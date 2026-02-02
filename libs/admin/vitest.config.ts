@@ -1,0 +1,13 @@
+import { defineConfig, mergeConfig } from 'vitest/config';
+import rootConfig from '../../vitest.config';
+
+export default mergeConfig(
+	rootConfig,
+	defineConfig({
+		test: {
+			include: ['src/**/*.spec.ts'],
+			exclude: ['**/node_modules/**'],
+			passWithNoTests: true,
+		},
+	}),
+);

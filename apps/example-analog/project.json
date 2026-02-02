@@ -1,0 +1,64 @@
+{
+	"name": "example-analog",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"projectType": "application",
+	"prefix": "app",
+	"sourceRoot": "apps/example-analog/src",
+	"tags": [],
+	"targets": {
+		"build": {
+			"executor": "@analogjs/platform:vite",
+			"options": {
+				"configFile": "apps/example-analog/vite.config.ts",
+				"main": "apps/example-analog/src/main.ts",
+				"outputPath": "dist/apps/example-analog/client",
+				"tsConfig": "apps/example-analog/tsconfig.app.json"
+			},
+			"defaultConfiguration": "production",
+			"configurations": {
+				"development": {
+					"mode": "development"
+				},
+				"production": {
+					"sourcemap": false,
+					"mode": "production"
+				}
+			},
+			"outputs": ["{workspaceRoot}/dist/apps/example-analog"]
+		},
+		"serve": {
+			"executor": "@analogjs/platform:vite-dev-server",
+			"continuous": true,
+			"defaultConfiguration": "development",
+			"options": {
+				"buildTarget": "example-analog:build",
+				"port": 4200
+			},
+			"configurations": {
+				"development": {
+					"buildTarget": "example-analog:build:development",
+					"hmr": true
+				},
+				"production": {
+					"buildTarget": "example-analog:build:production"
+				}
+			}
+		},
+		"lint": {
+			"executor": "@nx/eslint:lint"
+		},
+		"serve-static": {
+			"continuous": true,
+			"executor": "@nx/web:file-server",
+			"options": {
+				"buildTarget": "example-analog:build",
+				"port": 4200,
+				"staticFilePath": "dist/apps/example-analog/browser",
+				"spa": true
+			}
+		},
+		"test": {
+			"executor": "@analogjs/vitest-angular:test"
+		}
+	}
+}

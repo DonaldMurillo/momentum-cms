@@ -11,28 +11,28 @@
  */
 
 import type {
-  TextField,
-  TextareaField,
-  RichTextField,
-  NumberField,
-  DateField,
-  CheckboxField,
-  SelectField,
-  RadioField,
-  EmailField,
-  PasswordField,
-  UploadField,
-  RelationshipField,
-  ArrayField,
-  GroupField,
-  BlocksField,
-  JSONField,
-  PointField,
-  SlugField,
-  SelectOption,
-  BlockConfig,
-  Field,
-  BaseFieldOptions,
+	TextField,
+	TextareaField,
+	RichTextField,
+	NumberField,
+	DateField,
+	CheckboxField,
+	SelectField,
+	RadioField,
+	EmailField,
+	PasswordField,
+	UploadField,
+	RelationshipField,
+	ArrayField,
+	GroupField,
+	BlocksField,
+	JSONField,
+	PointField,
+	SlugField,
+	SelectOption,
+	BlockConfig,
+	Field,
+	BaseFieldOptions,
 } from './field.types';
 
 // ============================================
@@ -40,30 +40,30 @@ import type {
 // ============================================
 
 export interface TextFieldOptions extends BaseFieldOptions {
-  minLength?: number;
-  maxLength?: number;
+	minLength?: number;
+	maxLength?: number;
 }
 
 export function text(name: string, options: TextFieldOptions = {}): TextField {
-  return {
-    name,
-    type: 'text',
-    ...options,
-  };
+	return {
+		name,
+		type: 'text',
+		...options,
+	};
 }
 
 export interface TextareaFieldOptions extends BaseFieldOptions {
-  minLength?: number;
-  maxLength?: number;
-  rows?: number;
+	minLength?: number;
+	maxLength?: number;
+	rows?: number;
 }
 
 export function textarea(name: string, options: TextareaFieldOptions = {}): TextareaField {
-  return {
-    name,
-    type: 'textarea',
-    ...options,
-  };
+	return {
+		name,
+		type: 'textarea',
+		...options,
+	};
 }
 
 // ============================================
@@ -73,11 +73,11 @@ export function textarea(name: string, options: TextareaFieldOptions = {}): Text
 export type RichTextFieldOptions = BaseFieldOptions;
 
 export function richText(name: string, options: RichTextFieldOptions = {}): RichTextField {
-  return {
-    name,
-    type: 'richText',
-    ...options,
-  };
+	return {
+		name,
+		type: 'richText',
+		...options,
+	};
 }
 
 // ============================================
@@ -85,17 +85,17 @@ export function richText(name: string, options: RichTextFieldOptions = {}): Rich
 // ============================================
 
 export interface NumberFieldOptions extends BaseFieldOptions {
-  min?: number;
-  max?: number;
-  step?: number;
+	min?: number;
+	max?: number;
+	step?: number;
 }
 
 export function number(name: string, options: NumberFieldOptions = {}): NumberField {
-  return {
-    name,
-    type: 'number',
-    ...options,
-  };
+	return {
+		name,
+		type: 'number',
+		...options,
+	};
 }
 
 // ============================================
@@ -105,11 +105,11 @@ export function number(name: string, options: NumberFieldOptions = {}): NumberFi
 export type DateFieldOptions = BaseFieldOptions;
 
 export function date(name: string, options: DateFieldOptions = {}): DateField {
-  return {
-    name,
-    type: 'date',
-    ...options,
-  };
+	return {
+		name,
+		type: 'date',
+		...options,
+	};
 }
 
 // ============================================
@@ -119,12 +119,12 @@ export function date(name: string, options: DateFieldOptions = {}): DateField {
 export type CheckboxFieldOptions = BaseFieldOptions;
 
 export function checkbox(name: string, options: CheckboxFieldOptions = {}): CheckboxField {
-  return {
-    name,
-    type: 'checkbox',
-    defaultValue: options.defaultValue ?? false,
-    ...options,
-  };
+	return {
+		name,
+		type: 'checkbox',
+		defaultValue: options.defaultValue ?? false,
+		...options,
+	};
 }
 
 // ============================================
@@ -132,28 +132,28 @@ export function checkbox(name: string, options: CheckboxFieldOptions = {}): Chec
 // ============================================
 
 export interface SelectFieldOptions extends BaseFieldOptions {
-  options: SelectOption[];
-  hasMany?: boolean;
+	options: SelectOption[];
+	hasMany?: boolean;
 }
 
 export function select(name: string, options: SelectFieldOptions): SelectField {
-  return {
-    name,
-    type: 'select',
-    ...options,
-  };
+	return {
+		name,
+		type: 'select',
+		...options,
+	};
 }
 
 export interface RadioFieldOptions extends BaseFieldOptions {
-  options: SelectOption[];
+	options: SelectOption[];
 }
 
 export function radio(name: string, options: RadioFieldOptions): RadioField {
-  return {
-    name,
-    type: 'radio',
-    ...options,
-  };
+	return {
+		name,
+		type: 'radio',
+		...options,
+	};
 }
 
 // ============================================
@@ -163,23 +163,23 @@ export function radio(name: string, options: RadioFieldOptions): RadioField {
 export type EmailFieldOptions = BaseFieldOptions;
 
 export function email(name: string, options: EmailFieldOptions = {}): EmailField {
-  return {
-    name,
-    type: 'email',
-    ...options,
-  };
+	return {
+		name,
+		type: 'email',
+		...options,
+	};
 }
 
 export interface PasswordFieldOptions extends BaseFieldOptions {
-  minLength?: number;
+	minLength?: number;
 }
 
 export function password(name: string, options: PasswordFieldOptions = {}): PasswordField {
-  return {
-    name,
-    type: 'password',
-    ...options,
-  };
+	return {
+		name,
+		type: 'password',
+		...options,
+	};
 }
 
 // ============================================
@@ -187,15 +187,15 @@ export function password(name: string, options: PasswordFieldOptions = {}): Pass
 // ============================================
 
 export interface UploadFieldOptions extends BaseFieldOptions {
-  relationTo: string;
+	relationTo: string;
 }
 
 export function upload(name: string, options: UploadFieldOptions): UploadField {
-  return {
-    name,
-    type: 'upload',
-    ...options,
-  };
+	return {
+		name,
+		type: 'upload',
+		...options,
+	};
 }
 
 // ============================================
@@ -203,16 +203,16 @@ export function upload(name: string, options: UploadFieldOptions): UploadField {
 // ============================================
 
 export interface RelationshipFieldOptions extends BaseFieldOptions {
-  collection: () => unknown; // Lazy reference to avoid circular imports
-  hasMany?: boolean;
+	collection: () => unknown; // Lazy reference to avoid circular imports
+	hasMany?: boolean;
 }
 
 export function relationship(name: string, options: RelationshipFieldOptions): RelationshipField {
-  return {
-    name,
-    type: 'relationship',
-    ...options,
-  };
+	return {
+		name,
+		type: 'relationship',
+		...options,
+	};
 }
 
 // ============================================
@@ -220,17 +220,17 @@ export function relationship(name: string, options: RelationshipFieldOptions): R
 // ============================================
 
 export interface ArrayFieldOptions extends BaseFieldOptions {
-  fields: Field[];
-  minRows?: number;
-  maxRows?: number;
+	fields: Field[];
+	minRows?: number;
+	maxRows?: number;
 }
 
 export function array(name: string, options: ArrayFieldOptions): ArrayField {
-  return {
-    name,
-    type: 'array',
-    ...options,
-  };
+	return {
+		name,
+		type: 'array',
+		...options,
+	};
 }
 
 // ============================================
@@ -238,15 +238,15 @@ export function array(name: string, options: ArrayFieldOptions): ArrayField {
 // ============================================
 
 export interface GroupFieldOptions extends BaseFieldOptions {
-  fields: Field[];
+	fields: Field[];
 }
 
 export function group(name: string, options: GroupFieldOptions): GroupField {
-  return {
-    name,
-    type: 'group',
-    ...options,
-  };
+	return {
+		name,
+		type: 'group',
+		...options,
+	};
 }
 
 // ============================================
@@ -254,17 +254,17 @@ export function group(name: string, options: GroupFieldOptions): GroupField {
 // ============================================
 
 export interface BlocksFieldOptions extends BaseFieldOptions {
-  blocks: BlockConfig[];
-  minRows?: number;
-  maxRows?: number;
+	blocks: BlockConfig[];
+	minRows?: number;
+	maxRows?: number;
 }
 
 export function blocks(name: string, options: BlocksFieldOptions): BlocksField {
-  return {
-    name,
-    type: 'blocks',
-    ...options,
-  };
+	return {
+		name,
+		type: 'blocks',
+		...options,
+	};
 }
 
 // ============================================
@@ -274,11 +274,11 @@ export function blocks(name: string, options: BlocksFieldOptions): BlocksField {
 export type JSONFieldOptions = BaseFieldOptions;
 
 export function json(name: string, options: JSONFieldOptions = {}): JSONField {
-  return {
-    name,
-    type: 'json',
-    ...options,
-  };
+	return {
+		name,
+		type: 'json',
+		...options,
+	};
 }
 
 // ============================================
@@ -288,11 +288,11 @@ export function json(name: string, options: JSONFieldOptions = {}): JSONField {
 export type PointFieldOptions = BaseFieldOptions;
 
 export function point(name: string, options: PointFieldOptions = {}): PointField {
-  return {
-    name,
-    type: 'point',
-    ...options,
-  };
+	return {
+		name,
+		type: 'point',
+		...options,
+	};
 }
 
 // ============================================
@@ -300,13 +300,13 @@ export function point(name: string, options: PointFieldOptions = {}): PointField
 // ============================================
 
 export interface SlugFieldOptions extends BaseFieldOptions {
-  from: string; // Field to generate slug from
+	from: string; // Field to generate slug from
 }
 
 export function slug(name: string, options: SlugFieldOptions): SlugField {
-  return {
-    name,
-    type: 'slug',
-    ...options,
-  };
+	return {
+		name,
+		type: 'slug',
+		...options,
+	};
 }

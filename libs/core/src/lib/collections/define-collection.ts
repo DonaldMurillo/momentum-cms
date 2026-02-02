@@ -28,29 +28,29 @@ import type { CollectionConfig, GlobalConfig } from './collection.types';
  * @returns The same configuration with proper typing
  */
 export function defineCollection(config: CollectionConfig): CollectionConfig {
-  // Set defaults
-  const collection: CollectionConfig = {
-    timestamps: true, // Enable timestamps by default
-    ...config,
-  };
+	// Set defaults
+	const collection: CollectionConfig = {
+		timestamps: true, // Enable timestamps by default
+		...config,
+	};
 
-  // Validate required fields
-  if (!collection.slug) {
-    throw new Error('Collection must have a slug');
-  }
+	// Validate required fields
+	if (!collection.slug) {
+		throw new Error('Collection must have a slug');
+	}
 
-  if (!collection.fields || collection.fields.length === 0) {
-    throw new Error(`Collection "${collection.slug}" must have at least one field`);
-  }
+	if (!collection.fields || collection.fields.length === 0) {
+		throw new Error(`Collection "${collection.slug}" must have at least one field`);
+	}
 
-  // Validate slug format (kebab-case)
-  if (!/^[a-z][a-z0-9-]*$/.test(collection.slug)) {
-    throw new Error(
-      `Collection slug "${collection.slug}" must be kebab-case (lowercase letters, numbers, and hyphens, starting with a letter)`
-    );
-  }
+	// Validate slug format (kebab-case)
+	if (!/^[a-z][a-z0-9-]*$/.test(collection.slug)) {
+		throw new Error(
+			`Collection slug "${collection.slug}" must be kebab-case (lowercase letters, numbers, and hyphens, starting with a letter)`,
+		);
+	}
 
-  return collection;
+	return collection;
 }
 
 /**
@@ -59,16 +59,16 @@ export function defineCollection(config: CollectionConfig): CollectionConfig {
  * @returns The same configuration with proper typing
  */
 export function defineGlobal(config: GlobalConfig): GlobalConfig {
-  // Validate required fields
-  if (!config.slug) {
-    throw new Error('Global must have a slug');
-  }
+	// Validate required fields
+	if (!config.slug) {
+		throw new Error('Global must have a slug');
+	}
 
-  if (!config.fields || config.fields.length === 0) {
-    throw new Error(`Global "${config.slug}" must have at least one field`);
-  }
+	if (!config.fields || config.fields.length === 0) {
+		throw new Error(`Global "${config.slug}" must have at least one field`);
+	}
 
-  return config;
+	return config;
 }
 
 /**
@@ -76,9 +76,9 @@ export function defineGlobal(config: GlobalConfig): GlobalConfig {
  * Useful for typing API responses and database queries
  */
 export type InferDocumentType<T extends CollectionConfig> = {
-  id: string | number;
-  createdAt?: Date;
-  updatedAt?: Date;
+	id: string | number;
+	createdAt?: Date;
+	updatedAt?: Date;
 } & {
-  [K in T['fields'][number]['name']]?: unknown;
+	[K in T['fields'][number]['name']]?: unknown;
 };

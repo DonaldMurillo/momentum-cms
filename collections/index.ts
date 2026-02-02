@@ -20,7 +20,4 @@ import type { CollectionConfig } from '@momentum-cms/core';
  * All collections in the CMS
  * Used by the server to generate routes and the admin to render UI
  */
-export const collections: CollectionConfig[] = [
-  Users,
-  Posts,
-];
+export const collections: CollectionConfig[] = [Users, Posts];

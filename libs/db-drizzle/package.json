@@ -1,8 +1,12 @@
 {
-  "name": "@momentum-cms/db-drizzle",
-  "version": "0.0.1",
-  "type": "commonjs",
-  "main": "./index.cjs",
-  "types": "./index.d.ts",
-  "dependencies": {}
+	"name": "@momentum-cms/db-drizzle",
+	"version": "0.0.1",
+	"type": "commonjs",
+	"main": "./index.cjs",
+	"types": "./index.d.ts",
+	"peerDependencies": {
+		"@momentum-cms/core": "^0.0.1",
+		"drizzle-orm": "^0.45.0",
+		"better-sqlite3": "^12.0.0"
+	}
 }

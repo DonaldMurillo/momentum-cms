@@ -10,3 +10,6 @@ export * from './lib/collections';
 
 // Fields
 export * from './lib/fields';
+
+// Configuration
+export * from './lib/config';

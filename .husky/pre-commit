@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# Run lint-staged (eslint + prettier on staged files)
+npx lint-staged
+
+# Build affected projects (includes type checking)
+npx nx affected -t build --parallel=3

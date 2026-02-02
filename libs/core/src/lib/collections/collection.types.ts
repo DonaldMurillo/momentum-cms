@@ -10,34 +10,34 @@ import type { Field } from '../fields/field.types';
 // ============================================
 
 export interface AccessArgs {
-  req: RequestContext;
-  id?: string | number;
-  data?: Record<string, unknown>;
+	req: RequestContext;
+	id?: string | number;
+	data?: Record<string, unknown>;
 }
 
 export interface RequestContext {
-  user?: UserContext;
-  headers?: Record<string, string>;
-  // Add more request context as needed
+	user?: UserContext;
+	headers?: Record<string, string>;
+	// Add more request context as needed
 }
 
 export interface UserContext {
-  id: string | number;
-  email?: string;
-  role?: string;
-  [key: string]: unknown;
+	id: string | number;
+	email?: string;
+	role?: string;
+	[key: string]: unknown;
 }
 
 export type AccessFunction = (args: AccessArgs) => boolean | Promise<boolean>;
 
 export interface AccessConfig {
-  create?: AccessFunction;
-  read?: AccessFunction;
-  update?: AccessFunction;
-  delete?: AccessFunction;
-  admin?: AccessFunction;
-  unlock?: AccessFunction; // For auth-enabled collections
-  readVersions?: AccessFunction; // For version-enabled collections
+	create?: AccessFunction;
+	read?: AccessFunction;
+	update?: AccessFunction;
+	delete?: AccessFunction;
+	admin?: AccessFunction;
+	unlock?: AccessFunction; // For auth-enabled collections
+	readVersions?: AccessFunction; // For version-enabled collections
 }
 
 // ============================================
@@ -45,23 +45,25 @@ export interface AccessConfig {
 // ============================================
 
 export interface HookArgs {
-  req: RequestContext;
-  data?: Record<string, unknown>;
-  doc?: Record<string, unknown>;
-  operation?: 'create' | 'update' | 'delete';
-  originalDoc?: Record<string, unknown>;
+	req: RequestContext;
+	data?: Record<string, unknown>;
+	doc?: Record<string, unknown>;
+	operation?: 'create' | 'update' | 'delete';
+	originalDoc?: Record<string, unknown>;
 }
 
-export type HookFunction = (args: HookArgs) => Record<string, unknown> | void | Promise<Record<string, unknown> | void>;
+export type HookFunction = (
+	args: HookArgs,
+) => Record<string, unknown> | void | Promise<Record<string, unknown> | void>;
 
 export interface HooksConfig {
-  beforeValidate?: HookFunction[];
-  beforeChange?: HookFunction[];
-  afterChange?: HookFunction[];
-  beforeRead?: HookFunction[];
-  afterRead?: HookFunction[];
-  beforeDelete?: HookFunction[];
-  afterDelete?: HookFunction[];
+	beforeValidate?: HookFunction[];
+	beforeChange?: HookFunction[];
+	afterChange?: HookFunction[];
+	beforeRead?: HookFunction[];
+	afterRead?: HookFunction[];
+	beforeDelete?: HookFunction[];
+	afterDelete?: HookFunction[];
 }
 
 // ============================================
@@ -69,32 +71,32 @@ export interface HooksConfig {
 // ============================================
 
 export interface AdminConfig {
-  /** Field to use as the document title in the admin UI */
-  useAsTitle?: string;
+	/** Field to use as the document title in the admin UI */
+	useAsTitle?: string;
 
-  /** Default columns to show in list view */
-  defaultColumns?: string[];
+	/** Default columns to show in list view */
+	defaultColumns?: string[];
 
-  /** Admin sidebar group */
-  group?: string;
+	/** Admin sidebar group */
+	group?: string;
 
-  /** Fields searchable in admin list */
-  listSearchableFields?: string[];
+	/** Fields searchable in admin list */
+	listSearchableFields?: string[];
 
-  /** Pagination settings */
-  pagination?: {
-    defaultLimit?: number;
-    limits?: number[];
-  };
+	/** Pagination settings */
+	pagination?: {
+		defaultLimit?: number;
+		limits?: number[];
+	};
 
-  /** Custom description for admin UI */
-  description?: string;
+	/** Custom description for admin UI */
+	description?: string;
 
-  /** Hide from admin navigation */
-  hidden?: boolean;
+	/** Hide from admin navigation */
+	hidden?: boolean;
 
-  /** Enable preview mode */
-  preview?: boolean | ((doc: Record<string, unknown>) => string);
+	/** Enable preview mode */
+	preview?: boolean | ((doc: Record<string, unknown>) => string);
 }
 
 // ============================================
@@ -102,21 +104,21 @@ export interface AdminConfig {
 // ============================================
 
 export interface VersionsConfig {
-  /** Enable draft versions */
-  drafts?: boolean | DraftsConfig;
+	/** Enable draft versions */
+	drafts?: boolean | DraftsConfig;
 
-  /** Maximum versions to keep per document */
-  maxPerDoc?: number;
+	/** Maximum versions to keep per document */
+	maxPerDoc?: number;
 }
 
 export interface DraftsConfig {
-  /** Auto-save drafts */
-  autosave?: boolean | AutosaveConfig;
+	/** Auto-save drafts */
+	autosave?: boolean | AutosaveConfig;
 }
 
 export interface AutosaveConfig {
-  /** Interval in milliseconds */
-  interval?: number;
+	/** Interval in milliseconds */
+	interval?: number;
 }
 
 // ============================================
@@ -124,24 +126,24 @@ export interface AutosaveConfig {
 // ============================================
 
 export interface AuthConfig {
-  /** Enable token-based auth */
-  tokenExpiration?: number;
+	/** Enable token-based auth */
+	tokenExpiration?: number;
 
-  /** Verify email before login */
-  verify?: boolean;
+	/** Verify email before login */
+	verify?: boolean;
 
-  /** Max login attempts before lockout */
-  maxLoginAttempts?: number;
+	/** Max login attempts before lockout */
+	maxLoginAttempts?: number;
 
-  /** Lockout interval in milliseconds */
-  lockTime?: number;
+	/** Lockout interval in milliseconds */
+	lockTime?: number;
 
-  /** Cookies configuration */
-  cookies?: {
-    secure?: boolean;
-    sameSite?: 'strict' | 'lax' | 'none';
-    domain?: string;
-  };
+	/** Cookies configuration */
+	cookies?: {
+		secure?: boolean;
+		sameSite?: 'strict' | 'lax' | 'none';
+		domain?: string;
+	};
 }
 
 // ============================================
@@ -149,11 +151,11 @@ export interface AuthConfig {
 // ============================================
 
 export interface TimestampsConfig {
-  /** Add createdAt field */
-  createdAt?: boolean;
+	/** Add createdAt field */
+	createdAt?: boolean;
 
-  /** Add updatedAt field */
-  updatedAt?: boolean;
+	/** Add updatedAt field */
+	updatedAt?: boolean;
 }
 
 // ============================================
@@ -161,52 +163,52 @@ export interface TimestampsConfig {
 // ============================================
 
 export interface CollectionConfig {
-  /** Unique identifier for the collection (used in URLs and database) */
-  slug: string;
+	/** Unique identifier for the collection (used in URLs and database) */
+	slug: string;
 
-  /** Custom labels */
-  labels?: {
-    singular?: string;
-    plural?: string;
-  };
+	/** Custom labels */
+	labels?: {
+		singular?: string;
+		plural?: string;
+	};
 
-  /** Field definitions */
-  fields: Field[];
+	/** Field definitions */
+	fields: Field[];
 
-  /** Admin panel configuration */
-  admin?: AdminConfig;
+	/** Admin panel configuration */
+	admin?: AdminConfig;
 
-  /** Access control functions */
-  access?: AccessConfig;
+	/** Access control functions */
+	access?: AccessConfig;
 
-  /** Lifecycle hooks */
-  hooks?: HooksConfig;
+	/** Lifecycle hooks */
+	hooks?: HooksConfig;
 
-  /** Enable authentication for this collection (makes it a user collection) */
-  auth?: boolean | AuthConfig;
+	/** Enable authentication for this collection (makes it a user collection) */
+	auth?: boolean | AuthConfig;
 
-  /** Enable versioning */
-  versions?: boolean | VersionsConfig;
+	/** Enable versioning */
+	versions?: boolean | VersionsConfig;
 
-  /** Timestamps configuration */
-  timestamps?: boolean | TimestampsConfig;
+	/** Timestamps configuration */
+	timestamps?: boolean | TimestampsConfig;
 
-  /** Custom database table/collection name */
-  dbName?: string;
+	/** Custom database table/collection name */
+	dbName?: string;
 
-  /** Default sort field */
-  defaultSort?: string;
+	/** Default sort field */
+	defaultSort?: string;
 
-  /** GraphQL configuration */
-  graphQL?: {
-    singularName?: string;
-    pluralName?: string;
-    disableQueries?: boolean;
-    disableMutations?: boolean;
-  };
+	/** GraphQL configuration */
+	graphQL?: {
+		singularName?: string;
+		pluralName?: string;
+		disableQueries?: boolean;
+		disableMutations?: boolean;
+	};
 
-  /** Custom endpoints */
-  endpoints?: EndpointConfig[];
+	/** Custom endpoints */
+	endpoints?: EndpointConfig[];
 }
 
 // ============================================
@@ -214,12 +216,12 @@ export interface CollectionConfig {
 // ============================================
 
 export interface EndpointConfig {
-  path: string;
-  method: 'get' | 'post' | 'put' | 'patch' | 'delete';
-  handler: (args: {
-    req: RequestContext;
-    collection: CollectionConfig;
-  }) => Promise<{ status: number; body: unknown }>;
+	path: string;
+	method: 'get' | 'post' | 'put' | 'patch' | 'delete';
+	handler: (args: {
+		req: RequestContext;
+		collection: CollectionConfig;
+	}) => Promise<{ status: number; body: unknown }>;
 }
 
 // ============================================
@@ -227,11 +229,14 @@ export interface EndpointConfig {
 // ============================================
 
 export interface GlobalConfig {
-  slug: string;
-  label?: string;
-  fields: Field[];
-  admin?: Omit<AdminConfig, 'useAsTitle' | 'defaultColumns' | 'pagination'>;
-  access?: Pick<AccessConfig, 'read' | 'update'>;
-  hooks?: Pick<HooksConfig, 'beforeValidate' | 'beforeChange' | 'afterChange' | 'beforeRead' | 'afterRead'>;
-  versions?: boolean | VersionsConfig;
+	slug: string;
+	label?: string;
+	fields: Field[];
+	admin?: Omit<AdminConfig, 'useAsTitle' | 'defaultColumns' | 'pagination'>;
+	access?: Pick<AccessConfig, 'read' | 'update'>;
+	hooks?: Pick<
+		HooksConfig,
+		'beforeValidate' | 'beforeChange' | 'afterChange' | 'beforeRead' | 'afterRead'
+	>;
+	versions?: boolean | VersionsConfig;
 }

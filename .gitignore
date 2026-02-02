@@ -44,3 +44,10 @@ Thumbs.db
 .angular
 
 __screenshots__/
+
+# SQLite database files
+**/data/*.db
+**/data/*.db-journal
+*.sqlite
+*.sqlite-journal
+playwright-report
