@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { DatabaseAdapter, CollectionConfig, Field } from '@momentum-cms/core';
@@ -8,6 +9,24 @@ import type { DatabaseAdapter, CollectionConfig, Field } from '@momentum-cms/cor
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null;
+}
+
+/**
+ * Simple async queue to serialize database operations.
+ * Prevents SQLite locking issues with concurrent requests.
+ */
+class AsyncQueue {
+	private queue: Promise<unknown> = Promise.resolve();
+
+	/**
+	 * Add an operation to the queue. Operations execute sequentially.
+	 */
+	enqueue<T>(operation: () => T): Promise<T> {
+		const result = this.queue.then(() => operation());
+		// Update queue to wait for this operation (ignore errors for queue chaining)
+		this.queue = result.catch(() => undefined);
+		return result;
+	}
 }
 
 // Note: drizzle-orm is available for advanced type-safe queries:
@@ -97,8 +116,11 @@ export function sqliteAdapter(options: SqliteAdapterOptions): DatabaseAdapter {
 	ensureDirectoryExists(options.filename);
 
 	const sqlite = new Database(options.filename);
-	// Note: drizzle(sqlite) is available for advanced queries if needed
-	let idCounter = 1;
+	// Enable WAL mode for better concurrent read performance
+	sqlite.pragma('journal_mode = WAL');
+
+	// Queue for serializing write operations
+	const writeQueue = new AsyncQueue();
 
 	return {
 		async initialize(collections: CollectionConfig[]): Promise<void> {
@@ -134,33 +156,43 @@ export function sqliteAdapter(options: SqliteAdapterOptions): DatabaseAdapter {
 			collection: string,
 			data: Record<string, unknown>,
 		): Promise<Record<string, unknown>> {
-			const id = String(idCounter++);
-			const now = new Date().toISOString();
+			return writeQueue.enqueue(() => {
+				const id = randomUUID();
+				const now = new Date().toISOString();
 
-			const doc: Record<string, unknown> = {
-				...data,
-				id,
-				createdAt: now,
-				updatedAt: now,
-			};
+				const doc: Record<string, unknown> = {
+					...data,
+					id,
+					createdAt: now,
+					updatedAt: now,
+				};
 
-			const columns = Object.keys(doc);
-			const placeholders = columns.map(() => '?').join(', ');
-			const values = columns.map((col) => {
-				const val = doc[col];
-				// Serialize objects/arrays as JSON
-				if (typeof val === 'object' && val !== null) {
-					return JSON.stringify(val);
-				}
-				return val;
+				const columns = Object.keys(doc);
+				const placeholders = columns.map(() => '?').join(', ');
+				const values = columns.map((col) => {
+					const val = doc[col];
+					// Handle undefined - SQLite can't bind undefined
+					if (val === undefined) {
+						return null;
+					}
+					// Handle booleans - SQLite uses 0/1
+					if (typeof val === 'boolean') {
+						return val ? 1 : 0;
+					}
+					// Serialize objects/arrays as JSON
+					if (typeof val === 'object' && val !== null) {
+						return JSON.stringify(val);
+					}
+					return val;
+				});
+
+				const quotedColumns = columns.map((c) => `"${c}"`).join(', ');
+				sqlite
+					.prepare(`INSERT INTO "${collection}" (${quotedColumns}) VALUES (${placeholders})`)
+					.run(...values);
+
+				return doc;
 			});
-
-			const quotedColumns = columns.map((c) => `"${c}"`).join(', ');
-			sqlite
-				.prepare(`INSERT INTO "${collection}" (${quotedColumns}) VALUES (${placeholders})`)
-				.run(...values);
-
-			return doc;
 		},
 
 		async update(
@@ -168,41 +200,53 @@ export function sqliteAdapter(options: SqliteAdapterOptions): DatabaseAdapter {
 			id: string,
 			data: Record<string, unknown>,
 		): Promise<Record<string, unknown>> {
-			const now = new Date().toISOString();
-			const updateData: Record<string, unknown> = { ...data, updatedAt: now };
+			return writeQueue.enqueue(() => {
+				const now = new Date().toISOString();
+				const updateData: Record<string, unknown> = { ...data, updatedAt: now };
 
-			// Remove id and createdAt from update data if present
-			delete updateData['id'];
-			delete updateData['createdAt'];
+				// Remove id and createdAt from update data if present
+				delete updateData['id'];
+				delete updateData['createdAt'];
 
-			const setClauses: string[] = [];
-			const values: unknown[] = [];
+				const setClauses: string[] = [];
+				const values: unknown[] = [];
 
-			for (const [key, value] of Object.entries(updateData)) {
-				setClauses.push(`"${key}" = ?`);
-				if (typeof value === 'object' && value !== null) {
-					values.push(JSON.stringify(value));
-				} else {
-					values.push(value);
+				for (const [key, value] of Object.entries(updateData)) {
+					setClauses.push(`"${key}" = ?`);
+					// Handle undefined - SQLite can't bind undefined
+					if (value === undefined) {
+						values.push(null);
+					} else if (typeof value === 'boolean') {
+						// Handle booleans - SQLite uses 0/1
+						values.push(value ? 1 : 0);
+					} else if (typeof value === 'object' && value !== null) {
+						values.push(JSON.stringify(value));
+					} else {
+						values.push(value);
+					}
 				}
-			}
-			values.push(id);
+				values.push(id);
 
-			sqlite
-				.prepare(`UPDATE "${collection}" SET ${setClauses.join(', ')} WHERE id = ?`)
-				.run(...values);
+				sqlite
+					.prepare(`UPDATE "${collection}" SET ${setClauses.join(', ')} WHERE id = ?`)
+					.run(...values);
 
-			// Fetch and return the updated document
-			const updated: unknown = sqlite.prepare(`SELECT * FROM "${collection}" WHERE id = ?`).get(id);
-			if (!isRecord(updated)) {
-				throw new Error('Failed to fetch updated document');
-			}
-			return updated;
+				// Fetch and return the updated document
+				const updated: unknown = sqlite
+					.prepare(`SELECT * FROM "${collection}" WHERE id = ?`)
+					.get(id);
+				if (!isRecord(updated)) {
+					throw new Error('Failed to fetch updated document');
+				}
+				return updated;
+			});
 		},
 
 		async delete(collection: string, id: string): Promise<boolean> {
-			const result = sqlite.prepare(`DELETE FROM "${collection}" WHERE id = ?`).run(id);
-			return result.changes > 0;
+			return writeQueue.enqueue(() => {
+				const result = sqlite.prepare(`DELETE FROM "${collection}" WHERE id = ?`).run(id);
+				return result.changes > 0;
+			});
 		},
 	};
 }

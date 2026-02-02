@@ -6,42 +6,32 @@ test.describe('Collection List Page - Posts', () => {
 	});
 
 	test('should display collection heading', async ({ page }) => {
-		const mainContent = page.locator('.mcms-main');
-		const heading = mainContent.getByRole('heading', { name: 'Posts' });
+		const heading = page.getByRole('heading', { name: 'Posts' });
 		await expect(heading).toBeVisible();
 	});
 
 	test('should display management subtitle', async ({ page }) => {
-		const mainContent = page.locator('.mcms-main');
-		const subtitle = mainContent.getByText(/Manage your posts/i);
+		const subtitle = page.getByText(/Manage your posts/i);
 		await expect(subtitle).toBeVisible();
 	});
 
 	test('should have Create New button', async ({ page }) => {
-		const mainContent = page.locator('.mcms-main');
-		const createButton = mainContent.getByRole('link', { name: /Create New/i });
+		const createButton = page.getByRole('link', { name: /Create New/i });
 		await expect(createButton).toBeVisible();
 	});
 
 	test('should navigate to create form when clicking Create New', async ({ page }) => {
-		const mainContent = page.locator('.mcms-main');
-		const createButton = mainContent.getByRole('link', { name: /Create New/i });
+		const createButton = page.getByRole('link', { name: /Create New/i });
 		await createButton.click();
 
 		await expect(page).toHaveURL(/\/admin\/collections\/posts\/create/);
 	});
 
-	test('should display empty state when no documents', async ({ page }) => {
-		const mainContent = page.locator('.mcms-main');
-		// Since there's no backend yet, we should see empty state
-		const emptyState = mainContent.getByText(/No posts yet/i);
-		await expect(emptyState).toBeVisible();
-	});
-
-	test('should have link to create first document in empty state', async ({ page }) => {
-		const mainContent = page.locator('.mcms-main');
-		const createFirstLink = mainContent.getByRole('link', { name: /Create your first one/i });
-		await expect(createFirstLink).toBeVisible();
+	test('should display table with column headers', async ({ page }) => {
+		// Check for table headers
+		await expect(page.getByRole('columnheader', { name: 'ID' })).toBeVisible();
+		await expect(page.getByRole('columnheader', { name: 'Title' })).toBeVisible();
+		await expect(page.getByRole('columnheader', { name: 'Actions' })).toBeVisible();
 	});
 });
 
@@ -51,26 +41,22 @@ test.describe('Collection List Page - Users', () => {
 	});
 
 	test('should display collection heading', async ({ page }) => {
-		const mainContent = page.locator('.mcms-main');
-		const heading = mainContent.getByRole('heading', { name: 'Users' });
+		const heading = page.getByRole('heading', { name: 'Users' });
 		await expect(heading).toBeVisible();
 	});
 
 	test('should display management subtitle', async ({ page }) => {
-		const mainContent = page.locator('.mcms-main');
-		const subtitle = mainContent.getByText(/Manage your users/i);
+		const subtitle = page.getByText(/Manage your users/i);
 		await expect(subtitle).toBeVisible();
 	});
 
 	test('should have Create New button', async ({ page }) => {
-		const mainContent = page.locator('.mcms-main');
-		const createButton = mainContent.getByRole('link', { name: /Create New/i });
+		const createButton = page.getByRole('link', { name: /Create New/i });
 		await expect(createButton).toBeVisible();
 	});
 
 	test('should navigate to create form when clicking Create New', async ({ page }) => {
-		const mainContent = page.locator('.mcms-main');
-		const createButton = mainContent.getByRole('link', { name: /Create New/i });
+		const createButton = page.getByRole('link', { name: /Create New/i });
 		await createButton.click();
 
 		await expect(page).toHaveURL(/\/admin\/collections\/users\/create/);
@@ -81,26 +67,26 @@ test.describe('Collection List Page - Navigation', () => {
 	test('should maintain sidebar visibility on collection list', async ({ page }) => {
 		await page.goto('/admin/collections/posts');
 
-		const sidebar = page.locator('.mcms-sidebar');
-		await expect(sidebar).toBeVisible();
+		// Sidebar should show branding
+		const brandingTitle = page.getByText('Momentum CMS');
+		await expect(brandingTitle).toBeVisible();
 	});
 
 	test('should be able to switch between collections via sidebar', async ({ page }) => {
 		await page.goto('/admin/collections/posts');
 
-		const navSection = page.locator('.mcms-nav-section');
-		const mainContent = page.locator('.mcms-main');
+		const nav = page.getByRole('navigation');
 
 		// Navigate to Users via sidebar
-		await navSection.locator('.mcms-nav-item').filter({ hasText: 'Users' }).click();
+		await nav.getByRole('link', { name: 'Users' }).click();
 
 		await expect(page).toHaveURL(/\/admin\/collections\/users/);
-		await expect(mainContent.getByRole('heading', { name: 'Users' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible();
 
 		// Navigate back to Posts via sidebar
-		await navSection.locator('.mcms-nav-item').filter({ hasText: 'Posts' }).click();
+		await nav.getByRole('link', { name: 'Posts' }).click();
 
 		await expect(page).toHaveURL(/\/admin\/collections\/posts/);
-		await expect(mainContent.getByRole('heading', { name: 'Posts' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Posts' })).toBeVisible();
 	});
 });

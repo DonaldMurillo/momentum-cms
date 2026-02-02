@@ -6,109 +6,90 @@ test.describe('Admin Dashboard', () => {
 	});
 
 	test('should display dashboard with correct heading', async ({ page }) => {
-		const mainContent = page.locator('.mcms-main');
-		const heading = mainContent.getByRole('heading', { name: 'Dashboard' });
+		const heading = page.getByRole('heading', { name: 'Dashboard' });
 		await expect(heading).toBeVisible();
 	});
 
 	test('should display welcome subtitle', async ({ page }) => {
-		const mainContent = page.locator('.mcms-main');
-		const subtitle = mainContent.getByText('Welcome to Momentum CMS');
+		const subtitle = page.getByText('Welcome to Momentum CMS');
 		await expect(subtitle).toBeVisible();
 	});
 
 	test('should display collection cards for Posts and Users', async ({ page }) => {
-		const collectionsGrid = page.locator('.mcms-collections-grid');
-
-		// Check Posts collection card in main content
-		const postsCard = collectionsGrid.locator('.mcms-collection-card').filter({ hasText: 'Posts' });
+		// Check Posts collection card
+		const postsCard = page.getByRole('link', { name: /Posts.*posts.*fields/i });
 		await expect(postsCard).toBeVisible();
 
-		// Check Users collection card in main content
-		const usersCard = collectionsGrid.locator('.mcms-collection-card').filter({ hasText: 'Users' });
+		// Check Users collection card
+		const usersCard = page.getByRole('link', { name: /Users.*users.*fields/i });
 		await expect(usersCard).toBeVisible();
 	});
 
 	test('should show field count on collection cards', async ({ page }) => {
-		const collectionsGrid = page.locator('.mcms-collections-grid');
-
 		// Posts has 5 fields
-		const postsCard = collectionsGrid.locator('.mcms-collection-card').filter({ hasText: 'Posts' });
-		await expect(postsCard.getByText('5 fields')).toBeVisible();
+		await expect(page.getByText('5 fields')).toBeVisible();
 
 		// Users has 4 fields
-		const usersCard = collectionsGrid.locator('.mcms-collection-card').filter({ hasText: 'Users' });
-		await expect(usersCard.getByText('4 fields')).toBeVisible();
+		await expect(page.getByText('4 fields')).toBeVisible();
 	});
 
 	test('should navigate to Posts collection when clicking card', async ({ page }) => {
-		const collectionsGrid = page.locator('.mcms-collections-grid');
-		const postsCard = collectionsGrid.locator('.mcms-collection-card').filter({ hasText: 'Posts' });
+		const postsCard = page.getByRole('link', { name: /Posts.*posts.*fields/i });
 		await postsCard.click();
 
 		await expect(page).toHaveURL(/\/admin\/collections\/posts/);
-		const mainContent = page.locator('.mcms-main');
-		await expect(mainContent.getByRole('heading', { name: 'Posts' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Posts' })).toBeVisible();
 	});
 
 	test('should navigate to Users collection when clicking card', async ({ page }) => {
-		const collectionsGrid = page.locator('.mcms-collections-grid');
-		const usersCard = collectionsGrid.locator('.mcms-collection-card').filter({ hasText: 'Users' });
+		const usersCard = page.getByRole('link', { name: /Users.*users.*fields/i });
 		await usersCard.click();
 
 		await expect(page).toHaveURL(/\/admin\/collections\/users/);
-		const mainContent = page.locator('.mcms-main');
-		await expect(mainContent.getByRole('heading', { name: 'Users' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible();
 	});
 });
 
 test.describe('Admin Sidebar Navigation', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/admin');
+		// Wait for hydration to complete
+		await page.waitForLoadState('networkidle');
 	});
 
-	test('should display sidebar with navigation links', async ({ page }) => {
-		const sidebar = page.locator('.mcms-sidebar');
-		await expect(sidebar).toBeVisible();
-	});
-
-	test('should display branding title in sidebar header', async ({ page }) => {
-		const sidebarHeader = page.locator('.mcms-sidebar-header');
-		const brandingTitle = sidebarHeader.locator('.mcms-site-title');
-		await expect(brandingTitle).toHaveText('Momentum CMS');
+	test('should display sidebar with branding title', async ({ page }) => {
+		// Sidebar with Momentum CMS branding - it's an h1 heading
+		const brandingTitle = page.getByRole('heading', { name: 'Momentum CMS' });
+		await expect(brandingTitle).toBeVisible();
 	});
 
 	test('should have Dashboard link in sidebar', async ({ page }) => {
-		const nav = page.locator('.mcms-nav');
-		const dashboardLink = nav.locator('.mcms-nav-dashboard');
+		// Dashboard link in navigation
+		const dashboardLink = page.getByRole('navigation').getByRole('link', { name: 'Dashboard' });
 		await expect(dashboardLink).toBeVisible();
-		await expect(dashboardLink).toHaveText(/Dashboard/);
 	});
 
 	test('should have collection links in sidebar', async ({ page }) => {
-		const navSection = page.locator('.mcms-nav-section');
+		const nav = page.getByRole('navigation');
 
-		const postsLink = navSection.locator('.mcms-nav-item').filter({ hasText: 'Posts' });
+		const postsLink = nav.getByRole('link', { name: 'Posts' });
 		await expect(postsLink).toBeVisible();
 
-		const usersLink = navSection.locator('.mcms-nav-item').filter({ hasText: 'Users' });
+		const usersLink = nav.getByRole('link', { name: 'Users' });
 		await expect(usersLink).toBeVisible();
 	});
 
 	test('should navigate using sidebar links', async ({ page }) => {
-		const navSection = page.locator('.mcms-nav-section');
-		const nav = page.locator('.mcms-nav');
-
 		// Click Posts in sidebar
-		await navSection.locator('.mcms-nav-item').filter({ hasText: 'Posts' }).click();
+		await page.getByRole('navigation').getByRole('link', { name: 'Posts' }).click();
 		await expect(page).toHaveURL(/\/admin\/collections\/posts/);
 
-		// Click Dashboard in sidebar
-		await nav.locator('.mcms-nav-dashboard').click();
+		// Click Dashboard in sidebar (re-query navigation after page change)
+		await page.getByRole('navigation').getByRole('link', { name: 'Dashboard' }).click();
 		await expect(page).toHaveURL(/\/admin$/);
 
 		// Click Users in sidebar
-		await navSection.locator('.mcms-nav-item').filter({ hasText: 'Users' }).click();
+		await page.getByRole('navigation').getByRole('link', { name: 'Users' }).click();
 		await expect(page).toHaveURL(/\/admin\/collections\/users/);
 	});
 });

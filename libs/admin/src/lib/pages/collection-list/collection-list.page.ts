@@ -20,167 +20,82 @@ import { MomentumApiService } from '../../services/api.service';
  */
 @Component({
 	selector: 'mcms-collection-list',
-	standalone: true,
 	imports: [RouterLink],
 	changeDetection: ChangeDetectionStrategy.OnPush,
+	host: { class: 'block max-w-5xl' },
 	template: `
-		<div class="mcms-collection-list">
-			<header class="mcms-page-header">
-				<div class="mcms-header-left">
-					<h1>{{ collection()?.labels?.plural || collection()?.slug || 'Collection' }}</h1>
-					<p class="mcms-subtitle">
-						Manage your {{ collection()?.labels?.plural?.toLowerCase() || 'documents' }}
-					</p>
-				</div>
-				<div class="mcms-header-actions">
-					<a [routerLink]="['create']" class="mcms-btn mcms-btn-primary"> + Create New </a>
-				</div>
-			</header>
-
-			<div class="mcms-list-container">
-				@if (loading()) {
-					<div class="mcms-loading">Loading...</div>
-				} @else if (documents().length === 0) {
-					<div class="mcms-empty-state">
-						<p>No {{ collection()?.labels?.plural?.toLowerCase() || 'documents' }} yet.</p>
-						<a [routerLink]="['create']" class="mcms-btn mcms-btn-secondary">
-							Create your first one
-						</a>
-					</div>
-				} @else {
-					<table class="mcms-table">
-						<thead>
-							<tr>
-								<th>ID</th>
-								@for (field of displayFields(); track field.name) {
-									<th>{{ field.label || field.name }}</th>
-								}
-								<th>Actions</th>
-							</tr>
-						</thead>
-						<tbody>
-							@for (doc of documents(); track doc['id']) {
-								<tr>
-									<td>{{ doc['id'] }}</td>
-									@for (field of displayFields(); track field.name) {
-										<td>{{ doc[field.name] || '-' }}</td>
-									}
-									<td>
-										<a [routerLink]="[doc['id']]" class="mcms-link">Edit</a>
-									</td>
-								</tr>
-							}
-						</tbody>
-					</table>
-				}
+		<header class="flex justify-between items-start mb-8">
+			<div>
+				<h1 class="text-3xl font-bold text-foreground">
+					{{ collection()?.labels?.plural || collection()?.slug || 'Collection' }}
+				</h1>
+				<p class="text-muted-foreground mt-2">
+					Manage your {{ collection()?.labels?.plural?.toLowerCase() || 'documents' }}
+				</p>
 			</div>
+			<a
+				[routerLink]="['create']"
+				class="inline-flex items-center px-5 py-2.5 rounded-md font-medium no-underline cursor-pointer transition-all bg-primary text-primary-foreground hover:bg-primary/90"
+			>
+				+ Create New
+			</a>
+		</header>
+
+		<div class="bg-card rounded-lg border border-border overflow-hidden">
+			@if (loading()) {
+				<div class="p-12 text-center text-muted-foreground">Loading...</div>
+			} @else if (documents().length === 0) {
+				<div class="p-12 text-center text-muted-foreground">
+					<p>No {{ collection()?.labels?.plural?.toLowerCase() || 'documents' }} yet.</p>
+					<a
+						[routerLink]="['create']"
+						class="inline-flex items-center mt-4 px-5 py-2.5 rounded-md font-medium no-underline cursor-pointer transition-all bg-secondary text-secondary-foreground hover:bg-secondary/80"
+					>
+						Create your first one
+					</a>
+				</div>
+			} @else {
+				<table class="w-full">
+					<thead>
+						<tr>
+							<th
+								class="px-4 py-4 text-left border-b border-border bg-muted font-semibold text-muted-foreground text-sm"
+							>
+								ID
+							</th>
+							@for (field of displayFields(); track field.name) {
+								<th
+									class="px-4 py-4 text-left border-b border-border bg-muted font-semibold text-muted-foreground text-sm"
+								>
+									{{ field.label || field.name }}
+								</th>
+							}
+							<th
+								class="px-4 py-4 text-left border-b border-border bg-muted font-semibold text-muted-foreground text-sm"
+							>
+								Actions
+							</th>
+						</tr>
+					</thead>
+					<tbody>
+						@for (doc of documents(); track doc['id']) {
+							<tr class="hover:bg-muted/50 transition-colors">
+								<td class="px-4 py-4 border-b border-border">{{ doc['id'] }}</td>
+								@for (field of displayFields(); track field.name) {
+									<td class="px-4 py-4 border-b border-border">{{ doc[field.name] || '-' }}</td>
+								}
+								<td class="px-4 py-4 border-b border-border">
+									<a [routerLink]="[doc['id']]" class="text-primary no-underline hover:underline">
+										Edit
+									</a>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			}
 		</div>
 	`,
-	styles: [
-		`
-			.mcms-collection-list {
-				max-width: 1200px;
-			}
-
-			.mcms-page-header {
-				display: flex;
-				justify-content: space-between;
-				align-items: flex-start;
-				margin-bottom: 2rem;
-			}
-
-			.mcms-page-header h1 {
-				font-size: 2rem;
-				font-weight: 700;
-				color: #111827;
-				margin: 0;
-			}
-
-			.mcms-subtitle {
-				color: #6b7280;
-				margin: 0.5rem 0 0 0;
-			}
-
-			.mcms-btn {
-				display: inline-flex;
-				align-items: center;
-				padding: 0.625rem 1.25rem;
-				border-radius: 0.375rem;
-				font-weight: 500;
-				text-decoration: none;
-				cursor: pointer;
-				transition: all 0.15s;
-			}
-
-			.mcms-btn-primary {
-				background-color: #3b82f6;
-				color: white;
-			}
-
-			.mcms-btn-primary:hover {
-				background-color: #2563eb;
-			}
-
-			.mcms-btn-secondary {
-				background-color: #e5e7eb;
-				color: #374151;
-			}
-
-			.mcms-btn-secondary:hover {
-				background-color: #d1d5db;
-			}
-
-			.mcms-list-container {
-				background: white;
-				border-radius: 0.5rem;
-				border: 1px solid #e5e7eb;
-				overflow: hidden;
-			}
-
-			.mcms-table {
-				width: 100%;
-				border-collapse: collapse;
-			}
-
-			.mcms-table th,
-			.mcms-table td {
-				padding: 1rem;
-				text-align: left;
-				border-bottom: 1px solid #e5e7eb;
-			}
-
-			.mcms-table th {
-				background-color: #f9fafb;
-				font-weight: 600;
-				color: #374151;
-				font-size: 0.875rem;
-			}
-
-			.mcms-table tbody tr:hover {
-				background-color: #f9fafb;
-			}
-
-			.mcms-link {
-				color: #3b82f6;
-				text-decoration: none;
-			}
-
-			.mcms-link:hover {
-				text-decoration: underline;
-			}
-
-			.mcms-loading,
-			.mcms-empty-state {
-				padding: 3rem;
-				text-align: center;
-				color: #6b7280;
-			}
-
-			.mcms-empty-state .mcms-btn {
-				margin-top: 1rem;
-			}
-		`,
-	],
 })
 export class CollectionListPage {
 	private readonly route = inject(ActivatedRoute);

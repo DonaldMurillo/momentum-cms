@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, json as jsonParser } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { createMomentumHandlers, type MomentumRequest } from '@momentum-cms/server-core';
 import type { MomentumConfig, ResolvedMomentumConfig } from '@momentum-cms/core';
@@ -20,28 +20,8 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	const router = Router();
 	const handlers = createMomentumHandlers(config);
 
-	// JSON body parser middleware
-	router.use((req: Request, _res: Response, next: NextFunction) => {
-		if (req.headers['content-type']?.includes('application/json')) {
-			let data = '';
-			req.on('data', (chunk: Buffer) => {
-				data += chunk.toString();
-			});
-			req.on('end', () => {
-				try {
-					req.body = data ? JSON.parse(data) : {};
-				} catch {
-					req.body = {};
-				}
-				next();
-			});
-		} else if (req.body === undefined) {
-			req.body = {};
-			next();
-		} else {
-			next();
-		}
-	});
+	// Use Express's built-in JSON body parser
+	router.use(jsonParser());
 
 	// CORS middleware
 	router.use((_req: Request, res: Response, next: NextFunction) => {

@@ -34,7 +34,7 @@ nx run-many -t lint         # Lint all projects
 
 ## Code Style
 
-- **Standalone components only** (no NgModules for components)
+- **Standalone components** (default in Angular 21 - don't add `standalone: true`)
 - **Signals for state**: `signal()`, `computed()`, `effect()`
 - **Signal inputs/outputs**: `input()`, `input.required()`, `output()`
 - **inject() function**, not constructor injection
@@ -42,6 +42,106 @@ nx run-many -t lint         # Lint all projects
 - **Control flow**: `@if`, `@for`, `@switch` (not *ngIf/*ngFor)
 - **kebab-case** filenames, **PascalCase** classes
 - **Barrel exports** via index.ts
+
+## UI Component Patterns
+
+### No Wrapping Divs
+
+Angular components create a host element. Use `host` property for Tailwind styles:
+
+```typescript
+@Component({
+  selector: 'mcms-button',
+  host: { class: 'inline-flex items-center gap-2' }, // Styles on host
+  template: `<ng-content />`, // Content projected directly
+})
+```
+
+NOT:
+
+```typescript
+template: `<div class="inline-flex items-center gap-2"><ng-content /></div>`, // Unnecessary wrapper
+```
+
+### Class Configuration
+
+Accept `class` input for Tailwind customization:
+
+```typescript
+@Component({
+	selector: 'button[mcms-button]',
+	host: { '[class]': 'hostClasses()' },
+	template: `<ng-content />`,
+	changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class McmsButtonComponent {
+	readonly variant = input<'primary' | 'secondary'>('primary');
+	readonly class = input(''); // Custom class override
+
+	readonly hostClasses = computed(
+		() => `${baseClasses} ${variantClasses[this.variant()]} ${this.class()}`,
+	);
+}
+```
+
+### Theme Service
+
+Use `McmsThemeService` for dark mode:
+
+```typescript
+import { McmsThemeService } from '@momentum-cms/admin';
+
+@Component({...})
+export class MyComponent {
+  private readonly theme = inject(McmsThemeService);
+
+  toggleDarkMode(): void {
+    this.theme.toggleTheme(); // Toggles between light/dark
+  }
+
+  // Reactive signals
+  readonly isDark = this.theme.isDark; // computed signal
+  readonly currentTheme = this.theme.theme; // 'light' | 'dark' | 'system'
+}
+```
+
+### App Tailwind Setup
+
+Apps using the admin library must:
+
+1. **tailwind.config.js** - Use the admin preset and include library sources:
+
+```javascript
+const adminPreset = require('../../libs/admin/tailwind.preset');
+
+module.exports = {
+	presets: [adminPreset],
+	content: [
+		join(__dirname, 'src/**/!(*.stories|*.spec).{ts,html}'),
+		join(__dirname, '../../libs/admin/src/**/*.{ts,html}'), // Include admin lib
+		...createGlobPatternsForDependencies(__dirname),
+	],
+};
+```
+
+2. **styles.css** - Include CSS variables inline (Angular's esbuild can't resolve library CSS imports):
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+	:root {
+		--mcms-background: 0 0% 100%;
+		--mcms-foreground: 222 47% 11%;
+		/* ... copy from libs/admin/src/styles/theme.css */
+	}
+	.dark {
+		/* dark mode variables */
+	}
+}
+```
 
 ## Libraries (@momentum-cms/\*)
 
@@ -93,6 +193,7 @@ npx drizzle-kit push               # Direct push (dev only)
 
 ## Code Quality (Enforced by ESLint)
 
+- **NO `standalone: true`** - default in Angular 21, redundant
 - **NO `@Input()`** - use `input()` or `input.required()`
 - **NO `@Output()`** - use `output()`
 - **NO `@ViewChild()`** - use `viewChild()` or `viewChild.required()`
@@ -114,5 +215,4 @@ npx drizzle-kit push               # Direct push (dev only)
 Pre-commit runs:
 
 1. lint-staged (eslint --fix + prettier)
-2. tsc --noEmit
-3. nx affected -t build
+2. nx affected -t build (includes type checking)

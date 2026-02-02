@@ -61,6 +61,9 @@ export default [
 			// Ban legacy Angular decorators
 			'local/no-legacy-angular-decorators': 'error',
 
+			// Ban redundant standalone: true (default in Angular 21+)
+			'local/no-standalone-true': 'error',
+
 			// No console in production code
 			'no-console': ['error', { allow: ['warn', 'error'] }],
 		},

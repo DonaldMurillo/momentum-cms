@@ -2,4 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Momentum CMS Admin Theme - CSS Variables */
+@layer base {
+	:root {
+		--mcms-background: 0 0% 100%;
+		--mcms-foreground: 222 47% 11%;
+		--mcms-card: 0 0% 100%;
+		--mcms-card-foreground: 222 47% 11%;
+		--mcms-primary: 221 83% 53%;
+		--mcms-primary-foreground: 210 40% 98%;
+		--mcms-secondary: 210 40% 96%;
+		--mcms-secondary-foreground: 222 47% 11%;
+		--mcms-muted: 210 40% 96%;
+		--mcms-muted-foreground: 215 16% 47%;
+		--mcms-destructive: 0 84% 60%;
+		--mcms-destructive-foreground: 210 40% 98%;
+		--mcms-border: 214 32% 91%;
+		--mcms-input: 214 32% 91%;
+		--mcms-ring: 221 83% 53%;
+		--mcms-sidebar: 222 47% 11%;
+		--mcms-sidebar-foreground: 210 40% 98%;
+		--mcms-sidebar-accent: 217 33% 17%;
+		--mcms-sidebar-border: 217 33% 17%;
+	}
+
+	.dark {
+		--mcms-background: 222 47% 11%;
+		--mcms-foreground: 210 40% 98%;
+		--mcms-card: 217 33% 17%;
+		--mcms-card-foreground: 210 40% 98%;
+		--mcms-primary: 217 91% 60%;
+		--mcms-primary-foreground: 222 47% 11%;
+		--mcms-secondary: 217 33% 17%;
+		--mcms-secondary-foreground: 210 40% 98%;
+		--mcms-muted: 217 33% 17%;
+		--mcms-muted-foreground: 215 20% 65%;
+		--mcms-destructive: 0 62% 50%;
+		--mcms-destructive-foreground: 210 40% 98%;
+		--mcms-border: 217 33% 17%;
+		--mcms-input: 217 33% 17%;
+		--mcms-ring: 224 76% 48%;
+		--mcms-sidebar: 224 71% 4%;
+		--mcms-sidebar-foreground: 210 40% 98%;
+		--mcms-sidebar-accent: 217 33% 17%;
+		--mcms-sidebar-border: 217 33% 17%;
+	}
+}
+
 /* You can add global styles to this file, and also import other style files */
