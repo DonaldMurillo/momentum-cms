@@ -14,7 +14,15 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
-    "paths": {}
+    "paths": {
+      "@momentum-cms/core": ["libs/core/src/index.ts"],
+      "@momentum-cms/server-core": ["libs/server-core/src/index.ts"],
+      "@momentum-cms/server-express": ["libs/server-express/src/index.ts"],
+      "@momentum-cms/server-analog": ["libs/server-analog/src/index.ts"],
+      "@momentum-cms/admin": ["libs/admin/src/index.ts"],
+      "@momentum-cms/db-drizzle": ["libs/db-drizzle/src/index.ts"],
+      "@momentum-cms/auth": ["libs/auth/src/index.ts"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }
