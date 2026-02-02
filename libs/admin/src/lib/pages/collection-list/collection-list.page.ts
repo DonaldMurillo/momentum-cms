@@ -77,15 +77,18 @@ import { MomentumApiService } from '../../services/api.service';
 							</th>
 						</tr>
 					</thead>
-					<tbody>
+					<tbody class="text-foreground">
 						@for (doc of documents(); track doc['id']) {
 							<tr class="hover:bg-muted/50 transition-colors">
-								<td class="px-4 py-4 border-b border-border">{{ doc['id'] }}</td>
+								<td class="px-4 py-4 border-b border-border text-sm">{{ doc['id'] }}</td>
 								@for (field of displayFields(); track field.name) {
 									<td class="px-4 py-4 border-b border-border">{{ doc[field.name] || '-' }}</td>
 								}
 								<td class="px-4 py-4 border-b border-border">
-									<a [routerLink]="[doc['id']]" class="text-primary no-underline hover:underline">
+									<a
+										[routerLink]="[doc['id']]"
+										class="text-primary font-medium no-underline hover:underline"
+									>
 										Edit
 									</a>
 								</td>

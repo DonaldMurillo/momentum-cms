@@ -14,6 +14,7 @@
 		],
 		"sharedGlobals": []
 	},
+	"parallel": 3,
 	"targetDefaults": {
 		"@angular/build:application": {
 			"cache": true,
@@ -46,6 +47,22 @@
 		"@nx/angular:unit-test": {
 			"cache": true,
 			"inputs": ["default", "^production"]
+		},
+		"e2e": {
+			"cache": true,
+			"inputs": ["default", "^production"],
+			"dependsOn": ["^build"]
+		},
+		"build": {
+			"dependsOn": ["^build"],
+			"cache": true
+		},
+		"test": {
+			"cache": true,
+			"inputs": ["default", "^production"]
+		},
+		"lint": {
+			"cache": true
 		}
 	},
 	"plugins": [
@@ -86,6 +103,14 @@
 	"release": {
 		"version": {
 			"preVersionCommand": "npx nx run-many -t build"
+		}
+	},
+	"tasksRunnerOptions": {
+		"default": {
+			"runner": "nx/tasks-runners/default",
+			"options": {
+				"cacheableOperations": ["build", "lint", "test", "e2e"]
+			}
 		}
 	}
 }

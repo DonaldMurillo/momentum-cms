@@ -5,28 +5,36 @@
 /* Momentum CMS Admin Theme - CSS Variables */
 @layer base {
 	:root {
+		--mcms-radius: 0.5rem;
 		--mcms-background: 0 0% 100%;
 		--mcms-foreground: 222 47% 11%;
 		--mcms-card: 0 0% 100%;
 		--mcms-card-foreground: 222 47% 11%;
-		--mcms-primary: 221 83% 53%;
+		--mcms-primary: 221 83% 48%; /* Darkened from 53% for better contrast */
 		--mcms-primary-foreground: 210 40% 98%;
 		--mcms-secondary: 210 40% 96%;
 		--mcms-secondary-foreground: 222 47% 11%;
 		--mcms-muted: 210 40% 96%;
-		--mcms-muted-foreground: 215 16% 47%;
+		--mcms-muted-foreground: 215 16% 40%; /* Darkened from 47% for better contrast */
+		--mcms-accent: 210 40% 96%;
+		--mcms-accent-foreground: 222 47% 11%;
 		--mcms-destructive: 0 84% 60%;
 		--mcms-destructive-foreground: 210 40% 98%;
-		--mcms-border: 214 32% 91%;
-		--mcms-input: 214 32% 91%;
-		--mcms-ring: 221 83% 53%;
-		--mcms-sidebar: 222 47% 11%;
-		--mcms-sidebar-foreground: 210 40% 98%;
-		--mcms-sidebar-accent: 217 33% 17%;
-		--mcms-sidebar-border: 217 33% 17%;
+		--mcms-border: 214 32% 85%;
+		--mcms-input: 214 32% 85%;
+		--mcms-ring: 221 83% 48%; /* Match primary color */
+		--mcms-sidebar: 210 40% 98%; /* Light sidebar in light mode */
+		--mcms-sidebar-foreground: 222 47% 11%;
+		--mcms-sidebar-primary: 221 83% 48%;
+		--mcms-sidebar-primary-foreground: 210 40% 98%;
+		--mcms-sidebar-accent: 210 40% 94%;
+		--mcms-sidebar-accent-foreground: 222 47% 11%;
+		--mcms-sidebar-border: 214 32% 85%;
+		--mcms-sidebar-ring: 221 83% 48%;
 	}
 
 	.dark {
+		--mcms-radius: 0.5rem;
 		--mcms-background: 222 47% 11%;
 		--mcms-foreground: 210 40% 98%;
 		--mcms-card: 217 33% 17%;
@@ -37,6 +45,8 @@
 		--mcms-secondary-foreground: 210 40% 98%;
 		--mcms-muted: 217 33% 17%;
 		--mcms-muted-foreground: 215 20% 65%;
+		--mcms-accent: 217 33% 17%;
+		--mcms-accent-foreground: 210 40% 98%;
 		--mcms-destructive: 0 62% 50%;
 		--mcms-destructive-foreground: 210 40% 98%;
 		--mcms-border: 217 33% 17%;
@@ -44,9 +54,23 @@
 		--mcms-ring: 224 76% 48%;
 		--mcms-sidebar: 224 71% 4%;
 		--mcms-sidebar-foreground: 210 40% 98%;
+		--mcms-sidebar-primary: 217 91% 60%;
+		--mcms-sidebar-primary-foreground: 222 47% 11%;
 		--mcms-sidebar-accent: 217 33% 17%;
+		--mcms-sidebar-accent-foreground: 210 40% 98%;
 		--mcms-sidebar-border: 217 33% 17%;
+		--mcms-sidebar-ring: 224 76% 48%;
 	}
 }
 
-/* You can add global styles to this file, and also import other style files */
+/* Apply base styles */
+@layer base {
+	* {
+		border-color: hsl(var(--mcms-border));
+	}
+
+	body {
+		background-color: hsl(var(--mcms-background));
+		color: hsl(var(--mcms-foreground));
+	}
+}

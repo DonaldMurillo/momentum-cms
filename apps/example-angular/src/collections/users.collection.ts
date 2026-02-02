@@ -9,6 +9,7 @@ export const Users = defineCollection({
 	fields: [
 		text('name', { required: true, label: 'Name' }),
 		email('email', { required: true, label: 'Email' }),
+		text('authId', { label: 'Auth ID' }), // Links to Better Auth user.id
 		select('role', {
 			label: 'Role',
 			required: true,

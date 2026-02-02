@@ -21,6 +21,9 @@
 import type { Routes, Route } from '@angular/router';
 import type { Type } from '@angular/core';
 import type { CollectionConfig } from '@momentum-cms/core';
+import { authGuard } from '../guards/auth.guard';
+import { guestGuard } from '../guards/guest.guard';
+import { setupGuard } from '../guards/setup.guard';
 
 export interface MomentumAdminBranding {
 	/** Logo URL */
@@ -38,6 +41,8 @@ export interface MomentumAdminOptions {
 	collections: CollectionConfig[];
 	/** Optional branding customization */
 	branding?: MomentumAdminBranding;
+	/** Whether to include auth routes (login, setup). Defaults to true */
+	includeAuthRoutes?: boolean;
 }
 
 export interface MomentumAdminRouteData {
@@ -53,17 +58,42 @@ export interface MomentumAdminRouteData {
 export function momentumAdminRoutes(options: MomentumAdminOptions): Routes {
 	// Remove leading slash from basePath
 	const basePath = options.basePath.replace(/^\//, '');
+	const includeAuthRoutes = options.includeAuthRoutes ?? true;
 
 	const routeData: MomentumAdminRouteData = {
 		collections: options.collections,
 		branding: options.branding,
 	};
 
+	const routes: Routes = [];
+
+	// Auth routes (login, setup) - outside the admin shell
+	if (includeAuthRoutes) {
+		routes.push(
+			// Login page - only for unauthenticated users
+			{
+				path: `${basePath}/login`,
+				loadComponent: (): Promise<Type<unknown>> =>
+					import('../pages/login/login.page').then((m) => m.LoginPage),
+				canActivate: [guestGuard],
+			},
+			// Setup page - only when no users exist
+			{
+				path: `${basePath}/setup`,
+				loadComponent: (): Promise<Type<unknown>> =>
+					import('../pages/setup/setup.page').then((m) => m.SetupPage),
+				canActivate: [setupGuard],
+			},
+		);
+	}
+
+	// Main admin route with shell - protected by authGuard
 	const adminRoute: Route = {
 		path: basePath,
 		loadComponent: (): Promise<Type<unknown>> =>
 			import('../components/shell/admin-shell.component').then((m) => m.AdminShellComponent),
 		data: routeData,
+		canActivate: [authGuard],
 		children: [
 			// Dashboard (default route)
 			{
@@ -92,5 +122,7 @@ export function momentumAdminRoutes(options: MomentumAdminOptions): Routes {
 		],
 	};
 
-	return [adminRoute];
+	routes.push(adminRoute);
+
+	return routes;
 }

@@ -4,5 +4,8 @@
 	"type": "commonjs",
 	"main": "./index.cjs",
 	"types": "./index.d.ts",
-	"dependencies": {}
+	"peerDependencies": {
+		"better-auth": "^1.4.0",
+		"better-sqlite3": "^12.0.0"
+	}
 }

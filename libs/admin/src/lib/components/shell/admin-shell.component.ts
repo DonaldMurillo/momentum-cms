@@ -1,8 +1,11 @@
 import { Component, ChangeDetectionStrategy, inject, computed } from '@angular/core';
-import { RouterOutlet, RouterLink, ActivatedRoute } from '@angular/router';
+import { RouterOutlet, RouterLink, ActivatedRoute, Router } from '@angular/router';
 import type { CollectionConfig } from '@momentum-cms/core';
+import { Button } from '@momentum-cms/ui';
 import type { MomentumAdminBranding } from '../../routes/momentum-admin-routes';
 import { getCollectionsFromRouteData, getBrandingFromRouteData } from '../../utils/route-data';
+import { MomentumAuthService } from '../../services/auth.service';
+import { McmsThemeService } from '../../ui/theme/theme.service';
 
 /**
  * Admin Shell Component
@@ -12,7 +15,7 @@ import { getCollectionsFromRouteData, getBrandingFromRouteData } from '../../uti
  */
 @Component({
 	selector: 'mcms-admin-shell',
-	imports: [RouterOutlet, RouterLink],
+	imports: [RouterOutlet, RouterLink, Button],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'flex min-h-screen bg-background' },
 	template: `
@@ -47,6 +50,41 @@ import { getCollectionsFromRouteData, getBrandingFromRouteData } from '../../uti
 					}
 				</div>
 			</nav>
+
+			<!-- User section -->
+			@if (auth.user(); as user) {
+				<div class="p-4 border-t border-sidebar-border">
+					<div class="flex items-center gap-3 mb-3">
+						<div
+							class="w-9 h-9 rounded-full bg-sidebar-accent flex items-center justify-center text-sm font-medium"
+						>
+							{{ userInitials() }}
+						</div>
+						<div class="flex-1 min-w-0">
+							<p class="text-sm font-medium truncate">{{ user.name }}</p>
+							<p class="text-xs text-sidebar-foreground/60 truncate">{{ user.email }}</p>
+						</div>
+					</div>
+					<button
+						mcms-button
+						variant="ghost"
+						size="sm"
+						class="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground mb-1"
+						(click)="toggleTheme()"
+					>
+						{{ theme.isDark() ? 'Light mode' : 'Dark mode' }}
+					</button>
+					<button
+						mcms-button
+						variant="ghost"
+						size="sm"
+						class="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground"
+						(click)="onSignOut()"
+					>
+						Sign out
+					</button>
+				</div>
+			}
 		</aside>
 
 		<!-- Main Content -->
@@ -59,6 +97,9 @@ import { getCollectionsFromRouteData, getBrandingFromRouteData } from '../../uti
 })
 export class AdminShellComponent {
 	private readonly route = inject(ActivatedRoute);
+	private readonly router = inject(Router);
+	readonly auth = inject(MomentumAuthService);
+	readonly theme = inject(McmsThemeService);
 
 	readonly collections = computed((): CollectionConfig[] => {
 		return getCollectionsFromRouteData(this.route.snapshot.data);
@@ -67,4 +108,24 @@ export class AdminShellComponent {
 	readonly branding = computed((): MomentumAdminBranding | undefined => {
 		return getBrandingFromRouteData(this.route.snapshot.data);
 	});
+
+	readonly userInitials = computed((): string => {
+		const user = this.auth.user();
+		if (!user?.name) return '?';
+		return user.name
+			.split(' ')
+			.map((n) => n[0])
+			.join('')
+			.toUpperCase()
+			.slice(0, 2);
+	});
+
+	toggleTheme(): void {
+		this.theme.toggleTheme();
+	}
+
+	async onSignOut(): Promise<void> {
+		await this.auth.signOut();
+		await this.router.navigate(['/admin/login']);
+	}
 }

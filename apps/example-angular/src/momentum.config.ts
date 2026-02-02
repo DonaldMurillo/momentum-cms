@@ -1,5 +1,5 @@
 import { defineMomentumConfig } from '@momentum-cms/core';
-import { sqliteAdapter } from '@momentum-cms/db-drizzle';
+import { postgresAdapter } from '@momentum-cms/db-drizzle';
 import { Posts, Users } from './collections';
 
 /**
@@ -10,8 +10,9 @@ import { Posts, Users } from './collections';
  */
 export default defineMomentumConfig({
 	db: {
-		adapter: sqliteAdapter({
-			filename: './data/momentum.db',
+		adapter: postgresAdapter({
+			connectionString:
+				process.env['DATABASE_URL'] ?? 'postgresql://postgres:postgres@localhost:5433/momentum',
 		}),
 	},
 	collections: [Posts, Users],

@@ -3,13 +3,14 @@ import { nxE2EPreset } from '@nx/playwright/preset';
 import { workspaceRoot } from '@nx/devkit';
 
 // For CI, you may want to set BASE_URL to the deployed application.
-const baseURL = process.env['BASE_URL'] || 'http://localhost:4200';
+const baseURL = process.env['BASE_URL'] || 'http://localhost:4000';
 
 /**
  * Strict Playwright configuration for E2E testing.
  * - No mocks allowed - tests run against real server
  * - Strict timeouts to catch slow operations
  * - CI-aware retries and parallelization
+ * - Global setup creates admin user before tests
  *
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -30,6 +31,9 @@ export default defineConfig({
 
 	// Reporter configuration
 	reporter: process.env['CI'] ? 'github' : 'html',
+
+	// Global setup runs once before all tests - creates admin user
+	globalSetup: require.resolve('./src/global-setup'),
 
 	/* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
 	use: {
@@ -57,39 +61,42 @@ export default defineConfig({
 		timeout: 5000,
 	},
 
-	/* Run your local dev server before starting the tests - NO MOCKS */
+	/* Run the production server before starting the tests - NO MOCKS */
 	webServer: {
-		command: 'npx nx run example-angular:serve',
-		url: 'http://localhost:4200',
+		command:
+			'npx nx build example-angular --configuration=production && node dist/apps/example-angular/server/server.mjs',
+		url: 'http://localhost:4000',
 		reuseExistingServer: !process.env['CI'],
 		cwd: workspaceRoot,
-		timeout: 120000,
+		timeout: 180000,
 	},
 
 	projects: [
+		// Auth tests run without storage state to test login/logout flows
 		{
-			name: 'chromium',
-			use: { ...devices['Desktop Chrome'] },
+			name: 'auth-tests',
+			testMatch: /auth\.spec\.ts$/,
+			use: {
+				...devices['Desktop Chrome'],
+				// No storage state - tests unauthenticated behavior
+			},
 		},
-
-		// Uncomment to enable additional browsers (requires: npx playwright install)
-		// {
-		// 	name: 'firefox',
-		// 	use: { ...devices['Desktop Firefox'] },
-		// },
-		// {
-		// 	name: 'webkit',
-		// 	use: { ...devices['Desktop Safari'] },
-		// },
-
-		// Mobile browsers for responsive testing
-		// {
-		// 	name: 'mobile-chrome',
-		// 	use: { ...devices['Pixel 5'] },
-		// },
-		// {
-		// 	name: 'mobile-safari',
-		// 	use: { ...devices['iPhone 12'] },
-		// },
+		// General tests (example.spec.ts, api.spec.ts) run without storage state
+		{
+			name: 'general-tests',
+			testMatch: /(example|api)\.spec\.ts$/,
+			use: {
+				...devices['Desktop Chrome'],
+				// No storage state - tests handle auth as needed
+			},
+		},
+		// Authenticated tests - auth fixture loads storage state from global setup
+		{
+			name: 'authenticated-tests',
+			testMatch: /(admin-dashboard|collection-list|collection-edit)\.spec\.ts$/,
+			use: {
+				...devices['Desktop Chrome'],
+			},
+		},
 	],
 });

@@ -1,92 +1,122 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/auth.fixture';
+
+/**
+ * Collection List E2E Tests
+ *
+ * Tests require authentication and use the auth fixture
+ * to ensure the user is logged in before each test.
+ */
 
 test.describe('Collection List Page - Posts', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.goto('/admin/collections/posts');
-	});
+	test('should display collection heading', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/posts');
+		await authenticatedPage.waitForLoadState('networkidle');
 
-	test('should display collection heading', async ({ page }) => {
-		const heading = page.getByRole('heading', { name: 'Posts' });
+		const heading = authenticatedPage.getByRole('heading', { name: 'Posts' });
 		await expect(heading).toBeVisible();
 	});
 
-	test('should display management subtitle', async ({ page }) => {
-		const subtitle = page.getByText(/Manage your posts/i);
+	test('should display management subtitle', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/posts');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		const subtitle = authenticatedPage.getByText(/Manage your posts/i);
 		await expect(subtitle).toBeVisible();
 	});
 
-	test('should have Create New button', async ({ page }) => {
-		const createButton = page.getByRole('link', { name: /Create New/i });
+	test('should have Create New button', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/posts');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		const createButton = authenticatedPage.getByRole('link', { name: /Create New/i });
 		await expect(createButton).toBeVisible();
 	});
 
-	test('should navigate to create form when clicking Create New', async ({ page }) => {
-		const createButton = page.getByRole('link', { name: /Create New/i });
+	test('should navigate to create form when clicking Create New', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/posts');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		const createButton = authenticatedPage.getByRole('link', { name: /Create New/i });
 		await createButton.click();
 
-		await expect(page).toHaveURL(/\/admin\/collections\/posts\/create/);
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/posts\/create/);
 	});
 
-	test('should display table with column headers', async ({ page }) => {
+	test('should display table with column headers', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/posts');
+		await authenticatedPage.waitForLoadState('networkidle');
+
 		// Check for table headers
-		await expect(page.getByRole('columnheader', { name: 'ID' })).toBeVisible();
-		await expect(page.getByRole('columnheader', { name: 'Title' })).toBeVisible();
-		await expect(page.getByRole('columnheader', { name: 'Actions' })).toBeVisible();
+		await expect(authenticatedPage.getByRole('columnheader', { name: 'ID' })).toBeVisible();
+		await expect(authenticatedPage.getByRole('columnheader', { name: 'Title' })).toBeVisible();
+		await expect(authenticatedPage.getByRole('columnheader', { name: 'Actions' })).toBeVisible();
 	});
 });
 
 test.describe('Collection List Page - Users', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.goto('/admin/collections/users');
-	});
+	test('should display collection heading', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/users');
+		await authenticatedPage.waitForLoadState('networkidle');
 
-	test('should display collection heading', async ({ page }) => {
-		const heading = page.getByRole('heading', { name: 'Users' });
+		const heading = authenticatedPage.getByRole('heading', { name: 'Users' });
 		await expect(heading).toBeVisible();
 	});
 
-	test('should display management subtitle', async ({ page }) => {
-		const subtitle = page.getByText(/Manage your users/i);
+	test('should display management subtitle', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/users');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		const subtitle = authenticatedPage.getByText(/Manage your users/i);
 		await expect(subtitle).toBeVisible();
 	});
 
-	test('should have Create New button', async ({ page }) => {
-		const createButton = page.getByRole('link', { name: /Create New/i });
+	test('should have Create New button', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/users');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		const createButton = authenticatedPage.getByRole('link', { name: /Create New/i });
 		await expect(createButton).toBeVisible();
 	});
 
-	test('should navigate to create form when clicking Create New', async ({ page }) => {
-		const createButton = page.getByRole('link', { name: /Create New/i });
+	test('should navigate to create form when clicking Create New', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/users');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		const createButton = authenticatedPage.getByRole('link', { name: /Create New/i });
 		await createButton.click();
 
-		await expect(page).toHaveURL(/\/admin\/collections\/users\/create/);
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users\/create/);
 	});
 });
 
 test.describe('Collection List Page - Navigation', () => {
-	test('should maintain sidebar visibility on collection list', async ({ page }) => {
-		await page.goto('/admin/collections/posts');
+	test('should maintain sidebar visibility on collection list', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/posts');
+		await authenticatedPage.waitForLoadState('networkidle');
 
 		// Sidebar should show branding
-		const brandingTitle = page.getByText('Momentum CMS');
+		const brandingTitle = authenticatedPage.getByText('Momentum CMS');
 		await expect(brandingTitle).toBeVisible();
 	});
 
-	test('should be able to switch between collections via sidebar', async ({ page }) => {
-		await page.goto('/admin/collections/posts');
+	test('should be able to switch between collections via sidebar', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin/collections/posts');
+		await authenticatedPage.waitForLoadState('networkidle');
 
-		const nav = page.getByRole('navigation');
+		const nav = authenticatedPage.getByRole('navigation');
 
 		// Navigate to Users via sidebar
 		await nav.getByRole('link', { name: 'Users' }).click();
 
-		await expect(page).toHaveURL(/\/admin\/collections\/users/);
-		await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible();
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users/);
+		await expect(authenticatedPage.getByRole('heading', { name: 'Users' })).toBeVisible();
 
 		// Navigate back to Posts via sidebar
 		await nav.getByRole('link', { name: 'Posts' }).click();
 
-		await expect(page).toHaveURL(/\/admin\/collections\/posts/);
-		await expect(page.getByRole('heading', { name: 'Posts' })).toBeVisible();
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/posts/);
+		await expect(authenticatedPage.getByRole('heading', { name: 'Posts' })).toBeVisible();
 	});
 });

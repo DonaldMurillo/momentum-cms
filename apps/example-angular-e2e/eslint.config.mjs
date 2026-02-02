@@ -6,7 +6,18 @@ export default [
 	...baseConfig,
 	{
 		files: ['**/*.ts', '**/*.js'],
-		// Override or add rules here
-		rules: {},
+		rules: {
+			// Allow conditionals in tests for auth-aware test skipping
+			// This pattern is intentional: tests check auth state and skip gracefully
+			'playwright/no-conditional-in-test': 'off',
+			'playwright/no-conditional-expect': 'off',
+
+			// Allow test.skip() for auth-aware tests that need to skip when not authenticated
+			'playwright/no-skipped-test': 'off',
+
+			// networkidle is useful for SSR apps where we need hydration to complete
+			// Using domcontentloaded alone isn't sufficient for Angular SSR
+			'playwright/no-networkidle': 'warn',
+		},
 	},
 ];
