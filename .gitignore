@@ -50,4 +50,13 @@ __screenshots__/
 **/data/*.db-journal
 *.sqlite
 *.sqlite-journal
+
+# Playwright / E2E testing
 playwright-report
+playwright/
+test-results/
+**/playwright/
+**/*-debug.png
+
+# Data directory (seeded/local data)
+data/
