@@ -61,3 +61,6 @@ test-results/
 
 # Data directory (seeded/local data)
 data/
+
+
+storybook-static

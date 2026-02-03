@@ -1,0 +1,17 @@
+{
+	"name": "ui-e2e",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/ui-e2e/src",
+	"projectType": "application",
+	"tags": ["e2e"],
+	"implicitDependencies": ["ui"],
+	"targets": {
+		"e2e": {
+			"executor": "@nx/playwright:playwright",
+			"outputs": ["{workspaceRoot}/dist/.playwright/libs/ui-e2e"],
+			"options": {
+				"config": "libs/ui-e2e/playwright.config.ts"
+			}
+		}
+	}
+}
