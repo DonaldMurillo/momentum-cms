@@ -1,0 +1,103 @@
+import { defineConfig, devices } from '@playwright/test';
+import { nxE2EPreset } from '@nx/playwright/preset';
+import { workspaceRoot } from '@nx/devkit';
+
+// For CI, you may want to set BASE_URL to the deployed application.
+const baseURL = process.env['BASE_URL'] || 'http://localhost:4001';
+
+/**
+ * Playwright configuration for Seeding E2E Tests.
+ *
+ * - Serial execution for database state consistency
+ * - Single worker to prevent race conditions
+ * - Global setup resets database and waits for seeds
+ * - Uses production build for realistic testing
+ *
+ * See https://playwright.dev/docs/test-configuration.
+ */
+export default defineConfig({
+	...nxE2EPreset(__filename, { testDir: './src' }),
+
+	// Fail the build if test.only is left in the source code on CI
+	forbidOnly: !!process.env['CI'],
+
+	// Retry failed tests on CI only
+	retries: process.env['CI'] ? 2 : 0,
+
+	// Run tests serially for database state consistency
+	fullyParallel: false,
+
+	// Single worker to prevent race conditions with shared database
+	workers: 1,
+
+	// Reporter configuration
+	reporter: process.env['CI'] ? 'github' : 'html',
+
+	// Global setup resets database before tests
+	globalSetup: require.resolve('./src/global-setup'),
+
+	use: {
+		baseURL,
+
+		// Strict timeouts - catch slow operations early
+		actionTimeout: 10000,
+		navigationTimeout: 30000,
+
+		// Collect trace when retrying the failed test
+		trace: 'on-first-retry',
+
+		// Screenshot on failure
+		screenshot: 'only-on-failure',
+
+		// Video on retry
+		video: 'on-first-retry',
+	},
+
+	// Global timeout for each test
+	timeout: 30000,
+
+	// Expect timeout
+	expect: {
+		timeout: 5000,
+	},
+
+	// Run production build before tests
+	webServer: {
+		command:
+			'npx nx build seeding-test-app --configuration=production && node dist/seeding-test-app/server/server.mjs',
+		url: 'http://localhost:4001',
+		reuseExistingServer: !process.env['CI'],
+		cwd: workspaceRoot,
+		timeout: 180000,
+	},
+
+	projects: [
+		// Basic seeding tests - run first
+		{
+			name: 'seeding-basic',
+			testMatch: /seeding-basic\.spec\.ts$/,
+			use: { ...devices['Desktop Chrome'] },
+		},
+		// Idempotency tests - depend on basic tests
+		{
+			name: 'seeding-idempotency',
+			testMatch: /seeding-idempotency\.spec\.ts$/,
+			use: { ...devices['Desktop Chrome'] },
+			dependencies: ['seeding-basic'],
+		},
+		// Custom seed function tests
+		{
+			name: 'seeding-custom',
+			testMatch: /seeding-custom\.spec\.ts$/,
+			use: { ...devices['Desktop Chrome'] },
+			dependencies: ['seeding-idempotency'],
+		},
+		// Seed tracking table tests - run last
+		{
+			name: 'seeding-tracking',
+			testMatch: /seeding-tracking\.spec\.ts$/,
+			use: { ...devices['Desktop Chrome'] },
+			dependencies: ['seeding-custom'],
+		},
+	],
+});

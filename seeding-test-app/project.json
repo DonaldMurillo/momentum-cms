@@ -1,0 +1,87 @@
+{
+	"name": "seeding-test-app",
+	"$schema": "../node_modules/nx/schemas/project-schema.json",
+	"projectType": "application",
+	"prefix": "app",
+	"sourceRoot": "seeding-test-app/src",
+	"tags": [],
+	"targets": {
+		"build": {
+			"executor": "@angular/build:application",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/seeding-test-app",
+				"browser": "seeding-test-app/src/main.ts",
+				"tsConfig": "seeding-test-app/tsconfig.app.json",
+				"assets": [
+					{
+						"glob": "**/*",
+						"input": "seeding-test-app/public"
+					}
+				],
+				"styles": ["seeding-test-app/src/styles.css"],
+				"server": "seeding-test-app/src/main.server.ts",
+				"ssr": {
+					"entry": "seeding-test-app/src/server.ts"
+				},
+				"outputMode": "server"
+			},
+			"configurations": {
+				"production": {
+					"budgets": [
+						{
+							"type": "initial",
+							"maximumWarning": "500kb",
+							"maximumError": "1mb"
+						},
+						{
+							"type": "anyComponentStyle",
+							"maximumWarning": "4kb",
+							"maximumError": "8kb"
+						}
+					],
+					"outputHashing": "all"
+				},
+				"development": {
+					"optimization": false,
+					"extractLicenses": false,
+					"sourceMap": true
+				}
+			},
+			"defaultConfiguration": "production"
+		},
+		"serve": {
+			"continuous": true,
+			"executor": "@angular/build:dev-server",
+			"options": {
+				"port": 4001
+			},
+			"configurations": {
+				"production": {
+					"buildTarget": "seeding-test-app:build:production"
+				},
+				"development": {
+					"buildTarget": "seeding-test-app:build:development"
+				}
+			},
+			"defaultConfiguration": "development"
+		},
+		"lint": {
+			"executor": "@nx/eslint:lint"
+		},
+		"test": {
+			"executor": "@angular/build:unit-test",
+			"options": {}
+		},
+		"serve-static": {
+			"continuous": true,
+			"executor": "@nx/web:file-server",
+			"options": {
+				"buildTarget": "seeding-test-app:build",
+				"port": 4001,
+				"staticFilePath": "dist/seeding-test-app/browser",
+				"spa": true
+			}
+		}
+	}
+}

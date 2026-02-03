@@ -1,0 +1,9 @@
+{
+	"name": "seeding-test-app-e2e",
+	"$schema": "../node_modules/nx/schemas/project-schema.json",
+	"projectType": "application",
+	"sourceRoot": "seeding-test-app-e2e/src",
+	"implicitDependencies": ["seeding-test-app"],
+	"// targets": "to see all targets run: nx show project seeding-test-app-e2e --web",
+	"targets": {}
+}

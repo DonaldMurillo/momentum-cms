@@ -11,3 +11,12 @@ export {
 	type SetupStatus,
 	type SetupMiddlewareConfig,
 } from './lib/setup-middleware';
+export {
+	initializeMomentum,
+	createHealthMiddleware,
+	type MomentumInitResult,
+	type SeedingStatus,
+	type InitializeMomentumOptions,
+	type HealthMiddlewareOptions,
+	type HealthResponse,
+} from './lib/init-helpers';

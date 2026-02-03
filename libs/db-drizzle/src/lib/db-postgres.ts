@@ -128,6 +128,24 @@ const AUTH_TABLES_SQL = `
 `;
 
 /**
+ * SQL statements to create seed tracking table.
+ * Used to track seeded entities for idempotent seeding.
+ */
+const SEED_TRACKING_TABLE_SQL = `
+	CREATE TABLE IF NOT EXISTS "_momentum_seeds" (
+		"id" VARCHAR(36) PRIMARY KEY NOT NULL,
+		"seedId" VARCHAR(255) NOT NULL UNIQUE,
+		"collection" VARCHAR(255) NOT NULL,
+		"documentId" VARCHAR(36) NOT NULL,
+		"checksum" VARCHAR(64) NOT NULL,
+		"createdAt" TIMESTAMPTZ NOT NULL,
+		"updatedAt" TIMESTAMPTZ NOT NULL
+	);
+
+	CREATE INDEX IF NOT EXISTS "idx_momentum_seeds_seedId" ON "_momentum_seeds"("seedId");
+`;
+
+/**
  * Extended adapter interface that includes raw database access for Better Auth.
  */
 export interface PostgresAdapterWithRaw extends DatabaseAdapter {
@@ -207,6 +225,9 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 			// Create Better Auth tables first
 			await pool.query(AUTH_TABLES_SQL);
 
+			// Create seed tracking table for idempotent seeding
+			await pool.query(SEED_TRACKING_TABLE_SQL);
+
 			// Then create collection tables
 			for (const collection of collections) {
 				const createSql = createTableSql(collection);
@@ -222,7 +243,36 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 			const pageValue = typeof queryParams['page'] === 'number' ? queryParams['page'] : 1;
 			const offset = (pageValue - 1) * limitValue;
 
-			return query(`SELECT * FROM "${collection}" LIMIT $1 OFFSET $2`, [limitValue, offset]);
+			// Build WHERE clause from query parameters (excluding pagination params)
+			const whereClauses: string[] = [];
+			const whereValues: unknown[] = [];
+			const reservedParams = new Set(['limit', 'page', 'sort', 'order']);
+			let paramIndex = 1;
+
+			// Regex to validate column names (alphanumeric and underscore only, must start with letter or underscore)
+			const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+			for (const [key, value] of Object.entries(queryParams)) {
+				if (reservedParams.has(key)) {
+					continue;
+				}
+				if (value !== undefined && value !== null) {
+					// Validate column name to prevent SQL injection
+					if (!validColumnName.test(key)) {
+						throw new Error(`Invalid column name: ${key}`);
+					}
+					whereClauses.push(`"${key}" = $${paramIndex}`);
+					whereValues.push(value);
+					paramIndex++;
+				}
+			}
+
+			const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+			return query(
+				`SELECT * FROM "${collection}" ${whereClause} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+				[...whereValues, limitValue, offset],
+			);
 		},
 
 		async findById(collection: string, id: string): Promise<Record<string, unknown> | null> {

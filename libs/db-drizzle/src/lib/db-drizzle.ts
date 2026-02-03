@@ -169,6 +169,24 @@ const AUTH_TABLES_SQL = `
 `;
 
 /**
+ * SQL statements to create seed tracking table.
+ * Used to track seeded entities for idempotent seeding.
+ */
+const SEED_TRACKING_TABLE_SQL = `
+	CREATE TABLE IF NOT EXISTS "_momentum_seeds" (
+		"id" TEXT PRIMARY KEY NOT NULL,
+		"seedId" TEXT NOT NULL UNIQUE,
+		"collection" TEXT NOT NULL,
+		"documentId" TEXT NOT NULL,
+		"checksum" TEXT NOT NULL,
+		"createdAt" TEXT NOT NULL,
+		"updatedAt" TEXT NOT NULL
+	);
+
+	CREATE INDEX IF NOT EXISTS "idx_momentum_seeds_seedId" ON "_momentum_seeds"("seedId");
+`;
+
+/**
  * Extended adapter interface that includes raw database access for Better Auth.
  */
 export interface SqliteAdapterWithRaw extends DatabaseAdapter {
@@ -203,6 +221,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 			// Note: Using better-sqlite3's exec() method which is safe for SQL strings
 			sqlite.exec(AUTH_TABLES_SQL);
 
+			// Create seed tracking table for idempotent seeding
+			sqlite.exec(SEED_TRACKING_TABLE_SQL);
+
 			// Then create collection tables
 			for (const collection of collections) {
 				const createSql = createTableSql(collection);
@@ -218,10 +239,33 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 			const pageValue = typeof query['page'] === 'number' ? query['page'] : 1;
 			const offset = (pageValue - 1) * limitValue;
 
+			// Build WHERE clause from query parameters (excluding pagination params)
+			const whereClauses: string[] = [];
+			const whereValues: unknown[] = [];
+			const reservedParams = new Set(['limit', 'page', 'sort', 'order']);
+
+			// Regex to validate column names (alphanumeric and underscore only, must start with letter or underscore)
+			const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+			for (const [key, value] of Object.entries(query)) {
+				if (reservedParams.has(key)) {
+					continue;
+				}
+				if (value !== undefined && value !== null) {
+					// Validate column name to prevent SQL injection
+					if (!validColumnName.test(key)) {
+						throw new Error(`Invalid column name: ${key}`);
+					}
+					whereClauses.push(`"${key}" = ?`);
+					whereValues.push(value);
+				}
+			}
+
+			const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
 			// Use better-sqlite3 directly for SELECT queries
-			const rows: unknown[] = sqlite
-				.prepare(`SELECT * FROM "${collection}" LIMIT ? OFFSET ?`)
-				.all(limitValue, offset);
+			const sql = `SELECT * FROM "${collection}" ${whereClause} LIMIT ? OFFSET ?`;
+			const rows: unknown[] = sqlite.prepare(sql).all(...whereValues, limitValue, offset);
 			return rows.filter(
 				(row): row is Record<string, unknown> => typeof row === 'object' && row !== null,
 			);
