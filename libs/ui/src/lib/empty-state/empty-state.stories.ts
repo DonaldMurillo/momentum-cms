@@ -1,10 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { EmptyState } from './empty-state.component';
+import { Button } from '../button/button.component';
 
 const meta: Meta<EmptyState> = {
 	title: 'Components/Layout/EmptyState',
 	component: EmptyState,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [EmptyState, Button],
+		}),
+	],
 	argTypes: {
 		size: {
 			control: 'select',

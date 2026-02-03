@@ -91,10 +91,10 @@ export default defineConfig({
 			},
 			dependencies: ['api-access-control-tests'],
 		},
-		// General tests (example.spec.ts, api.spec.ts, transfer-state.spec.ts) run without storage state
+		// General tests (example.spec.ts, api.spec.ts, transfer-state.spec.ts, storybook.spec.ts) run without storage state
 		{
 			name: 'general-tests',
-			testMatch: /(example|api|transfer-state)\.spec\.ts$/,
+			testMatch: /(example|api|transfer-state|storybook)\.spec\.ts$/,
 			use: {
 				...devices['Desktop Chrome'],
 				// No storage state - tests handle auth as needed

@@ -1,10 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Textarea } from './textarea.component';
 
 const meta: Meta<Textarea> = {
 	title: 'Components/Form/Textarea',
 	component: Textarea,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Textarea],
+		}),
+	],
 	argTypes: {
 		placeholder: {
 			control: 'text',

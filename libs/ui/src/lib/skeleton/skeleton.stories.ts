@@ -1,10 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Skeleton } from './skeleton.component';
 
 const meta: Meta<Skeleton> = {
 	title: 'Components/Skeleton',
 	component: Skeleton,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Skeleton],
+		}),
+	],
 	argTypes: {
 		class: {
 			control: 'text',

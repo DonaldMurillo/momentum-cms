@@ -1,10 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Separator } from './separator.component';
+import { Button } from '../button/button.component';
 
 const meta: Meta<Separator> = {
 	title: 'Components/Separator',
 	component: Separator,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Separator, Button],
+		}),
+	],
 	argTypes: {
 		orientation: {
 			control: 'radio',

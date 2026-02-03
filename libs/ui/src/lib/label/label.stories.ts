@@ -1,10 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Label } from './label.component';
+import { Input } from '../input/input.component';
+import { Checkbox } from '../checkbox/checkbox.component';
 
 const meta: Meta<Label> = {
 	title: 'Components/Form/Label',
 	component: Label,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Label, Input, Checkbox],
+		}),
+	],
 	argTypes: {
 		for: {
 			control: 'text',

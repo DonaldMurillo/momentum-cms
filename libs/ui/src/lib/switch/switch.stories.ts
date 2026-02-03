@@ -1,10 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Switch } from './switch.component';
 
 const meta: Meta<Switch> = {
 	title: 'Components/Form/Switch',
 	component: Switch,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Switch],
+		}),
+	],
 	argTypes: {
 		disabled: {
 			control: 'boolean',

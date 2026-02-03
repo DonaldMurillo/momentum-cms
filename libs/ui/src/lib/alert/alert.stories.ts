@@ -1,10 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Alert } from './alert.component';
+import { AlertTitle } from './alert-title.component';
+import { AlertDescription } from './alert-description.component';
 
 const meta: Meta<Alert> = {
 	title: 'Components/Layout/Alert',
 	component: Alert,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Alert, AlertTitle, AlertDescription],
+		}),
+	],
 	argTypes: {
 		variant: {
 			control: 'select',

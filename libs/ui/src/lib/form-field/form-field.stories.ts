@@ -1,10 +1,21 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { FormField } from './form-field.component';
+import { Label } from '../label/label.component';
+import { Input } from '../input/input.component';
+import { Textarea } from '../textarea/textarea.component';
+import { Select } from '../select/select.component';
+import { Button } from '../button/button.component';
 
 const meta: Meta<FormField> = {
 	title: 'Components/Form/FormField',
 	component: FormField,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [FormField, Label, Input, Textarea, Select, Button],
+		}),
+	],
 	argTypes: {
 		required: {
 			control: 'boolean',

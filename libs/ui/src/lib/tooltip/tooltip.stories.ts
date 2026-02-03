@@ -1,10 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { TooltipTrigger } from './tooltip-trigger.directive';
+import { Button } from '../button/button.component';
 
 const meta: Meta<TooltipTrigger> = {
 	title: 'Components/Overlay/Tooltip',
 	component: TooltipTrigger,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [TooltipTrigger, Button],
+		}),
+	],
 	argTypes: {
 		mcmsTooltip: {
 			control: 'text',

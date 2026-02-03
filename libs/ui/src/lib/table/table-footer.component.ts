@@ -19,6 +19,11 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 		'[class]': 'hostClasses()',
 	},
 	template: `<ng-content />`,
+	styles: `
+		:host {
+			display: table-footer-group;
+		}
+	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TableFooter {

@@ -1,10 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Input } from './input.component';
 
 const meta: Meta<Input> = {
 	title: 'Components/Form/Input',
 	component: Input,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Input],
+		}),
+	],
 	argTypes: {
 		type: {
 			control: 'select',

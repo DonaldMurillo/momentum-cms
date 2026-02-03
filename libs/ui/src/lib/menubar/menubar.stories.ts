@@ -1,10 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Menubar } from './menubar.component';
+import { MenubarItem } from './menubar-item.component';
+import { MenubarSubmenu } from './menubar-submenu.component';
 
 const meta: Meta<Menubar> = {
 	title: 'Components/Navigation/Menubar',
 	component: Menubar,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Menubar, MenubarItem, MenubarSubmenu],
+		}),
+	],
 	argTypes: {
 		disabled: {
 			control: 'boolean',

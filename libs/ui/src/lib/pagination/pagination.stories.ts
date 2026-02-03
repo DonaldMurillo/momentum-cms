@@ -1,10 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Pagination } from './pagination.component';
 
 const meta: Meta<Pagination> = {
 	title: 'Components/Navigation/Pagination',
 	component: Pagination,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Pagination],
+		}),
+	],
 	argTypes: {
 		currentPage: {
 			control: 'number',

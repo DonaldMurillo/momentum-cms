@@ -29,15 +29,13 @@ import type { ValidationError } from '../input/input.types';
 			[disabled]="disabled()"
 			(click)="toggle()"
 			(keydown.space)="toggle(); $event.preventDefault()"
-			class="peer h-4 w-4 shrink-0 rounded-sm border border-primary
-			       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
-			       disabled:cursor-not-allowed disabled:opacity-50
-			       aria-[invalid=true]:border-destructive
-			       aria-checked:bg-primary aria-checked:text-primary-foreground"
+			[class.checked]="value()"
+			[class.error]="hasError()"
+			class="checkbox-button"
 		>
 			@if (value()) {
 				<svg
-					class="h-4 w-4"
+					class="check-icon"
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
@@ -52,14 +50,64 @@ import type { ValidationError } from '../input/input.types';
 				</svg>
 			}
 		</button>
-		<label
-			[attr.for]="id()"
-			class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-		>
+		<label [attr.for]="id()" class="checkbox-label">
 			<ng-content />
 		</label>
 	`,
-	styles: ``,
+	styles: `
+		:host {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.5rem;
+		}
+		:host(.mcms-checkbox--disabled) {
+			cursor: not-allowed;
+			opacity: 0.5;
+		}
+		.checkbox-button {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 1rem;
+			height: 1rem;
+			flex-shrink: 0;
+			border-radius: 0.125rem;
+			border: 1px solid hsl(var(--mcms-primary));
+			background-color: transparent;
+			cursor: pointer;
+			padding: 0;
+			transition:
+				background-color 0.15s,
+				border-color 0.15s;
+		}
+		.checkbox-button:focus-visible {
+			outline: none;
+			box-shadow:
+				0 0 0 2px hsl(var(--mcms-background)),
+				0 0 0 4px hsl(var(--mcms-ring));
+		}
+		.checkbox-button:disabled {
+			cursor: not-allowed;
+			opacity: 0.5;
+		}
+		.checkbox-button.error {
+			border-color: hsl(var(--mcms-destructive));
+		}
+		.checkbox-button.checked {
+			background-color: hsl(var(--mcms-primary));
+			color: hsl(var(--mcms-primary-foreground));
+		}
+		.check-icon {
+			width: 1rem;
+			height: 1rem;
+		}
+		.checkbox-label {
+			font-size: 0.875rem;
+			font-weight: 500;
+			line-height: 1;
+			color: hsl(var(--mcms-foreground));
+		}
+	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Checkbox {

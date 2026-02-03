@@ -17,6 +17,12 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 		'[class]': 'hostClasses()',
 	},
 	template: `<ng-content />`,
+	styles: `
+		:host {
+			display: table-caption;
+			caption-side: bottom;
+		}
+	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TableCaption {

@@ -19,6 +19,7 @@ import type { ButtonSize, ButtonVariant } from './button.types';
 		'[style.--btn-bg]': 'variantBg()',
 		'[style.--btn-color]': 'variantColor()',
 		'[style.--btn-hover-bg]': 'variantHoverBg()',
+		'[style.--btn-border]': 'variantBorder()',
 		'[style.height]': 'sizeHeight()',
 		'[style.padding]': 'sizePadding()',
 		'[style.width]': 'sizeWidth()',
@@ -36,9 +37,10 @@ import type { ButtonSize, ButtonVariant } from './button.types';
 			font-weight: 500;
 			transition:
 				background-color 0.15s,
-				color 0.15s;
+				color 0.15s,
+				border-color 0.15s;
 			cursor: pointer;
-			border: none;
+			border: 1px solid var(--btn-border, transparent);
 			background-color: var(--btn-bg);
 			color: var(--btn-color);
 		}
@@ -144,6 +146,16 @@ export class Button {
 			case 'ghost':
 				return 'hsl(var(--mcms-accent))';
 			case 'link':
+				return 'transparent';
+		}
+	});
+
+	readonly variantBorder = computed(() => {
+		const v = this.variant();
+		switch (v) {
+			case 'outline':
+				return 'hsl(var(--mcms-border))';
+			default:
 				return 'transparent';
 		}
 	});

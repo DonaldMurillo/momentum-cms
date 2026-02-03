@@ -1,10 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Select } from './select.component';
 
 const meta: Meta<Select> = {
 	title: 'Components/Form/Select',
 	component: Select,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Select],
+		}),
+	],
 	argTypes: {
 		placeholder: {
 			control: 'text',

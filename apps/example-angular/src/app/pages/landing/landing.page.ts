@@ -19,12 +19,20 @@ import { RouterLink } from '@angular/router';
 							</div>
 							<span class="text-white font-semibold text-xl">Momentum CMS</span>
 						</div>
-						<a
-							routerLink="/admin"
-							class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors"
-						>
-							Open Admin
-						</a>
+						<div class="flex items-center gap-3">
+							<a
+								href="/storybook"
+								class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors"
+							>
+								Component Library
+							</a>
+							<a
+								routerLink="/admin"
+								class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors"
+							>
+								Open Admin
+							</a>
+						</div>
 					</div>
 				</div>
 			</header>

@@ -1,10 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { RadioGroup } from './radio-group.component';
 
 const meta: Meta<RadioGroup> = {
 	title: 'Components/Form/RadioGroup',
 	component: RadioGroup,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [RadioGroup],
+		}),
+	],
 	argTypes: {
 		disabled: {
 			control: 'boolean',

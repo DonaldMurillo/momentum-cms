@@ -1,10 +1,32 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
+import { CdkMenuModule } from '@angular/cdk/menu';
 import { DropdownMenu } from './dropdown-menu.component';
+import { DropdownMenuItem } from './dropdown-menu-item.component';
+import { DropdownLabel } from './dropdown-label.component';
+import { DropdownSeparator } from './dropdown-separator.component';
+import { Button } from '../button/button.component';
+import { Avatar } from '../avatar/avatar.component';
+import { AvatarFallback } from '../avatar/avatar-fallback.component';
 
 const meta: Meta<DropdownMenu> = {
 	title: 'Components/Overlay/DropdownMenu',
 	component: DropdownMenu,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [
+				CdkMenuModule,
+				DropdownMenu,
+				DropdownMenuItem,
+				DropdownLabel,
+				DropdownSeparator,
+				Button,
+				Avatar,
+				AvatarFallback,
+			],
+		}),
+	],
 	argTypes: {
 		disabled: {
 			control: 'boolean',

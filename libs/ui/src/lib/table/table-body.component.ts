@@ -18,6 +18,14 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 		'[class]': 'hostClasses()',
 	},
 	template: `<ng-content />`,
+	styles: `
+		:host {
+			display: table-row-group;
+		}
+		:host ::ng-deep mcms-table-row:last-child {
+			border-bottom: none;
+		}
+	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TableBody {

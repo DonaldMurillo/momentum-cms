@@ -24,6 +24,11 @@ import { GridRow } from '@angular/aria/grid';
 		'[class]': 'hostClasses()',
 	},
 	template: `<ng-content />`,
+	styles: `
+		:host {
+			display: table-row;
+		}
+	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TableRow {

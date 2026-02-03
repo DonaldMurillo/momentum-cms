@@ -1,10 +1,30 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { ConfirmationDialogComponent } from './confirmation-dialog.component';
+import { Dialog } from '../dialog/dialog.component';
+import { DialogHeader } from '../dialog/dialog-header.component';
+import { DialogTitle } from '../dialog/dialog-title.component';
+import { DialogDescription } from '../dialog/dialog-description.component';
+import { DialogFooter } from '../dialog/dialog-footer.component';
+import { Button } from '../button/button.component';
 
 const meta: Meta<ConfirmationDialogComponent> = {
 	title: 'Components/Overlay/ConfirmationDialog',
 	component: ConfirmationDialogComponent,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [
+				ConfirmationDialogComponent,
+				Dialog,
+				DialogHeader,
+				DialogTitle,
+				DialogDescription,
+				DialogFooter,
+				Button,
+			],
+		}),
+	],
 };
 export default meta;
 type Story = StoryObj<ConfirmationDialogComponent>;

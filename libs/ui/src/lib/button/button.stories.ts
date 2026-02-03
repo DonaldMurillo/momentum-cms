@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { expect, userEvent, within } from 'storybook/test';
 import { Button } from './button.component';
 
@@ -6,6 +7,11 @@ const meta: Meta<Button> = {
 	title: 'Components/Button',
 	component: Button,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Button],
+		}),
+	],
 	argTypes: {
 		variant: {
 			control: 'select',

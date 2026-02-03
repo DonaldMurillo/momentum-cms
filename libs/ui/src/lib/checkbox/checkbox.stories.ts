@@ -1,10 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Checkbox } from './checkbox.component';
 
 const meta: Meta<Checkbox> = {
 	title: 'Components/Form/Checkbox',
 	component: Checkbox,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Checkbox],
+		}),
+	],
 	argTypes: {
 		disabled: {
 			control: 'boolean',

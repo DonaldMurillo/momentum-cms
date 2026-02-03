@@ -1,10 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { ToastComponent } from './toast.component';
 
 const meta: Meta<ToastComponent> = {
 	title: 'Components/Overlay/Toast',
 	component: ToastComponent,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [ToastComponent],
+		}),
+	],
 };
 export default meta;
 type Story = StoryObj<ToastComponent>;

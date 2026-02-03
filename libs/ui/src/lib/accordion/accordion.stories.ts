@@ -1,10 +1,19 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Accordion } from './accordion.component';
+import { AccordionItem } from './accordion-item.component';
+import { AccordionTrigger } from './accordion-trigger.component';
+import { AccordionContent } from './accordion-content.component';
 
 const meta: Meta<Accordion> = {
 	title: 'Components/Navigation/Accordion',
 	component: Accordion,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Accordion, AccordionItem, AccordionTrigger, AccordionContent],
+		}),
+	],
 	argTypes: {
 		multiExpandable: {
 			control: 'boolean',

@@ -8,6 +8,7 @@
 	"targets": {
 		"build": {
 			"executor": "@angular/build:application",
+			"dependsOn": ["ui:build-storybook"],
 			"outputs": ["{options.outputPath}"],
 			"options": {
 				"outputPath": "dist/apps/example-angular",
@@ -17,6 +18,11 @@
 					{
 						"glob": "**/*",
 						"input": "apps/example-angular/public"
+					},
+					{
+						"glob": "**/*",
+						"input": "dist/storybook/ui",
+						"output": "storybook"
 					}
 				],
 				"styles": ["apps/example-angular/src/styles.css"],

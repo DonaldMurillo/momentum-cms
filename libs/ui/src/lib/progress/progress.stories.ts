@@ -1,10 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Progress } from './progress.component';
 
 const meta: Meta<Progress> = {
 	title: 'Components/Progress',
 	component: Progress,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Progress],
+		}),
+	],
 	argTypes: {
 		value: {
 			control: { type: 'range', min: 0, max: 100, step: 1 },

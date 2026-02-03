@@ -23,6 +23,11 @@ import { GridCell } from '@angular/aria/grid';
 		role: 'gridcell',
 	},
 	template: `<ng-content />`,
+	styles: `
+		:host {
+			display: table-cell;
+		}
+	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TableCell {

@@ -1,10 +1,19 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Toolbar } from './toolbar.component';
+import { ToolbarWidget } from './toolbar-widget.component';
+import { ToolbarSeparator } from './toolbar-separator.component';
+import { ToolbarWidgetGroup } from './toolbar-widget-group.component';
 
 const meta: Meta<Toolbar> = {
 	title: 'Components/Navigation/Toolbar',
 	component: Toolbar,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Toolbar, ToolbarWidget, ToolbarSeparator, ToolbarWidgetGroup],
+		}),
+	],
 	argTypes: {
 		orientation: {
 			control: 'select',

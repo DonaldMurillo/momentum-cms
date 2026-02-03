@@ -1,10 +1,44 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Tabs } from './tabs.component';
+import { TabsList } from './tabs-list.component';
+import { TabsTrigger } from './tabs-trigger.component';
+import { TabsContent } from './tabs-content.component';
+import { Card } from '../card/card.component';
+import { CardHeader } from '../card/card-header.component';
+import { CardTitle } from '../card/card-title.component';
+import { CardDescription } from '../card/card-description.component';
+import { CardContent } from '../card/card-content.component';
+import { CardFooter } from '../card/card-footer.component';
+import { FormField } from '../form-field/form-field.component';
+import { Input } from '../input/input.component';
+import { Button } from '../button/button.component';
+import { Label } from '../label/label.component';
 
 const meta: Meta<Tabs> = {
 	title: 'Components/Navigation/Tabs',
 	component: Tabs,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [
+				Tabs,
+				TabsList,
+				TabsTrigger,
+				TabsContent,
+				Card,
+				CardHeader,
+				CardTitle,
+				CardDescription,
+				CardContent,
+				CardFooter,
+				FormField,
+				Input,
+				Button,
+				Label,
+			],
+		}),
+	],
 };
 export default meta;
 type Story = StoryObj<Tabs>;
@@ -97,7 +131,7 @@ export const WithCards: Story = {
 						</mcms-card-header>
 						<mcms-card-content>
 							<mcms-form-field>
-								<mcms-form-field-label>Name</mcms-form-field-label>
+								<span mcmsLabel>Name</span>
 								<mcms-input placeholder="Enter your name" />
 							</mcms-form-field>
 						</mcms-card-content>
@@ -114,7 +148,7 @@ export const WithCards: Story = {
 						</mcms-card-header>
 						<mcms-card-content>
 							<mcms-form-field>
-								<mcms-form-field-label>New Password</mcms-form-field-label>
+								<span mcmsLabel>New Password</span>
 								<mcms-input type="password" placeholder="Enter new password" />
 							</mcms-form-field>
 						</mcms-card-content>

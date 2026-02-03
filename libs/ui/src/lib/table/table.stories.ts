@@ -1,10 +1,40 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Table } from './table.component';
+import { TableHeader } from './table-header.component';
+import { TableBody } from './table-body.component';
+import { TableFooter } from './table-footer.component';
+import { TableRow } from './table-row.component';
+import { TableHead } from './table-head.component';
+import { TableCell } from './table-cell.component';
+import { TableCaption } from './table-caption.component';
+import { Badge } from '../badge/badge.component';
+import { Avatar } from '../avatar/avatar.component';
+import { AvatarFallback } from '../avatar/avatar-fallback.component';
+import { Button } from '../button/button.component';
 
 const meta: Meta<Table> = {
 	title: 'Components/Data/Table',
 	component: Table,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [
+				Table,
+				TableHeader,
+				TableBody,
+				TableFooter,
+				TableRow,
+				TableHead,
+				TableCell,
+				TableCaption,
+				Badge,
+				Avatar,
+				AvatarFallback,
+				Button,
+			],
+		}),
+	],
 	argTypes: {
 		enableSelection: {
 			control: 'boolean',

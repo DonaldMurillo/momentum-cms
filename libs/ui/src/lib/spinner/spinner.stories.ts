@@ -1,10 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Spinner } from './spinner.component';
+import { Button } from '../button/button.component';
 
 const meta: Meta<Spinner> = {
 	title: 'Components/Spinner',
 	component: Spinner,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Spinner, Button],
+		}),
+	],
 	argTypes: {
 		size: {
 			control: 'select',

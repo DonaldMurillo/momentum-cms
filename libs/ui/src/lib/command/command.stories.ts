@@ -1,10 +1,30 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Command } from './command.component';
+import { CommandInput } from './command-input.component';
+import { CommandList } from './command-list.component';
+import { CommandEmpty } from './command-empty.component';
+import { CommandGroup } from './command-group.component';
+import { CommandItem } from './command-item.component';
+import { CommandSeparator } from './command-separator.component';
 
 const meta: Meta<Command> = {
 	title: 'Components/Data/Command',
 	component: Command,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [
+				Command,
+				CommandInput,
+				CommandList,
+				CommandEmpty,
+				CommandGroup,
+				CommandItem,
+				CommandSeparator,
+			],
+		}),
+	],
 	argTypes: {
 		disabled: {
 			control: 'boolean',

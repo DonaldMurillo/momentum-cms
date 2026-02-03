@@ -1,10 +1,32 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
+import { CdkMenuModule } from '@angular/cdk/menu';
 import { PopoverContent } from './popover-content.component';
+import { Button } from '../button/button.component';
+import { FormField } from '../form-field/form-field.component';
+import { Label } from '../label/label.component';
+import { Input } from '../input/input.component';
+import { Avatar } from '../avatar/avatar.component';
+import { AvatarFallback } from '../avatar/avatar-fallback.component';
 
 const meta: Meta<PopoverContent> = {
 	title: 'Components/Overlay/Popover',
 	component: PopoverContent,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [
+				CdkMenuModule,
+				PopoverContent,
+				Button,
+				FormField,
+				Label,
+				Input,
+				Avatar,
+				AvatarFallback,
+			],
+		}),
+	],
 };
 export default meta;
 type Story = StoryObj<PopoverContent>;
@@ -40,11 +62,11 @@ export const WithForm: Story = {
 							<h4 style="font-weight: 500; margin-bottom: 1rem;">Display Settings</h4>
 							<div style="display: flex; flex-direction: column; gap: 0.75rem;">
 								<mcms-form-field>
-									<mcms-form-field-label>Width</mcms-form-field-label>
+									<span mcmsLabel>Width</span>
 									<mcms-input type="number" placeholder="100" />
 								</mcms-form-field>
 								<mcms-form-field>
-									<mcms-form-field-label>Height</mcms-form-field-label>
+									<span mcmsLabel>Height</span>
 									<mcms-input type="number" placeholder="100" />
 								</mcms-form-field>
 							</div>

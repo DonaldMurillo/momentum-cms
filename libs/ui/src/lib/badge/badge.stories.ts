@@ -1,10 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Badge } from './badge.component';
 
 const meta: Meta<Badge> = {
 	title: 'Components/Badge',
 	component: Badge,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Badge],
+		}),
+	],
 	argTypes: {
 		variant: {
 			control: 'select',

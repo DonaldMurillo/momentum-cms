@@ -1,10 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { AspectRatio } from './aspect-ratio.component';
 
 const meta: Meta<AspectRatio> = {
 	title: 'Components/Layout/AspectRatio',
 	component: AspectRatio,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [AspectRatio],
+		}),
+	],
 	argTypes: {
 		ratio: {
 			control: 'number',

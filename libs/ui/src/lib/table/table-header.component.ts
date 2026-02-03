@@ -13,11 +13,20 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
  * ```
  */
 @Component({
-	selector: 'mcms-table-header',
+	selector: 'mcms-table-header, thead[mcms-table-header]',
 	host: {
 		'[class]': 'hostClasses()',
+		'[style.display]': '"table-header-group"',
 	},
 	template: `<ng-content />`,
+	styles: `
+		:host {
+			display: table-header-group;
+		}
+		:host ::ng-deep mcms-table-row {
+			border-bottom: 1px solid hsl(var(--mcms-border));
+		}
+	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TableHeader {

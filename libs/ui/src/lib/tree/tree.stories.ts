@@ -1,10 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Tree } from './tree.component';
+import { TreeItem } from './tree-item.component';
+import { TreeItemGroupComponent } from './tree-item-group.component';
 
 const meta: Meta<Tree> = {
 	title: 'Components/Navigation/Tree',
 	component: Tree,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Tree, TreeItem, TreeItemGroupComponent],
+		}),
+	],
 	argTypes: {
 		multi: {
 			control: 'boolean',

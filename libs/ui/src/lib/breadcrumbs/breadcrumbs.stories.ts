@@ -1,10 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Breadcrumbs } from './breadcrumbs.component';
+import { BreadcrumbItem } from './breadcrumb-item.component';
+import { BreadcrumbSeparator } from './breadcrumb-separator.component';
 
 const meta: Meta<Breadcrumbs> = {
 	title: 'Components/Navigation/Breadcrumbs',
 	component: Breadcrumbs,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Breadcrumbs, BreadcrumbItem, BreadcrumbSeparator],
+		}),
+	],
 };
 export default meta;
 type Story = StoryObj<Breadcrumbs>;

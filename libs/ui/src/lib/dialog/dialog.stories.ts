@@ -1,10 +1,46 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Dialog } from './dialog.component';
+import { DialogHeader } from './dialog-header.component';
+import { DialogTitle } from './dialog-title.component';
+import { DialogDescription } from './dialog-description.component';
+import { DialogContent } from './dialog-content.component';
+import { DialogFooter } from './dialog-footer.component';
+import { Button } from '../button/button.component';
+import { FormField } from '../form-field/form-field.component';
+import { Input } from '../input/input.component';
+import { Separator } from '../separator/separator.component';
+import { Avatar } from '../avatar/avatar.component';
+import { AvatarFallback } from '../avatar/avatar-fallback.component';
+import { Textarea } from '../textarea/textarea.component';
+import { RadioGroup } from '../radio-group/radio-group.component';
+import { Label } from '../label/label.component';
 
 const meta: Meta<Dialog> = {
 	title: 'Components/Overlay/Dialog',
 	component: Dialog,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [
+				Dialog,
+				DialogHeader,
+				DialogTitle,
+				DialogDescription,
+				DialogContent,
+				DialogFooter,
+				Button,
+				FormField,
+				Input,
+				Separator,
+				Avatar,
+				AvatarFallback,
+				Textarea,
+				RadioGroup,
+				Label,
+			],
+		}),
+	],
 };
 export default meta;
 type Story = StoryObj<Dialog>;

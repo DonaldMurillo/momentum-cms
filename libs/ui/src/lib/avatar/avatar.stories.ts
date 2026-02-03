@@ -1,10 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Avatar } from './avatar.component';
+import { AvatarFallback } from './avatar-fallback.component';
+import { AvatarImage } from './avatar-image.component';
 
 const meta: Meta<Avatar> = {
 	title: 'Components/Data/Avatar',
 	component: Avatar,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [Avatar, AvatarFallback, AvatarImage],
+		}),
+	],
 	argTypes: {
 		size: {
 			control: 'select',

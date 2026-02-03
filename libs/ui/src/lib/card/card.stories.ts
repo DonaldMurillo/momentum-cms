@@ -1,10 +1,36 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { moduleMetadata } from '@storybook/angular';
 import { Card } from './card.component';
+import { CardHeader } from './card-header.component';
+import { CardTitle } from './card-title.component';
+import { CardDescription } from './card-description.component';
+import { CardContent } from './card-content.component';
+import { CardFooter } from './card-footer.component';
+import { Button } from '../button/button.component';
+import { FormField } from '../form-field/form-field.component';
+import { Label } from '../label/label.component';
+import { Input } from '../input/input.component';
 
 const meta: Meta<Card> = {
 	title: 'Components/Layout/Card',
 	component: Card,
 	tags: ['autodocs'],
+	decorators: [
+		moduleMetadata({
+			imports: [
+				Card,
+				CardHeader,
+				CardTitle,
+				CardDescription,
+				CardContent,
+				CardFooter,
+				Button,
+				FormField,
+				Label,
+				Input,
+			],
+		}),
+	],
 };
 export default meta;
 type Story = StoryObj<Card>;
@@ -51,11 +77,11 @@ export const WithForm: Story = {
 				<mcms-card-content>
 					<div style="display: flex; flex-direction: column; gap: 1rem;">
 						<mcms-form-field>
-							<mcms-form-field-label>Email</mcms-form-field-label>
+							<span mcmsLabel>Email</span>
 							<mcms-input type="email" placeholder="Enter your email" />
 						</mcms-form-field>
 						<mcms-form-field>
-							<mcms-form-field-label>Password</mcms-form-field-label>
+							<span mcmsLabel>Password</span>
 							<mcms-input type="password" placeholder="Enter password" />
 						</mcms-form-field>
 					</div>
