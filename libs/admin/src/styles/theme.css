@@ -41,6 +41,21 @@
 		--mcms-destructive: 0 84% 60%;
 		--mcms-destructive-foreground: 210 40% 98%;
 
+		/* Success - Green for positive feedback */
+		--mcms-success: 142 76% 36%;
+		--mcms-success-foreground: 0 0% 100%;
+
+		/* Warning - Amber for caution */
+		--mcms-warning: 38 92% 50%;
+		--mcms-warning-foreground: 48 96% 5%;
+
+		/* Info - Blue for informational messages */
+		--mcms-info: 199 89% 48%;
+		--mcms-info-foreground: 0 0% 100%;
+
+		/* Overlay - For modal backdrops */
+		--mcms-overlay: 0 0% 0%;
+
 		/* Border, input, and ring */
 		--mcms-border: 214 32% 91%;
 		--mcms-input: 214 32% 91%;
@@ -88,6 +103,21 @@
 		/* Destructive */
 		--mcms-destructive: 0 62% 30%;
 		--mcms-destructive-foreground: 210 40% 98%;
+
+		/* Success */
+		--mcms-success: 142 71% 45%;
+		--mcms-success-foreground: 0 0% 100%;
+
+		/* Warning */
+		--mcms-warning: 38 92% 50%;
+		--mcms-warning-foreground: 48 96% 5%;
+
+		/* Info */
+		--mcms-info: 199 89% 48%;
+		--mcms-info-foreground: 0 0% 100%;
+
+		/* Overlay */
+		--mcms-overlay: 0 0% 0%;
 
 		/* Border, input, and ring */
 		--mcms-border: 217 33% 17%;

@@ -1,30 +1,32 @@
-import {
-	ChangeDetectionStrategy,
-	Component,
-	ElementRef,
-	inject,
-	input,
-	output,
-} from '@angular/core';
-import type { FocusableOption } from '@angular/cdk/a11y';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { MenuItem } from '@angular/aria/menu';
 
 /**
  * Dropdown menu item component.
  *
+ * Uses @angular/aria/menu MenuItem for keyboard navigation and accessibility.
+ *
  * Usage:
  * ```html
- * <button mcms-dropdown-item>Edit</button>
- * <button mcms-dropdown-item [disabled]="true">Disabled</button>
- * <button mcms-dropdown-item shortcut="⌘K">Search</button>
+ * <button mcms-dropdown-item value="edit">Edit</button>
+ * <button mcms-dropdown-item value="disabled" [disabled]="true">Disabled</button>
+ * <button mcms-dropdown-item value="search" shortcut="⌘K">Search</button>
  * ```
  */
 @Component({
 	selector: 'button[mcms-dropdown-item], a[mcms-dropdown-item]',
+	hostDirectives: [
+		{
+			directive: MenuItem,
+			inputs: ['value', 'disabled', 'searchTerm'],
+		},
+	],
 	host: {
+		'[class]': 'hostClasses()',
 		role: 'menuitem',
-		'[attr.tabindex]': 'disabledInput() ? -1 : 0',
-		'[attr.disabled]': 'disabledInput() || null',
-		'[attr.aria-disabled]': 'disabledInput()',
+		'[attr.tabindex]': 'disabled() ? -1 : 0',
+		'[attr.disabled]': 'disabled() || null',
+		'[attr.aria-disabled]': 'disabled()',
 		'(click)': 'onClick($event)',
 		'(keydown.enter)': 'onClick($event)',
 		'(keydown.space)': 'onClick($event); $event.preventDefault()',
@@ -32,69 +34,41 @@ import type { FocusableOption } from '@angular/cdk/a11y';
 	template: `
 		<ng-content />
 		@if (shortcut()) {
-			<span class="dropdown-shortcut">{{ shortcut() }}</span>
-		}
-	`,
-	styles: `
-		:host {
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			gap: 0.5rem;
-			cursor: pointer;
-			user-select: none;
-			border-radius: 0.25rem;
-			padding: 0.375rem 0.5rem;
-			font-size: 0.875rem;
-			outline: none;
-			transition:
-				background-color 0.1s,
-				color 0.1s;
-			background: transparent;
-			border: none;
-			width: 100%;
-			text-align: left;
-			color: inherit;
-		}
-
-		:host(:hover:not([disabled])),
-		:host(:focus:not([disabled])) {
-			background-color: hsl(var(--mcms-accent));
-			color: hsl(var(--mcms-accent-foreground));
-		}
-
-		:host([disabled]) {
-			pointer-events: none;
-			opacity: 0.5;
-		}
-
-		.dropdown-shortcut {
-			margin-left: auto;
-			font-size: 0.75rem;
-			letter-spacing: 0.1em;
-			color: hsl(var(--mcms-muted-foreground));
+			<span class="ml-auto text-xs tracking-widest text-muted-foreground">{{ shortcut() }}</span>
 		}
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DropdownMenuItem implements FocusableOption {
-	readonly disabledInput = input(false, { alias: 'disabled' });
+export class DropdownMenuItem {
+	protected readonly menuItem = inject(MenuItem);
+
+	/** The value of the menu item (required for @angular/aria) */
+	readonly value = input.required<string>();
+
+	/** Whether the menu item is disabled */
+	readonly disabled = input(false);
+
+	/** Keyboard shortcut display text */
 	readonly shortcut = input<string | undefined>(undefined);
+
+	/** Emits when the item is selected */
 	readonly selected = output<void>();
 
-	private readonly elementRef = inject(ElementRef<HTMLElement>);
+	/** Additional CSS classes */
+	readonly class = input('');
 
-	/** Property required by FocusableOption interface */
-	get disabled(): boolean {
-		return this.disabledInput();
-	}
-
-	focus(): void {
-		this.elementRef.nativeElement.focus();
-	}
+	protected readonly hostClasses = computed(() => {
+		const base =
+			'flex items-center justify-between gap-2 cursor-pointer select-none rounded-sm px-2 py-1.5 text-sm outline-none transition-colors w-full text-left bg-transparent border-none text-inherit';
+		const interactiveClasses = this.disabled()
+			? 'pointer-events-none opacity-50'
+			: 'hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground';
+		const activeClasses = this.menuItem.active() ? 'bg-accent text-accent-foreground' : '';
+		return `${base} ${interactiveClasses} ${activeClasses} ${this.class()}`.trim();
+	});
 
 	onClick(event: Event): void {
-		if (this.disabledInput()) {
+		if (this.disabled()) {
 			event.preventDefault();
 			event.stopPropagation();
 			return;

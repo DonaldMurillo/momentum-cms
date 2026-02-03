@@ -1,88 +1,60 @@
-import {
-	AfterContentInit,
-	ChangeDetectionStrategy,
-	Component,
-	contentChildren,
-	OnDestroy,
-} from '@angular/core';
-import { FocusKeyManager } from '@angular/cdk/a11y';
-import { DropdownMenuItem } from './dropdown-menu-item.component';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { Menu } from '@angular/aria/menu';
 
 /**
  * Dropdown menu container component.
+ *
+ * Uses @angular/aria/menu for keyboard navigation, typeahead search, and accessibility.
  *
  * Usage:
  * ```html
  * <mcms-dropdown-menu>
  *   <mcms-dropdown-label>Actions</mcms-dropdown-label>
- *   <button mcms-dropdown-item>Edit</button>
- *   <button mcms-dropdown-item>Duplicate</button>
+ *   <button mcms-dropdown-item value="edit">Edit</button>
+ *   <button mcms-dropdown-item value="duplicate">Duplicate</button>
  *   <mcms-dropdown-separator />
- *   <button mcms-dropdown-item>Delete</button>
+ *   <button mcms-dropdown-item value="delete">Delete</button>
  * </mcms-dropdown-menu>
  * ```
  */
 @Component({
 	selector: 'mcms-dropdown-menu',
+	hostDirectives: [
+		{
+			directive: Menu,
+			inputs: ['disabled', 'wrap', 'typeaheadDelay'],
+			outputs: ['onSelect'],
+		},
+	],
 	host: {
+		'[class]': 'hostClasses()',
 		role: 'menu',
 		'[attr.aria-orientation]': '"vertical"',
-		'(keydown)': 'onKeydown($event)',
 	},
 	template: `<ng-content />`,
-	styles: `
-		:host {
-			display: flex;
-			flex-direction: column;
-			z-index: 50;
-			min-width: 8rem;
-			overflow: hidden;
-			border-radius: 0.375rem;
-			border: 1px solid hsl(var(--mcms-border));
-			background-color: hsl(var(--mcms-card));
-			color: hsl(var(--mcms-card-foreground));
-			padding: 0.25rem;
-			box-shadow:
-				0 10px 15px -3px rgb(0 0 0 / 0.1),
-				0 4px 6px -4px rgb(0 0 0 / 0.1);
-			animation: dropdown-in 0.15s ease-out;
-		}
-
-		@keyframes dropdown-in {
-			from {
-				opacity: 0;
-				transform: scale(0.95);
-			}
-			to {
-				opacity: 1;
-				transform: scale(1);
-			}
-		}
-	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DropdownMenu implements AfterContentInit, OnDestroy {
-	readonly items = contentChildren(DropdownMenuItem);
+export class DropdownMenu {
+	protected readonly menu = inject(Menu);
 
-	private keyManager!: FocusKeyManager<DropdownMenuItem>;
+	/** Whether the menu is disabled */
+	readonly disabled = input(false);
 
-	ngAfterContentInit(): void {
-		this.keyManager = new FocusKeyManager(this.items())
-			.withWrap()
-			.withVerticalOrientation()
-			.skipPredicate((item) => item.disabled);
+	/** Whether navigation wraps around */
+	readonly wrap = input(true);
 
-		// Focus first item when menu opens
-		setTimeout(() => {
-			this.keyManager.setFirstItemActive();
-		});
-	}
+	/** Typeahead delay in milliseconds */
+	readonly typeaheadDelay = input(1000);
 
-	ngOnDestroy(): void {
-		this.keyManager?.destroy();
-	}
+	/** Emits when an item is selected */
+	readonly itemSelected = output<string>();
 
-	onKeydown(event: KeyboardEvent): void {
-		this.keyManager.onKeydown(event);
-	}
+	/** Additional CSS classes */
+	readonly class = input('');
+
+	protected readonly hostClasses = computed(() => {
+		const base =
+			'flex flex-col z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-card text-card-foreground p-1 shadow-lg animate-in fade-in-0 zoom-in-95';
+		return `${base} ${this.class()}`.trim();
+	});
 }

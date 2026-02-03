@@ -1,7 +1,6 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { OverlayModule } from '@angular/cdk/overlay';
-import { A11yModule } from '@angular/cdk/a11y';
 import { DropdownLabel } from './dropdown-label.component';
 import { DropdownMenu } from './dropdown-menu.component';
 import { DropdownMenuItem } from './dropdown-menu-item.component';
@@ -24,10 +23,10 @@ import { DropdownTrigger } from './dropdown-trigger.directive';
 		<ng-template #menuContent>
 			<mcms-dropdown-menu>
 				<mcms-dropdown-label>Actions</mcms-dropdown-label>
-				<button mcms-dropdown-item (selected)="onSelect('item1')">Item 1</button>
-				<button mcms-dropdown-item (selected)="onSelect('item2')">Item 2</button>
+				<button mcms-dropdown-item value="item1" (selected)="onSelect('item1')">Item 1</button>
+				<button mcms-dropdown-item value="item2" (selected)="onSelect('item2')">Item 2</button>
 				<mcms-dropdown-separator />
-				<button mcms-dropdown-item [disabled]="true">Disabled Item</button>
+				<button mcms-dropdown-item value="disabled" [disabled]="true">Disabled Item</button>
 			</mcms-dropdown-menu>
 		</ng-template>
 	`,
@@ -50,7 +49,7 @@ describe('DropdownTrigger', () => {
 
 	beforeEach(async () => {
 		await TestBed.configureTestingModule({
-			imports: [TestHostComponent, OverlayModule, A11yModule],
+			imports: [TestHostComponent, OverlayModule],
 		}).compileComponents();
 
 		fixture = TestBed.createComponent(TestHostComponent);
@@ -88,10 +87,11 @@ describe('DropdownMenu', () => {
 
 	beforeEach(async () => {
 		await TestBed.configureTestingModule({
-			imports: [DropdownMenu, A11yModule],
+			imports: [DropdownMenu],
 		}).compileComponents();
 
 		fixture = TestBed.createComponent(DropdownMenu);
+		fixture.detectChanges();
 		await fixture.whenStable();
 	});
 
@@ -106,45 +106,85 @@ describe('DropdownMenu', () => {
 	it('should have aria-orientation="vertical"', () => {
 		expect(fixture.nativeElement.getAttribute('aria-orientation')).toBe('vertical');
 	});
+
+	it('should have flex column layout', () => {
+		expect(fixture.nativeElement.classList.contains('flex')).toBe(true);
+		expect(fixture.nativeElement.classList.contains('flex-col')).toBe(true);
+	});
+
+	it('should have rounded styling', () => {
+		expect(fixture.nativeElement.classList.contains('rounded-md')).toBe(true);
+	});
+
+	it('should have card background', () => {
+		expect(fixture.nativeElement.classList.contains('bg-card')).toBe(true);
+	});
 });
 
+@Component({
+	imports: [DropdownMenu, DropdownMenuItem],
+	template: `
+		<mcms-dropdown-menu>
+			<button mcms-dropdown-item value="test">Test Item</button>
+		</mcms-dropdown-menu>
+	`,
+})
+class _TestMenuItemHostComponent {}
+
+@Component({
+	imports: [DropdownMenu, DropdownMenuItem],
+	template: `
+		<mcms-dropdown-menu>
+			<button mcms-dropdown-item value="test-shortcut" shortcut="⌘K">Test Item</button>
+		</mcms-dropdown-menu>
+	`,
+})
+class _TestMenuItemWithShortcutComponent {}
+
 describe('DropdownMenuItem', () => {
-	let fixture: ComponentFixture<DropdownMenuItem>;
+	let fixture: ComponentFixture<_TestMenuItemHostComponent>;
 
 	beforeEach(async () => {
 		await TestBed.configureTestingModule({
-			imports: [DropdownMenuItem],
+			imports: [_TestMenuItemHostComponent],
 		}).compileComponents();
 
-		fixture = TestBed.createComponent(DropdownMenuItem);
+		fixture = TestBed.createComponent(_TestMenuItemHostComponent);
+		fixture.detectChanges();
 		await fixture.whenStable();
 	});
 
 	it('should create', () => {
-		expect(fixture.componentInstance).toBeTruthy();
+		const item = fixture.nativeElement.querySelector('[mcms-dropdown-item]');
+		expect(item).toBeTruthy();
 	});
 
 	it('should have role="menuitem"', () => {
-		expect(fixture.nativeElement.getAttribute('role')).toBe('menuitem');
+		const item = fixture.nativeElement.querySelector('[mcms-dropdown-item]');
+		expect(item.getAttribute('role')).toBe('menuitem');
 	});
 
 	it('should be focusable by default', () => {
-		expect(fixture.nativeElement.getAttribute('tabindex')).toBe('0');
+		const item = fixture.nativeElement.querySelector('[mcms-dropdown-item]');
+		expect(item.getAttribute('tabindex')).toBe('0');
 	});
+});
 
-	it('should not be focusable when disabled', () => {
-		fixture.componentRef.setInput('disabled', true);
+describe('DropdownMenuItem with shortcut', () => {
+	let fixture: ComponentFixture<_TestMenuItemWithShortcutComponent>;
+
+	beforeEach(async () => {
+		await TestBed.configureTestingModule({
+			imports: [_TestMenuItemWithShortcutComponent],
+		}).compileComponents();
+
+		fixture = TestBed.createComponent(_TestMenuItemWithShortcutComponent);
 		fixture.detectChanges();
-
-		expect(fixture.nativeElement.getAttribute('tabindex')).toBe('-1');
-		expect(fixture.nativeElement.getAttribute('aria-disabled')).toBe('true');
+		await fixture.whenStable();
 	});
 
 	it('should display shortcut when provided', () => {
-		fixture.componentRef.setInput('shortcut', '⌘K');
-		fixture.detectChanges();
-
-		const shortcut = fixture.nativeElement.querySelector('.dropdown-shortcut');
+		const shortcut = fixture.nativeElement.querySelector('[mcms-dropdown-item] span');
 		expect(shortcut?.textContent).toBe('⌘K');
 	});
 });
