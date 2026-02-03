@@ -7,6 +7,8 @@
 		"test:ui": "vitest --ui",
 		"test:coverage": "vitest run --coverage",
 		"test:run": "vitest run",
+		"test:isolated": "npx tsx scripts/test-isolated.ts",
+		"test:isolated:prod": "npx tsx scripts/test-isolated.ts --prod",
 		"prepare": "husky"
 	},
 	"private": true,
@@ -100,6 +102,7 @@
 		"ts-jest": "^29.4.0",
 		"ts-node": "10.9.1",
 		"tslib": "^2.3.0",
+		"tsx": "^4.21.0",
 		"typescript": "~5.9.2",
 		"typescript-eslint": "^8.40.0",
 		"verdaccio": "^6.0.5",
