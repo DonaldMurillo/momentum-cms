@@ -64,7 +64,7 @@ describe('momentumApiMiddleware', () => {
 			const res = await request(app).get('/api/unknown');
 
 			expect(res.status).toBe(404);
-			expect(res.body.error).toBe('Collection not found');
+			expect(res.body.error).toBe('Collection "unknown" not found');
 		});
 	});
 
