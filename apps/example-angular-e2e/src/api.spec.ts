@@ -160,7 +160,7 @@ test.describe('API Endpoints - Error Handling', () => {
 
 		expect(response.status()).toBe(404);
 		const body = await response.json();
-		expect(body.error).toBe('Collection not found');
+		expect(body.error).toContain('not found');
 	});
 });
 

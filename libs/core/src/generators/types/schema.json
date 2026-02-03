@@ -1,0 +1,25 @@
+{
+	"$schema": "https://json-schema.org/schema",
+	"$id": "MomentumGenerateTypes",
+	"title": "Generate Types Schema",
+	"description": "Generate TypeScript types from Momentum CMS collection definitions",
+	"type": "object",
+	"properties": {
+		"configPath": {
+			"type": "string",
+			"description": "Path to the momentum.config.ts file (relative to project root)",
+			"x-prompt": "What is the path to your momentum.config.ts file?"
+		},
+		"outputPath": {
+			"type": "string",
+			"description": "Output path for generated types (relative to project root)",
+			"default": "src/types/momentum.generated.ts"
+		},
+		"watch": {
+			"type": "boolean",
+			"description": "Watch for changes and regenerate types",
+			"default": false
+		}
+	},
+	"required": ["configPath"]
+}

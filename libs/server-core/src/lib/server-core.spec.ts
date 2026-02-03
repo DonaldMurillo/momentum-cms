@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createMomentumHandlers, type MomentumRequest } from './server-core';
+import { resetMomentumAPI } from './momentum-api';
 import type { CollectionConfig, MomentumConfig, DatabaseAdapter } from '@momentum-cms/core';
 
 // Mock collection for testing
@@ -26,6 +27,9 @@ describe('createMomentumHandlers', () => {
 	let config: MomentumConfig;
 
 	beforeEach(() => {
+		// Reset singleton before each test
+		resetMomentumAPI();
+
 		mockAdapter = {
 			find: vi.fn(),
 			findById: vi.fn(),
@@ -38,6 +42,10 @@ describe('createMomentumHandlers', () => {
 			db: { adapter: mockAdapter },
 			server: { port: 4000 },
 		};
+	});
+
+	afterEach(() => {
+		resetMomentumAPI();
 	});
 
 	describe('handleFind', () => {
@@ -58,7 +66,14 @@ describe('createMomentumHandlers', () => {
 
 			expect(result.docs).toEqual(mockDocs);
 			expect(result.totalDocs).toBe(2);
-			expect(mockAdapter.find).toHaveBeenCalledWith('posts', {});
+			// Momentum API always passes pagination params
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({
+					limit: 10,
+					page: 1,
+				}),
+			);
 		});
 
 		it('should pass query params to database', async () => {
@@ -73,11 +88,14 @@ describe('createMomentumHandlers', () => {
 
 			await handlers.handleFind(request);
 
-			expect(mockAdapter.find).toHaveBeenCalledWith('posts', {
-				limit: 10,
-				page: 2,
-				sort: '-createdAt',
-			});
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({
+					limit: 10,
+					page: 2,
+					sort: '-createdAt',
+				}),
+			);
 		});
 
 		it('should return 404 for unknown collection', async () => {
@@ -90,7 +108,8 @@ describe('createMomentumHandlers', () => {
 
 			const result = await handlers.handleFind(request);
 
-			expect(result.error).toBe('Collection not found');
+			expect(result.error).toContain('unknown');
+			expect(result.error).toContain('not found');
 			expect(result.status).toBe(404);
 		});
 	});
@@ -208,7 +227,7 @@ describe('createMomentumHandlers', () => {
 
 			const result = await handlers.handleUpdate(request);
 
-			expect(result.error).toBe('Document not found');
+			expect(result.error).toContain('not found');
 			expect(result.status).toBe(404);
 		});
 	});
@@ -244,7 +263,7 @@ describe('createMomentumHandlers', () => {
 
 			const result = await handlers.handleDelete(request);
 
-			expect(result.error).toBe('Document not found');
+			expect(result.error).toContain('not found');
 			expect(result.status).toBe(404);
 		});
 	});

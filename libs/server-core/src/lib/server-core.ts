@@ -1,4 +1,14 @@
-import type { CollectionConfig, Field, DatabaseAdapter, MomentumConfig } from '@momentum-cms/core';
+import type { DatabaseAdapter, MomentumConfig } from '@momentum-cms/core';
+import {
+	initializeMomentumAPI,
+	getMomentumAPI,
+	isMomentumAPIInitialized,
+	CollectionNotFoundError,
+	DocumentNotFoundError,
+	AccessDeniedError,
+	ValidationError as MomentumValidationError,
+} from './momentum-api';
+import type { MomentumAPI, MomentumAPIContext } from './momentum-api.types';
 
 // Re-export types for convenience
 export type { DatabaseAdapter, MomentumConfig, ResolvedMomentumConfig } from '@momentum-cms/core';
@@ -23,6 +33,8 @@ export interface MomentumRequest {
 	id?: string;
 	body?: Record<string, unknown>;
 	query?: QueryOptions;
+	/** User context for access control */
+	user?: MomentumAPIContext['user'];
 }
 
 /**
@@ -60,148 +72,112 @@ export interface MomentumHandlers {
 }
 
 /**
- * Validates data against collection field definitions.
- */
-function validateData(
-	data: Record<string, unknown>,
-	fields: Field[],
-	isUpdate = false,
-): ValidationError[] {
-	const errors: ValidationError[] = [];
-
-	for (const field of fields) {
-		const value = data[field.name];
-		const fieldLabel = field.label ?? field.name;
-
-		// Check required fields (only on create, not on update)
-		if (field.required && !isUpdate) {
-			if (value === undefined || value === null || value === '') {
-				errors.push({
-					field: field.name,
-					message: `${fieldLabel} is required`,
-				});
-			}
-		}
-
-		// Type-specific validation could be added here
-	}
-
-	return errors;
-}
-
-/**
  * Creates Momentum CMS handlers.
  * Framework-agnostic - can be used with Express, h3, Fastify, etc.
+ *
+ * Now delegates to the MomentumAPI singleton for consistent behavior
+ * between HTTP requests and direct API calls.
  */
 export function createMomentumHandlers(config: MomentumConfig): MomentumHandlers {
-	const { collections, db } = config;
-	const adapter = db.adapter;
+	// Initialize the Momentum API if not already done
+	if (!isMomentumAPIInitialized()) {
+		initializeMomentumAPI(config);
+	}
 
-	function getCollection(slug: string): CollectionConfig | undefined {
-		return collections.find((c) => c.slug === slug);
+	/**
+	 * Get the API instance with request context applied.
+	 */
+	function getContextualAPI(request: MomentumRequest): MomentumAPI {
+		const api = getMomentumAPI();
+		if (request.user) {
+			return api.setContext({ user: request.user });
+		}
+		return api;
 	}
 
 	async function handleFind(request: MomentumRequest): Promise<MomentumResponse> {
-		const collection = getCollection(request.collectionSlug);
-		if (!collection) {
-			return { error: 'Collection not found', status: 404 };
-		}
+		try {
+			const api = getContextualAPI(request);
+			const result = await api.collection<Record<string, unknown>>(request.collectionSlug).find({
+				limit: request.query?.limit,
+				page: request.query?.page,
+				sort: request.query?.sort,
+				where: request.query?.where,
+			});
 
-		const docs = await adapter.find(request.collectionSlug, request.query ?? {});
-		return {
-			docs,
-			totalDocs: docs.length,
-		};
+			return {
+				docs: result.docs,
+				totalDocs: result.totalDocs,
+			};
+		} catch (error) {
+			return handleError(error);
+		}
 	}
 
 	async function handleFindById(request: MomentumRequest): Promise<MomentumResponse> {
-		const collection = getCollection(request.collectionSlug);
-		if (!collection) {
-			return { error: 'Collection not found', status: 404 };
-		}
-
 		if (!request.id) {
 			return { error: 'ID is required', status: 400 };
 		}
 
-		const doc = await adapter.findById(request.collectionSlug, request.id);
-		if (!doc) {
-			return { error: 'Document not found', status: 404 };
-		}
+		try {
+			const api = getContextualAPI(request);
+			const doc = await api
+				.collection<Record<string, unknown>>(request.collectionSlug)
+				.findById(request.id);
 
-		return { doc };
+			if (!doc) {
+				return { error: 'Document not found', status: 404 };
+			}
+
+			return { doc };
+		} catch (error) {
+			return handleError(error);
+		}
 	}
 
 	async function handleCreate(request: MomentumRequest): Promise<MomentumResponse> {
-		const collection = getCollection(request.collectionSlug);
-		if (!collection) {
-			return { error: 'Collection not found', status: 404 };
+		try {
+			const api = getContextualAPI(request);
+			const doc = await api
+				.collection<Record<string, unknown>>(request.collectionSlug)
+				.create(request.body ?? {});
+
+			return { doc, status: 201 };
+		} catch (error) {
+			return handleError(error);
 		}
-
-		const data = request.body ?? {};
-		const errors = validateData(data, collection.fields, false);
-
-		if (errors.length > 0) {
-			return {
-				error: 'Validation failed',
-				errors,
-				status: 400,
-			};
-		}
-
-		const doc = await adapter.create(request.collectionSlug, data);
-		return { doc, status: 201 };
 	}
 
 	async function handleUpdate(request: MomentumRequest): Promise<MomentumResponse> {
-		const collection = getCollection(request.collectionSlug);
-		if (!collection) {
-			return { error: 'Collection not found', status: 404 };
-		}
-
 		if (!request.id) {
 			return { error: 'ID is required', status: 400 };
 		}
 
-		// Check if document exists
-		const existing = await adapter.findById(request.collectionSlug, request.id);
-		if (!existing) {
-			return { error: 'Document not found', status: 404 };
+		try {
+			const api = getContextualAPI(request);
+			const doc = await api
+				.collection<Record<string, unknown>>(request.collectionSlug)
+				.update(request.id, request.body ?? {});
+
+			return { doc };
+		} catch (error) {
+			return handleError(error);
 		}
-
-		const data = request.body ?? {};
-		const errors = validateData(data, collection.fields, true);
-
-		if (errors.length > 0) {
-			return {
-				error: 'Validation failed',
-				errors,
-				status: 400,
-			};
-		}
-
-		const doc = await adapter.update(request.collectionSlug, request.id, data);
-		return { doc };
 	}
 
 	async function handleDelete(request: MomentumRequest): Promise<MomentumResponse> {
-		const collection = getCollection(request.collectionSlug);
-		if (!collection) {
-			return { error: 'Collection not found', status: 404 };
-		}
-
 		if (!request.id) {
 			return { error: 'ID is required', status: 400 };
 		}
 
-		// Check if document exists
-		const existing = await adapter.findById(request.collectionSlug, request.id);
-		if (!existing) {
-			return { error: 'Document not found', status: 404 };
-		}
+		try {
+			const api = getContextualAPI(request);
+			const result = await api.collection(request.collectionSlug).delete(request.id);
 
-		await adapter.delete(request.collectionSlug, request.id);
-		return { deleted: true, id: request.id };
+			return { deleted: result.deleted, id: result.id };
+		} catch (error) {
+			return handleError(error);
+		}
 	}
 
 	async function routeRequest(request: MomentumRequest): Promise<MomentumResponse> {
@@ -231,6 +207,32 @@ export function createMomentumHandlers(config: MomentumConfig): MomentumHandlers
 		handleDelete,
 		routeRequest,
 	};
+}
+
+/**
+ * Convert API errors to MomentumResponse format.
+ */
+function handleError(error: unknown): MomentumResponse {
+	if (error instanceof CollectionNotFoundError) {
+		return { error: error.message, status: 404 };
+	}
+	if (error instanceof DocumentNotFoundError) {
+		return { error: error.message, status: 404 };
+	}
+	if (error instanceof AccessDeniedError) {
+		return { error: error.message, status: 403 };
+	}
+	if (error instanceof MomentumValidationError) {
+		return {
+			error: 'Validation failed',
+			errors: error.errors,
+			status: 400,
+		};
+	}
+	if (error instanceof Error) {
+		return { error: error.message, status: 500 };
+	}
+	return { error: 'Unknown error', status: 500 };
 }
 
 /**

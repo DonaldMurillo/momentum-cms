@@ -182,8 +182,12 @@ test.describe('Collection Create Form - Posts', () => {
 		// Should redirect to list page after successful creation
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/posts$/, { timeout: 10000 });
 
-		// Verify the new post appears in the list
-		await expect(authenticatedPage.getByText(title)).toBeVisible();
+		// Verify the post was created via API (UI list has pagination, new posts may not be on first page)
+		const response = await authenticatedPage.request.get(`/api/posts?limit=100`);
+		const data = await response.json();
+		const createdPost = data.docs.find((doc: { title: string }) => doc.title === title);
+		expect(createdPost).toBeDefined();
+		expect(createdPost.slug).toBe(slug);
 	});
 
 	test('should create post with checkbox unchecked (boolean false)', async ({
@@ -212,8 +216,14 @@ test.describe('Collection Create Form - Posts', () => {
 		// Should redirect to list page after successful creation
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/posts$/, { timeout: 10000 });
 
-		// Verify the new post appears in the list
-		await expect(authenticatedPage.getByText(title)).toBeVisible();
+		// Verify the post was created via API (UI list has pagination, new posts may not be on first page)
+		const response = await authenticatedPage.request.get(`/api/posts?limit=100`);
+		const data = await response.json();
+		const createdPost = data.docs.find((doc: { title: string }) => doc.title === title);
+		expect(createdPost).toBeDefined();
+		expect(createdPost.slug).toBe(slug);
+		// Verify featured is false (unchecked checkbox)
+		expect(createdPost.featured).toBeFalsy();
 	});
 });
 

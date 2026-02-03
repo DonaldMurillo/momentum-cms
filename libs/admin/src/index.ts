@@ -11,6 +11,27 @@ export {
 	type SetupStatus,
 } from './lib/services/auth.service';
 
+// Momentum API (unified SSR/Browser)
+export {
+	injectMomentumAPI,
+	provideMomentumAPI,
+	MOMENTUM_API,
+	MOMENTUM_API_CONTEXT,
+	type MomentumClientAPI,
+	type MomentumCollectionAPI,
+	type MomentumAPIServer,
+	type MomentumAPIContext,
+	type FindOptions,
+	type FindResult,
+	type DeleteResult,
+	type UserContext,
+	// Type-safe API
+	injectTypedMomentumAPI,
+	type TypedMomentumClientAPI,
+	type TypedCollectionAPI,
+	type TypedFindOptions,
+} from './lib/services/momentum-api.service';
+
 // Guards
 export * from './lib/guards';
 

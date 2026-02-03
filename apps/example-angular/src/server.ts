@@ -13,6 +13,8 @@ import {
 	createSetupMiddleware,
 } from '@momentum-cms/server-express';
 import { createMomentumAuth } from '@momentum-cms/auth';
+import { initializeMomentumAPI, getMomentumAPI } from '@momentum-cms/server-core';
+import { provideMomentumAPI } from '@momentum-cms/admin';
 import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
 import momentumConfig from './momentum.config';
 
@@ -29,6 +31,9 @@ app.use(express.json());
 if (momentumConfig.db.adapter.initialize) {
 	momentumConfig.db.adapter.initialize(momentumConfig.collections).catch(console.error);
 }
+
+// Initialize Momentum API singleton
+initializeMomentumAPI(momentumConfig);
 
 // Get the pg pool from the adapter for Better Auth
 // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- PostgresAdapter implements PostgresAdapterWithRaw
@@ -76,10 +81,18 @@ app.use(
 
 /**
  * Handle all other requests by rendering the Angular application.
+ * Passes the Momentum API and user context for SSR.
  */
 app.use('/**', (req, res, next) => {
+	// Get user context from request (set by auth middleware if authenticated)
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/consistent-type-assertions -- Express request augmentation
+	const user = (req as any).momentumUser ?? undefined;
+
 	angularApp
-		.handle(req)
+		.handle(req, {
+			// Provide the Momentum API to Angular during SSR
+			providers: provideMomentumAPI(getMomentumAPI(), { user }),
+		})
 		.then((response) => (response ? writeResponseToNodeResponse(response, res) : next()))
 		.catch(next);
 });

@@ -80,6 +80,18 @@
 				"staticFilePath": "dist/apps/example-angular/browser",
 				"spa": true
 			}
+		},
+		"generate-types": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "npx tsx --tsconfig apps/example-angular/tsconfig.app.json libs/core/src/generators/types/generator.ts apps/example-angular/src/momentum.config.ts apps/example-angular/src/types/momentum.generated.ts"
+			}
+		},
+		"generate-types:watch": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "npx tsx --tsconfig apps/example-angular/tsconfig.app.json libs/core/src/generators/types/generator.ts apps/example-angular/src/momentum.config.ts apps/example-angular/src/types/momentum.generated.ts --watch"
+			}
 		}
 	}
 }
