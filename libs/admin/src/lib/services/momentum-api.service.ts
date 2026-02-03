@@ -20,10 +20,20 @@
  * ```
  */
 
-import { inject, InjectionToken, PLATFORM_ID, Provider, Signal, signal } from '@angular/core';
+import {
+	inject,
+	InjectionToken,
+	makeStateKey,
+	PLATFORM_ID,
+	Provider,
+	Signal,
+	signal,
+	StateKey,
+	TransferState,
+} from '@angular/core';
 import { isPlatformServer } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom, Observable } from 'rxjs';
+import { firstValueFrom, Observable, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 // ============================================
@@ -60,6 +70,17 @@ export interface FindOptions {
 	limit?: number;
 	page?: number;
 	depth?: number;
+	/** Enable TransferState caching for SSR hydration (default: true) */
+	transfer?: boolean;
+}
+
+/**
+ * Options for findById operations.
+ */
+export interface FindByIdOptions {
+	depth?: number;
+	/** Enable TransferState caching for SSR hydration (default: true) */
+	transfer?: boolean;
 }
 
 /**
@@ -169,21 +190,21 @@ export interface MomentumClientAPI {
 export interface MomentumCollectionAPI<T = Record<string, unknown>> {
 	// Observable methods (Angular-friendly)
 	find$(options?: FindOptions): Observable<FindResult<T>>;
-	findById$(id: string): Observable<T | null>;
+	findById$(id: string, options?: FindByIdOptions): Observable<T | null>;
 	create$(data: Partial<T>): Observable<T>;
 	update$(id: string, data: Partial<T>): Observable<T>;
 	delete$(id: string): Observable<DeleteResult>;
 
 	// Promise methods (async/await)
 	find(options?: FindOptions): Promise<FindResult<T>>;
-	findById(id: string): Promise<T | null>;
+	findById(id: string, options?: FindByIdOptions): Promise<T | null>;
 	create(data: Partial<T>): Promise<T>;
 	update(id: string, data: Partial<T>): Promise<T>;
 	delete(id: string): Promise<DeleteResult>;
 
 	// Signal methods (read-only operations)
 	findSignal(options?: FindOptions): Signal<FindResult<T> | undefined>;
-	findByIdSignal(id: string): Signal<T | null | undefined>;
+	findByIdSignal(id: string, options?: FindByIdOptions): Signal<T | null | undefined>;
 }
 
 // ============================================
@@ -199,6 +220,17 @@ export interface TypedFindOptions<TWhere> {
 	limit?: number;
 	page?: number;
 	depth?: number;
+	/** Enable TransferState caching for SSR hydration */
+	transfer?: boolean;
+}
+
+/**
+ * Typed findById options.
+ */
+export interface TypedFindByIdOptions {
+	depth?: number;
+	/** Enable TransferState caching for SSR hydration */
+	transfer?: boolean;
 }
 
 /**
@@ -207,21 +239,21 @@ export interface TypedFindOptions<TWhere> {
 export interface TypedCollectionAPI<TDoc, TWhere = Record<string, unknown>> {
 	// Observable methods
 	find$(options?: TypedFindOptions<TWhere>): Observable<FindResult<TDoc>>;
-	findById$(id: string): Observable<TDoc | null>;
+	findById$(id: string, options?: TypedFindByIdOptions): Observable<TDoc | null>;
 	create$(data: Partial<TDoc>): Observable<TDoc>;
 	update$(id: string, data: Partial<TDoc>): Observable<TDoc>;
 	delete$(id: string): Observable<DeleteResult>;
 
 	// Promise methods
 	find(options?: TypedFindOptions<TWhere>): Promise<FindResult<TDoc>>;
-	findById(id: string): Promise<TDoc | null>;
+	findById(id: string, options?: TypedFindByIdOptions): Promise<TDoc | null>;
 	create(data: Partial<TDoc>): Promise<TDoc>;
 	update(id: string, data: Partial<TDoc>): Promise<TDoc>;
 	delete(id: string): Promise<DeleteResult>;
 
 	// Signal methods (read-only operations)
 	findSignal(options?: TypedFindOptions<TWhere>): Signal<FindResult<TDoc> | undefined>;
-	findByIdSignal(id: string): Signal<TDoc | null | undefined>;
+	findByIdSignal(id: string, options?: TypedFindByIdOptions): Signal<TDoc | null | undefined>;
 }
 
 /**
@@ -255,6 +287,61 @@ export type TypedMomentumClientAPI<
 		TCollections[K]['where'] extends undefined ? Record<string, unknown> : TCollections[K]['where']
 	>;
 };
+
+// ============================================
+// TransferState Key Generator
+// ============================================
+
+/**
+ * Generates a deterministic TransferState key from collection slug and options.
+ * Keys are stable across SSR and browser for the same query.
+ */
+function generateTransferKey<T>(
+	collection: string,
+	operation: 'find' | 'findById',
+	options?: FindOptions | FindByIdOptions,
+	id?: string,
+): StateKey<T> {
+	const parts: string[] = ['mcms', collection, operation];
+
+	if (id) {
+		parts.push(id);
+	}
+
+	if (options) {
+		// Build hash from relevant options (excluding transfer which doesn't affect the query)
+		const hashParts: Record<string, unknown> = {};
+
+		if ('where' in options && options.where !== undefined) {
+			hashParts['where'] = options.where;
+		}
+		if ('sort' in options && options.sort !== undefined) {
+			hashParts['sort'] = options.sort;
+		}
+		if ('limit' in options && options.limit !== undefined) {
+			hashParts['limit'] = options.limit;
+		}
+		if ('page' in options && options.page !== undefined) {
+			hashParts['page'] = options.page;
+		}
+		if ('depth' in options && options.depth !== undefined) {
+			hashParts['depth'] = options.depth;
+		}
+
+		if (Object.keys(hashParts).length > 0) {
+			// Sort keys for stable hash
+			const sortedKeys = Object.keys(hashParts).sort();
+			const sorted: Record<string, unknown> = {};
+			for (const key of sortedKeys) {
+				sorted[key] = hashParts[key];
+			}
+			// Use btoa for simple hash, slice for reasonable key length
+			parts.push(btoa(JSON.stringify(sorted)).slice(0, 16));
+		}
+	}
+
+	return makeStateKey<T>(parts.join(':'));
+}
 
 // ============================================
 // Main Injection Function
@@ -294,6 +381,7 @@ export type TypedMomentumClientAPI<
  */
 export function injectMomentumAPI(): MomentumClientAPI {
 	const platformId = inject(PLATFORM_ID);
+	const transferState = inject(TransferState, { optional: true });
 
 	if (isPlatformServer(platformId)) {
 		// Server-side: use direct Momentum API if available
@@ -302,17 +390,17 @@ export function injectMomentumAPI(): MomentumClientAPI {
 
 		if (serverApi) {
 			// Use direct server API (no HTTP overhead)
-			return new ServerMomentumAPI(serverApi, userContext ?? {});
+			return new ServerMomentumAPI(serverApi, userContext ?? {}, transferState);
 		}
 
 		// Fallback to HTTP if server API not initialized yet
 		// This can happen during build-time prerendering
 		const http = inject(HttpClient);
-		return new BrowserMomentumAPI(http);
+		return new BrowserMomentumAPI(http, transferState, platformId);
 	} else {
 		// Browser-side: use HTTP client
 		const http = inject(HttpClient);
-		return new BrowserMomentumAPI(http);
+		return new BrowserMomentumAPI(http, transferState, platformId);
 	}
 }
 
@@ -377,24 +465,32 @@ class ServerMomentumAPI implements MomentumClientAPI {
 	constructor(
 		private readonly serverApi: MomentumAPIServer,
 		private readonly context: MomentumAPIContext,
+		private readonly transferState: TransferState | null,
 	) {
 		// Apply user context
 		this.contextualApi = context.user ? serverApi.setContext(context) : serverApi;
 	}
 
 	collection<T = Record<string, unknown>>(slug: string): MomentumCollectionAPI<T> {
-		return new ServerCollectionAPI<T>(this.contextualApi.collection<T>(slug));
+		return new ServerCollectionAPI<T>(
+			this.contextualApi.collection<T>(slug),
+			slug,
+			this.transferState,
+		);
 	}
 }
 
 class ServerCollectionAPI<T> implements MomentumCollectionAPI<T> {
-	constructor(private readonly ops: CollectionOperationsServer<T>) {}
+	constructor(
+		private readonly ops: CollectionOperationsServer<T>,
+		private readonly slug: string,
+		private readonly transferState: TransferState | null,
+	) {}
 
 	// Observable wrappers around promise methods
 	find$(options?: FindOptions): Observable<FindResult<T>> {
 		return new Observable((subscriber) => {
-			this.ops
-				.find(options)
+			this.find(options)
 				.then((result) => {
 					subscriber.next(result);
 					subscriber.complete();
@@ -403,10 +499,9 @@ class ServerCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		});
 	}
 
-	findById$(id: string): Observable<T | null> {
+	findById$(id: string, options?: FindByIdOptions): Observable<T | null> {
 		return new Observable((subscriber) => {
-			this.ops
-				.findById(id)
+			this.findById(id, options)
 				.then((result) => {
 					subscriber.next(result);
 					subscriber.complete();
@@ -451,13 +546,29 @@ class ServerCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		});
 	}
 
-	// Promise methods (direct delegation)
-	find(options?: FindOptions): Promise<FindResult<T>> {
-		return this.ops.find(options);
+	// Promise methods with TransferState support (enabled by default)
+	async find(options?: FindOptions): Promise<FindResult<T>> {
+		const result = await this.ops.find(options);
+
+		// Store in TransferState (enabled by default, opt-out with transfer: false)
+		if (options?.transfer !== false && this.transferState) {
+			const key = generateTransferKey<FindResult<T>>(this.slug, 'find', options);
+			this.transferState.set(key, result);
+		}
+
+		return result;
 	}
 
-	findById(id: string): Promise<T | null> {
-		return this.ops.findById(id);
+	async findById(id: string, options?: FindByIdOptions): Promise<T | null> {
+		const result = await this.ops.findById(id, options);
+
+		// Store in TransferState (enabled by default, opt-out with transfer: false)
+		if (options?.transfer !== false && this.transferState) {
+			const key = generateTransferKey<T | null>(this.slug, 'findById', options, id);
+			this.transferState.set(key, result);
+		}
+
+		return result;
 	}
 
 	create(data: Partial<T>): Promise<T> {
@@ -479,9 +590,9 @@ class ServerCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		return result.asReadonly();
 	}
 
-	findByIdSignal(id: string): Signal<T | null | undefined> {
+	findByIdSignal(id: string, options?: FindByIdOptions): Signal<T | null | undefined> {
 		const result = signal<T | null | undefined>(undefined);
-		this.findById(id).then((data) => result.set(data));
+		this.findById(id, options).then((data) => result.set(data));
 		return result.asReadonly();
 	}
 }
@@ -506,10 +617,20 @@ interface ApiResponse<T> {
 class BrowserMomentumAPI implements MomentumClientAPI {
 	private readonly baseUrl = '/api';
 
-	constructor(private readonly http: HttpClient) {}
+	constructor(
+		private readonly http: HttpClient,
+		private readonly transferState: TransferState | null,
+		private readonly platformId: object,
+	) {}
 
 	collection<T = Record<string, unknown>>(slug: string): MomentumCollectionAPI<T> {
-		return new BrowserCollectionAPI<T>(this.http, `${this.baseUrl}/${slug}`);
+		return new BrowserCollectionAPI<T>(
+			this.http,
+			`${this.baseUrl}/${slug}`,
+			slug,
+			this.transferState,
+			this.platformId,
+		);
 	}
 }
 
@@ -523,9 +644,23 @@ class BrowserCollectionAPI<T> implements MomentumCollectionAPI<T> {
 	constructor(
 		private readonly http: HttpClient,
 		private readonly endpoint: string,
+		private readonly slug: string,
+		private readonly transferState: TransferState | null,
+		private readonly platformId: object,
 	) {}
 
 	find$(options?: FindOptions): Observable<FindResult<T>> {
+		// Check TransferState cache first (enabled by default, opt-out with transfer: false)
+		if (options?.transfer !== false && this.transferState && !isPlatformServer(this.platformId)) {
+			const key = generateTransferKey<FindResult<T>>(this.slug, 'find', options);
+			const cached = this.transferState.get(key, null);
+			if (cached) {
+				this.transferState.remove(key);
+				return of(cached);
+			}
+		}
+
+		// Make HTTP call
 		const params = this.buildQueryParams(options);
 		return this.http.get<ApiResponse<T>>(this.endpoint, { params }).pipe(
 			map((response) => {
@@ -551,7 +686,17 @@ class BrowserCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		);
 	}
 
-	findById$(id: string): Observable<T | null> {
+	findById$(id: string, options?: FindByIdOptions): Observable<T | null> {
+		// Check TransferState cache first (enabled by default, opt-out with transfer: false)
+		if (options?.transfer !== false && this.transferState && !isPlatformServer(this.platformId)) {
+			const key = generateTransferKey<T | null>(this.slug, 'findById', options, id);
+			const cached = this.transferState.get(key, null);
+			if (cached !== null) {
+				this.transferState.remove(key);
+				return of(cached);
+			}
+		}
+
 		return (
 			this.http
 				.get<ApiResponse<T>>(`${this.endpoint}/${id}`)
@@ -589,8 +734,8 @@ class BrowserCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		return firstValueFrom(this.find$(options));
 	}
 
-	findById(id: string): Promise<T | null> {
-		return firstValueFrom(this.findById$(id));
+	findById(id: string, options?: FindByIdOptions): Promise<T | null> {
+		return firstValueFrom(this.findById$(id, options));
 	}
 
 	create(data: Partial<T>): Promise<T> {
@@ -612,9 +757,9 @@ class BrowserCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		return result.asReadonly();
 	}
 
-	findByIdSignal(id: string): Signal<T | null | undefined> {
+	findByIdSignal(id: string, options?: FindByIdOptions): Signal<T | null | undefined> {
 		const result = signal<T | null | undefined>(undefined);
-		this.findById(id).then((data) => result.set(data));
+		this.findById(id, options).then((data) => result.set(data));
 		return result.asReadonly();
 	}
 

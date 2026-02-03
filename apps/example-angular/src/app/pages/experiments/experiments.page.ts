@@ -16,10 +16,11 @@ export class ExperimentsPage {
 	protected api = injectTypedMomentumAPI<TypedMomentumCollections>();
 
 	constructor() {
-		// Full type safety:
+		// Full type safety with TransferState (enabled by default):
 		// - 'users' and 'posts' autocomplete as collection names
 		// - result.docs is typed as Users[]
 		// - where clause fields are type-checked
+		// - TransferState automatically caches SSR data (no duplicate HTTP calls)
 		this.api.users.find().then((result) => {
 			console.info('Users:', result.docs);
 		});

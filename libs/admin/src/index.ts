@@ -22,6 +22,7 @@ export {
 	type MomentumAPIServer,
 	type MomentumAPIContext,
 	type FindOptions,
+	type FindByIdOptions,
 	type FindResult,
 	type DeleteResult,
 	type UserContext,
@@ -30,6 +31,7 @@ export {
 	type TypedMomentumClientAPI,
 	type TypedCollectionAPI,
 	type TypedFindOptions,
+	type TypedFindByIdOptions,
 } from './lib/services/momentum-api.service';
 
 // Guards
