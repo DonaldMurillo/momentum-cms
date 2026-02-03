@@ -1,4 +1,5 @@
 import type { CollectionConfig } from './collections';
+import type { SeedingConfig, SeedingOptions } from './seeding';
 
 /**
  * Database adapter type for Momentum CMS.
@@ -95,6 +96,24 @@ export interface MomentumConfig {
 	 * Server configuration.
 	 */
 	server?: ServerConfig;
+
+	/**
+	 * Seeding configuration for initial data.
+	 * Provides declarative data seeding with strict typing.
+	 */
+	seeding?: SeedingConfig;
+}
+
+/**
+ * Resolved seeding options with defaults applied.
+ */
+export type ResolvedSeedingOptions = Required<SeedingOptions>;
+
+/**
+ * Resolved seeding config with defaults applied.
+ */
+export interface ResolvedSeedingConfig extends SeedingConfig {
+	options: ResolvedSeedingOptions;
 }
 
 /**
@@ -103,6 +122,7 @@ export interface MomentumConfig {
 export interface ResolvedMomentumConfig extends MomentumConfig {
 	admin: Required<AdminPanelConfig>;
 	server: Required<ServerConfig>;
+	seeding?: ResolvedSeedingConfig;
 }
 
 /**
@@ -146,6 +166,16 @@ export function defineMomentumConfig(config: MomentumConfig): ResolvedMomentumCo
 				headers: ['Content-Type', 'Authorization'],
 			},
 		},
+		seeding: config.seeding
+			? {
+					...config.seeding,
+					options: {
+						onConflict: config.seeding.options?.onConflict ?? 'skip',
+						runOnStart: config.seeding.options?.runOnStart ?? 'development',
+						quiet: config.seeding.options?.quiet ?? false,
+					},
+				}
+			: undefined,
 	};
 }
 

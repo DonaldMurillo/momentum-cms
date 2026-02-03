@@ -48,3 +48,14 @@ export {
 	createUserDeleteSyncHook,
 	type UserSyncConfig,
 } from './lib/user-sync-hooks';
+
+// Seeding
+export {
+	runSeeding,
+	shouldRunSeeding,
+	calculateChecksum,
+	createSeedTracker,
+	type SeedingResult,
+	type SeedTracker,
+	type CreateSeedTrackingData,
+} from './lib/seeding';

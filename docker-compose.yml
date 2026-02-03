@@ -1,0 +1,40 @@
+services:
+  # Main development database (port 5433)
+  postgres:
+    image: postgres:16
+    container_name: momentum-postgres
+    environment:
+      POSTGRES_DB: momentum
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Seeding E2E test database (port 5434)
+  postgres-seeding-test:
+    image: postgres:16
+    container_name: momentum-seeding-test-postgres
+    environment:
+      POSTGRES_DB: momentum_seeding_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5434:5432'
+    volumes:
+      - postgres_seeding_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  postgres_seeding_test_data:
