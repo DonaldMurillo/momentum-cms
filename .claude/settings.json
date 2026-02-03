@@ -1,20 +1,42 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(nx *)",
-      "Bash(npm run *)",
-      "Bash(npm install *)",
-      "Bash(npx drizzle-kit *)",
-      "Bash(git status)",
-      "Bash(git diff *)",
-      "Bash(git log *)",
-      "Bash(git add *)",
-      "Bash(git commit *)",
-      "Bash(gh *)"
-    ],
-    "deny": [
-      "Bash(rm -rf /)",
-      "Bash(git push --force *)"
-    ]
-  }
+	"permissions": {
+		"allow": [
+			"Bash(nx *)",
+			"Bash(npm run *)",
+			"Bash(npm install *)",
+			"Bash(npx drizzle-kit *)",
+			"Bash(git status)",
+			"Bash(git diff *)",
+			"Bash(git log *)",
+			"Bash(git add *)",
+			"Bash(git commit *)",
+			"Bash(gh *)"
+		],
+		"deny": ["Bash(rm -rf /)", "Bash(git push --force *)"]
+	},
+	"hooks": {
+		"PostToolUse": [
+			{
+				"matcher": "Write|Edit",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/lint-fix.sh\"",
+						"timeout": 30
+					}
+				]
+			}
+		],
+		"Stop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-check.py\"",
+						"timeout": 10
+					}
+				]
+			}
+		]
+	}
 }
