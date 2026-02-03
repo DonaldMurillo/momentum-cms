@@ -1,4 +1,4 @@
-import { defineCollection, text, email, checkbox, select } from '@momentum-cms/core';
+import { defineCollection, text, email, checkbox, select, hasRole } from '@momentum-cms/core';
 
 export const Users = defineCollection({
 	slug: 'users',
@@ -38,15 +38,11 @@ export const Users = defineCollection({
 		],
 	},
 	access: {
-		// Only admins can read user data
-		read: ({ req }) => req.user?.role === 'admin',
-		// Only admins can create users
-		create: ({ req }) => req.user?.role === 'admin',
-		// Only admins can update users
-		update: ({ req }) => req.user?.role === 'admin',
-		// Only admins can delete users
-		delete: ({ req }) => req.user?.role === 'admin',
-		// Only admins can access users in admin panel
-		admin: ({ req }) => req.user?.role === 'admin',
+		// Only admins can manage users
+		read: hasRole('admin'),
+		create: hasRole('admin'),
+		update: hasRole('admin'),
+		delete: hasRole('admin'),
+		admin: hasRole('admin'),
 	},
 });

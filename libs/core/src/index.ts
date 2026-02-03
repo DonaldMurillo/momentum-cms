@@ -11,5 +11,8 @@ export * from './lib/collections';
 // Fields
 export * from './lib/fields';
 
+// Access Control Helpers
+export * from './lib/access';
+
 // Configuration
 export * from './lib/config';

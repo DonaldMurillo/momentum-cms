@@ -1,4 +1,15 @@
-import { defineCollection, text, textarea, checkbox, select } from '@momentum-cms/core';
+import {
+	defineCollection,
+	text,
+	textarea,
+	checkbox,
+	select,
+	// Access helpers
+	allowAll,
+	hasRole,
+	hasAnyRole,
+	isAuthenticated,
+} from '@momentum-cms/core';
 
 export const Posts = defineCollection({
 	slug: 'posts',
@@ -22,14 +33,14 @@ export const Posts = defineCollection({
 	],
 	access: {
 		// Anyone can read posts (public content)
-		read: () => true,
+		read: allowAll(),
 		// Editors and admins can create posts (not viewers)
-		create: ({ req }) => req.user?.role === 'admin' || req.user?.role === 'editor',
+		create: hasAnyRole(['admin', 'editor']),
 		// Editors and admins can update posts (not viewers)
-		update: ({ req }) => req.user?.role === 'admin' || req.user?.role === 'editor',
+		update: hasAnyRole(['admin', 'editor']),
 		// Only admins can delete posts
-		delete: ({ req }) => req.user?.role === 'admin',
+		delete: hasRole('admin'),
 		// Authenticated users can access posts in admin panel
-		admin: ({ req }) => !!req.user,
+		admin: isAuthenticated(),
 	},
 });
