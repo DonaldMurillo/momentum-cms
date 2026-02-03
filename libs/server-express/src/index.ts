@@ -4,6 +4,7 @@ export {
 	createProtectMiddleware,
 	createSessionResolverMiddleware,
 	type AuthenticatedRequest,
+	type SessionResolverConfig,
 } from './lib/auth-middleware';
 export {
 	createSetupMiddleware,

@@ -72,6 +72,15 @@ export default defineConfig({
 	},
 
 	projects: [
+		// API Access Control tests - run FIRST and in SERIAL
+		// Creates test users (editor, viewer) for other tests to use
+		{
+			name: 'api-access-control-tests',
+			testMatch: /api-access-control\.spec\.ts$/,
+			use: {
+				...devices['Desktop Chrome'],
+			},
+		},
 		// Auth tests run without storage state to test login/logout flows
 		{
 			name: 'auth-tests',
@@ -80,6 +89,7 @@ export default defineConfig({
 				...devices['Desktop Chrome'],
 				// No storage state - tests unauthenticated behavior
 			},
+			dependencies: ['api-access-control-tests'],
 		},
 		// General tests (example.spec.ts, api.spec.ts, transfer-state.spec.ts) run without storage state
 		{
@@ -89,6 +99,17 @@ export default defineConfig({
 				...devices['Desktop Chrome'],
 				// No storage state - tests handle auth as needed
 			},
+			dependencies: ['api-access-control-tests'],
+		},
+		// Unauthenticated access control tests
+		{
+			name: 'unauthenticated-tests',
+			testMatch: /access-control\.spec\.ts$/,
+			use: {
+				...devices['Desktop Chrome'],
+				// No storage state - tests unauthenticated API behavior
+			},
+			dependencies: ['api-access-control-tests'],
 		},
 		// Authenticated tests - auth fixture loads storage state from global setup
 		{
@@ -97,6 +118,7 @@ export default defineConfig({
 			use: {
 				...devices['Desktop Chrome'],
 			},
+			dependencies: ['api-access-control-tests'],
 		},
 	],
 });

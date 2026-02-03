@@ -5,7 +5,9 @@ import {
 	computed,
 	signal,
 	effect,
+	PLATFORM_ID,
 } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { map } from 'rxjs/operators';
@@ -103,6 +105,7 @@ import { MomentumApiService } from '../../services/api.service';
 export class CollectionListPage {
 	private readonly route = inject(ActivatedRoute);
 	private readonly api = inject(MomentumApiService);
+	private readonly platformId = inject(PLATFORM_ID);
 
 	readonly loading = signal(true);
 	readonly documents = signal<Record<string, unknown>[]>([]);
@@ -135,9 +138,10 @@ export class CollectionListPage {
 
 	constructor() {
 		// Fetch documents when collection changes
+		// Only on client side - SSR doesn't have access to auth cookies
 		effect(() => {
 			const collection = this.collection();
-			if (collection) {
+			if (collection && isPlatformBrowser(this.platformId)) {
 				this.loadDocuments(collection.slug);
 			}
 		});

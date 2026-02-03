@@ -10,6 +10,10 @@ export {
 	type AuthResult,
 	type SetupStatus,
 } from './lib/services/auth.service';
+export {
+	CollectionAccessService,
+	type CollectionPermissions,
+} from './lib/services/collection-access.service';
 
 // Momentum API (unified SSR/Browser)
 export {
@@ -39,6 +43,17 @@ export * from './lib/guards';
 
 // UI Components and Services
 export * from './lib/ui/theme';
+
+// User Injection Utilities
+export {
+	injectUser,
+	injectUserRole,
+	injectIsAuthenticated,
+	injectIsAdmin,
+	injectHasRole,
+	injectHasAnyRole,
+	type BaseUser,
+} from './lib/utils/inject-user';
 
 // Components (for direct usage in Analog apps)
 export { AdminShellComponent } from './lib/components/shell/admin-shell.component';

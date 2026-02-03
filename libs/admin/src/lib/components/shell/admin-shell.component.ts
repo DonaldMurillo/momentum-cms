@@ -1,10 +1,19 @@
-import { Component, ChangeDetectionStrategy, inject, computed } from '@angular/core';
+import {
+	Component,
+	ChangeDetectionStrategy,
+	inject,
+	computed,
+	OnInit,
+	PLATFORM_ID,
+} from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { RouterOutlet, RouterLink, ActivatedRoute, Router } from '@angular/router';
 import type { CollectionConfig } from '@momentum-cms/core';
 import { Button } from '@momentum-cms/ui';
 import type { MomentumAdminBranding } from '../../routes/momentum-admin-routes';
 import { getCollectionsFromRouteData, getBrandingFromRouteData } from '../../utils/route-data';
 import { MomentumAuthService } from '../../services/auth.service';
+import { CollectionAccessService } from '../../services/collection-access.service';
 import { McmsThemeService } from '../../ui/theme/theme.service';
 
 /**
@@ -95,15 +104,67 @@ import { McmsThemeService } from '../../ui/theme/theme.service';
 		</main>
 	`,
 })
-export class AdminShellComponent {
+export class AdminShellComponent implements OnInit {
 	private readonly route = inject(ActivatedRoute);
 	private readonly router = inject(Router);
+	private readonly platformId = inject(PLATFORM_ID);
 	readonly auth = inject(MomentumAuthService);
+	readonly collectionAccess = inject(CollectionAccessService);
 	readonly theme = inject(McmsThemeService);
 
-	readonly collections = computed((): CollectionConfig[] => {
+	/** All collections from route data */
+	private readonly allCollections = computed((): CollectionConfig[] => {
 		return getCollectionsFromRouteData(this.route.snapshot.data);
 	});
+
+	/** Collections filtered by access permissions */
+	readonly collections = computed((): CollectionConfig[] => {
+		const all = this.allCollections();
+		const accessible = this.collectionAccess.accessibleCollections();
+
+		// If permissions not loaded yet, show all (will be filtered after load)
+		if (!this.collectionAccess.initialized()) {
+			return all;
+		}
+
+		// Filter to only accessible collections
+		return all.filter((c) => accessible.includes(c.slug));
+	});
+
+	ngOnInit(): void {
+		// Only run on client side - SSR doesn't have access to auth cookies
+		if (!isPlatformBrowser(this.platformId)) {
+			return;
+		}
+
+		// Initialize auth and check session on client-side hydration
+		// This is needed because guards don't re-run on hydration
+		this.initializeAuth();
+	}
+
+	private async initializeAuth(): Promise<void> {
+		// Wait for auth to initialize if still loading
+		if (this.auth.loading()) {
+			await this.auth.initialize();
+		}
+
+		// Redirect to setup if no users exist
+		if (this.auth.needsSetup()) {
+			await this.router.navigate(['/admin/setup']);
+			return;
+		}
+
+		// Redirect to login if not authenticated
+		if (!this.auth.isAuthenticated()) {
+			await this.router.navigate(['/admin/login']);
+			return;
+		}
+
+		// Load collection access permissions
+		if (!this.collectionAccess.initialized()) {
+			this.collectionAccess.loadAccess();
+		}
+	}
 
 	readonly branding = computed((): MomentumAdminBranding | undefined => {
 		return getBrandingFromRouteData(this.route.snapshot.data);

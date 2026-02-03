@@ -20,4 +20,16 @@ export const Posts = defineCollection({
 		}),
 		checkbox('featured', { label: 'Featured Post' }),
 	],
+	access: {
+		// Anyone can read posts (public content)
+		read: () => true,
+		// Editors and admins can create posts (not viewers)
+		create: ({ req }) => req.user?.role === 'admin' || req.user?.role === 'editor',
+		// Editors and admins can update posts (not viewers)
+		update: ({ req }) => req.user?.role === 'admin' || req.user?.role === 'editor',
+		// Only admins can delete posts
+		delete: ({ req }) => req.user?.role === 'admin',
+		// Authenticated users can access posts in admin panel
+		admin: ({ req }) => !!req.user,
+	},
 });

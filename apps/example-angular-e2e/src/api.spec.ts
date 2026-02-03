@@ -1,7 +1,18 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('API Endpoints - Posts Collection', () => {
-	test('GET /api/posts should return array of documents', async ({ request }) => {
+/**
+ * API Endpoint Tests (Unauthenticated)
+ *
+ * These tests verify API behavior for unauthenticated requests.
+ * With access control enabled:
+ * - Posts: public read, authenticated create/update, admin delete
+ * - Users: admin-only for all operations
+ *
+ * Authenticated API operations are tested in access-control.spec.ts
+ */
+
+test.describe('API Endpoints - Posts Collection (Unauthenticated)', () => {
+	test('GET /api/posts should return array of documents (public read)', async ({ request }) => {
 		const response = await request.get('/api/posts');
 
 		expect(response.status()).toBe(200);
@@ -11,7 +22,7 @@ test.describe('API Endpoints - Posts Collection', () => {
 		expect(typeof body.totalDocs).toBe('number');
 	});
 
-	test('POST /api/posts should create a new post', async ({ request }) => {
+	test('POST /api/posts should deny unauthenticated create', async ({ request }) => {
 		const response = await request.post('/api/posts', {
 			data: {
 				title: 'E2E Test Post',
@@ -21,45 +32,8 @@ test.describe('API Endpoints - Posts Collection', () => {
 			},
 		});
 
-		expect(response.status()).toBe(201);
-		const body = await response.json();
-		expect(body.doc.title).toBe('E2E Test Post');
-		expect(body.doc.id).toBeDefined();
-	});
-
-	test('POST /api/posts should validate required fields', async ({ request }) => {
-		const response = await request.post('/api/posts', {
-			data: {
-				content: 'Missing title and slug',
-			},
-		});
-
-		expect(response.status()).toBe(400);
-		const body = await response.json();
-		expect(body.error).toBe('Validation failed');
-		expect(body.errors).toContainEqual({
-			field: 'title',
-			message: 'Title is required',
-		});
-	});
-
-	test('GET /api/posts/:id should return a specific post', async ({ request }) => {
-		// First create a post
-		const createResponse = await request.post('/api/posts', {
-			data: {
-				title: 'Post to Fetch',
-				slug: 'post-to-fetch',
-			},
-		});
-		const createBody = await createResponse.json();
-		const postId = createBody.doc.id;
-
-		// Then fetch it
-		const response = await request.get(`/api/posts/${postId}`);
-
-		expect(response.status()).toBe(200);
-		const body = await response.json();
-		expect(body.doc.title).toBe('Post to Fetch');
+		// Access control: create requires authentication
+		expect(response.status()).toBe(403);
 	});
 
 	test('GET /api/posts/:id should return 404 for nonexistent post', async ({ request }) => {
@@ -70,62 +44,34 @@ test.describe('API Endpoints - Posts Collection', () => {
 		expect(body.error).toBe('Document not found');
 	});
 
-	test('PATCH /api/posts/:id should update a post', async ({ request }) => {
-		// First create a post
-		const createResponse = await request.post('/api/posts', {
-			data: {
-				title: 'Original Title',
-				slug: 'original-slug',
-			},
-		});
-		const createBody = await createResponse.json();
-		const postId = createBody.doc.id;
-
-		// Then update it
-		const response = await request.patch(`/api/posts/${postId}`, {
+	test('PATCH /api/posts/:id should deny unauthenticated update', async ({ request }) => {
+		const response = await request.patch('/api/posts/some-id', {
 			data: {
 				title: 'Updated Title',
 			},
 		});
 
-		expect(response.status()).toBe(200);
-		const body = await response.json();
-		expect(body.doc.title).toBe('Updated Title');
+		// Access control: update requires authentication
+		expect(response.status()).toBe(403);
 	});
 
-	test('DELETE /api/posts/:id should delete a post', async ({ request }) => {
-		// First create a post
-		const createResponse = await request.post('/api/posts', {
-			data: {
-				title: 'Post to Delete',
-				slug: 'post-to-delete',
-			},
-		});
-		const createBody = await createResponse.json();
-		const postId = createBody.doc.id;
+	test('DELETE /api/posts/:id should deny unauthenticated delete', async ({ request }) => {
+		const response = await request.delete('/api/posts/some-id');
 
-		// Delete it
-		const deleteResponse = await request.delete(`/api/posts/${postId}`);
-		expect(deleteResponse.status()).toBe(200);
-		const deleteBody = await deleteResponse.json();
-		expect(deleteBody.deleted).toBe(true);
-
-		// Verify it's deleted
-		const getResponse = await request.get(`/api/posts/${postId}`);
-		expect(getResponse.status()).toBe(404);
+		// Access control: delete requires admin
+		expect(response.status()).toBe(403);
 	});
 });
 
-test.describe('API Endpoints - Users Collection', () => {
-	test('GET /api/users should return empty array initially', async ({ request }) => {
+test.describe('API Endpoints - Users Collection (Unauthenticated)', () => {
+	test('GET /api/users should deny unauthenticated read', async ({ request }) => {
 		const response = await request.get('/api/users');
 
-		expect(response.status()).toBe(200);
-		const body = await response.json();
-		expect(body.docs).toBeDefined();
+		// Access control: users read requires admin
+		expect(response.status()).toBe(403);
 	});
 
-	test('POST /api/users should create a new user', async ({ request }) => {
+	test('POST /api/users should deny unauthenticated create', async ({ request }) => {
 		const response = await request.post('/api/users', {
 			data: {
 				name: 'John Doe',
@@ -135,22 +81,8 @@ test.describe('API Endpoints - Users Collection', () => {
 			},
 		});
 
-		expect(response.status()).toBe(201);
-		const body = await response.json();
-		expect(body.doc.name).toBe('John Doe');
-		expect(body.doc.email).toBe('john@example.com');
-	});
-
-	test('POST /api/users should validate required fields', async ({ request }) => {
-		const response = await request.post('/api/users', {
-			data: {
-				active: true,
-			},
-		});
-
-		expect(response.status()).toBe(400);
-		const body = await response.json();
-		expect(body.error).toBe('Validation failed');
+		// Access control: users create requires admin
+		expect(response.status()).toBe(403);
 	});
 });
 

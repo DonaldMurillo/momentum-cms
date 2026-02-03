@@ -93,6 +93,17 @@ export function createProtectMiddleware(
 }
 
 /**
+ * Configuration for session resolver middleware.
+ */
+export interface SessionResolverConfig {
+	/**
+	 * Optional function to look up user role from external source (e.g., Momentum users collection).
+	 * Called with the user's email, should return the role string or undefined.
+	 */
+	getRoleByEmail?: (email: string) => Promise<string | undefined>;
+}
+
+/**
  * Middleware to resolve session for all requests (including SSR).
  *
  * Unlike createProtectMiddleware, this does NOT block unauthenticated requests.
@@ -103,12 +114,21 @@ export function createProtectMiddleware(
  * ```typescript
  * import { createSessionResolverMiddleware } from '@momentum-cms/server-express';
  *
- * // Resolve session for all requests before SSR
+ * // Basic usage - resolve session for all requests
  * app.use(createSessionResolverMiddleware(auth));
+ *
+ * // With role lookup from Momentum users collection
+ * app.use(createSessionResolverMiddleware(auth, {
+ *   getRoleByEmail: async (email) => {
+ *     const result = await api.collection('users').find({ where: { email: { equals: email } } });
+ *     return result.docs[0]?.role;
+ *   }
+ * }));
  * ```
  */
 export function createSessionResolverMiddleware(
 	auth: MomentumAuth,
+	config?: SessionResolverConfig,
 ): (req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void> {
 	return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
 		try {
@@ -117,8 +137,22 @@ export function createSessionResolverMiddleware(
 			});
 
 			if (session) {
-				// Attach user and session to request for SSR
-				req.user = session.user;
+				// Build user object from session
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Better Auth user structure
+				const authUser = session.user as { id: string; email?: string; name?: string };
+				let role: string | undefined;
+
+				// Look up role from external source if configured
+				if (config?.getRoleByEmail && authUser.email) {
+					try {
+						role = await config.getRoleByEmail(authUser.email);
+					} catch {
+						// Role lookup failed, continue without role
+					}
+				}
+
+				// Attach user with role to request
+				req.user = { ...authUser, role };
 				req.authSession = session.session;
 			}
 		} catch {

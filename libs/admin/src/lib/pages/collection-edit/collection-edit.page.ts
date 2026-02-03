@@ -5,7 +5,9 @@ import {
 	computed,
 	signal,
 	effect,
+	PLATFORM_ID,
 } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import type { CollectionConfig, Field } from '@momentum-cms/core';
@@ -46,7 +48,10 @@ import { MomentumApiService } from '../../services/api.service';
 		@if (loading()) {
 			<div class="p-8 text-center text-muted-foreground">Loading document...</div>
 		} @else {
-			<form class="bg-card rounded-lg border border-border overflow-hidden" (ngSubmit)="onSubmit()">
+			<form
+				class="bg-card rounded-lg border border-border overflow-hidden"
+				(submit)="$event.preventDefault()"
+			>
 				<div class="p-8 flex flex-col gap-6">
 					@for (field of collection()?.fields || []; track field.name) {
 						<div class="flex flex-col">
@@ -141,9 +146,10 @@ import { MomentumApiService } from '../../services/api.service';
 
 				<div class="flex gap-4 px-8 py-6 bg-muted border-t border-border">
 					<button
-						type="submit"
+						type="button"
 						class="inline-flex items-center px-6 py-3 rounded-md font-medium text-base transition-all bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
 						[disabled]="saving()"
+						(click)="onSubmit()"
 					>
 						{{ saving() ? 'Saving...' : isEditing() ? 'Update' : 'Create' }}
 					</button>
@@ -162,6 +168,7 @@ export class CollectionEditPage {
 	private readonly route = inject(ActivatedRoute);
 	private readonly router = inject(Router);
 	private readonly api = inject(MomentumApiService);
+	private readonly platformId = inject(PLATFORM_ID);
 
 	readonly saving = signal(false);
 	readonly loading = signal(false);
@@ -185,10 +192,11 @@ export class CollectionEditPage {
 
 	constructor() {
 		// Load existing document data when editing
+		// Only on client side - SSR doesn't have access to auth cookies
 		effect(() => {
 			const collection = this.collection();
 			const docId = this.documentId();
-			if (collection && docId && docId !== 'create') {
+			if (collection && docId && docId !== 'create' && isPlatformBrowser(this.platformId)) {
 				this.loadDocument(collection.slug, docId);
 			}
 		});

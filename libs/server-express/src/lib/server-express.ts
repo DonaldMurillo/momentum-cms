@@ -1,7 +1,39 @@
 import { Router, json as jsonParser } from 'express';
 import type { Request, Response, NextFunction } from 'express';
-import { createMomentumHandlers, type MomentumRequest } from '@momentum-cms/server-core';
-import type { MomentumConfig, ResolvedMomentumConfig } from '@momentum-cms/core';
+import {
+	createMomentumHandlers,
+	getCollectionPermissions,
+	type MomentumRequest,
+} from '@momentum-cms/server-core';
+import type { MomentumConfig, ResolvedMomentumConfig, UserContext } from '@momentum-cms/core';
+
+/**
+ * Extended Express Request with user context from auth middleware.
+ */
+interface AuthenticatedRequest extends Request {
+	user?: {
+		id: string;
+		email?: string;
+		role?: string;
+		[key: string]: unknown;
+	};
+}
+
+/**
+ * Extracts user context from Express request (set by auth middleware).
+ */
+function extractUserFromRequest(req: Request): UserContext | undefined {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Express request augmentation
+	const authReq = req as AuthenticatedRequest;
+	if (authReq.user?.id) {
+		return {
+			id: authReq.user.id,
+			email: authReq.user.email,
+			role: authReq.user.role,
+		};
+	}
+	return undefined;
+}
 
 /**
  * Creates Express middleware for Momentum CMS API.
@@ -67,6 +99,14 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		return {};
 	}
 
+	// Route: GET /access - Get collection permissions for current user
+	// Must be defined BEFORE /:collection routes to avoid matching "access" as a collection slug
+	router.get('/access', async (req: Request, res: Response) => {
+		const user = extractUserFromRequest(req);
+		const permissions = await getCollectionPermissions(config, user);
+		res.json({ collections: permissions });
+	});
+
 	// Route: GET /:collection - Find all documents
 	// Route: GET /:collection/:id - Find document by ID
 	router.get('/:collection/:id?', async (req: Request, res: Response) => {
@@ -80,6 +120,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				page: req.query['page'] ? Number(req.query['page']) : undefined,
 				sort: typeof sortParam === 'string' ? sortParam : undefined,
 			},
+			user: extractUserFromRequest(req),
 		};
 
 		const response = await handlers.routeRequest(request);
@@ -92,6 +133,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			method: 'POST',
 			collectionSlug: req.params['collection'],
 			body: getBody(req),
+			user: extractUserFromRequest(req),
 		};
 
 		const response = await handlers.routeRequest(request);
@@ -105,6 +147,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			collectionSlug: req.params['collection'],
 			id: req.params['id'],
 			body: getBody(req),
+			user: extractUserFromRequest(req),
 		};
 
 		const response = await handlers.routeRequest(request);
@@ -118,6 +161,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			collectionSlug: req.params['collection'],
 			id: req.params['id'],
 			body: getBody(req),
+			user: extractUserFromRequest(req),
 		};
 
 		const response = await handlers.routeRequest(request);
@@ -130,6 +174,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			method: 'DELETE',
 			collectionSlug: req.params['collection'],
 			id: req.params['id'],
+			user: extractUserFromRequest(req),
 		};
 
 		const response = await handlers.routeRequest(request);

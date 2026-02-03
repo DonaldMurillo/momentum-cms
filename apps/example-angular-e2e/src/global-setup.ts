@@ -68,8 +68,23 @@ async function globalSetup(config: FullConfig): Promise<void> {
 		await page.goto(`${baseURL}/admin`);
 
 		// Wait for the auth state to stabilize after client-side hydration
-		const authState = await waitForAuthState(page);
+		let authState = await waitForAuthState(page);
 		console.log(`Auth state: ${authState}`);
+
+		// IMPORTANT: SSR renders dashboard without auth (guards allow during SSR)
+		// We need to verify cookies actually exist, not just trust the UI
+		if (authState === 'authenticated') {
+			const cookies = await context.cookies();
+			console.log(`Cookies found: ${cookies.length}`);
+			if (cookies.length === 0) {
+				// SSR rendered dashboard but no actual auth
+				// Navigate to login page directly to force proper auth flow
+				console.log('No cookies found - navigating to login page...');
+				await page.goto(`${baseURL}/admin/login`);
+				authState = await waitForAuthState(page);
+				console.log(`Auth state after navigating to login: ${authState}`);
+			}
+		}
 
 		if (authState === 'setup') {
 			// No users exist - create the first admin user
@@ -88,21 +103,47 @@ async function globalSetup(config: FullConfig): Promise<void> {
 			await page.waitForURL(/\/admin(?!\/setup|\/login)/, { timeout: 30000 });
 			console.log('Admin user created and logged in');
 		} else if (authState === 'login') {
-			// Users exist but not logged in - login with test credentials
-			console.log('Logging in with test admin...');
+			// Users exist but not logged in - login with test credentials via API
+			console.log('Logging in with test admin via API...');
 
-			await page.getByLabel(/email/i).fill('admin@test.com');
-			await page.getByLabel(/password/i).fill('TestPassword123!');
+			// Use Better Auth's sign-in API directly - more reliable than UI
+			const signInResponse = await context.request.post(`${baseURL}/api/auth/sign-in/email`, {
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				data: {
+					email: 'admin@test.com',
+					password: 'TestPassword123!',
+				},
+			});
 
-			const submitButton = page.getByRole('button', { name: /sign in|login/i });
-			await submitButton.click();
+			console.log(`Sign-in API response status: ${signInResponse.status()}`);
 
-			// Wait for redirect to admin dashboard
-			await page.waitForURL(/\/admin(?!\/setup|\/login)/, { timeout: 30000 });
-			console.log('Logged in successfully');
+			if (!signInResponse.ok()) {
+				const errorBody = await signInResponse.text();
+				console.error('Sign-in API error:', errorBody);
+				throw new Error(`Failed to sign in via API: ${signInResponse.status()} - ${errorBody}`);
+			}
+
+			// The API sets cookies automatically via Set-Cookie headers
+			// Refresh the page to load with the new session
+			await page.goto(`${baseURL}/admin`);
+			await page.waitForLoadState('networkidle');
+
+			// Verify we're now on the dashboard
+			const dashboardHeading = page.getByRole('heading', { name: 'Dashboard' });
+			await dashboardHeading.waitFor({ state: 'visible', timeout: 10000 });
+			console.log('Logged in successfully via API');
 		} else {
-			// Already authenticated
+			// Already authenticated with valid cookies
 			console.log('Already authenticated');
+		}
+
+		// Verify cookies exist before saving
+		const finalCookies = await context.cookies();
+		console.log(`Final cookies count: ${finalCookies.length}`);
+		if (finalCookies.length === 0) {
+			throw new Error('Authentication failed - no cookies to save');
 		}
 
 		// Save the authentication state to the same path used by playwright.config.ts

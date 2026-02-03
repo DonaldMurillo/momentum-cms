@@ -31,3 +31,20 @@ export {
 	type WhereClause,
 	type FieldValidationError,
 } from './lib/momentum-api';
+
+// Collection Access
+export {
+	checkCollectionAdminAccess,
+	checkSingleCollectionAdminAccess,
+	getCollectionPermissions,
+	type CollectionAccess,
+	type CollectionPermissions,
+	type AccessResponse,
+} from './lib/collection-access';
+
+// User Sync Hooks
+export {
+	createUserSyncHook,
+	createUserDeleteSyncHook,
+	type UserSyncConfig,
+} from './lib/user-sync-hooks';

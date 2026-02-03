@@ -24,6 +24,7 @@ import type { CollectionConfig } from '@momentum-cms/core';
 import { authGuard } from '../guards/auth.guard';
 import { guestGuard } from '../guards/guest.guard';
 import { setupGuard } from '../guards/setup.guard';
+import { collectionAccessGuard } from '../guards/collection-access.guard';
 
 export interface MomentumAdminBranding {
 	/** Logo URL */
@@ -106,18 +107,21 @@ export function momentumAdminRoutes(options: MomentumAdminOptions): Routes {
 				path: 'collections/:slug',
 				loadComponent: (): Promise<Type<unknown>> =>
 					import('../pages/collection-list/collection-list.page').then((m) => m.CollectionListPage),
+				canActivate: [collectionAccessGuard],
 			},
 			// Create new document
 			{
 				path: 'collections/:slug/create',
 				loadComponent: (): Promise<Type<unknown>> =>
 					import('../pages/collection-edit/collection-edit.page').then((m) => m.CollectionEditPage),
+				canActivate: [collectionAccessGuard],
 			},
 			// Edit existing document
 			{
 				path: 'collections/:slug/:id',
 				loadComponent: (): Promise<Type<unknown>> =>
 					import('../pages/collection-edit/collection-edit.page').then((m) => m.CollectionEditPage),
+				canActivate: [collectionAccessGuard],
 			},
 		],
 	};

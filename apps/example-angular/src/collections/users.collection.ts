@@ -21,4 +21,32 @@ export const Users = defineCollection({
 		}),
 		checkbox('active', { label: 'Active' }),
 	],
+	hooks: {
+		// Simple hook to strip password field before database insert
+		// The user sync hook in server.ts handles Better Auth user creation
+		beforeChange: [
+			({ data, operation }) => {
+				if (operation === 'create' && data && 'password' in data) {
+					// eslint-disable-next-line no-console
+					console.log('[UsersCollection] beforeChange: Stripping password from data');
+					// eslint-disable-next-line @typescript-eslint/no-unused-vars
+					const { password, ...rest } = data;
+					return rest;
+				}
+				return data ?? {};
+			},
+		],
+	},
+	access: {
+		// Only admins can read user data
+		read: ({ req }) => req.user?.role === 'admin',
+		// Only admins can create users
+		create: ({ req }) => req.user?.role === 'admin',
+		// Only admins can update users
+		update: ({ req }) => req.user?.role === 'admin',
+		// Only admins can delete users
+		delete: ({ req }) => req.user?.role === 'admin',
+		// Only admins can access users in admin panel
+		admin: ({ req }) => req.user?.role === 'admin',
+	},
 });
