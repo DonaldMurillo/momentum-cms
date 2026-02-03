@@ -8,11 +8,16 @@ export const appRoutes: Route[] = [
 		path: '',
 		loadComponent: () => import('./pages/landing/landing.page').then((m) => m.LandingPage),
 	},
-	// Landing page
+	// Experiments page
 	{
 		path: 'experiments',
 		loadComponent: () =>
 			import('./pages/experiments/experiments.page').then((m) => m.ExperimentsPage),
+	},
+	// Kitchen Sink - UI component showcase
+	{
+		path: 'kitchen-sink',
+		loadComponent: () => import('@momentum-cms/ui').then((m) => m.KitchenSinkPage),
 	},
 	// Mount admin UI at /admin
 	...momentumAdminRoutes({

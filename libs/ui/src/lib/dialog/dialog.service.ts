@@ -1,4 +1,4 @@
-import { inject, Injector, Type } from '@angular/core';
+import { inject, Injectable, Injector, Type } from '@angular/core';
 import { Overlay, OverlayConfig } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import type { DialogConfig } from './dialog.types';
@@ -20,6 +20,7 @@ import { DialogRef } from './dialog-ref';
  * });
  * ```
  */
+@Injectable({ providedIn: 'root' })
 export class DialogService {
 	private readonly overlay = inject(Overlay);
 	private readonly injector = inject(Injector);

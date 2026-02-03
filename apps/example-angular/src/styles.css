@@ -10,6 +10,8 @@
 		--mcms-foreground: 222 47% 11%;
 		--mcms-card: 0 0% 100%;
 		--mcms-card-foreground: 222 47% 11%;
+		--mcms-popover: 0 0% 100%;
+		--mcms-popover-foreground: 222 47% 11%;
 		--mcms-primary: 221 83% 48%; /* Darkened from 53% for better contrast */
 		--mcms-primary-foreground: 210 40% 98%;
 		--mcms-secondary: 210 40% 96%;
@@ -20,6 +22,12 @@
 		--mcms-accent-foreground: 222 47% 11%;
 		--mcms-destructive: 0 84% 60%;
 		--mcms-destructive-foreground: 210 40% 98%;
+		--mcms-success: 142 76% 36%;
+		--mcms-success-foreground: 0 0% 100%;
+		--mcms-warning: 38 92% 50%;
+		--mcms-warning-foreground: 48 96% 5%;
+		--mcms-info: 199 89% 48%;
+		--mcms-info-foreground: 0 0% 100%;
 		--mcms-border: 214 32% 85%;
 		--mcms-input: 214 32% 85%;
 		--mcms-ring: 221 83% 48%; /* Match primary color */
@@ -39,6 +47,8 @@
 		--mcms-foreground: 210 40% 98%;
 		--mcms-card: 217 33% 17%;
 		--mcms-card-foreground: 210 40% 98%;
+		--mcms-popover: 222 47% 11%;
+		--mcms-popover-foreground: 210 40% 98%;
 		--mcms-primary: 217 91% 60%;
 		--mcms-primary-foreground: 222 47% 11%;
 		--mcms-secondary: 217 33% 17%;
@@ -49,6 +59,12 @@
 		--mcms-accent-foreground: 210 40% 98%;
 		--mcms-destructive: 0 62% 50%;
 		--mcms-destructive-foreground: 210 40% 98%;
+		--mcms-success: 142 71% 45%;
+		--mcms-success-foreground: 0 0% 100%;
+		--mcms-warning: 38 92% 50%;
+		--mcms-warning-foreground: 48 96% 5%;
+		--mcms-info: 199 89% 48%;
+		--mcms-info-foreground: 0 0% 100%;
 		--mcms-border: 217 33% 17%;
 		--mcms-input: 217 33% 17%;
 		--mcms-ring: 224 76% 48%;

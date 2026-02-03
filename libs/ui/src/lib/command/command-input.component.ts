@@ -1,4 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, input, model } from '@angular/core';
+import {
+	afterNextRender,
+	ChangeDetectionStrategy,
+	Component,
+	computed,
+	ElementRef,
+	inject,
+	Injector,
+	input,
+	model,
+	viewChild,
+} from '@angular/core';
 
 /**
  * Input element for the command component.
@@ -6,7 +17,7 @@ import { ChangeDetectionStrategy, Component, computed, input, model } from '@ang
  *
  * @example
  * ```html
- * <mcms-command-input placeholder="Search..." [(value)]="searchValue" />
+ * <mcms-command-input placeholder="Search..." [(value)]="searchValue" [autofocus]="true" />
  * ```
  */
 @Component({
@@ -32,6 +43,7 @@ import { ChangeDetectionStrategy, Component, computed, input, model } from '@ang
 			<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
 		</svg>
 		<input
+			#inputEl
 			type="text"
 			[placeholder]="placeholder()"
 			[class]="inputClasses()"
@@ -46,6 +58,9 @@ import { ChangeDetectionStrategy, Component, computed, input, model } from '@ang
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CommandInput {
+	private readonly injector = inject(Injector);
+	private readonly inputEl = viewChild<ElementRef<HTMLInputElement>>('inputEl');
+
 	/** Placeholder text for the input */
 	readonly placeholder = input('');
 
@@ -55,8 +70,22 @@ export class CommandInput {
 	/** Whether the input is disabled */
 	readonly disabled = input(false);
 
+	/** Whether to autofocus the input on mount */
+	readonly autofocus = input(false);
+
 	/** Additional CSS classes */
 	readonly class = input('');
+
+	constructor() {
+		afterNextRender(
+			() => {
+				if (this.autofocus()) {
+					this.inputEl()?.nativeElement.focus();
+				}
+			},
+			{ injector: this.injector },
+		);
+	}
 
 	protected readonly hostClasses = computed(() => {
 		const base = 'flex items-center border-b px-3';

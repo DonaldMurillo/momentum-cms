@@ -181,3 +181,6 @@ export * from './lib/menubar/menubar.types';
 export * from './lib/menubar/menubar.component';
 export * from './lib/menubar/menubar-item.component';
 export * from './lib/menubar/menubar-submenu.component';
+
+// Kitchen Sink (demo page)
+export * from './lib/kitchen-sink/kitchen-sink.page';

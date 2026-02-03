@@ -50,6 +50,11 @@ module.exports = {
 					foreground: 'hsl(var(--mcms-accent-foreground) / <alpha-value>)',
 				},
 
+				popover: {
+					DEFAULT: 'hsl(var(--mcms-popover) / <alpha-value>)',
+					foreground: 'hsl(var(--mcms-popover-foreground) / <alpha-value>)',
+				},
+
 				destructive: {
 					DEFAULT: 'hsl(var(--mcms-destructive) / <alpha-value>)',
 					foreground: 'hsl(var(--mcms-destructive-foreground) / <alpha-value>)',
