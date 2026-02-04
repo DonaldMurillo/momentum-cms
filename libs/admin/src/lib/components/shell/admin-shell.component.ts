@@ -7,97 +7,50 @@ import {
 	PLATFORM_ID,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { RouterOutlet, RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { RouterOutlet, ActivatedRoute, Router } from '@angular/router';
 import type { CollectionConfig } from '@momentum-cms/core';
-import { Button } from '@momentum-cms/ui';
-import type { MomentumAdminBranding } from '../../routes/momentum-admin-routes';
+import { SidebarService, SidebarTrigger } from '@momentum-cms/ui';
 import { getCollectionsFromRouteData, getBrandingFromRouteData } from '../../utils/route-data';
 import { MomentumAuthService } from '../../services/auth.service';
 import { CollectionAccessService } from '../../services/collection-access.service';
-import { McmsThemeService } from '../../ui/theme/theme.service';
+import { AdminSidebarWidget } from '../../widgets/admin-sidebar/admin-sidebar.component';
+import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
 
 /**
  * Admin Shell Component
  *
  * The main layout component for the admin UI.
  * Provides navigation sidebar and content area.
+ *
+ * Features:
+ * - Responsive sidebar (drawer on mobile, static on desktop)
+ * - Keyboard shortcuts (Cmd+B / Ctrl+B to toggle sidebar)
+ * - Mobile header with hamburger menu
  */
 @Component({
 	selector: 'mcms-admin-shell',
-	imports: [RouterOutlet, RouterLink, Button],
+	imports: [RouterOutlet, AdminSidebarWidget, SidebarTrigger],
 	changeDetection: ChangeDetectionStrategy.OnPush,
-	host: { class: 'flex min-h-screen bg-background' },
+	host: { class: 'flex h-screen overflow-hidden bg-background' },
 	template: `
-		<!-- Sidebar -->
-		<aside class="w-64 bg-sidebar text-sidebar-foreground flex flex-col shrink-0">
-			<div class="p-6 border-b border-sidebar-border">
-				@if (branding()?.logo) {
-					<img [src]="branding()!.logo" alt="Logo" class="h-8 mb-2" />
-				}
-				<h1 class="text-xl font-semibold">{{ branding()?.title || 'Momentum CMS' }}</h1>
-			</div>
+		<!-- Mobile header with hamburger (hidden at md breakpoint = 768px+) -->
+		<header
+			class="md:hidden fixed top-0 inset-x-0 h-14 border-b border-border bg-background z-30 flex items-center px-4 gap-4"
+		>
+			<mcms-sidebar-trigger />
+			<span class="font-semibold">{{ sidebarBranding()?.title || 'Momentum CMS' }}</span>
+		</header>
 
-			<nav class="flex-1 p-4">
-				<a
-					routerLink="."
-					class="block px-4 py-3 mb-4 text-sidebar-foreground/80 no-underline rounded-md transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-				>
-					Dashboard
-				</a>
+		<mcms-admin-sidebar
+			[branding]="sidebarBranding()"
+			[collections]="collections()"
+			[user]="sidebarUser()"
+			basePath="/admin"
+			(signOut)="onSignOut()"
+		/>
 
-				<div class="mt-4">
-					<h2 class="text-xs font-semibold text-sidebar-foreground/60 uppercase px-4 py-2">
-						Collections
-					</h2>
-					@for (collection of collections(); track collection.slug) {
-						<a
-							[routerLink]="['collections', collection.slug]"
-							class="block px-4 py-3 text-sidebar-foreground/80 no-underline rounded-md transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-						>
-							{{ collection.labels?.plural || collection.slug }}
-						</a>
-					}
-				</div>
-			</nav>
-
-			<!-- User section -->
-			@if (auth.user(); as user) {
-				<div class="p-4 border-t border-sidebar-border">
-					<div class="flex items-center gap-3 mb-3">
-						<div
-							class="w-9 h-9 rounded-full bg-sidebar-accent flex items-center justify-center text-sm font-medium"
-						>
-							{{ userInitials() }}
-						</div>
-						<div class="flex-1 min-w-0">
-							<p class="text-sm font-medium truncate">{{ user.name }}</p>
-							<p class="text-xs text-sidebar-foreground/60 truncate">{{ user.email }}</p>
-						</div>
-					</div>
-					<button
-						mcms-button
-						variant="ghost"
-						size="sm"
-						class="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground mb-1"
-						(click)="toggleTheme()"
-					>
-						{{ theme.isDark() ? 'Light mode' : 'Dark mode' }}
-					</button>
-					<button
-						mcms-button
-						variant="ghost"
-						size="sm"
-						class="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground"
-						(click)="onSignOut()"
-					>
-						Sign out
-					</button>
-				</div>
-			}
-		</aside>
-
-		<!-- Main Content -->
-		<main class="flex-1 p-8 overflow-auto">
+		<!-- Main Content (with top padding on mobile for header, normal padding at md+) -->
+		<main class="flex-1 p-8 overflow-y-auto overflow-x-hidden pt-20 md:pt-8">
 			@defer (hydrate on immediate) {
 				<router-outlet></router-outlet>
 			}
@@ -108,9 +61,9 @@ export class AdminShellComponent implements OnInit {
 	private readonly route = inject(ActivatedRoute);
 	private readonly router = inject(Router);
 	private readonly platformId = inject(PLATFORM_ID);
-	readonly auth = inject(MomentumAuthService);
-	readonly collectionAccess = inject(CollectionAccessService);
-	readonly theme = inject(McmsThemeService);
+	private readonly auth = inject(MomentumAuthService);
+	private readonly collectionAccess = inject(CollectionAccessService);
+	private readonly sidebar = inject(SidebarService);
 
 	/** All collections from route data */
 	private readonly allCollections = computed((): CollectionConfig[] => {
@@ -131,11 +84,36 @@ export class AdminShellComponent implements OnInit {
 		return all.filter((c) => accessible.includes(c.slug));
 	});
 
+	/** Branding for sidebar */
+	readonly sidebarBranding = computed((): AdminBranding | undefined => {
+		const routeBranding = getBrandingFromRouteData(this.route.snapshot.data);
+		if (!routeBranding) return undefined;
+		return {
+			title: routeBranding.title,
+			logo: routeBranding.logo,
+		};
+	});
+
+	/** User for sidebar */
+	readonly sidebarUser = computed((): AdminUser | null => {
+		const user = this.auth.user();
+		if (!user) return null;
+		return {
+			id: user.id,
+			name: user.name,
+			email: user.email,
+			role: user.role,
+		};
+	});
+
 	ngOnInit(): void {
 		// Only run on client side - SSR doesn't have access to auth cookies
 		if (!isPlatformBrowser(this.platformId)) {
 			return;
 		}
+
+		// Setup keyboard shortcuts for sidebar (Cmd+B / Ctrl+B)
+		this.sidebar.setupKeyboardShortcuts();
 
 		// Initialize auth and check session on client-side hydration
 		// This is needed because guards don't re-run on hydration
@@ -164,25 +142,6 @@ export class AdminShellComponent implements OnInit {
 		if (!this.collectionAccess.initialized()) {
 			this.collectionAccess.loadAccess();
 		}
-	}
-
-	readonly branding = computed((): MomentumAdminBranding | undefined => {
-		return getBrandingFromRouteData(this.route.snapshot.data);
-	});
-
-	readonly userInitials = computed((): string => {
-		const user = this.auth.user();
-		if (!user?.name) return '?';
-		return user.name
-			.split(' ')
-			.map((n) => n[0])
-			.join('')
-			.toUpperCase()
-			.slice(0, 2);
-	});
-
-	toggleTheme(): void {
-		this.theme.toggleTheme();
 	}
 
 	async onSignOut(): Promise<void> {
