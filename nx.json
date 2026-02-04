@@ -10,7 +10,10 @@
 			"!{projectRoot}/tsconfig.spec.json",
 			"!{projectRoot}/jest.config.[jt]s",
 			"!{projectRoot}/src/test-setup.[jt]s",
-			"!{projectRoot}/test-setup.[jt]s"
+			"!{projectRoot}/test-setup.[jt]s",
+			"!{projectRoot}/**/*.stories.@(js|jsx|ts|tsx|mdx)",
+			"!{projectRoot}/.storybook/**/*",
+			"!{projectRoot}/tsconfig.storybook.json"
 		],
 		"sharedGlobals": []
 	},
@@ -83,6 +86,17 @@
 			"options": {
 				"targetName": "test"
 			}
+		},
+		{
+			"plugin": "@nx/storybook/plugin",
+			"options": {
+				"serveStorybookTargetName": "storybook",
+				"buildStorybookTargetName": "build-storybook",
+				"testStorybookTargetName": "test-storybook",
+				"staticStorybookTargetName": "static-storybook",
+				"buildDepsTargetName": "build-deps",
+				"watchDepsTargetName": "watch-deps"
+			}
 		}
 	],
 	"generators": {
@@ -109,7 +123,7 @@
 		"default": {
 			"runner": "nx/tasks-runners/default",
 			"options": {
-				"cacheableOperations": ["build", "lint", "test", "e2e"]
+				"cacheableOperations": ["build", "lint", "test", "e2e", "build-storybook"]
 			}
 		}
 	}

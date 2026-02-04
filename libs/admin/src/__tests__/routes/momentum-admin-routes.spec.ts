@@ -1,3 +1,4 @@
+import '@angular/compiler';
 import { describe, it, expect } from 'vitest';
 import { momentumAdminRoutes } from '../../lib/routes/momentum-admin-routes';
 import type { CollectionConfig } from '@momentum-cms/core';
@@ -16,15 +17,24 @@ describe('momentumAdminRoutes()', () => {
 		},
 	];
 
+	// Helper to find the admin shell route (the one with children)
+	const findAdminShellRoute = (
+		routes: ReturnType<typeof momentumAdminRoutes>,
+	): ReturnType<typeof momentumAdminRoutes>[0] | undefined => {
+		return routes.find((r) => r.children !== undefined);
+	};
+
 	describe('Basic Route Structure', () => {
-		it('should return routes array with base path', () => {
+		it('should return routes array with admin shell route', () => {
 			const routes = momentumAdminRoutes({
 				basePath: '/admin',
 				collections: mockCollections,
 			});
 
 			expect(routes).toBeInstanceOf(Array);
-			expect(routes[0].path).toBe('admin');
+			const adminRoute = findAdminShellRoute(routes);
+			expect(adminRoute).toBeDefined();
+			expect(adminRoute?.path).toBe('admin');
 		});
 
 		it('should strip leading slash from basePath', () => {
@@ -33,7 +43,8 @@ describe('momentumAdminRoutes()', () => {
 				collections: mockCollections,
 			});
 
-			expect(routes[0].path).toBe('admin');
+			const adminRoute = findAdminShellRoute(routes);
+			expect(adminRoute?.path).toBe('admin');
 		});
 
 		it('should handle basePath without leading slash', () => {
@@ -42,7 +53,29 @@ describe('momentumAdminRoutes()', () => {
 				collections: mockCollections,
 			});
 
-			expect(routes[0].path).toBe('admin');
+			const adminRoute = findAdminShellRoute(routes);
+			expect(adminRoute?.path).toBe('admin');
+		});
+
+		it('should include auth routes by default', () => {
+			const routes = momentumAdminRoutes({
+				basePath: '/admin',
+				collections: mockCollections,
+			});
+
+			expect(routes.some((r) => r.path === 'admin/login')).toBe(true);
+			expect(routes.some((r) => r.path === 'admin/setup')).toBe(true);
+		});
+
+		it('should exclude auth routes when includeAuthRoutes is false', () => {
+			const routes = momentumAdminRoutes({
+				basePath: '/admin',
+				collections: mockCollections,
+				includeAuthRoutes: false,
+			});
+
+			expect(routes.some((r) => r.path === 'admin/login')).toBe(false);
+			expect(routes.some((r) => r.path === 'admin/setup')).toBe(false);
 		});
 	});
 
@@ -53,7 +86,8 @@ describe('momentumAdminRoutes()', () => {
 				collections: mockCollections,
 			});
 
-			const children = routes[0].children;
+			const adminRoute = findAdminShellRoute(routes);
+			const children = adminRoute?.children;
 			expect(children).toBeDefined();
 			expect(children?.some((c) => c.path === '')).toBe(true);
 		});
@@ -64,7 +98,8 @@ describe('momentumAdminRoutes()', () => {
 				collections: mockCollections,
 			});
 
-			const children = routes[0].children;
+			const adminRoute = findAdminShellRoute(routes);
+			const children = adminRoute?.children;
 			expect(children?.some((c) => c.path === 'collections/:slug')).toBe(true);
 		});
 
@@ -74,7 +109,8 @@ describe('momentumAdminRoutes()', () => {
 				collections: mockCollections,
 			});
 
-			const children = routes[0].children;
+			const adminRoute = findAdminShellRoute(routes);
+			const children = adminRoute?.children;
 			expect(children?.some((c) => c.path === 'collections/:slug/create')).toBe(true);
 		});
 
@@ -84,7 +120,8 @@ describe('momentumAdminRoutes()', () => {
 				collections: mockCollections,
 			});
 
-			const children = routes[0].children;
+			const adminRoute = findAdminShellRoute(routes);
+			const children = adminRoute?.children;
 			expect(children?.some((c) => c.path === 'collections/:slug/:id')).toBe(true);
 		});
 	});
@@ -96,7 +133,8 @@ describe('momentumAdminRoutes()', () => {
 				collections: mockCollections,
 			});
 
-			const routeData = routes[0].data;
+			const adminRoute = findAdminShellRoute(routes);
+			const routeData = adminRoute?.data;
 			expect(routeData?.collections).toBe(mockCollections);
 		});
 
@@ -112,7 +150,8 @@ describe('momentumAdminRoutes()', () => {
 				branding,
 			});
 
-			const routeData = routes[0].data;
+			const adminRoute = findAdminShellRoute(routes);
+			const routeData = adminRoute?.data;
 			expect(routeData?.branding).toBe(branding);
 		});
 	});
@@ -124,8 +163,9 @@ describe('momentumAdminRoutes()', () => {
 				collections: mockCollections,
 			});
 
-			expect(routes[0].loadComponent).toBeDefined();
-			expect(typeof routes[0].loadComponent).toBe('function');
+			const adminRoute = findAdminShellRoute(routes);
+			expect(adminRoute?.loadComponent).toBeDefined();
+			expect(typeof adminRoute?.loadComponent).toBe('function');
 		});
 
 		it('should use loadComponent for child routes', () => {
@@ -134,7 +174,8 @@ describe('momentumAdminRoutes()', () => {
 				collections: mockCollections,
 			});
 
-			const children = routes[0].children;
+			const adminRoute = findAdminShellRoute(routes);
+			const children = adminRoute?.children;
 			const dashboardRoute = children?.find((c) => c.path === '');
 			expect(dashboardRoute?.loadComponent).toBeDefined();
 		});
@@ -148,7 +189,9 @@ describe('momentumAdminRoutes()', () => {
 			});
 
 			expect(routes).toBeInstanceOf(Array);
-			expect(routes[0].path).toBe('admin');
+			const adminRoute = findAdminShellRoute(routes);
+			expect(adminRoute).toBeDefined();
+			expect(adminRoute?.path).toBe('admin');
 		});
 	});
 });

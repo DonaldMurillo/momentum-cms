@@ -126,6 +126,24 @@ app.use(
 );
 
 /**
+ * Serve Storybook static files at /storybook
+ * Built Storybook files are served from dist/storybook/ui
+ */
+const storybookDistFolder = resolve(serverDistFolder, '../../../storybook/ui');
+app.use(
+	'/storybook',
+	express.static(storybookDistFolder, {
+		maxAge: '1y',
+		index: 'index.html',
+	}),
+);
+
+// Fallback for Storybook SPA routing (iframe.html, etc.)
+app.get('/storybook/*', (req, res) => {
+	res.sendFile(resolve(storybookDistFolder, 'index.html'));
+});
+
+/**
  * Handle all other requests by rendering the Angular application.
  * Passes the Momentum API and user context for SSR.
  */
