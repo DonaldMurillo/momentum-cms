@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { NgTemplateOutlet } from '@angular/common';
 
 /**
  * Individual breadcrumb item.
@@ -11,13 +13,19 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
  */
 @Component({
 	selector: 'mcms-breadcrumb-item',
+	imports: [RouterLink, NgTemplateOutlet],
 	host: {
 		'[class]': 'hostClasses()',
 	},
 	template: `
+		<ng-template #content><ng-content /></ng-template>
+
 		@if (href() && !current()) {
-			<a [href]="href()" class="transition-colors hover:text-foreground">
-				<ng-content />
+			<a
+				[routerLink]="href()"
+				class="text-muted-foreground transition-colors hover:text-foreground"
+			>
+				<ng-container *ngTemplateOutlet="content" />
 			</a>
 		} @else {
 			<span
@@ -25,14 +33,14 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 				[class.font-medium]="current()"
 				[class.text-foreground]="current()"
 			>
-				<ng-content />
+				<ng-container *ngTemplateOutlet="content" />
 			</span>
 		}
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BreadcrumbItem {
-	/** Link href for navigation. */
+	/** Link href for navigation (uses routerLink for SPA navigation). */
 	readonly href = input<string>();
 
 	/** Whether this is the current/active page. */

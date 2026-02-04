@@ -59,6 +59,56 @@ export {
 export { AdminShellComponent } from './lib/components/shell/admin-shell.component';
 export { DashboardPage } from './lib/pages/dashboard/dashboard.page';
 export { CollectionListPage } from './lib/pages/collection-list/collection-list.page';
+export { CollectionViewPage } from './lib/pages/collection-view/collection-view.page';
 export { CollectionEditPage } from './lib/pages/collection-edit/collection-edit.page';
 export { LoginPage } from './lib/pages/login/login.page';
 export { SetupPage } from './lib/pages/setup/setup.page';
+
+// Widgets
+export { AdminSidebarWidget } from './lib/widgets/admin-sidebar/admin-sidebar.component';
+export { CollectionCardWidget } from './lib/widgets/collection-card/collection-card.component';
+export { EntityListWidget } from './lib/widgets/entity-list/entity-list.component';
+export { EntityFormWidget } from './lib/widgets/entity-form/entity-form.component';
+export { EntityViewWidget } from './lib/widgets/entity-view/entity-view.component';
+export { FeedbackService } from './lib/widgets/feedback/feedback.service';
+
+// Field Renderers (for custom forms)
+export { FieldRenderer } from './lib/widgets/entity-form/field-renderers/field-renderer.component';
+export { TextFieldRenderer } from './lib/widgets/entity-form/field-renderers/text-field.component';
+export { NumberFieldRenderer } from './lib/widgets/entity-form/field-renderers/number-field.component';
+export { SelectFieldRenderer } from './lib/widgets/entity-form/field-renderers/select-field.component';
+export { CheckboxFieldRenderer } from './lib/widgets/entity-form/field-renderers/checkbox-field.component';
+export { DateFieldRenderer } from './lib/widgets/entity-form/field-renderers/date-field.component';
+
+// Widget Types
+export type {
+	AdminBranding,
+	AdminNavItem,
+	AdminNavSection,
+	AdminUser,
+	CollectionWithCount,
+	EntityAction,
+	Entity,
+} from './lib/widgets/widget.types';
+
+export type {
+	EntityListColumn,
+	EntityListActionEvent,
+	EntityListBulkActionEvent,
+	EntityListFindResult,
+} from './lib/widgets/entity-list/entity-list.types';
+
+export type {
+	EntityFormMode,
+	FieldError,
+	EntityFormState,
+	FieldRendererContext,
+	FieldChangeEvent,
+	EntityFormSaveResult,
+} from './lib/widgets/entity-form/entity-form.types';
+
+export type {
+	EntityViewFieldConfig,
+	BreadcrumbItem,
+	EntityViewActionEvent,
+} from './lib/widgets/entity-view/entity-view.types';

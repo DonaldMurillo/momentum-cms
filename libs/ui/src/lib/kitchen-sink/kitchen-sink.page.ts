@@ -58,6 +58,14 @@ import { BreadcrumbSeparator } from '../breadcrumbs/breadcrumb-separator.compone
 
 import { Pagination } from '../pagination/pagination.component';
 
+import { Sidebar } from '../sidebar/sidebar.component';
+import { SidebarHeader } from '../sidebar/sidebar-header.component';
+import { SidebarContent } from '../sidebar/sidebar-content.component';
+import { SidebarFooter } from '../sidebar/sidebar-footer.component';
+import { SidebarNav } from '../sidebar/sidebar-nav.component';
+import { SidebarNavItem } from '../sidebar/sidebar-nav-item.component';
+import { SidebarSection } from '../sidebar/sidebar-section.component';
+
 // Data Display Components
 import { Table } from '../table/table.component';
 import { TableHeader } from '../table/table-header.component';
@@ -80,6 +88,24 @@ import { CommandEmpty } from '../command/command-empty.component';
 import { CommandGroup } from '../command/command-group.component';
 import { CommandItem } from '../command/command-item.component';
 import { CommandSeparator } from '../command/command-separator.component';
+
+// DataTable
+import { DataTable } from '../data-table/data-table.component';
+import type { DataTableColumn, DataTableRowAction } from '../data-table/data-table.types';
+
+// SearchInput
+import { SearchInput } from '../search-input/search-input.component';
+
+// FieldDisplay
+import { FieldDisplay } from '../field-display/field-display.component';
+
+interface KitchenSinkUser {
+	id: number;
+	name: string;
+	email: string;
+	role: string;
+	status: string;
+}
 
 /**
  * Kitchen Sink page showcasing all UI components.
@@ -147,6 +173,14 @@ import { CommandSeparator } from '../command/command-separator.component';
 		BreadcrumbSeparator,
 		// Pagination
 		Pagination,
+		// Sidebar
+		Sidebar,
+		SidebarHeader,
+		SidebarContent,
+		SidebarFooter,
+		SidebarNav,
+		SidebarNavItem,
+		SidebarSection,
 		// Table
 		Table,
 		TableHeader,
@@ -168,6 +202,12 @@ import { CommandSeparator } from '../command/command-separator.component';
 		CommandGroup,
 		CommandItem,
 		CommandSeparator,
+		// DataTable
+		DataTable,
+		// SearchInput
+		SearchInput,
+		// FieldDisplay
+		FieldDisplay,
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: {
@@ -267,6 +307,33 @@ import { CommandSeparator } from '../command/command-separator.component';
 						<mcms-label>Radio Group</mcms-label>
 						<mcms-radio-group [options]="radioOptions" />
 					</div>
+				</div>
+			</section>
+
+			<!-- SearchInput Section -->
+			<section class="mb-12">
+				<h2 class="text-2xl font-semibold mb-4">Search Input</h2>
+				<mcms-separator class="mb-6" />
+
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<mcms-card>
+						<mcms-card-header>
+							<mcms-card-title>Default Search</mcms-card-title>
+						</mcms-card-header>
+						<mcms-card-content>
+							<mcms-search-input [(value)]="searchValue" placeholder="Search..." />
+							<p class="mt-2 text-sm text-muted-foreground">Value: {{ searchValue() }}</p>
+						</mcms-card-content>
+					</mcms-card>
+
+					<mcms-card>
+						<mcms-card-header>
+							<mcms-card-title>Custom Placeholder</mcms-card-title>
+						</mcms-card-header>
+						<mcms-card-content>
+							<mcms-search-input placeholder="Search users by name or email..." />
+						</mcms-card-content>
+					</mcms-card>
 				</div>
 			</section>
 
@@ -547,6 +614,49 @@ import { CommandSeparator } from '../command/command-separator.component';
 							/>
 						</mcms-card-content>
 					</mcms-card>
+
+					<mcms-card class="md:col-span-2">
+						<mcms-card-header>
+							<mcms-card-title>Sidebar</mcms-card-title>
+							<mcms-card-description
+								>Navigation sidebar with sections and items</mcms-card-description
+							>
+						</mcms-card-header>
+						<mcms-card-content>
+							<div class="h-[400px] border border-border rounded-lg overflow-hidden flex">
+								<mcms-sidebar width="14rem">
+									<mcms-sidebar-header>
+										<span class="font-semibold">My App</span>
+									</mcms-sidebar-header>
+									<mcms-sidebar-content>
+										<mcms-sidebar-nav>
+											<mcms-sidebar-nav-item label="Dashboard" href="#" [active]="true" />
+											<mcms-sidebar-nav-item label="Users" href="#" />
+											<mcms-sidebar-section title="Content" [collapsible]="true">
+												<mcms-sidebar-nav-item label="Posts" href="#" />
+												<mcms-sidebar-nav-item label="Media" href="#" />
+											</mcms-sidebar-section>
+											<mcms-sidebar-section title="Settings">
+												<mcms-sidebar-nav-item label="General" href="#" />
+												<mcms-sidebar-nav-item label="Security" href="#" [disabled]="true" />
+											</mcms-sidebar-section>
+										</mcms-sidebar-nav>
+									</mcms-sidebar-content>
+									<mcms-sidebar-footer>
+										<div class="flex items-center gap-2 px-2">
+											<mcms-avatar size="sm">
+												<mcms-avatar-fallback [delayMs]="0">JD</mcms-avatar-fallback>
+											</mcms-avatar>
+											<span class="text-sm">John Doe</span>
+										</div>
+									</mcms-sidebar-footer>
+								</mcms-sidebar>
+								<div class="flex-1 p-4 bg-muted/20">
+									<p class="text-muted-foreground">Main content area</p>
+								</div>
+							</div>
+						</mcms-card-content>
+					</mcms-card>
 				</div>
 			</section>
 
@@ -626,6 +736,85 @@ import { CommandSeparator } from '../command/command-separator.component';
 						</mcms-table-row>
 					</mcms-table-body>
 				</mcms-table>
+			</section>
+
+			<!-- DataTable Section -->
+			<section class="mb-12">
+				<h2 class="text-2xl font-semibold mb-4">DataTable</h2>
+				<mcms-separator class="mb-6" />
+
+				<div class="space-y-6">
+					<mcms-card>
+						<mcms-card-header>
+							<mcms-card-title>Full-Featured DataTable</mcms-card-title>
+							<mcms-card-description>
+								DataTable with search, sorting, pagination, selection, and row actions
+							</mcms-card-description>
+						</mcms-card-header>
+						<mcms-card-content>
+							<mcms-data-table
+								[data]="tableData"
+								[columns]="tableColumns"
+								[selectable]="true"
+								[searchable]="true"
+								[paginated]="true"
+								[pageSize]="3"
+								[rowActions]="tableRowActions"
+								[(selectedItems)]="selectedTableItems"
+								(rowAction)="onTableRowAction($event)"
+							/>
+							<p class="mt-4 text-sm text-muted-foreground">
+								Selected: {{ selectedTableItems().length }} items
+							</p>
+						</mcms-card-content>
+					</mcms-card>
+
+					<mcms-card>
+						<mcms-card-header>
+							<mcms-card-title>Simple DataTable</mcms-card-title>
+							<mcms-card-description>Basic table without extra features</mcms-card-description>
+						</mcms-card-header>
+						<mcms-card-content>
+							<mcms-data-table
+								[data]="tableData.slice(0, 4)"
+								[columns]="tableColumns"
+								[searchable]="false"
+								[paginated]="false"
+							/>
+						</mcms-card-content>
+					</mcms-card>
+				</div>
+			</section>
+
+			<!-- FieldDisplay Section -->
+			<section class="mb-12">
+				<h2 class="text-2xl font-semibold mb-4">Field Display</h2>
+				<mcms-separator class="mb-6" />
+
+				<div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+					<mcms-field-display [value]="'John Doe'" type="text" label="Name" />
+					<mcms-field-display [value]="42500" type="number" label="Salary" />
+					<mcms-field-display [value]="'2024-06-15'" type="date" label="Start Date" />
+					<mcms-field-display [value]="true" type="boolean" label="Active" />
+					<mcms-field-display [value]="'active'" type="badge" label="Status" />
+					<mcms-field-display [value]="'john@example.com'" type="email" label="Email" />
+					<mcms-field-display [value]="'https://example.com'" type="link" label="Website" />
+					<mcms-field-display [value]="null" type="text" label="Empty" emptyText="N/A" />
+				</div>
+
+				<mcms-card class="mt-6">
+					<mcms-card-header>
+						<mcms-card-title>List & JSON Types</mcms-card-title>
+					</mcms-card-header>
+					<mcms-card-content class="grid grid-cols-2 gap-6">
+						<mcms-field-display
+							[value]="['Angular', 'TypeScript', 'RxJS']"
+							type="list"
+							label="Skills"
+						/>
+						<mcms-field-display [value]="fieldDisplayJsonData" type="json" label="Config" />
+					</mcms-card-content>
+				</mcms-card>
 			</section>
 
 			<!-- Empty State Section -->
@@ -743,6 +932,12 @@ export class KitchenSinkPage {
 	readonly searchQuery = signal('');
 	readonly activeIndex = signal(0);
 
+	// SearchInput demo
+	readonly searchValue = signal('');
+
+	// FieldDisplay demo
+	readonly fieldDisplayJsonData = { theme: 'dark', language: 'en', version: '1.0' };
+
 	readonly commandItems = [
 		{ value: 'calendar', label: 'Calendar', group: 'suggestions' },
 		{ value: 'search-emoji', label: 'Search Emoji', group: 'suggestions' },
@@ -829,6 +1024,44 @@ export class KitchenSinkPage {
 		{ value: 'radio2', label: 'Radio 2' },
 		{ value: 'radio3', label: 'Radio 3' },
 	];
+
+	// DataTable sample data
+	readonly tableData: KitchenSinkUser[] = [
+		{ id: 1, name: 'Alice Johnson', email: 'alice@example.com', role: 'Admin', status: 'active' },
+		{ id: 2, name: 'Bob Smith', email: 'bob@example.com', role: 'User', status: 'active' },
+		{
+			id: 3,
+			name: 'Charlie Brown',
+			email: 'charlie@example.com',
+			role: 'Editor',
+			status: 'pending',
+		},
+		{ id: 4, name: 'Diana Prince', email: 'diana@example.com', role: 'User', status: 'inactive' },
+		{ id: 5, name: 'Eve Wilson', email: 'eve@example.com', role: 'Admin', status: 'active' },
+		{ id: 6, name: 'Frank Miller', email: 'frank@example.com', role: 'User', status: 'active' },
+	];
+
+	readonly tableColumns: DataTableColumn<KitchenSinkUser>[] = [
+		{ field: 'name', header: 'Name', sortable: true },
+		{ field: 'email', header: 'Email', sortable: true },
+		{ field: 'role', header: 'Role', sortable: true },
+		{ field: 'status', header: 'Status' },
+	];
+
+	readonly tableRowActions: DataTableRowAction<KitchenSinkUser>[] = [
+		{ id: 'view', label: 'View' },
+		{ id: 'edit', label: 'Edit' },
+		{ id: 'delete', label: 'Delete', variant: 'destructive' },
+	];
+
+	readonly selectedTableItems = signal<KitchenSinkUser[]>([]);
+
+	onTableRowAction(event: {
+		action: DataTableRowAction<KitchenSinkUser>;
+		item: KitchenSinkUser;
+	}): void {
+		this.toastService.show('Row Action', `${event.action.label} clicked on ${event.item.name}`);
+	}
 
 	showToast(type: 'default' | 'success' | 'error' | 'warning'): void {
 		const messages = {
