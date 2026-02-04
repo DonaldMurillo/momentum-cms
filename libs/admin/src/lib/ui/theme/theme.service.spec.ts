@@ -12,9 +12,33 @@ describe('Theme Logic', () => {
 	// Mock matchMedia
 	const mockMatchMedia = vi.fn();
 
+	// Mock localStorage
+	const mockStorage: Record<string, string> = {};
+	const mockLocalStorage = {
+		getItem: vi.fn((key: string) => mockStorage[key] ?? null),
+		setItem: vi.fn((key: string, value: string) => {
+			mockStorage[key] = value;
+		}),
+		removeItem: vi.fn((key: string) => {
+			delete mockStorage[key];
+		}),
+		clear: vi.fn(() => {
+			Object.keys(mockStorage).forEach((key) => delete mockStorage[key]);
+		}),
+		length: 0,
+		key: vi.fn(),
+	};
+
 	beforeEach(() => {
-		// Clear localStorage
-		localStorage.clear();
+		// Reset storage mock
+		Object.keys(mockStorage).forEach((key) => delete mockStorage[key]);
+		vi.clearAllMocks();
+
+		// Mock localStorage globally
+		Object.defineProperty(globalThis, 'localStorage', {
+			value: mockLocalStorage,
+			writable: true,
+		});
 
 		// Mock matchMedia to return light preference
 		mockMatchMedia.mockReturnValue({

@@ -111,14 +111,21 @@ export function momentumAdminRoutes(options: MomentumAdminOptions): Routes {
 			},
 			// Create new document
 			{
-				path: 'collections/:slug/create',
+				path: 'collections/:slug/new',
 				loadComponent: (): Promise<Type<unknown>> =>
 					import('../pages/collection-edit/collection-edit.page').then((m) => m.CollectionEditPage),
 				canActivate: [collectionAccessGuard],
 			},
-			// Edit existing document
+			// View existing document
 			{
 				path: 'collections/:slug/:id',
+				loadComponent: (): Promise<Type<unknown>> =>
+					import('../pages/collection-view/collection-view.page').then((m) => m.CollectionViewPage),
+				canActivate: [collectionAccessGuard],
+			},
+			// Edit existing document
+			{
+				path: 'collections/:slug/:id/edit',
 				loadComponent: (): Promise<Type<unknown>> =>
 					import('../pages/collection-edit/collection-edit.page').then((m) => m.CollectionEditPage),
 				canActivate: [collectionAccessGuard],

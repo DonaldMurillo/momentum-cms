@@ -120,6 +120,18 @@ export * from './lib/breadcrumbs/breadcrumbs.component';
 export * from './lib/breadcrumbs/breadcrumb-item.component';
 export * from './lib/breadcrumbs/breadcrumb-separator.component';
 
+// Sidebar
+export * from './lib/sidebar/sidebar.types';
+export * from './lib/sidebar/sidebar.service';
+export * from './lib/sidebar/sidebar.component';
+export * from './lib/sidebar/sidebar-header.component';
+export * from './lib/sidebar/sidebar-content.component';
+export * from './lib/sidebar/sidebar-footer.component';
+export * from './lib/sidebar/sidebar-nav.component';
+export * from './lib/sidebar/sidebar-nav-item.component';
+export * from './lib/sidebar/sidebar-section.component';
+export * from './lib/sidebar/sidebar-trigger.component';
+
 // Pagination
 export * from './lib/pagination/pagination.types';
 export * from './lib/pagination/pagination.component';
@@ -153,6 +165,10 @@ export * from './lib/table/table-footer.component';
 export * from './lib/empty-state/empty-state.types';
 export * from './lib/empty-state/empty-state.component';
 
+// DataTable
+export * from './lib/data-table/data-table.types';
+export * from './lib/data-table/data-table.component';
+
 // Command
 export * from './lib/command/command.types';
 export * from './lib/command/command.component';
@@ -181,6 +197,13 @@ export * from './lib/menubar/menubar.types';
 export * from './lib/menubar/menubar.component';
 export * from './lib/menubar/menubar-item.component';
 export * from './lib/menubar/menubar-submenu.component';
+
+// SearchInput
+export * from './lib/search-input/search-input.component';
+
+// FieldDisplay
+export * from './lib/field-display/field-display.types';
+export * from './lib/field-display/field-display.component';
 
 // Kitchen Sink (demo page)
 export * from './lib/kitchen-sink/kitchen-sink.page';

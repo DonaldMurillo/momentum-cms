@@ -12,7 +12,7 @@ export default defineMomentumConfig({
 	db: {
 		adapter: postgresAdapter({
 			connectionString:
-				process.env['DATABASE_URL'] ?? 'postgresql://postgres:postgres@localhost:5433/momentum',
+				process.env['DATABASE_URL'] ?? 'postgresql://postgres:postgres@localhost:5432/momentum',
 		}),
 	},
 	collections: [Posts, Users],

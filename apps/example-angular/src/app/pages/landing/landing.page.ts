@@ -1,9 +1,27 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import {
+	Button,
+	Card,
+	CardHeader,
+	CardTitle,
+	CardDescription,
+	CardContent,
+	CardFooter,
+} from '@momentum-cms/ui';
 
 @Component({
 	selector: 'app-landing-page',
-	imports: [RouterLink],
+	imports: [
+		RouterLink,
+		Button,
+		Card,
+		CardHeader,
+		CardTitle,
+		CardDescription,
+		CardContent,
+		CardFooter,
+	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `
 		<div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -22,16 +40,13 @@ import { RouterLink } from '@angular/router';
 						<div class="flex items-center gap-3">
 							<a
 								href="/storybook"
-								class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors"
+								mcms-button
+								variant="secondary"
+								class="!bg-purple-600 hover:!bg-purple-500 !text-white"
 							>
 								Component Library
 							</a>
-							<a
-								routerLink="/admin"
-								class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors"
-							>
-								Open Admin
-							</a>
+							<a routerLink="/admin" mcms-button variant="primary"> Open Admin </a>
 						</div>
 					</div>
 				</div>
@@ -53,10 +68,7 @@ import { RouterLink } from '@angular/router';
 						Inspired by Payload CMS, built for Angular.
 					</p>
 					<div class="flex gap-4 justify-center">
-						<a
-							routerLink="/admin"
-							class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-						>
+						<a routerLink="/admin" mcms-button variant="primary" size="lg">
 							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path
 									stroke-linecap="round"
@@ -70,7 +82,10 @@ import { RouterLink } from '@angular/router';
 						<a
 							href="https://github.com/momentum-cms/momentum"
 							target="_blank"
-							class="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+							mcms-button
+							variant="secondary"
+							size="lg"
+							class="!bg-slate-700 hover:!bg-slate-600 !text-white"
 						>
 							<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
 								<path
@@ -84,90 +99,108 @@ import { RouterLink } from '@angular/router';
 
 				<!-- Feature Cards -->
 				<div class="grid md:grid-cols-3 gap-6 mb-16">
-					<div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
-						<div
-							class="w-12 h-12 bg-indigo-500/20 rounded-lg flex items-center justify-center mb-4"
-						>
-							<svg
-								class="w-6 h-6 text-indigo-400"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
+					<mcms-card class="!bg-slate-800/50 !border-slate-700/50">
+						<mcms-card-header>
+							<div
+								class="w-12 h-12 bg-indigo-500/20 rounded-lg flex items-center justify-center mb-2"
 							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-								/>
-							</svg>
-						</div>
-						<h3 class="text-lg font-semibold text-white mb-2">Type-Safe Collections</h3>
-						<p class="text-slate-400">
-							Define your data models in TypeScript with full type safety. Collections auto-generate
-							database schemas and API endpoints.
-						</p>
-					</div>
+								<svg
+									class="w-6 h-6 text-indigo-400"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+									/>
+								</svg>
+							</div>
+							<mcms-card-title class="!text-lg !text-white">Type-Safe Collections</mcms-card-title>
+						</mcms-card-header>
+						<mcms-card-content>
+							<p class="text-slate-400">
+								Define your data models in TypeScript with full type safety. Collections
+								auto-generate database schemas and API endpoints.
+							</p>
+						</mcms-card-content>
+					</mcms-card>
 
-					<div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
-						<div
-							class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4"
-						>
-							<svg
-								class="w-6 h-6 text-purple-400"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
+					<mcms-card class="!bg-slate-800/50 !border-slate-700/50">
+						<mcms-card-header>
+							<div
+								class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-2"
 							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
-								/>
-							</svg>
-						</div>
-						<h3 class="text-lg font-semibold text-white mb-2">Auto-Generated Admin UI</h3>
-						<p class="text-slate-400">
-							A beautiful admin dashboard is generated automatically from your collection
-							definitions. No manual form building required.
-						</p>
-					</div>
+								<svg
+									class="w-6 h-6 text-purple-400"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
+									/>
+								</svg>
+							</div>
+							<mcms-card-title class="!text-lg !text-white"
+								>Auto-Generated Admin UI</mcms-card-title
+							>
+						</mcms-card-header>
+						<mcms-card-content>
+							<p class="text-slate-400">
+								A beautiful admin dashboard is generated automatically from your collection
+								definitions. No manual form building required.
+							</p>
+						</mcms-card-content>
+					</mcms-card>
 
-					<div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
-						<div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mb-4">
-							<svg
-								class="w-6 h-6 text-green-400"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
+					<mcms-card class="!bg-slate-800/50 !border-slate-700/50">
+						<mcms-card-header>
+							<div
+								class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mb-2"
 							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"
-								/>
-							</svg>
-						</div>
-						<h3 class="text-lg font-semibold text-white mb-2">REST API Ready</h3>
-						<p class="text-slate-400">
-							Full CRUD API endpoints are generated for each collection. Works with Express,
-							Analog.js, or any Node.js framework.
-						</p>
-					</div>
+								<svg
+									class="w-6 h-6 text-green-400"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"
+									/>
+								</svg>
+							</div>
+							<mcms-card-title class="!text-lg !text-white">REST API Ready</mcms-card-title>
+						</mcms-card-header>
+						<mcms-card-content>
+							<p class="text-slate-400">
+								Full CRUD API endpoints are generated for each collection. Works with Express,
+								Analog.js, or any Node.js framework.
+							</p>
+						</mcms-card-content>
+					</mcms-card>
 				</div>
 
 				<!-- Quick Start -->
-				<div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-8">
-					<h2 class="text-2xl font-bold text-white mb-6">Quick Start</h2>
-
-					<div class="space-y-6">
-						<div>
-							<h3 class="text-lg font-semibold text-indigo-400 mb-3">1. Define a Collection</h3>
-							<pre
-								class="bg-slate-900 rounded-lg p-4 overflow-x-auto text-sm"
-							><code class="text-slate-300">import {{ '{' }} defineCollection, text, textarea {{ '}' }} from '&#64;momentum-cms/core';
+				<mcms-card class="!bg-slate-800/50 !border-slate-700/50 !p-0">
+					<mcms-card-header class="p-8 pb-0">
+						<mcms-card-title class="!text-2xl !text-white">Quick Start</mcms-card-title>
+					</mcms-card-header>
+					<mcms-card-content class="p-8 pt-6">
+						<div class="space-y-6">
+							<div>
+								<h3 class="text-lg font-semibold text-indigo-400 mb-3">1. Define a Collection</h3>
+								<pre
+									class="bg-slate-900 rounded-lg p-4 overflow-x-auto text-sm"
+								><code class="text-slate-300">import {{ '{' }} defineCollection, text, textarea {{ '}' }} from '&#64;momentum-cms/core';
 
 export const Posts = defineCollection({{ '{' }}
   slug: 'posts',
@@ -177,110 +210,127 @@ export const Posts = defineCollection({{ '{' }}
     textarea('content'),
   ],
 {{ '}' }});</code></pre>
-						</div>
+							</div>
 
-						<div>
-							<h3 class="text-lg font-semibold text-indigo-400 mb-3">2. Configure Momentum</h3>
-							<pre
-								class="bg-slate-900 rounded-lg p-4 overflow-x-auto text-sm"
-							><code class="text-slate-300">import {{ '{' }} defineMomentumConfig {{ '}' }} from '&#64;momentum-cms/core';
+							<div>
+								<h3 class="text-lg font-semibold text-indigo-400 mb-3">2. Configure Momentum</h3>
+								<pre
+									class="bg-slate-900 rounded-lg p-4 overflow-x-auto text-sm"
+								><code class="text-slate-300">import {{ '{' }} defineMomentumConfig {{ '}' }} from '&#64;momentum-cms/core';
 import {{ '{' }} sqliteAdapter {{ '}' }} from '&#64;momentum-cms/db-drizzle';
 
 export default defineMomentumConfig({{ '{' }}
   db: {{ '{' }} adapter: sqliteAdapter({{ '{' }} filename: './data/cms.db' {{ '}' }}) {{ '}' }},
   collections: [Posts],
 {{ '}' }});</code></pre>
-						</div>
+							</div>
 
-						<div>
-							<h3 class="text-lg font-semibold text-indigo-400 mb-3">3. Try the API</h3>
-							<div class="grid md:grid-cols-2 gap-4">
-								<div class="bg-slate-900 rounded-lg p-4">
-									<p class="text-slate-400 text-sm mb-2">List all posts:</p>
-									<code class="text-green-400 text-sm">GET /api/posts</code>
-								</div>
-								<div class="bg-slate-900 rounded-lg p-4">
-									<p class="text-slate-400 text-sm mb-2">Create a post:</p>
-									<code class="text-green-400 text-sm">POST /api/posts</code>
-								</div>
-								<div class="bg-slate-900 rounded-lg p-4">
-									<p class="text-slate-400 text-sm mb-2">Get single post:</p>
-									<code class="text-green-400 text-sm">GET /api/posts/:id</code>
-								</div>
-								<div class="bg-slate-900 rounded-lg p-4">
-									<p class="text-slate-400 text-sm mb-2">Update a post:</p>
-									<code class="text-green-400 text-sm">PATCH /api/posts/:id</code>
+							<div>
+								<h3 class="text-lg font-semibold text-indigo-400 mb-3">3. Try the API</h3>
+								<div class="grid md:grid-cols-2 gap-4">
+									<div class="bg-slate-900 rounded-lg p-4">
+										<p class="text-slate-400 text-sm mb-2">List all posts:</p>
+										<code class="text-green-400 text-sm">GET /api/posts</code>
+									</div>
+									<div class="bg-slate-900 rounded-lg p-4">
+										<p class="text-slate-400 text-sm mb-2">Create a post:</p>
+										<code class="text-green-400 text-sm">POST /api/posts</code>
+									</div>
+									<div class="bg-slate-900 rounded-lg p-4">
+										<p class="text-slate-400 text-sm mb-2">Get single post:</p>
+										<code class="text-green-400 text-sm">GET /api/posts/:id</code>
+									</div>
+									<div class="bg-slate-900 rounded-lg p-4">
+										<p class="text-slate-400 text-sm mb-2">Update a post:</p>
+										<code class="text-green-400 text-sm">PATCH /api/posts/:id</code>
+									</div>
 								</div>
 							</div>
 						</div>
-					</div>
-				</div>
+					</mcms-card-content>
+				</mcms-card>
 
 				<!-- Collections in this demo -->
 				<div class="mt-12">
 					<h2 class="text-2xl font-bold text-white mb-6 text-center">Collections in This Demo</h2>
 					<div class="grid md:grid-cols-2 gap-6">
-						<div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
-							<div class="flex items-center gap-3 mb-4">
-								<div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-									<svg
-										class="w-5 h-5 text-blue-400"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-										/>
-									</svg>
+						<mcms-card class="!bg-slate-800/50 !border-slate-700/50">
+							<mcms-card-header>
+								<div class="flex items-center gap-3">
+									<div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+										<svg
+											class="w-5 h-5 text-blue-400"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+											/>
+										</svg>
+									</div>
+									<mcms-card-title class="!text-lg !text-white !m-0">Posts</mcms-card-title>
 								</div>
-								<h3 class="text-lg font-semibold text-white">Posts</h3>
-							</div>
-							<p class="text-slate-400 mb-4">
-								Blog posts with title, slug, content, status, and featured flag.
-							</p>
-							<a
-								routerLink="/admin/collections/posts"
-								class="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
-							>
-								Manage Posts &rarr;
-							</a>
-						</div>
-
-						<div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
-							<div class="flex items-center gap-3 mb-4">
-								<div
-									class="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center"
+							</mcms-card-header>
+							<mcms-card-content>
+								<mcms-card-description class="!text-slate-400">
+									Blog posts with title, slug, content, status, and featured flag.
+								</mcms-card-description>
+							</mcms-card-content>
+							<mcms-card-footer>
+								<a
+									routerLink="/admin/collections/posts"
+									mcms-button
+									variant="link"
+									class="!text-indigo-400 hover:!text-indigo-300 !p-0 !h-auto"
 								>
-									<svg
-										class="w-5 h-5 text-emerald-400"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
+									Manage Posts &rarr;
+								</a>
+							</mcms-card-footer>
+						</mcms-card>
+
+						<mcms-card class="!bg-slate-800/50 !border-slate-700/50">
+							<mcms-card-header>
+								<div class="flex items-center gap-3">
+									<div
+										class="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center"
 									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-										/>
-									</svg>
+										<svg
+											class="w-5 h-5 text-emerald-400"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+											/>
+										</svg>
+									</div>
+									<mcms-card-title class="!text-lg !text-white !m-0">Users</mcms-card-title>
 								</div>
-								<h3 class="text-lg font-semibold text-white">Users</h3>
-							</div>
-							<p class="text-slate-400 mb-4">
-								User accounts with name, email, role, and active status.
-							</p>
-							<a
-								routerLink="/admin/collections/users"
-								class="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
-							>
-								Manage Users &rarr;
-							</a>
-						</div>
+							</mcms-card-header>
+							<mcms-card-content>
+								<mcms-card-description class="!text-slate-400">
+									User accounts with name, email, role, and active status.
+								</mcms-card-description>
+							</mcms-card-content>
+							<mcms-card-footer>
+								<a
+									routerLink="/admin/collections/users"
+									mcms-button
+									variant="link"
+									class="!text-indigo-400 hover:!text-indigo-300 !p-0 !h-auto"
+								>
+									Manage Users &rarr;
+								</a>
+							</mcms-card-footer>
+						</mcms-card>
 					</div>
 				</div>
 			</main>

@@ -71,7 +71,7 @@
 		--mcms-sidebar-primary-foreground: 210 40% 98%;
 		--mcms-sidebar-accent: 217 33% 17%;
 		--mcms-sidebar-accent-foreground: 210 40% 98%;
-		--mcms-sidebar-border: 217 33% 17%;
+		--mcms-sidebar-border: 217 33% 20%;
 		--mcms-sidebar-ring: 221 83% 53%;
 	}
 
@@ -80,24 +80,24 @@
 		--mcms-background: 222 47% 11%;
 		--mcms-foreground: 210 40% 98%;
 
-		/* Card */
-		--mcms-card: 217 33% 17%;
+		/* Card - slightly lighter than background */
+		--mcms-card: 217 33% 15%;
 		--mcms-card-foreground: 210 40% 98%;
 
 		/* Primary - Blue (same as light) */
 		--mcms-primary: 217 91% 60%;
 		--mcms-primary-foreground: 222 47% 11%;
 
-		/* Secondary */
-		--mcms-secondary: 217 33% 17%;
+		/* Secondary - distinct from card for badges */
+		--mcms-secondary: 215 28% 25%;
 		--mcms-secondary-foreground: 210 40% 98%;
 
-		/* Muted */
-		--mcms-muted: 217 33% 17%;
+		/* Muted - subtle background */
+		--mcms-muted: 217 33% 20%;
 		--mcms-muted-foreground: 215 20% 65%;
 
-		/* Accent */
-		--mcms-accent: 217 33% 17%;
+		/* Accent - hover states */
+		--mcms-accent: 217 33% 22%;
 		--mcms-accent-foreground: 210 40% 98%;
 
 		/* Destructive */
@@ -119,9 +119,9 @@
 		/* Overlay */
 		--mcms-overlay: 0 0% 0%;
 
-		/* Border, input, and ring */
-		--mcms-border: 217 33% 17%;
-		--mcms-input: 217 33% 17%;
+		/* Border, input, and ring - slightly visible */
+		--mcms-border: 217 33% 22%;
+		--mcms-input: 217 33% 22%;
 		--mcms-ring: 224 76% 48%;
 
 		/* Sidebar colors - Slightly lighter than main in dark mode */
@@ -131,7 +131,7 @@
 		--mcms-sidebar-primary-foreground: 210 40% 98%;
 		--mcms-sidebar-accent: 217 33% 17%;
 		--mcms-sidebar-accent-foreground: 213 31% 91%;
-		--mcms-sidebar-border: 217 33% 17%;
+		--mcms-sidebar-border: 217 33% 12%;
 		--mcms-sidebar-ring: 217 91% 60%;
 	}
 }

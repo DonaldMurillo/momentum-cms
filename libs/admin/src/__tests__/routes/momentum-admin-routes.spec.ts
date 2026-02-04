@@ -111,7 +111,18 @@ describe('momentumAdminRoutes()', () => {
 
 			const adminRoute = findAdminShellRoute(routes);
 			const children = adminRoute?.children;
-			expect(children?.some((c) => c.path === 'collections/:slug/create')).toBe(true);
+			expect(children?.some((c) => c.path === 'collections/:slug/new')).toBe(true);
+		});
+
+		it('should include collection view route', () => {
+			const routes = momentumAdminRoutes({
+				basePath: '/admin',
+				collections: mockCollections,
+			});
+
+			const adminRoute = findAdminShellRoute(routes);
+			const children = adminRoute?.children;
+			expect(children?.some((c) => c.path === 'collections/:slug/:id')).toBe(true);
 		});
 
 		it('should include collection edit route', () => {
@@ -122,7 +133,7 @@ describe('momentumAdminRoutes()', () => {
 
 			const adminRoute = findAdminShellRoute(routes);
 			const children = adminRoute?.children;
-			expect(children?.some((c) => c.path === 'collections/:slug/:id')).toBe(true);
+			expect(children?.some((c) => c.path === 'collections/:slug/:id/edit')).toBe(true);
 		});
 	});
 
@@ -135,7 +146,7 @@ describe('momentumAdminRoutes()', () => {
 
 			const adminRoute = findAdminShellRoute(routes);
 			const routeData = adminRoute?.data;
-			expect(routeData?.collections).toBe(mockCollections);
+			expect(routeData?.['collections']).toBe(mockCollections);
 		});
 
 		it('should pass branding to route data when provided', () => {
@@ -152,7 +163,7 @@ describe('momentumAdminRoutes()', () => {
 
 			const adminRoute = findAdminShellRoute(routes);
 			const routeData = adminRoute?.data;
-			expect(routeData?.branding).toBe(branding);
+			expect(routeData?.['branding']).toBe(branding);
 		});
 	});
 

@@ -1,5 +1,6 @@
 import { Route } from '@angular/router';
 import { momentumAdminRoutes } from '@momentum-cms/admin';
+import { KitchenSinkPage } from '@momentum-cms/ui';
 import { collections } from '../collections';
 
 export const appRoutes: Route[] = [
@@ -17,7 +18,7 @@ export const appRoutes: Route[] = [
 	// Kitchen Sink - UI component showcase
 	{
 		path: 'kitchen-sink',
-		loadComponent: () => import('@momentum-cms/ui').then((m) => m.KitchenSinkPage),
+		component: KitchenSinkPage,
 	},
 	// Mount admin UI at /admin
 	...momentumAdminRoutes({

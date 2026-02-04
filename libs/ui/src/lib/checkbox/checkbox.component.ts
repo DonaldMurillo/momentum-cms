@@ -23,17 +23,27 @@ import type { ValidationError } from '../input/input.types';
 			type="button"
 			role="checkbox"
 			[id]="id()"
-			[attr.aria-checked]="value()"
+			[attr.aria-checked]="indeterminate() ? 'mixed' : value()"
 			[attr.aria-invalid]="hasError() || null"
 			[attr.aria-describedby]="ariaDescribedBy()"
 			[disabled]="disabled()"
 			(click)="toggle()"
 			(keydown.space)="toggle(); $event.preventDefault()"
-			[class.checked]="value()"
+			[class.checked]="value() || indeterminate()"
 			[class.error]="hasError()"
 			class="checkbox-button"
 		>
-			@if (value()) {
+			@if (indeterminate()) {
+				<svg
+					class="check-icon"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 12h14" />
+				</svg>
+			} @else if (value()) {
 				<svg
 					class="check-icon"
 					fill="none"
@@ -119,6 +129,8 @@ export class Checkbox {
 	// === Component-specific configuration ===
 	readonly id = input('');
 	readonly describedBy = input<string | undefined>(undefined);
+	/** Shows a horizontal dash instead of check mark (used for partial selections). */
+	readonly indeterminate = input(false);
 
 	// === Computed state ===
 	readonly hasError = computed(() => this.errors().length > 0);

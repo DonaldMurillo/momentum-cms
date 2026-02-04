@@ -35,11 +35,8 @@
 			}
 		},
 		"test": {
-			"executor": "@nx/vitest:test",
-			"outputs": ["{workspaceRoot}/coverage/libs/admin"],
-			"options": {
-				"config": "libs/admin/vitest.config.ts"
-			}
+			"executor": "@nx/angular:unit-test",
+			"options": {}
 		},
 		"lint": {
 			"executor": "@nx/eslint:lint"
