@@ -120,5 +120,14 @@ export default defineConfig({
 			},
 			dependencies: ['api-access-control-tests'],
 		},
+		// Versioning tests - test version history, publish/unpublish, drafts
+		{
+			name: 'versioning-tests',
+			testMatch: /versioning\.spec\.ts$/,
+			use: {
+				...devices['Desktop Chrome'],
+			},
+			dependencies: ['api-access-control-tests'],
+		},
 	],
 });

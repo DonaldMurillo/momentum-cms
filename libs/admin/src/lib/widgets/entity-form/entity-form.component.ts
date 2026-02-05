@@ -23,6 +23,7 @@ import {
 	BreadcrumbSeparator,
 } from '@momentum-cms/ui';
 import { injectMomentumAPI } from '../../services/momentum-api.service';
+import { VersionService } from '../../services/version.service';
 import { CollectionAccessService } from '../../services/collection-access.service';
 import { FeedbackService } from '../feedback/feedback.service';
 import type { Entity } from '../widget.types';
@@ -137,13 +138,31 @@ import { FieldRenderer } from './field-renderers/field-renderer.component';
 
 				<mcms-card-footer class="flex justify-end gap-3 border-t bg-muted/50 px-6 py-4">
 					@if (mode() !== 'view') {
-						<button mcms-button variant="outline" [disabled]="isSubmitting()" (click)="onCancel()">
+						<button
+							mcms-button
+							variant="outline"
+							[disabled]="isSubmitting() || isSavingDraft()"
+							(click)="onCancel()"
+						>
 							Cancel
 						</button>
+						@if (canSaveDraft()) {
+							<button
+								mcms-button
+								variant="outline"
+								[disabled]="isSubmitting() || isSavingDraft()"
+								(click)="onSaveDraft()"
+							>
+								@if (isSavingDraft()) {
+									<mcms-spinner size="sm" class="mr-2" />
+								}
+								Save Draft
+							</button>
+						}
 						<button
 							mcms-button
 							variant="primary"
-							[disabled]="isSubmitting() || !canSubmit()"
+							[disabled]="isSubmitting() || isSavingDraft() || !canSubmit()"
 							(click)="onSubmit()"
 						>
 							@if (isSubmitting()) {
@@ -163,6 +182,7 @@ import { FieldRenderer } from './field-renderers/field-renderer.component';
 })
 export class EntityFormWidget<T extends Entity = Entity> {
 	private readonly api = injectMomentumAPI();
+	private readonly versionService = inject(VersionService);
 	private readonly collectionAccess = inject(CollectionAccessService);
 	private readonly feedback = inject(FeedbackService);
 	private readonly router = inject(Router);
@@ -187,12 +207,14 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	readonly cancelled = output<void>();
 	readonly saveError = output<Error>();
 	readonly modeChange = output<EntityFormMode>();
+	readonly draftSaved = output<void>();
 
 	/** Internal state */
 	readonly formData = signal<Record<string, unknown>>({});
 	readonly originalData = signal<T | null>(null);
 	readonly isLoading = signal(false);
 	readonly isSubmitting = signal(false);
+	readonly isSavingDraft = signal(false);
 	readonly errors = signal<FieldError[]>([]);
 	readonly formError = signal<string | null>(null);
 
@@ -265,6 +287,21 @@ export class EntityFormWidget<T extends Entity = Entity> {
 		}
 
 		return true;
+	});
+
+	/** Whether collection has versioning with drafts enabled */
+	readonly hasVersioning = computed(() => {
+		const col = this.collection();
+		const versions = col.versions;
+		if (typeof versions === 'object' && versions !== null) {
+			return !!versions.drafts;
+		}
+		return false;
+	});
+
+	/** Whether draft save is available (edit mode with existing entity) */
+	readonly canSaveDraft = computed(() => {
+		return this.hasVersioning() && this.mode() === 'edit' && !!this.entityId();
 	});
 
 	constructor() {
@@ -396,5 +433,31 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	 */
 	switchToEdit(): void {
 		this.modeChange.emit('edit');
+	}
+
+	/**
+	 * Save form data as a draft.
+	 */
+	async onSaveDraft(): Promise<void> {
+		const id = this.entityId();
+		if (!id || this.isSavingDraft()) return;
+
+		this.isSavingDraft.set(true);
+		this.formError.set(null);
+
+		try {
+			const slug = this.collection().slug;
+			const data = this.formData();
+
+			await this.versionService.saveDraft(slug, id, data);
+			this.feedback.draftSaved();
+			this.draftSaved.emit();
+		} catch (err) {
+			const errorMessage = err instanceof Error ? err.message : 'Failed to save draft';
+			this.formError.set(errorMessage);
+			this.feedback.operationFailed('Draft save failed', err instanceof Error ? err : undefined);
+		} finally {
+			this.isSavingDraft.set(false);
+		}
 	}
 }

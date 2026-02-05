@@ -37,7 +37,14 @@ export interface AccessConfig {
 	delete?: AccessFunction;
 	admin?: AccessFunction;
 	unlock?: AccessFunction; // For auth-enabled collections
-	readVersions?: AccessFunction; // For version-enabled collections
+
+	// Version-related access control
+	/** Control who can read version history */
+	readVersions?: AccessFunction;
+	/** Control who can publish/unpublish documents */
+	publishVersions?: AccessFunction;
+	/** Control who can restore previous versions */
+	restoreVersions?: AccessFunction;
 }
 
 // ============================================
