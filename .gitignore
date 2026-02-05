@@ -64,3 +64,4 @@ data/
 
 
 storybook-static
+vitest.config.*.timestamp*

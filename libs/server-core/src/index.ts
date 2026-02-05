@@ -64,3 +64,14 @@ export {
 	type SeedTracker,
 	type CreateSeedTrackingData,
 } from './lib/seeding';
+
+// Upload Handler
+export {
+	handleUpload,
+	handleFileDelete,
+	handleFileGet,
+	getUploadConfig,
+	type UploadRequest,
+	type UploadResponse,
+	type UploadConfig,
+} from './lib/upload-handler';

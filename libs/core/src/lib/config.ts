@@ -7,6 +7,7 @@ import type {
 	VersionCountOptions,
 	CreateVersionOptions,
 } from './versions';
+import type { StorageAdapter } from './storage';
 
 /**
  * Database adapter type for Momentum CMS.
@@ -155,6 +156,34 @@ export interface ServerConfig {
 }
 
 /**
+ * Storage configuration for file uploads.
+ */
+export interface StorageConfig {
+	/**
+	 * Storage adapter instance.
+	 * Use localStorageAdapter or s3StorageAdapter from @momentum-cms/storage.
+	 */
+	adapter: StorageAdapter;
+
+	/**
+	 * Directory for file uploads (for local storage).
+	 * @default './uploads'
+	 */
+	uploadDir?: string;
+
+	/**
+	 * Maximum file size in bytes.
+	 * @default 10485760 (10MB)
+	 */
+	maxFileSize?: number;
+
+	/**
+	 * Allowed MIME types. Defaults to common image and document types.
+	 */
+	allowedMimeTypes?: string[];
+}
+
+/**
  * Momentum CMS configuration.
  */
 export interface MomentumConfig {
@@ -177,6 +206,11 @@ export interface MomentumConfig {
 	 * Server configuration.
 	 */
 	server?: ServerConfig;
+
+	/**
+	 * Storage configuration for file uploads.
+	 */
+	storage?: StorageConfig;
 
 	/**
 	 * Seeding configuration for initial data.

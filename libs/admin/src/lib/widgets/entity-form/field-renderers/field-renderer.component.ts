@@ -6,6 +6,7 @@ import { NumberFieldRenderer } from './number-field.component';
 import { SelectFieldRenderer } from './select-field.component';
 import { CheckboxFieldRenderer } from './checkbox-field.component';
 import { DateFieldRenderer } from './date-field.component';
+import { UploadFieldRenderer } from './upload-field.component';
 
 /**
  * Dynamic field renderer that switches based on field type.
@@ -30,6 +31,7 @@ import { DateFieldRenderer } from './date-field.component';
 		SelectFieldRenderer,
 		CheckboxFieldRenderer,
 		DateFieldRenderer,
+		UploadFieldRenderer,
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
@@ -117,6 +119,16 @@ import { DateFieldRenderer } from './date-field.component';
 			}
 			@case ('date') {
 				<mcms-date-field-renderer
+					[field]="field()"
+					[value]="value()"
+					[mode]="mode()"
+					[path]="path()"
+					[error]="error()"
+					(fieldChange)="fieldChange.emit($event)"
+				/>
+			}
+			@case ('upload') {
+				<mcms-upload-field-renderer
 					[field]="field()"
 					[value]="value()"
 					[mode]="mode()"

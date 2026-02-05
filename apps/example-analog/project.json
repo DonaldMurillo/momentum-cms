@@ -59,6 +59,14 @@
 		},
 		"test": {
 			"executor": "@analogjs/vitest-angular:test"
+		},
+		"seed": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "node apps/example-analog/scripts/seed.cjs",
+				"cwd": "{workspaceRoot}"
+			},
+			"dependsOn": ["core:build", "db-drizzle:build", "server-core:build"]
 		}
 	}
 }

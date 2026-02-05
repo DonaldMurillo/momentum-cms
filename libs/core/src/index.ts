@@ -17,6 +17,9 @@ export * from './lib/access';
 // Configuration
 export * from './lib/config';
 
+// Storage
+export * from './lib/storage';
+
 // Seeding
 export * from './lib/seeding';
 

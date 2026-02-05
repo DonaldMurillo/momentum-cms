@@ -99,12 +99,19 @@ export default defineConfig({
 			use: { ...devices['Desktop Chrome'] },
 			dependencies: ['seeding-custom'],
 		},
-		// Versioning tests - run last (tests version/draft functionality)
+		// Versioning tests (tests version/draft functionality)
 		{
 			name: 'versioning',
 			testMatch: /versioning\.spec\.ts$/,
 			use: { ...devices['Desktop Chrome'] },
 			dependencies: ['seeding-tracking'],
+		},
+		// Media upload tests - run last (tests file upload/storage)
+		{
+			name: 'media-upload',
+			testMatch: /media-upload\.spec\.ts$/,
+			use: { ...devices['Desktop Chrome'] },
+			dependencies: ['versioning'],
 		},
 	],
 });

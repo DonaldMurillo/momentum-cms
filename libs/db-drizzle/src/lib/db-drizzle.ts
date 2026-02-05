@@ -118,7 +118,8 @@ function getColumnType(field: Field): string {
 		case 'date':
 			return 'TEXT'; // ISO date string
 		case 'relationship':
-			return 'TEXT'; // Store as ID reference
+		case 'upload':
+			return 'TEXT'; // Store as ID reference to media document
 		case 'array':
 		case 'group':
 		case 'blocks':

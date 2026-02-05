@@ -1,12 +1,23 @@
 import { Router, json as jsonParser } from 'express';
 import type { Request, Response, NextFunction } from 'express';
+// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- multer requires CommonJS import
+const multer = require('multer') as typeof import('multer');
 import {
 	createMomentumHandlers,
 	getCollectionPermissions,
 	getMomentumAPI,
+	handleUpload,
+	handleFileGet,
+	getUploadConfig,
 	type MomentumRequest,
+	type UploadRequest,
 } from '@momentum-cms/server-core';
-import type { MomentumConfig, ResolvedMomentumConfig, UserContext } from '@momentum-cms/core';
+import type {
+	MomentumConfig,
+	ResolvedMomentumConfig,
+	UserContext,
+	UploadedFile,
+} from '@momentum-cms/core';
 
 /**
  * Extended Express Request with user context from auth middleware.
@@ -327,6 +338,86 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			const message = error instanceof Error ? error.message : 'Unknown error';
 			res.status(500).json({ error: 'Failed to get status', message });
 		}
+	});
+
+	// ============================================
+	// Media Upload Routes
+	// Must be defined BEFORE /:collection routes
+	// ============================================
+
+	// Configure multer for memory storage
+	const upload = multer({
+		storage: multer.memoryStorage(),
+		limits: {
+			fileSize: config.storage?.maxFileSize ?? 10 * 1024 * 1024, // Default 10MB
+		},
+	});
+
+	// Route: POST /media/upload - Upload a file
+	router.post('/media/upload', upload.single('file'), async (req: Request, res: Response) => {
+		const uploadConfig = getUploadConfig(config);
+		if (!uploadConfig) {
+			res.status(500).json({ error: 'Storage not configured' });
+			return;
+		}
+
+		const multerFile = req.file;
+		if (!multerFile) {
+			res.status(400).json({ error: 'No file provided' });
+			return;
+		}
+
+		// Convert multer file to UploadedFile
+		const file: UploadedFile = {
+			originalName: multerFile.originalname,
+			mimeType: multerFile.mimetype,
+			size: multerFile.size,
+			buffer: multerFile.buffer,
+		};
+
+		// Get alt text from body if provided
+		const alt = typeof req.body?.alt === 'string' ? req.body.alt : undefined;
+
+		const uploadRequest: UploadRequest = {
+			file,
+			user: extractUserFromRequest(req),
+			alt,
+		};
+
+		const response = await handleUpload(uploadConfig, uploadRequest);
+		res.status(response.status).json(response);
+	});
+
+	// Route: GET /media/file/:path(*) - Serve uploaded files
+	router.get('/media/file/*', async (req: Request, res: Response) => {
+		const uploadConfig = getUploadConfig(config);
+		if (!uploadConfig) {
+			res.status(500).json({ error: 'Storage not configured' });
+			return;
+		}
+
+		// Extract path from URL (everything after /media/file/)
+		const filePath = req.params[0];
+		if (!filePath) {
+			res.status(400).json({ error: 'File path required' });
+			return;
+		}
+
+		const result = await handleFileGet(uploadConfig.adapter, filePath);
+		if (!result) {
+			res.status(404).json({ error: 'File not found' });
+			return;
+		}
+
+		// Set content type if known
+		if (result.mimeType) {
+			res.setHeader('Content-Type', result.mimeType);
+		}
+
+		// Enable caching for static files
+		res.setHeader('Cache-Control', 'public, max-age=31536000');
+
+		res.send(result.buffer);
 	});
 
 	// ============================================

@@ -47,7 +47,8 @@ function getColumnType(field: Field): string {
 		case 'date':
 			return 'TIMESTAMPTZ';
 		case 'relationship':
-			return 'VARCHAR(36)';
+		case 'upload':
+			return 'VARCHAR(36)'; // Store as ID reference to media document
 		case 'array':
 		case 'group':
 		case 'blocks':

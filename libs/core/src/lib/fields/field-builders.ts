@@ -187,13 +187,21 @@ export function password(name: string, options: PasswordFieldOptions = {}): Pass
 // ============================================
 
 export interface UploadFieldOptions extends BaseFieldOptions {
-	relationTo: string;
+	/** Collection slug where media documents are stored (default: 'media') */
+	relationTo?: string;
+	/** Allowed MIME types (e.g., ['image/*', 'application/pdf']) */
+	mimeTypes?: string[];
+	/** Maximum file size in bytes */
+	maxSize?: number;
+	/** Allow multiple file uploads */
+	hasMany?: boolean;
 }
 
-export function upload(name: string, options: UploadFieldOptions): UploadField {
+export function upload(name: string, options: UploadFieldOptions = {}): UploadField {
 	return {
 		name,
 		type: 'upload',
+		relationTo: options.relationTo ?? 'media',
 		...options,
 	};
 }

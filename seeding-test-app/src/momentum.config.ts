@@ -1,6 +1,8 @@
 import { defineMomentumConfig } from '@momentum-cms/core';
 import { postgresAdapter } from '@momentum-cms/db-drizzle';
-import { Categories, Articles } from './collections';
+import { localStorageAdapter } from '@momentum-cms/storage';
+import { Categories, Articles, MediaCollection } from './collections';
+import { join } from 'node:path';
 
 /**
  * Document types for type-safe seeding
@@ -35,7 +37,12 @@ export default defineMomentumConfig({
 				'postgresql://postgres:postgres@localhost:5434/momentum_seeding_test',
 		}),
 	},
-	collections: [Categories, Articles],
+	collections: [Categories, Articles, MediaCollection],
+	storage: {
+		adapter: localStorageAdapter({
+			directory: join(process.cwd(), 'data', 'uploads'),
+		}),
+	},
 	admin: {
 		basePath: '/admin',
 		branding: {
