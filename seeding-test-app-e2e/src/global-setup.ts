@@ -1,16 +1,102 @@
 /* eslint-disable no-console */
 import { chromium, type FullConfig } from '@playwright/test';
-import * as path from 'path';
-import { waitForAuthState, TEST_CREDENTIALS } from './fixtures/e2e-utils';
+import { Pool } from 'pg';
+import {
+	waitForAuthState,
+	TEST_CREDENTIALS,
+	ADDITIONAL_TEST_USERS,
+	getAuthFilePath,
+	type TestUserCredentials,
+} from './fixtures/e2e-utils';
 
 const MAX_WAIT_TIME = 60000; // 60 seconds max wait for seeds
 const POLL_INTERVAL = 1000; // Poll every second
 
-// Auth file path for storing session state
-const AUTH_FILE = path.join(__dirname, '..', 'playwright/.auth/user.json');
+// Admin auth file path (uses the same getAuthFilePath from e2e-utils)
+const ADMIN_AUTH_FILE = getAuthFilePath(TEST_CREDENTIALS.email);
 
 // Mailpit API for password reset recovery
 const MAILPIT_API = 'http://localhost:8025/api/v1';
+
+// Database connection for direct role fixes (bypasses API access control)
+const DATABASE_URL =
+	process.env['DATABASE_URL'] ??
+	'postgresql://postgres:postgres@localhost:5434/momentum_seeding_test';
+
+/**
+ * Ensure a user exists in the Momentum users collection with the correct role.
+ * Uses direct database access to bypass API access control.
+ * This handles the chicken-and-egg problem where admin needs 'admin' role to
+ * PATCH users, but the session resolver reads role from the Momentum collection.
+ */
+async function ensureMomentumUser(
+	pool: Pool,
+	credentials: TestUserCredentials,
+	authUserId?: string,
+): Promise<void> {
+	// Check if user already exists
+	const existing = await pool.query('SELECT id, role FROM users WHERE email = $1', [
+		credentials.email,
+	]);
+
+	if (existing.rows.length > 0) {
+		// User exists - update role if needed
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- pg row
+		const row = existing.rows[0] as { id: string; role: string };
+		if (row.role !== credentials.role) {
+			await pool.query('UPDATE users SET role = $1 WHERE id = $2', [
+				credentials.role,
+				row.id,
+			]);
+			console.log(
+				`[Auth Setup] Fixed ${credentials.email} role: ${row.role} → ${credentials.role}`,
+			);
+		}
+	} else {
+		// User doesn't exist - create them.
+		// Look up Better Auth user ID if not provided.
+		let resolvedAuthId = authUserId;
+		if (!resolvedAuthId) {
+			const authLookup = await pool.query(
+				'SELECT id FROM "user" WHERE email = $1',
+				[credentials.email],
+			);
+			if (authLookup.rows.length > 0) {
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- pg row
+				resolvedAuthId = (authLookup.rows[0] as { id: string }).id;
+			}
+		}
+
+		await pool.query(
+			`INSERT INTO users (id, name, email, role, "authId", active, "createdAt", "updatedAt")
+			 VALUES (gen_random_uuid(), $1, $2, $3, $4, true, NOW(), NOW())`,
+			[credentials.name, credentials.email, credentials.role, resolvedAuthId ?? ''],
+		);
+		console.log(
+			`[Auth Setup] Created Momentum user: ${credentials.email} (${credentials.role})`,
+		);
+	}
+}
+
+/**
+ * Ensure all test users exist in the Momentum users collection with correct roles.
+ * Uses direct database access to bypass API access control.
+ */
+async function ensureAllMomentumUsers(
+	authUserIds: Map<string, string>,
+): Promise<void> {
+	const pool = new Pool({ connectionString: DATABASE_URL });
+	try {
+		const allUsers = [TEST_CREDENTIALS, ...ADDITIONAL_TEST_USERS];
+		for (const user of allUsers) {
+			await ensureMomentumUser(pool, user, authUserIds.get(user.email));
+		}
+	} catch (error) {
+		console.warn('[Auth Setup] Momentum user sync failed:', error);
+	} finally {
+		await pool.end();
+	}
+}
 
 /**
  * Wait for seeding to complete via health endpoint.
@@ -158,11 +244,86 @@ async function recoverPasswordViaReset(baseURL: string): Promise<boolean> {
 }
 
 /**
+ * Create an additional test user via Better Auth sign-up API.
+ * If the user already exists (sign-up returns 409 or similar), sign in instead.
+ * Saves auth state to a per-user file for test fixtures to load.
+ * Returns the Better Auth user ID for Momentum collection linking.
+ */
+async function ensureTestUser(
+	baseURL: string,
+	credentials: TestUserCredentials,
+): Promise<string | undefined> {
+	const userAuthFile = getAuthFilePath(credentials.email);
+	console.log(`[Auth Setup] Ensuring user ${credentials.email} (${credentials.role})...`);
+
+	const browser = await chromium.launch();
+	const context = await browser.newContext();
+	let authUserId: string | undefined;
+
+	try {
+		// Try to sign up the user via Better Auth
+		const signUpResponse = await context.request.post(`${baseURL}/api/auth/sign-up/email`, {
+			headers: { 'Content-Type': 'application/json' },
+			data: {
+				name: credentials.name,
+				email: credentials.email,
+				password: credentials.password,
+			},
+		});
+
+		if (signUpResponse.ok()) {
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Better Auth response
+			const signUpData = (await signUpResponse.json()) as {
+				user?: { id?: string };
+			};
+			authUserId = signUpData.user?.id;
+			console.log(`[Auth Setup] User ${credentials.email} created in Better Auth`);
+		} else {
+			// User likely already exists - try to sign in
+			console.log(
+				`[Auth Setup] Sign-up returned ${signUpResponse.status()}, trying sign-in...`,
+			);
+			const signInResponse = await context.request.post(
+				`${baseURL}/api/auth/sign-in/email`,
+				{
+					headers: { 'Content-Type': 'application/json' },
+					data: {
+						email: credentials.email,
+						password: credentials.password,
+					},
+				},
+			);
+
+			if (!signInResponse.ok()) {
+				throw new Error(
+					`Failed to sign in ${credentials.email}: ${signInResponse.status()} ${await signInResponse.text()}`,
+				);
+			}
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Better Auth response
+			const signInData = (await signInResponse.json()) as {
+				user?: { id?: string };
+			};
+			authUserId = signInData.user?.id;
+			console.log(`[Auth Setup] User ${credentials.email} signed in`);
+		}
+
+		// Save the user's auth state
+		await context.storageState({ path: userAuthFile });
+		console.log(`[Auth Setup] Saved auth state for ${credentials.email}`);
+	} finally {
+		await browser.close();
+	}
+
+	return authUserId;
+}
+
+/**
  * Global setup for E2E tests.
  *
  * 1. Waits for seeding process to complete
  * 2. Creates test admin user if one doesn't exist
- * 3. Saves authentication state for other tests to reuse
+ * 3. Creates additional test users (editor, viewer, authors)
+ * 4. Saves authentication state for other tests to reuse
  */
 async function globalSetup(config: FullConfig): Promise<void> {
 	const baseURL = config.projects[0]?.use?.baseURL || 'http://localhost:4001';
@@ -288,14 +449,41 @@ async function globalSetup(config: FullConfig): Promise<void> {
 		}
 
 		// Save the authentication state
-		await context.storageState({ path: AUTH_FILE });
-		console.log(`[Auth Setup] Authentication state saved to ${AUTH_FILE}`);
+		await context.storageState({ path: ADMIN_AUTH_FILE });
+		console.log(`[Auth Setup] Authentication state saved to ${ADMIN_AUTH_FILE}`);
+
 	} catch (error) {
 		console.error('[Auth Setup] Global setup failed:', error);
 		throw error;
 	} finally {
 		await browser.close();
 	}
+
+	// Step 3: Create additional test users in Better Auth (editor, viewer, authors)
+	console.log('[Auth Setup] Creating additional test users...');
+	const authUserIds = new Map<string, string>();
+	for (const userCreds of ADDITIONAL_TEST_USERS) {
+		try {
+			const authId = await ensureTestUser(baseURL, userCreds);
+			if (authId) {
+				authUserIds.set(userCreds.email, authId);
+			}
+		} catch (error) {
+			console.warn(
+				`[Auth Setup] Failed to create user ${userCreds.email}:`,
+				error instanceof Error ? error.message : error,
+			);
+			// Non-fatal: continue with other users
+		}
+	}
+	console.log('[Auth Setup] Additional test users setup complete');
+
+	// Step 4: Ensure all users exist in Momentum users collection with correct roles.
+	// Uses direct database access to bypass API access control (chicken-and-egg problem:
+	// admin needs 'admin' role to manage users, but session resolver reads role from Momentum).
+	console.log('[Auth Setup] Syncing Momentum users collection...');
+	await ensureAllMomentumUsers(authUserIds);
+	console.log('[Auth Setup] Momentum users synced');
 }
 
 export default globalSetup;

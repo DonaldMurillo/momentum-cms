@@ -13,6 +13,7 @@ import type {
 	HookArgs,
 	RequestContext,
 } from '@momentum-cms/core';
+import { flattenDataFields } from '@momentum-cms/core';
 import type {
 	MomentumAPI,
 	MomentumAPIContext,
@@ -121,7 +122,12 @@ class MomentumAPIImpl implements MomentumAPI {
 			throw new CollectionNotFoundError(slug);
 		}
 
-		return new CollectionOperationsImpl<T>(slug, collectionConfig, this.adapter, this.context);
+		return new CollectionOperationsImpl<T>(
+			slug,
+			collectionConfig,
+			this.adapter,
+			this.context,
+		);
 	}
 
 	getConfig(): MomentumConfig {
@@ -157,6 +163,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		private readonly context: MomentumAPIContext,
 	) {}
 
+
 	async find(options: FindOptions = {}): Promise<FindResult<T>> {
 		// Check read access
 		await this.checkAccess('read');
@@ -178,7 +185,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		const docs = (await this.adapter.find(this.slug, query)) as T[];
 
 		// Run afterRead hooks on each document
-		const processedDocs = await this.processAfterReadHooks(docs);
+		const afterHookDocs = await this.processAfterReadHooks(docs);
 
 		// Get total count for pagination metadata
 		// Use a separate count query without limit/offset to get the true total
@@ -194,7 +201,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		const totalPages = Math.ceil(totalDocs / limit) || 1;
 
 		return {
-			docs: processedDocs,
+			docs: afterHookDocs,
 			totalDocs,
 			totalPages,
 			page,
@@ -223,6 +230,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 
 		// Run afterRead hooks
 		const [processed] = await this.processAfterReadHooks([doc]);
+
 		return processed;
 	}
 
@@ -316,6 +324,58 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		return { id, deleted };
 	}
 
+	async search(
+		query: string,
+		options?: { fields?: string[]; limit?: number; page?: number },
+	): Promise<FindResult<T>> {
+		// Check read access
+		await this.checkAccess('read');
+
+		const limit = options?.limit ?? 20;
+		const page = options?.page ?? 1;
+
+		// Determine searchable fields: use provided fields, or auto-detect text-like types
+		let searchFields = options?.fields;
+		if (!searchFields || searchFields.length === 0) {
+			const dataFields = flattenDataFields(this.collectionConfig.fields);
+			const searchableTypes = new Set(['text', 'textarea', 'email', 'richText']);
+			searchFields = dataFields
+				.filter((f) => searchableTypes.has(f.type))
+				.map((f) => f.name);
+		}
+
+		if (searchFields.length === 0 || !query.trim()) {
+			return { docs: [], totalDocs: 0, totalPages: 0, page, limit, hasNextPage: false, hasPrevPage: false };
+		}
+
+		// Use the adapter's search method if available, otherwise fall back to find
+		let docs: Record<string, unknown>[];
+		if (this.adapter.search) {
+			docs = await this.adapter.search(this.slug, query, searchFields, { limit, page });
+		} else {
+			// Fallback: basic find (no full-text search)
+			docs = await this.adapter.find(this.slug, { limit, page });
+		}
+
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
+		const resolvedDocs = docs as unknown as T[];
+
+		const totalDocs = resolvedDocs.length;
+		const totalPages = Math.max(1, Math.ceil(totalDocs / limit));
+
+		return {
+			docs: resolvedDocs,
+			totalDocs,
+			totalPages,
+			page,
+			limit,
+			hasNextPage: page < totalPages,
+			hasPrevPage: page > 1,
+			nextPage: page < totalPages ? page + 1 : undefined,
+			prevPage: page > 1 ? page - 1 : undefined,
+		};
+	}
+
 	async count(where?: WhereClause): Promise<number> {
 		// Check read access
 		await this.checkAccess('read');
@@ -325,6 +385,100 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		const query: Record<string, unknown> = where ? { ...where, limit: 0 } : { limit: 0 };
 		const docs = await this.adapter.find(this.slug, query);
 		return docs.length;
+	}
+
+	async batchCreate(items: Partial<T>[]): Promise<T[]> {
+		if (items.length === 0) return [];
+
+		const doCreate = async (): Promise<T[]> => {
+			const results: T[] = [];
+			for (const item of items) {
+				results.push(await this.create(item));
+			}
+			return results;
+		};
+
+		// Use transaction if available
+		if (this.adapter.transaction) {
+			return this.adapter.transaction(async (txAdapter) => {
+				// Create a new collection ops with the txAdapter
+				const txOps = new CollectionOperationsImpl<T>(
+					this.slug,
+					this.collectionConfig,
+					txAdapter,
+					this.context,
+				);
+				const results: T[] = [];
+				for (const item of items) {
+					results.push(await txOps.create(item));
+				}
+				return results;
+			});
+		}
+
+		return doCreate();
+	}
+
+	async batchUpdate(items: { id: string; data: Partial<T> }[]): Promise<T[]> {
+		if (items.length === 0) return [];
+
+		const doUpdate = async (): Promise<T[]> => {
+			const results: T[] = [];
+			for (const item of items) {
+				results.push(await this.update(item.id, item.data));
+			}
+			return results;
+		};
+
+		// Use transaction if available
+		if (this.adapter.transaction) {
+			return this.adapter.transaction(async (txAdapter) => {
+				const txOps = new CollectionOperationsImpl<T>(
+					this.slug,
+					this.collectionConfig,
+					txAdapter,
+					this.context,
+				);
+				const results: T[] = [];
+				for (const item of items) {
+					results.push(await txOps.update(item.id, item.data));
+				}
+				return results;
+			});
+		}
+
+		return doUpdate();
+	}
+
+	async batchDelete(ids: string[]): Promise<DeleteResult[]> {
+		if (ids.length === 0) return [];
+
+		const doDelete = async (): Promise<DeleteResult[]> => {
+			const results: DeleteResult[] = [];
+			for (const id of ids) {
+				results.push(await this.delete(id));
+			}
+			return results;
+		};
+
+		// Use transaction if available
+		if (this.adapter.transaction) {
+			return this.adapter.transaction(async (txAdapter) => {
+				const txOps = new CollectionOperationsImpl<T>(
+					this.slug,
+					this.collectionConfig,
+					txAdapter,
+					this.context,
+				);
+				const results: DeleteResult[] = [];
+				for (const id of ids) {
+					results.push(await txOps.delete(id));
+				}
+				return results;
+			});
+		}
+
+		return doDelete();
 	}
 
 	/**
@@ -383,7 +537,8 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		isUpdate: boolean,
 	): Promise<FieldValidationError[]> {
 		const errors: FieldValidationError[] = [];
-		const fields = this.collectionConfig.fields;
+		// Flatten through layout fields (tabs, collapsible, row) to validate all data fields
+		const fields = flattenDataFields(this.collectionConfig.fields);
 
 		for (const field of fields) {
 			const value = data[field.name];

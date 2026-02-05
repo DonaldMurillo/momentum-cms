@@ -2,4 +2,138 @@
 @tailwind components;
 @tailwind utilities;
 
-/* You can add global styles to this file, and also import other style files */
+@layer base {
+	:root {
+		/* Base colors */
+		--mcms-background: 0 0% 100%;
+		--mcms-foreground: 222 47% 11%;
+
+		/* Card */
+		--mcms-card: 0 0% 100%;
+		--mcms-card-foreground: 222 47% 11%;
+
+		/* Primary - Blue */
+		--mcms-primary: 221 83% 53%;
+		--mcms-primary-foreground: 210 40% 98%;
+
+		/* Secondary - Gray */
+		--mcms-secondary: 210 40% 96%;
+		--mcms-secondary-foreground: 222 47% 11%;
+
+		/* Muted - Light gray for subtle backgrounds */
+		--mcms-muted: 210 40% 96%;
+		--mcms-muted-foreground: 215 16% 47%;
+
+		/* Accent - Hover states */
+		--mcms-accent: 210 40% 96%;
+		--mcms-accent-foreground: 222 47% 11%;
+
+		/* Destructive - Red for dangerous actions */
+		--mcms-destructive: 0 84% 60%;
+		--mcms-destructive-foreground: 210 40% 98%;
+
+		/* Success - Green for positive feedback */
+		--mcms-success: 142 76% 36%;
+		--mcms-success-foreground: 0 0% 100%;
+
+		/* Warning - Amber for caution */
+		--mcms-warning: 38 92% 50%;
+		--mcms-warning-foreground: 48 96% 5%;
+
+		/* Info - Blue for informational messages */
+		--mcms-info: 199 89% 48%;
+		--mcms-info-foreground: 0 0% 100%;
+
+		/* Overlay - For modal backdrops */
+		--mcms-overlay: 0 0% 0%;
+
+		/* Border, input, and ring */
+		--mcms-border: 214 32% 91%;
+		--mcms-input: 214 32% 91%;
+		--mcms-ring: 221 83% 53%;
+
+		/* Border radius */
+		--mcms-radius: 0.5rem;
+
+		/* Sidebar colors - Dark sidebar in light mode */
+		--mcms-sidebar: 222 47% 11%;
+		--mcms-sidebar-foreground: 210 40% 98%;
+		--mcms-sidebar-primary: 221 83% 53%;
+		--mcms-sidebar-primary-foreground: 210 40% 98%;
+		--mcms-sidebar-accent: 217 33% 17%;
+		--mcms-sidebar-accent-foreground: 210 40% 98%;
+		--mcms-sidebar-border: 217 33% 20%;
+		--mcms-sidebar-ring: 221 83% 53%;
+	}
+
+	.dark {
+		/* Base colors - Dark background */
+		--mcms-background: 222 47% 11%;
+		--mcms-foreground: 210 40% 98%;
+
+		/* Card - slightly lighter than background */
+		--mcms-card: 217 33% 15%;
+		--mcms-card-foreground: 210 40% 98%;
+
+		/* Primary - Blue */
+		--mcms-primary: 217 91% 60%;
+		--mcms-primary-foreground: 222 47% 11%;
+
+		/* Secondary - distinct from card for badges */
+		--mcms-secondary: 215 28% 25%;
+		--mcms-secondary-foreground: 210 40% 98%;
+
+		/* Muted - subtle background */
+		--mcms-muted: 217 33% 20%;
+		--mcms-muted-foreground: 215 20% 65%;
+
+		/* Accent - hover states */
+		--mcms-accent: 217 33% 22%;
+		--mcms-accent-foreground: 210 40% 98%;
+
+		/* Destructive */
+		--mcms-destructive: 0 62% 30%;
+		--mcms-destructive-foreground: 210 40% 98%;
+
+		/* Success */
+		--mcms-success: 142 71% 45%;
+		--mcms-success-foreground: 0 0% 100%;
+
+		/* Warning */
+		--mcms-warning: 38 92% 50%;
+		--mcms-warning-foreground: 48 96% 5%;
+
+		/* Info */
+		--mcms-info: 199 89% 48%;
+		--mcms-info-foreground: 0 0% 100%;
+
+		/* Overlay */
+		--mcms-overlay: 0 0% 0%;
+
+		/* Border, input, and ring - slightly visible */
+		--mcms-border: 217 33% 22%;
+		--mcms-input: 217 33% 22%;
+		--mcms-ring: 224 76% 48%;
+
+		/* Sidebar colors - Slightly lighter than main in dark mode */
+		--mcms-sidebar: 224 71% 4%;
+		--mcms-sidebar-foreground: 213 31% 91%;
+		--mcms-sidebar-primary: 217 91% 60%;
+		--mcms-sidebar-primary-foreground: 210 40% 98%;
+		--mcms-sidebar-accent: 217 33% 17%;
+		--mcms-sidebar-accent-foreground: 213 31% 91%;
+		--mcms-sidebar-border: 217 33% 12%;
+		--mcms-sidebar-ring: 217 91% 60%;
+	}
+}
+
+@layer base {
+	* {
+		border-color: hsl(var(--mcms-border));
+	}
+
+	body {
+		background-color: hsl(var(--mcms-background));
+		color: hsl(var(--mcms-foreground));
+	}
+}

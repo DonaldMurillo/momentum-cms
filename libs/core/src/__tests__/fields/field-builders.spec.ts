@@ -18,6 +18,14 @@ import {
 	json,
 	point,
 	slug,
+	tabs,
+	collapsible,
+	row,
+} from '../../lib/fields';
+import {
+	isLayoutField,
+	flattenDataFields,
+	LAYOUT_FIELD_TYPES,
 } from '../../lib/fields';
 
 describe('Field Builders', () => {
@@ -266,6 +274,212 @@ describe('Field Builders', () => {
 			const field = slug('slug', { from: 'title' });
 			expect(field.type).toBe('slug');
 			expect(field.from).toBe('title');
+		});
+	});
+
+	describe('tabs()', () => {
+		it('should create a tabs field with tab definitions', () => {
+			const field = tabs('settings', {
+				tabs: [
+					{ label: 'General', fields: [text('title')] },
+					{ label: 'SEO', fields: [text('metaTitle'), textarea('metaDescription')] },
+				],
+			});
+			expect(field.type).toBe('tabs');
+			expect(field.name).toBe('settings');
+			expect(field.tabs).toHaveLength(2);
+			expect(field.tabs[0].label).toBe('General');
+			expect(field.tabs[0].fields).toHaveLength(1);
+			expect(field.tabs[1].label).toBe('SEO');
+			expect(field.tabs[1].fields).toHaveLength(2);
+		});
+
+		it('should support label and description', () => {
+			const field = tabs('config', {
+				tabs: [{ label: 'Tab1', fields: [] }],
+				label: 'Configuration',
+				description: 'Organize settings into tabs',
+			});
+			expect(field.label).toBe('Configuration');
+			expect(field.description).toBe('Organize settings into tabs');
+		});
+	});
+
+	describe('collapsible()', () => {
+		it('should create a collapsible field with child fields', () => {
+			const field = collapsible('advanced', {
+				fields: [text('apiKey'), checkbox('debug')],
+			});
+			expect(field.type).toBe('collapsible');
+			expect(field.name).toBe('advanced');
+			expect(field.fields).toHaveLength(2);
+		});
+
+		it('should support defaultOpen option', () => {
+			const field = collapsible('settings', {
+				fields: [text('title')],
+				defaultOpen: true,
+			});
+			expect(field.defaultOpen).toBe(true);
+		});
+
+		it('should default defaultOpen to undefined (falsy)', () => {
+			const field = collapsible('settings', {
+				fields: [text('title')],
+			});
+			expect(field.defaultOpen).toBeUndefined();
+		});
+	});
+
+	describe('row()', () => {
+		it('should create a row field with child fields', () => {
+			const field = row('nameRow', {
+				fields: [text('firstName'), text('lastName')],
+			});
+			expect(field.type).toBe('row');
+			expect(field.name).toBe('nameRow');
+			expect(field.fields).toHaveLength(2);
+		});
+
+		it('should support label', () => {
+			const field = row('details', {
+				fields: [text('city'), text('state')],
+				label: 'Location Details',
+			});
+			expect(field.label).toBe('Location Details');
+		});
+	});
+
+	describe('LAYOUT_FIELD_TYPES', () => {
+		it('should contain tabs, collapsible, and row', () => {
+			expect(LAYOUT_FIELD_TYPES.has('tabs')).toBe(true);
+			expect(LAYOUT_FIELD_TYPES.has('collapsible')).toBe(true);
+			expect(LAYOUT_FIELD_TYPES.has('row')).toBe(true);
+		});
+
+		it('should not contain data field types', () => {
+			expect(LAYOUT_FIELD_TYPES.has('text')).toBe(false);
+			expect(LAYOUT_FIELD_TYPES.has('number')).toBe(false);
+			expect(LAYOUT_FIELD_TYPES.has('group')).toBe(false);
+			expect(LAYOUT_FIELD_TYPES.has('array')).toBe(false);
+		});
+	});
+
+	describe('isLayoutField()', () => {
+		it('should return true for tabs fields', () => {
+			const field = tabs('t', { tabs: [{ label: 'Tab', fields: [] }] });
+			expect(isLayoutField(field)).toBe(true);
+		});
+
+		it('should return true for collapsible fields', () => {
+			const field = collapsible('c', { fields: [] });
+			expect(isLayoutField(field)).toBe(true);
+		});
+
+		it('should return true for row fields', () => {
+			const field = row('r', { fields: [] });
+			expect(isLayoutField(field)).toBe(true);
+		});
+
+		it('should return false for data fields', () => {
+			expect(isLayoutField(text('t'))).toBe(false);
+			expect(isLayoutField(number('n'))).toBe(false);
+			expect(isLayoutField(group('g', { fields: [] }))).toBe(false);
+			expect(isLayoutField(array('a', { fields: [] }))).toBe(false);
+			expect(isLayoutField(checkbox('c'))).toBe(false);
+		});
+	});
+
+	describe('flattenDataFields()', () => {
+		it('should return data fields as-is', () => {
+			const fields = [text('title'), number('price'), checkbox('active')];
+			const result = flattenDataFields(fields);
+			expect(result).toHaveLength(3);
+			expect(result.map((f) => f.name)).toEqual(['title', 'price', 'active']);
+		});
+
+		it('should flatten tab fields into their child data fields', () => {
+			const fields = [
+				text('name'),
+				tabs('settings', {
+					tabs: [
+						{ label: 'SEO', fields: [text('metaTitle'), textarea('metaDescription')] },
+						{ label: 'Social', fields: [text('ogImage')] },
+					],
+				}),
+			];
+			const result = flattenDataFields(fields);
+			expect(result).toHaveLength(4);
+			expect(result.map((f) => f.name)).toEqual(['name', 'metaTitle', 'metaDescription', 'ogImage']);
+		});
+
+		it('should flatten collapsible fields into their child data fields', () => {
+			const fields = [
+				text('title'),
+				collapsible('advanced', {
+					fields: [text('apiKey'), checkbox('debug')],
+				}),
+			];
+			const result = flattenDataFields(fields);
+			expect(result).toHaveLength(3);
+			expect(result.map((f) => f.name)).toEqual(['title', 'apiKey', 'debug']);
+		});
+
+		it('should flatten row fields into their child data fields', () => {
+			const fields = [
+				row('nameRow', {
+					fields: [text('firstName'), text('lastName')],
+				}),
+				text('email'),
+			];
+			const result = flattenDataFields(fields);
+			expect(result).toHaveLength(3);
+			expect(result.map((f) => f.name)).toEqual(['firstName', 'lastName', 'email']);
+		});
+
+		it('should handle nested layout fields recursively', () => {
+			const fields = [
+				tabs('outer', {
+					tabs: [
+						{
+							label: 'Tab1',
+							fields: [
+								text('topField'),
+								collapsible('inner', {
+									fields: [
+										row('innerRow', {
+											fields: [text('a'), text('b')],
+										}),
+										number('c'),
+									],
+								}),
+							],
+						},
+					],
+				}),
+			];
+			const result = flattenDataFields(fields);
+			expect(result).toHaveLength(4);
+			expect(result.map((f) => f.name)).toEqual(['topField', 'a', 'b', 'c']);
+		});
+
+		it('should preserve group and array fields (they store data)', () => {
+			const fields = [
+				group('seo', { fields: [text('title')] }),
+				array('features', { fields: [text('label')] }),
+				collapsible('wrapper', {
+					fields: [group('nested', { fields: [text('x')] })],
+				}),
+			];
+			const result = flattenDataFields(fields);
+			expect(result).toHaveLength(3);
+			expect(result[0].type).toBe('group');
+			expect(result[1].type).toBe('array');
+			expect(result[2].type).toBe('group');
+		});
+
+		it('should return empty array for empty input', () => {
+			expect(flattenDataFields([])).toEqual([]);
 		});
 	});
 

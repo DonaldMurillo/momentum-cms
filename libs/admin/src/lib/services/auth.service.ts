@@ -21,6 +21,7 @@ export interface AuthUser {
 	name: string;
 	role: string;
 	emailVerified: boolean;
+	twoFactorEnabled?: boolean;
 	image?: string | null;
 	createdAt: string;
 	updatedAt: string;
@@ -64,6 +65,16 @@ export interface AuthResult {
 	success: boolean;
 	error?: string;
 	user?: AuthUser;
+}
+
+/**
+ * Result type for enabling two-factor authentication.
+ */
+export interface TwoFactorEnableResult {
+	success: boolean;
+	error?: string;
+	totpURI?: string;
+	backupCodes?: string[];
 }
 
 /**
@@ -329,6 +340,100 @@ export class MomentumAuthService {
 		} catch (error) {
 			const message = this.extractErrorMessage(error);
 			return { success: false, error: message };
+		}
+	}
+
+	/** Whether current user has 2FA enabled */
+	readonly twoFactorEnabled = computed(() => this.user()?.twoFactorEnabled ?? false);
+
+	/**
+	 * Enable two-factor authentication for the current user.
+	 * Returns the TOTP URI (for QR code generation) and backup codes.
+	 */
+	async enableTwoFactor(password: string): Promise<TwoFactorEnableResult> {
+		try {
+			const response = await firstValueFrom(
+				this.http.post<{ totpURI: string; backupCodes: string[] }>(
+					`${this.baseUrl}/two-factor/enable`,
+					{ password },
+					{ withCredentials: true },
+				),
+			);
+			return { success: true, totpURI: response.totpURI, backupCodes: response.backupCodes };
+		} catch (error) {
+			const message = this.extractErrorMessage(error);
+			return { success: false, error: message };
+		}
+	}
+
+	/**
+	 * Verify a TOTP code to complete 2FA setup or sign-in.
+	 */
+	async verifyTOTP(code: string, trustDevice = false): Promise<AuthResult> {
+		try {
+			const response = await firstValueFrom(
+				this.http.post<AuthResponse>(
+					`${this.baseUrl}/two-factor/verify-totp`,
+					{ code, trustDevice },
+					{ withCredentials: true },
+				),
+			);
+			if (response.user) {
+				this.user.set(response.user);
+			}
+			return { success: true };
+		} catch (error) {
+			const message = this.extractErrorMessage(error);
+			return { success: false, error: message };
+		}
+	}
+
+	/**
+	 * Disable two-factor authentication for the current user.
+	 */
+	async disableTwoFactor(password: string): Promise<AuthResult> {
+		try {
+			await firstValueFrom(
+				this.http.post<AuthResponse>(
+					`${this.baseUrl}/two-factor/disable`,
+					{ password },
+					{ withCredentials: true },
+				),
+			);
+			// Refresh user to update twoFactorEnabled flag
+			await this.refreshSession();
+			return { success: true };
+		} catch (error) {
+			const message = this.extractErrorMessage(error);
+			return { success: false, error: message };
+		}
+	}
+
+	/**
+	 * Get the list of enabled OAuth providers from the server.
+	 */
+	async getOAuthProviders(): Promise<string[]> {
+		try {
+			const response = await firstValueFrom(
+				this.http.get<{ providers: string[] }>(`${this.baseUrl}/providers`),
+			);
+			return response.providers ?? [];
+		} catch {
+			return [];
+		}
+	}
+
+	/**
+	 * Initiate OAuth sign-in by redirecting to the provider's authorization page.
+	 * Better Auth handles the redirect flow via /api/auth/sign-in/social.
+	 *
+	 * @param provider The OAuth provider name (e.g., 'google', 'github')
+	 * @param callbackURL URL to redirect to after successful authentication
+	 */
+	signInWithOAuth(provider: string, callbackURL = '/admin'): void {
+		const url = `${this.baseUrl}/sign-in/social?provider=${encodeURIComponent(provider)}&callbackURL=${encodeURIComponent(callbackURL)}`;
+		if (typeof window !== 'undefined') {
+			window.location.href = url;
 		}
 	}
 

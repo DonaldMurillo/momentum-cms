@@ -60,11 +60,11 @@ test.describe('Collection Create Form - Articles', () => {
 		const titleInput = authenticatedPage.locator('input#field-title');
 		await expect(titleInput).toBeVisible();
 
-		// Content field (textarea)
+		// Content field (rich text editor - TipTap)
 		const contentLabel = authenticatedPage.getByText('Content');
 		await expect(contentLabel).toBeVisible();
-		const contentTextarea = authenticatedPage.locator('textarea#field-content');
-		await expect(contentTextarea).toBeVisible();
+		const richTextEditor = authenticatedPage.locator('[data-testid="rich-text-editor"]');
+		await expect(richTextEditor).toBeVisible();
 	});
 
 	test('should have Create submit button', async ({ authenticatedPage }) => {
@@ -95,13 +95,12 @@ test.describe('Collection Create Form - Articles', () => {
 		await authenticatedPage.locator('input#field-title').fill('Test Article Title');
 		await expect(authenticatedPage.locator('input#field-title')).toHaveValue('Test Article Title');
 
-		// Fill content
-		await authenticatedPage
-			.locator('textarea#field-content')
-			.fill('This is the test article content.');
-		await expect(authenticatedPage.locator('textarea#field-content')).toHaveValue(
-			'This is the test article content.',
-		);
+		// Fill content (rich text editor - TipTap/ProseMirror)
+		const editor = authenticatedPage.locator('[data-testid="rich-text-editor"] .ProseMirror');
+		await expect(editor).toBeVisible();
+		await editor.click();
+		await authenticatedPage.keyboard.type('This is the test article content.');
+		await expect(editor).toContainText('This is the test article content.');
 	});
 
 	test('should successfully create a new article via API', async ({ authenticatedPage }) => {

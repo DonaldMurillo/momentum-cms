@@ -4,6 +4,7 @@ export {
 	createProtectMiddleware,
 	createSessionResolverMiddleware,
 	type AuthenticatedRequest,
+	type AuthMiddlewareOptions,
 	type SessionResolverConfig,
 } from './lib/auth-middleware';
 export {
@@ -11,6 +12,11 @@ export {
 	type SetupStatus,
 	type SetupMiddlewareConfig,
 } from './lib/setup-middleware';
+export {
+	createApiKeyResolverMiddleware,
+	createApiKeyRoutes,
+	type ApiKeyMiddlewareConfig,
+} from './lib/api-key-middleware';
 export {
 	initializeMomentum,
 	createHealthMiddleware,

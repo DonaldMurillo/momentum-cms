@@ -100,6 +100,10 @@ export {
 	MediaPreviewComponent,
 	type MediaPreviewData,
 } from './lib/widgets/media-preview/media-preview.component';
+export {
+	LivePreviewComponent,
+	type DeviceSize,
+} from './lib/widgets/live-preview/live-preview.component';
 
 // Field Renderers (for custom forms)
 export { FieldRenderer } from './lib/widgets/entity-form/field-renderers/field-renderer.component';

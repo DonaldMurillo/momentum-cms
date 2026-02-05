@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
 	checkMailpitHealth,
+	isMailpitAvailable,
 	clearMailpit,
 	getEmails,
 	getEmailById,
@@ -30,13 +31,14 @@ const TEST_USER = {
 };
 
 test.describe('Password Reset Flow', () => {
+	let mailpitRunning = false;
+
 	test.beforeAll(async () => {
-		// Verify Mailpit is running before tests start
-		await checkMailpitHealth();
+		mailpitRunning = await isMailpitAvailable();
 	});
 
 	test.beforeEach(async () => {
-		// Clear Mailpit before each test
+		test.skip(!mailpitRunning, 'Mailpit is not running - skipping password reset tests');
 		await clearMailpit();
 	});
 

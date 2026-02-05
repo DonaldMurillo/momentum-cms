@@ -22,7 +22,7 @@ test.describe('Seeding Idempotency Tests', () => {
 	});
 
 	test('no duplicate articles after multiple runs', async ({ request }) => {
-		const response = await request.get('/api/articles');
+		const response = await request.get('/api/articles?limit=100');
 		expect(response.ok()).toBe(true);
 
 		const data = (await response.json()) as { docs: Array<{ title: string }> };
@@ -60,8 +60,8 @@ test.describe('Seeding Idempotency Tests', () => {
 			seeds: { completed: number; expected: number; ready: boolean };
 		};
 
-		// Total should match expected (7 seeds: 3 categories + 4 articles from defaults + custom seed)
+		// Total should match expected (13 seeds: 3 categories + 4 articles + 2 products + 2 pages + 2 settings from defaults, plus custom seed)
 		expect(data.seeds.completed).toBe(data.seeds.expected);
-		expect(data.seeds.completed).toBe(7);
+		expect(data.seeds.completed).toBe(13);
 	});
 });

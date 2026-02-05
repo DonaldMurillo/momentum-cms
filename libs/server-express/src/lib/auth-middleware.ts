@@ -1,7 +1,8 @@
 import type { Router, Request, Response, NextFunction } from 'express';
 import { Router as createRouter } from 'express';
 import { toNodeHandler } from 'better-auth/node';
-import type { MomentumAuth } from '@momentum-cms/auth';
+import type { MomentumAuth, OAuthProvidersConfig } from '@momentum-cms/auth';
+import { getEnabledOAuthProviders } from '@momentum-cms/auth';
 
 /**
  * Extended Request type with auth session data.
@@ -43,11 +44,29 @@ function headersToRecord(headers: Request['headers']): Record<string, string> {
  * // Auth endpoints available at /api/auth/*
  * ```
  */
-export function createAuthMiddleware(auth: MomentumAuth): Router {
+/**
+ * Options for the auth middleware.
+ */
+export interface AuthMiddlewareOptions {
+	/** OAuth providers config (used to expose enabled providers to the client) */
+	socialProviders?: OAuthProvidersConfig;
+}
+
+export function createAuthMiddleware(
+	auth: MomentumAuth,
+	options?: AuthMiddlewareOptions,
+): Router {
 	const router = createRouter();
+
+	// Expose which OAuth providers are enabled (public endpoint, no auth required)
+	const enabledProviders = getEnabledOAuthProviders(options?.socialProviders);
+	router.get('/auth/providers', (_req: Request, res: Response) => {
+		res.json({ providers: enabledProviders });
+	});
 
 	// Mount Better Auth handler at /auth/*
 	// This handles all auth endpoints: sign-in, sign-up, sign-out, get-session, etc.
+	// Including social sign-in: /auth/sign-in/social, /auth/callback/{provider}
 	router.all('/auth/*', toNodeHandler(auth));
 
 	return router;
@@ -139,15 +158,24 @@ export function createSessionResolverMiddleware(
 			if (session) {
 				// Build user object from session
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Better Auth user structure
-				const authUser = session.user as { id: string; email?: string; name?: string };
-				let role: string | undefined;
+				const authUser = session.user as {
+					id: string;
+					email?: string;
+					name?: string;
+					role?: string;
+				};
 
 				// Look up role from external source if configured
+				// Falls back to the role from the Better Auth session if lookup returns undefined
+				let role: string | undefined = authUser.role;
 				if (config?.getRoleByEmail && authUser.email) {
 					try {
-						role = await config.getRoleByEmail(authUser.email);
+						const externalRole = await config.getRoleByEmail(authUser.email);
+						if (externalRole !== undefined) {
+							role = externalRole;
+						}
 					} catch {
-						// Role lookup failed, continue without role
+						// Role lookup failed, keep the auth session role
 					}
 				}
 

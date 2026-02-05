@@ -81,7 +81,7 @@ export class TextFieldRenderer {
 
 	/** Whether to use textarea */
 	readonly isTextarea = computed(() => {
-		return this.field().type === 'textarea' || this.field().type === 'richText';
+		return this.field().type === 'textarea';
 	});
 
 	/** Input type (text, email, etc.) */
@@ -91,7 +91,7 @@ export class TextFieldRenderer {
 
 	/** Number of rows for textarea */
 	readonly rows = computed(() => {
-		return this.field().type === 'richText' ? 10 : 4;
+		return 4;
 	});
 
 	/** String value for input */

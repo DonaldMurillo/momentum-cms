@@ -14,6 +14,7 @@ import type {
 	VersionQueryOptions,
 	RestoreVersionOptions,
 	PublishOptions,
+	SchedulePublishResult,
 } from '@momentum-cms/core';
 
 // ============================================
@@ -27,10 +28,6 @@ import type {
 export interface MomentumAPIContext {
 	/** Current authenticated user */
 	user?: UserContext;
-	/** Locale for internationalized content */
-	locale?: string;
-	/** Fallback locale if primary not found */
-	fallbackLocale?: string;
 	/** Depth for relationship population */
 	depth?: number;
 	/** Show hidden fields (admin only) */
@@ -136,9 +133,49 @@ export interface CollectionOperations<T = Record<string, unknown>> {
 	delete(id: string): Promise<DeleteResult>;
 
 	/**
+	 * Full-text search across collection fields.
+	 * Searches text/textarea/email fields using database full-text search.
+	 *
+	 * @param query - The search query string
+	 * @param options - Search options (fields to search, pagination)
+	 * @returns Search results sorted by relevance
+	 */
+	search(
+		query: string,
+		options?: { fields?: string[]; limit?: number; page?: number },
+	): Promise<FindResult<T>>;
+
+	/**
 	 * Count documents matching the query.
 	 */
 	count(where?: WhereClause): Promise<number>;
+
+	/**
+	 * Create multiple documents in a single transaction.
+	 * All documents are created or none (atomic).
+	 *
+	 * @param items - Array of document data to create
+	 * @returns Array of created documents
+	 */
+	batchCreate(items: Partial<T>[]): Promise<T[]>;
+
+	/**
+	 * Update multiple documents in a single transaction.
+	 * All updates succeed or none (atomic).
+	 *
+	 * @param items - Array of { id, data } pairs to update
+	 * @returns Array of updated documents
+	 */
+	batchUpdate(items: { id: string; data: Partial<T> }[]): Promise<T[]>;
+
+	/**
+	 * Delete multiple documents in a single transaction.
+	 * All deletions succeed or none (atomic).
+	 *
+	 * @param ids - Array of document IDs to delete
+	 * @returns Array of deletion results
+	 */
+	batchDelete(ids: string[]): Promise<DeleteResult[]>;
 
 	/**
 	 * Get version operations for this collection.
@@ -237,6 +274,22 @@ export interface VersionOperations<T = Record<string, unknown>> {
 		versionId1: string,
 		versionId2: string,
 	): Promise<{ field: string; oldValue: unknown; newValue: unknown }[]>;
+
+	/**
+	 * Schedule a document for future publishing.
+	 *
+	 * @param docId - The document ID
+	 * @param publishAt - ISO date string for when to publish
+	 * @returns The schedule result with document ID and scheduled date
+	 */
+	schedulePublish(docId: string, publishAt: string): Promise<SchedulePublishResult>;
+
+	/**
+	 * Cancel a scheduled publish for a document.
+	 *
+	 * @param docId - The document ID
+	 */
+	cancelScheduledPublish(docId: string): Promise<void>;
 }
 
 // ============================================

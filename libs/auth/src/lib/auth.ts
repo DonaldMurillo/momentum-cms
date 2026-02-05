@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth';
+import { twoFactor } from 'better-auth/plugins';
 import type { Pool } from 'pg';
 import type { Database } from 'better-sqlite3';
 import { createEmailService, type EmailConfig, type EmailService } from './email';
@@ -25,6 +26,23 @@ export interface MomentumEmailOptions extends EmailConfig {
 }
 
 /**
+ * OAuth provider configuration.
+ */
+export interface OAuthProviderConfig {
+	clientId: string;
+	clientSecret: string;
+	redirectURI?: string;
+}
+
+/**
+ * Supported OAuth providers.
+ */
+export interface OAuthProvidersConfig {
+	google?: OAuthProviderConfig;
+	github?: OAuthProviderConfig;
+}
+
+/**
  * Configuration options for Momentum Auth.
  */
 export interface MomentumAuthConfig {
@@ -38,6 +56,10 @@ export interface MomentumAuthConfig {
 	trustedOrigins?: string[];
 	/** Email configuration for password reset and verification */
 	email?: MomentumEmailOptions;
+	/** OAuth social login providers */
+	socialProviders?: OAuthProvidersConfig;
+	/** Enable two-factor authentication (TOTP). Default: false */
+	twoFactorAuth?: boolean;
 }
 
 /**
@@ -54,6 +76,10 @@ export interface MomentumAuthConfigLegacy {
 	trustedOrigins?: string[];
 	/** Email configuration for password reset and verification */
 	email?: MomentumEmailOptions;
+	/** OAuth social login providers */
+	socialProviders?: OAuthProvidersConfig;
+	/** Enable two-factor authentication (TOTP). Default: false */
+	twoFactorAuth?: boolean;
 }
 
 /**
@@ -65,6 +91,7 @@ export interface MomentumUser {
 	name: string;
 	role: string;
 	emailVerified: boolean;
+	twoFactorEnabled?: boolean;
 	image?: string | null;
 	createdAt: Date;
 	updatedAt: Date;
@@ -89,6 +116,66 @@ function isLegacyConfig(
 	config: MomentumAuthConfig | MomentumAuthConfigLegacy,
 ): config is MomentumAuthConfigLegacy {
 	return 'database' in config && !('db' in config);
+}
+
+/**
+ * Build social providers config from explicit config or environment variables.
+ * Returns undefined if no providers are configured.
+ */
+function buildSocialProviders(
+	config?: OAuthProvidersConfig,
+	baseURL?: string,
+): Record<string, OAuthProviderConfig> | undefined {
+	const providers: Record<string, OAuthProviderConfig> = {};
+	const resolvedBaseURL = baseURL ?? 'http://localhost:4000';
+
+	// Google - explicit config or env vars
+	const googleClientId = config?.google?.clientId ?? process.env['GOOGLE_CLIENT_ID'];
+	const googleClientSecret = config?.google?.clientSecret ?? process.env['GOOGLE_CLIENT_SECRET'];
+	if (googleClientId && googleClientSecret) {
+		providers['google'] = {
+			clientId: googleClientId,
+			clientSecret: googleClientSecret,
+			redirectURI:
+				config?.google?.redirectURI ?? `${resolvedBaseURL}/api/auth/callback/google`,
+		};
+	}
+
+	// GitHub - explicit config or env vars
+	const githubClientId = config?.github?.clientId ?? process.env['GITHUB_CLIENT_ID'];
+	const githubClientSecret = config?.github?.clientSecret ?? process.env['GITHUB_CLIENT_SECRET'];
+	if (githubClientId && githubClientSecret) {
+		providers['github'] = {
+			clientId: githubClientId,
+			clientSecret: githubClientSecret,
+			redirectURI:
+				config?.github?.redirectURI ?? `${resolvedBaseURL}/api/auth/callback/github`,
+		};
+	}
+
+	return Object.keys(providers).length > 0 ? providers : undefined;
+}
+
+/**
+ * Get the list of enabled OAuth provider names from config/env vars.
+ * Useful for exposing available providers to the client.
+ */
+export function getEnabledOAuthProviders(config?: OAuthProvidersConfig): string[] {
+	const providers: string[] = [];
+
+	const googleClientId = config?.google?.clientId ?? process.env['GOOGLE_CLIENT_ID'];
+	const googleClientSecret = config?.google?.clientSecret ?? process.env['GOOGLE_CLIENT_SECRET'];
+	if (googleClientId && googleClientSecret) {
+		providers.push('google');
+	}
+
+	const githubClientId = config?.github?.clientId ?? process.env['GITHUB_CLIENT_ID'];
+	const githubClientSecret = config?.github?.clientSecret ?? process.env['GITHUB_CLIENT_SECRET'];
+	if (githubClientId && githubClientSecret) {
+		providers.push('github');
+	}
+
+	return providers;
 }
 
 /**
@@ -124,7 +211,14 @@ export function createMomentumAuth(
 		? { type: 'sqlite', database: config.database }
 		: config.db;
 
-	const { baseURL, secret, trustedOrigins, email: emailConfig } = config;
+	const {
+		baseURL,
+		secret,
+		trustedOrigins,
+		email: emailConfig,
+		socialProviders,
+		twoFactorAuth,
+	} = config;
 
 	// Configure database based on type
 	// Better Auth auto-detects the database type from the instance:
@@ -147,6 +241,7 @@ export function createMomentumAuth(
 	const emailAndPasswordConfig: {
 		enabled: boolean;
 		minPasswordLength: number;
+		requireEmailVerification?: boolean;
 		sendResetPassword?: (params: {
 			user: { email: string; name: string };
 			url: string;
@@ -181,14 +276,19 @@ export function createMomentumAuth(
 	}
 
 	// Build email verification config if enabled
+	const requireVerification = emailConfig?.requireEmailVerification ?? false;
 	const emailVerificationConfig = emailService
 		? {
+				sendOnSignUp: true,
+				autoSignInAfterVerification: true,
+				expiresIn: 86400, // 24 hours
 				sendVerificationEmail: async ({
 					user,
 					url,
 				}: {
 					user: { email: string; name: string };
 					url: string;
+					token: string;
 				}) => {
 					const { subject, text, html } = getVerificationEmail({
 						name: user.name,
@@ -211,6 +311,20 @@ export function createMomentumAuth(
 			}
 		: undefined;
 
+	// If requireEmailVerification is set, login should be blocked for unverified users
+	if (requireVerification && emailAndPasswordConfig) {
+		emailAndPasswordConfig.requireEmailVerification = true;
+	}
+
+	// Build social providers config from env vars or explicit config
+	const socialProvidersConfig = buildSocialProviders(socialProviders, baseURL);
+
+	// Build plugins array
+	const plugins = [];
+	if (twoFactorAuth) {
+		plugins.push(twoFactor());
+	}
+
 	return betterAuth({
 		database: databaseOption,
 		baseURL: baseURL ?? 'http://localhost:4000',
@@ -222,6 +336,12 @@ export function createMomentumAuth(
 
 		// Email verification (only if email is enabled)
 		...(emailVerificationConfig && { emailVerification: emailVerificationConfig }),
+
+		// Social login providers (only if configured)
+		...(socialProvidersConfig && { socialProviders: socialProvidersConfig }),
+
+		// Plugins (2FA, etc.)
+		...(plugins.length > 0 && { plugins }),
 
 		// Add custom role field to users
 		user: {

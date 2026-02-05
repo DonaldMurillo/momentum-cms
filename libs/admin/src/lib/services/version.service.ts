@@ -95,6 +95,22 @@ export interface StatusResult {
 	status: DocumentStatus;
 }
 
+/**
+ * A single field difference between two versions.
+ */
+export interface VersionFieldDiff {
+	field: string;
+	oldValue: unknown;
+	newValue: unknown;
+}
+
+/**
+ * Result of comparing two versions.
+ */
+export interface VersionCompareResult {
+	differences: VersionFieldDiff[];
+}
+
 // ============================================
 // Version Service
 // ============================================
@@ -290,6 +306,37 @@ export class VersionService {
 	 */
 	async getStatus(collection: string, docId: string): Promise<DocumentStatus> {
 		return firstValueFrom(this.getStatus$(collection, docId));
+	}
+
+	// ============================================
+	// Compare Methods
+	// ============================================
+
+	/**
+	 * Compare two versions and return field-level differences.
+	 */
+	compareVersions$(
+		collection: string,
+		docId: string,
+		versionId1: string,
+		versionId2: string,
+	): Observable<VersionFieldDiff[]> {
+		const url = this.buildUrl(collection, docId, 'versions', 'compare');
+		return this.http
+			.post<VersionCompareResult>(url, { versionId1, versionId2 })
+			.pipe(map((result) => result.differences));
+	}
+
+	/**
+	 * Compare two versions and return field-level differences (Promise version).
+	 */
+	async compareVersions(
+		collection: string,
+		docId: string,
+		versionId1: string,
+		versionId2: string,
+	): Promise<VersionFieldDiff[]> {
+		return firstValueFrom(this.compareVersions$(collection, docId, versionId1, versionId2));
 	}
 
 	// ============================================

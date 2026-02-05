@@ -216,19 +216,108 @@ export interface CollectionConfig {
 
 	/** Custom endpoints */
 	endpoints?: EndpointConfig[];
+
+	/** Webhook subscriptions for this collection */
+	webhooks?: WebhookConfig[];
+}
+
+// ============================================
+// Webhooks
+// ============================================
+
+/** Events that trigger webhooks. */
+export type WebhookEvent =
+	| 'afterChange'
+	| 'afterDelete'
+	| 'afterCreate'
+	| 'afterUpdate';
+
+/** Configuration for a single webhook subscription. */
+export interface WebhookConfig {
+	/** URL to send the webhook POST request to. */
+	url: string;
+	/** Events that trigger this webhook. Defaults to all events. */
+	events?: WebhookEvent[];
+	/** Secret for HMAC-SHA256 signature verification. */
+	secret?: string;
+	/** Maximum retries on failure. @default 0 */
+	retries?: number;
+	/** Custom headers to include in the request. */
+	headers?: Record<string, string>;
+}
+
+/** Payload sent in webhook POST requests. */
+export interface WebhookPayload {
+	/** The event that triggered the webhook. */
+	event: WebhookEvent;
+	/** The collection slug. */
+	collection: string;
+	/** The operation type. */
+	operation: 'create' | 'update' | 'delete';
+	/** Timestamp of the event. */
+	timestamp: string;
+	/** The document data (after the operation). */
+	doc: Record<string, unknown>;
+	/** The previous document data (for updates). */
+	previousDoc?: Record<string, unknown>;
 }
 
 // ============================================
 // Custom Endpoints
 // ============================================
 
+/** Response from a custom endpoint handler. */
+export interface EndpointResponse {
+	status: number;
+	body: unknown;
+}
+
+/** Arguments passed to custom endpoint handlers. */
+export interface EndpointArgs {
+	/** Request context (user, headers) */
+	req: RequestContext;
+	/** This collection's config */
+	collection: CollectionConfig;
+	/**
+	 * Async helper to query any collection.
+	 * Returns the raw API result (find returns { docs, totalDocs }, findById returns doc, etc.).
+	 * Abstracts away server-core imports so collections remain isomorphic.
+	 */
+	query: EndpointQueryHelper;
+}
+
+/** Query helper for custom endpoints - provides access to collection data without server-core imports. */
+export interface EndpointQueryHelper {
+	find: (
+		slug: string,
+		options?: { limit?: number; page?: number },
+	) => Promise<{ docs: Record<string, unknown>[]; totalDocs: number }>;
+	findById: (slug: string, id: string) => Promise<Record<string, unknown> | null>;
+	count: (slug: string) => Promise<number>;
+	create: (
+		slug: string,
+		data: Record<string, unknown>,
+	) => Promise<Record<string, unknown>>;
+	update: (
+		slug: string,
+		id: string,
+		data: Record<string, unknown>,
+	) => Promise<Record<string, unknown>>;
+	delete: (slug: string, id: string) => Promise<{ id: string; deleted: boolean }>;
+	/**
+	 * Execute multiple operations within a database transaction.
+	 * All operations succeed or all are rolled back.
+	 * Falls back to non-transactional execution if adapter doesn't support transactions.
+	 */
+	transaction: <T>(
+		callback: (query: EndpointQueryHelper) => Promise<T>,
+	) => Promise<T>;
+}
+
 export interface EndpointConfig {
 	path: string;
 	method: 'get' | 'post' | 'put' | 'patch' | 'delete';
-	handler: (args: {
-		req: RequestContext;
-		collection: CollectionConfig;
-	}) => Promise<{ status: number; body: unknown }>;
+	handler: (args: EndpointArgs) => Promise<EndpointResponse>;
 }
 
 // ============================================

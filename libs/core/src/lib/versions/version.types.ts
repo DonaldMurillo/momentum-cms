@@ -167,6 +167,24 @@ export interface PublishOptions {
 	scheduledPublishAt?: string;
 }
 
+/**
+ * Options for scheduling a document publish.
+ */
+export interface SchedulePublishOptions {
+	/** ISO date string for when the document should be published. */
+	publishAt: string;
+}
+
+/**
+ * Result of a schedule publish operation.
+ */
+export interface SchedulePublishResult {
+	/** Document ID */
+	id: string;
+	/** Scheduled publish date (ISO string) */
+	scheduledPublishAt: string;
+}
+
 // ============================================
 // Version Events (for hooks)
 // ============================================

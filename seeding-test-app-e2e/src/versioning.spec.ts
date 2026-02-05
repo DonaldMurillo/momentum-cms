@@ -169,7 +169,7 @@ test.describe('Versioning API Tests', () => {
 test.describe('Versioning with Seeded Data', () => {
 	test('should be able to publish seeded article', async ({ request }) => {
 		// Get the seeded "Welcome Article"
-		const listResponse = await request.get('/api/articles');
+		const listResponse = await request.get('/api/articles?limit=100');
 		const listData = await listResponse.json();
 		const welcomeArticle = listData.docs.find(
 			(a: Record<string, unknown>) => a.title === 'Welcome Article',
@@ -192,7 +192,7 @@ test.describe('Versioning with Seeded Data', () => {
 
 	test('should list versions for seeded article after modifications', async ({ request }) => {
 		// Get the seeded "Welcome Article"
-		const listResponse = await request.get('/api/articles');
+		const listResponse = await request.get('/api/articles?limit=100');
 		const listData = await listResponse.json();
 		const welcomeArticle = listData.docs.find(
 			(a: Record<string, unknown>) => a.title === 'Welcome Article',

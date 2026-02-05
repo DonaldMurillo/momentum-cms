@@ -29,8 +29,12 @@ import type {
 	JSONField,
 	PointField,
 	SlugField,
+	TabsField,
+	CollapsibleField,
+	RowField,
 	SelectOption,
 	BlockConfig,
+	TabConfig,
 	Field,
 	BaseFieldOptions,
 } from './field.types';
@@ -315,6 +319,57 @@ export function slug(name: string, options: SlugFieldOptions): SlugField {
 	return {
 		name,
 		type: 'slug',
+		...options,
+	};
+}
+
+// ============================================
+// Layout Fields (visual organization, no data storage)
+// ============================================
+
+export interface TabsFieldOptions {
+	tabs: TabConfig[];
+	label?: string;
+	description?: string;
+}
+
+/** Organizes fields into tabbed sections. Does not store data. */
+export function tabs(name: string, options: TabsFieldOptions): TabsField {
+	return {
+		name,
+		type: 'tabs',
+		...options,
+	};
+}
+
+export interface CollapsibleFieldOptions {
+	fields: Field[];
+	label?: string;
+	description?: string;
+	/** Whether the section starts expanded (default: false) */
+	defaultOpen?: boolean;
+}
+
+/** Wraps fields in a collapsible/expandable section. Does not store data. */
+export function collapsible(name: string, options: CollapsibleFieldOptions): CollapsibleField {
+	return {
+		name,
+		type: 'collapsible',
+		...options,
+	};
+}
+
+export interface RowFieldOptions {
+	fields: Field[];
+	label?: string;
+	description?: string;
+}
+
+/** Displays child fields in a horizontal row layout. Does not store data. */
+export function row(name: string, options: RowFieldOptions): RowField {
+	return {
+		name,
+		type: 'row',
 		...options,
 	};
 }

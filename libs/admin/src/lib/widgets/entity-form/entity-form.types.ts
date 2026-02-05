@@ -5,6 +5,7 @@
  */
 
 import type { Field, CollectionConfig } from '@momentum-cms/core';
+import { flattenDataFields } from '@momentum-cms/core';
 import type { Entity } from '../widget.types';
 
 /**
@@ -126,7 +127,7 @@ export function getFieldDefaultValue(field: Field): unknown {
 /**
  * Type guard to check if a value is a record object.
  */
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
@@ -136,7 +137,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function createInitialFormData(collection: CollectionConfig): Record<string, unknown> {
 	const data: Record<string, unknown> = {};
 
-	for (const field of collection.fields) {
+	// Flatten through layout fields (tabs, collapsible, row) to initialize all data fields
+	const dataFields = flattenDataFields(collection.fields);
+	for (const field of dataFields) {
 		data[field.name] = getFieldDefaultValue(field);
 	}
 

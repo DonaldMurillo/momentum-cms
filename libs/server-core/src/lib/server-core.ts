@@ -68,6 +68,7 @@ export interface MomentumHandlers {
 	handleCreate(request: MomentumRequest): Promise<MomentumResponse>;
 	handleUpdate(request: MomentumRequest): Promise<MomentumResponse>;
 	handleDelete(request: MomentumRequest): Promise<MomentumResponse>;
+	handleSearch(request: MomentumRequest): Promise<MomentumResponse>;
 	routeRequest(request: MomentumRequest): Promise<MomentumResponse>;
 }
 
@@ -89,10 +90,11 @@ export function createMomentumHandlers(config: MomentumConfig): MomentumHandlers
 	 */
 	function getContextualAPI(request: MomentumRequest): MomentumAPI {
 		const api = getMomentumAPI();
+		const ctx: MomentumAPIContext = {};
 		if (request.user) {
-			return api.setContext({ user: request.user });
+			ctx.user = request.user;
 		}
-		return api;
+		return Object.keys(ctx).length > 0 ? api.setContext(ctx) : api;
 	}
 
 	async function handleFind(request: MomentumRequest): Promise<MomentumResponse> {
@@ -180,6 +182,29 @@ export function createMomentumHandlers(config: MomentumConfig): MomentumHandlers
 		}
 	}
 
+	async function handleSearch(request: MomentumRequest): Promise<MomentumResponse> {
+		try {
+			const api = getContextualAPI(request);
+			const q = typeof request.query?.['q'] === 'string' ? request.query['q'] : '';
+			const fieldsParam = request.query?.['fields'];
+			const fields =
+				typeof fieldsParam === 'string' ? fieldsParam.split(',').filter(Boolean) : undefined;
+			const limit = typeof request.query?.limit === 'number' ? request.query.limit : 20;
+			const page = typeof request.query?.page === 'number' ? request.query.page : 1;
+
+			const result = await api
+				.collection<Record<string, unknown>>(request.collectionSlug)
+				.search(q, { fields, limit, page });
+
+			return {
+				docs: result.docs,
+				totalDocs: result.totalDocs,
+			};
+		} catch (error) {
+			return handleError(error);
+		}
+	}
+
 	async function routeRequest(request: MomentumRequest): Promise<MomentumResponse> {
 		switch (request.method) {
 			case 'GET':
@@ -205,6 +230,7 @@ export function createMomentumHandlers(config: MomentumConfig): MomentumHandlers
 		handleCreate,
 		handleUpdate,
 		handleDelete,
+		handleSearch,
 		routeRequest,
 	};
 }

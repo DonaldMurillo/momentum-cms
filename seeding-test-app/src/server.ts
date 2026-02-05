@@ -1,6 +1,9 @@
 // Load environment variables from .env file
 import 'dotenv/config';
 
+// Allow localhost webhooks for E2E testing
+process.env['MOMENTUM_ALLOW_PRIVATE_WEBHOOKS'] = 'true';
+
 import {
 	AngularNodeAppEngine,
 	createNodeRequestHandler,
@@ -17,8 +20,11 @@ import {
 	createAuthMiddleware,
 	createSetupMiddleware,
 	createSessionResolverMiddleware,
+	createApiKeyResolverMiddleware,
+	createApiKeyRoutes,
+	createOpenAPIMiddleware,
 } from '@momentum-cms/server-express';
-import { getMomentumAPI, createUserSyncHook } from '@momentum-cms/server-core';
+import { getMomentumAPI, createUserSyncHook, registerWebhookHooks, startPublishScheduler, createPostgresApiKeyStore } from '@momentum-cms/server-core';
 import { createMomentumAuth } from '@momentum-cms/auth';
 import { provideMomentumAPI } from '@momentum-cms/admin';
 import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
@@ -54,6 +60,7 @@ const auth = createMomentumAuth({
 		// SMTP_HOST=localhost SMTP_PORT=1025 SMTP_FROM=noreply@momentum.local
 		appName: 'Seeding Test App',
 	},
+	twoFactorAuth: true,
 });
 
 /**
@@ -69,6 +76,40 @@ if (usersCollection) {
 }
 
 /**
+ * Register webhook hooks for all collections with webhook configs
+ */
+registerWebhookHooks(momentumConfig.collections);
+
+/**
+ * In-memory webhook receiver for E2E testing.
+ * Stores received webhook payloads so tests can verify delivery.
+ */
+const receivedWebhooks: Array<{ headers: Record<string, string>; body: unknown; timestamp: number }> = [];
+
+app.post('/api/test-webhook-receiver', (req, res) => {
+	receivedWebhooks.push({
+		headers: Object.fromEntries(
+			Object.entries(req.headers).filter(
+				([, v]) => typeof v === 'string',
+			),
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Headers are string values
+		) as Record<string, string>,
+		body: req.body,
+		timestamp: Date.now(),
+	});
+	res.status(200).json({ received: true });
+});
+
+app.get('/api/test-webhook-receiver', (_req, res) => {
+	res.json({ webhooks: receivedWebhooks, count: receivedWebhooks.length });
+});
+
+app.delete('/api/test-webhook-receiver', (_req, res) => {
+	receivedWebhooks.length = 0;
+	res.json({ cleared: true });
+});
+
+/**
  * Initialize Momentum CMS (database, API, seeding)
  * This is called AFTER hooks are configured so seeding benefits from them
  */
@@ -82,6 +123,19 @@ momentum.ready.catch((error) => {
 	console.error('[Seeding Test App] Initialization failed:', error);
 	process.exit(1);
 });
+
+// Start the publish scheduler after initialization
+momentum.ready
+	.then(() => {
+		startPublishScheduler(momentumConfig.db.adapter, momentumConfig.collections, {
+			intervalMs: 2000, // Check every 2 seconds (short for testing)
+			// eslint-disable-next-line no-console -- Scheduler logger
+			logger: (msg) => console.log(msg),
+		});
+	})
+	.catch(() => {
+		// Initialization failure already handled above
+	});
 
 /**
  * Health endpoint with seed status
@@ -112,6 +166,30 @@ app.use(
 );
 
 /**
+ * API Key support
+ * Create API key store and wire up resolver + management routes
+ */
+const apiKeyStore = createPostgresApiKeyStore({
+	query: async <T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> => {
+		const result = await pool.query(sql, params);
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- pg result rows
+		return result.rows as T[];
+	},
+	queryOne: async <T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T | null> => {
+		const result = await pool.query(sql, params);
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- pg result rows
+		return (result.rows[0] as T) ?? null;
+	},
+	execute: async (sql: string, params?: unknown[]): Promise<number> => {
+		const result = await pool.query(sql, params);
+		return result.rowCount ?? 0;
+	},
+});
+
+// API key resolver - checks X-API-Key header before session auth
+app.use(createApiKeyResolverMiddleware({ store: apiKeyStore }));
+
+/**
  * Session resolver middleware
  * Resolves user session from auth cookies and attaches to req.user
  * Must be before API middleware for access control to work
@@ -136,6 +214,18 @@ app.use(
 		},
 	}),
 );
+
+/**
+ * API key management endpoints (admin only)
+ * GET /api/api-keys, POST /api/api-keys, DELETE /api/api-keys/:id
+ */
+app.use('/api', createApiKeyRoutes({ store: apiKeyStore }));
+
+/**
+ * OpenAPI / Swagger documentation
+ * Mounted at /api/docs before the main API to avoid route conflicts
+ */
+app.use('/api/docs', createOpenAPIMiddleware({ config: momentumConfig }));
 
 /**
  * Momentum CMS API endpoints

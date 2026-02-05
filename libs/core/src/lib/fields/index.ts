@@ -21,6 +21,9 @@ export {
 	json,
 	point,
 	slug,
+	tabs,
+	collapsible,
+	row,
 } from './field-builders';
 
 export type {
@@ -42,4 +45,7 @@ export type {
 	JSONFieldOptions,
 	PointFieldOptions,
 	SlugFieldOptions,
+	TabsFieldOptions,
+	CollapsibleFieldOptions,
+	RowFieldOptions,
 } from './field-builders';

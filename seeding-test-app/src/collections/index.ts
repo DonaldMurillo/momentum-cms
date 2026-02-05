@@ -1,9 +1,22 @@
 import { Categories } from './categories.collection';
 import { Articles } from './articles.collection';
+import { Products } from './products.collection';
+import { Pages } from './pages.collection';
+import { Settings } from './settings.collection';
+import { Events } from './events.collection';
 import { MediaCollection } from '@momentum-cms/core';
 import { Users } from './users.collection';
 import type { CollectionConfig } from '@momentum-cms/core';
 
-export const collections: CollectionConfig[] = [Categories, Articles, MediaCollection, Users];
+export const collections: CollectionConfig[] = [
+	Categories,
+	Articles,
+	Products,
+	Pages,
+	Settings,
+	Events,
+	MediaCollection,
+	Users,
+];
 
-export { Categories, Articles, MediaCollection, Users };
+export { Categories, Articles, Products, Pages, Settings, Events, MediaCollection, Users };

@@ -133,6 +133,8 @@ export interface MediaPickerResult {
 							[class.ring-mcms-primary/50]="selectedMedia()?.id === media.id"
 							(click)="selectMedia(media)"
 							(dblclick)="confirmSelection(media)"
+							[attr.aria-label]="'Select ' + media.filename"
+							[attr.aria-pressed]="selectedMedia()?.id === media.id"
 						>
 							<mcms-media-preview
 								[media]="media"

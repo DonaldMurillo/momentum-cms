@@ -55,11 +55,11 @@ import { MomentumAuthService } from '../../services/auth.service';
 						</div>
 					}
 
-					<mcms-form-field id="name" [required]="true" [errors]="nameErrors()">
+					<mcms-form-field id="setup-name" [required]="true" [errors]="nameErrors()">
 						<span mcmsLabel>Full Name</span>
 						<mcms-input
 							type="text"
-							id="name"
+							id="setup-name"
 							name="name"
 							[(value)]="name"
 							placeholder="Your name"
@@ -68,11 +68,11 @@ import { MomentumAuthService } from '../../services/auth.service';
 						/>
 					</mcms-form-field>
 
-					<mcms-form-field id="email" [required]="true" [errors]="emailErrors()">
+					<mcms-form-field id="setup-email" [required]="true" [errors]="emailErrors()">
 						<span mcmsLabel>Email Address</span>
 						<mcms-input
 							type="email"
-							id="email"
+							id="setup-email"
 							name="email"
 							[(value)]="email"
 							placeholder="admin@example.com"
@@ -81,11 +81,11 @@ import { MomentumAuthService } from '../../services/auth.service';
 						/>
 					</mcms-form-field>
 
-					<mcms-form-field id="password" [required]="true" [errors]="passwordErrors()">
+					<mcms-form-field id="setup-password" [required]="true" [errors]="passwordErrors()">
 						<span mcmsLabel>Password</span>
 						<mcms-input
 							type="password"
-							id="password"
+							id="setup-password"
 							name="password"
 							[(value)]="password"
 							placeholder="At least 8 characters"
@@ -95,14 +95,14 @@ import { MomentumAuthService } from '../../services/auth.service';
 					</mcms-form-field>
 
 					<mcms-form-field
-						id="confirmPassword"
+						id="setup-confirm-password"
 						[required]="true"
 						[errors]="confirmPasswordErrors()"
 					>
 						<span mcmsLabel>Confirm Password</span>
 						<mcms-input
 							type="password"
-							id="confirmPassword"
+							id="setup-confirm-password"
 							name="confirmPassword"
 							[(value)]="confirmPassword"
 							placeholder="Repeat your password"
@@ -118,7 +118,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 						[disabled]="isSubmitting() || !isValid()"
 					>
 						@if (isSubmitting()) {
-							<span class="animate-spin">⏳</span>
+							<span class="animate-spin" aria-hidden="true">⏳</span>
 							Creating account...
 						} @else {
 							Create Admin Account

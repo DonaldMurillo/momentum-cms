@@ -10,6 +10,7 @@ import type {
 	VersionQueryOptions,
 	VersionCountOptions,
 } from '@momentum-cms/core';
+import { flattenDataFields } from '@momentum-cms/core';
 
 /**
  * PostgreSQL adapter options.
@@ -35,6 +36,9 @@ function getColumnType(field: Field): string {
 		case 'text':
 		case 'textarea':
 		case 'richText':
+		case 'password':
+		case 'radio':
+		case 'point':
 			return 'TEXT';
 		case 'email':
 		case 'slug':
@@ -54,6 +58,12 @@ function getColumnType(field: Field): string {
 		case 'blocks':
 		case 'json':
 			return 'JSONB';
+		case 'tabs':
+		case 'collapsible':
+		case 'row':
+			// Layout fields should be filtered out by flattenDataFields() before reaching here.
+			// If they somehow arrive, return TEXT as a safe fallback.
+			return 'TEXT';
 		default:
 			return 'TEXT';
 	}
@@ -70,12 +80,15 @@ function createTableSql(collection: CollectionConfig): string {
 		'"updatedAt" TIMESTAMPTZ NOT NULL',
 	];
 
-	// Add _status column for versioned collections with drafts
+	// Add _status and scheduledPublishAt columns for versioned collections with drafts
 	if (hasVersionDrafts(collection)) {
 		columns.push('"_status" VARCHAR(20) DEFAULT \'draft\'');
+		columns.push('"scheduledPublishAt" TIMESTAMPTZ');
 	}
 
-	for (const field of collection.fields) {
+	// Flatten through layout fields (tabs, collapsible, row) to get only data fields
+	const dataFields = flattenDataFields(collection.fields);
+	for (const field of dataFields) {
 		const colType = getColumnType(field);
 		const notNull = field.required ? ' NOT NULL' : '';
 		columns.push(`"${field.name}" ${colType}${notNull}`);
@@ -215,10 +228,39 @@ const AUTH_TABLES_SQL = `
 		"updatedAt" TIMESTAMPTZ NOT NULL
 	);
 
+	-- Two-factor authentication support (Better Auth twoFactor plugin)
+	ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "twoFactorEnabled" BOOLEAN DEFAULT false;
+
+	CREATE TABLE IF NOT EXISTS "twoFactor" (
+		"id" VARCHAR(36) PRIMARY KEY NOT NULL,
+		"secret" TEXT NOT NULL,
+		"backupCodes" TEXT NOT NULL,
+		"userId" VARCHAR(36) NOT NULL REFERENCES "user"("id") ON DELETE CASCADE
+	);
+
 	CREATE INDEX IF NOT EXISTS "idx_session_userId" ON "session"("userId");
 	CREATE INDEX IF NOT EXISTS "idx_session_token" ON "session"("token");
 	CREATE INDEX IF NOT EXISTS "idx_account_userId" ON "account"("userId");
 	CREATE INDEX IF NOT EXISTS "idx_user_email" ON "user"("email");
+	CREATE INDEX IF NOT EXISTS "idx_twofactor_secret" ON "twoFactor"("secret");
+	CREATE INDEX IF NOT EXISTS "idx_twofactor_userId" ON "twoFactor"("userId");
+
+	-- API keys table
+	CREATE TABLE IF NOT EXISTS "_api_keys" (
+		"id" VARCHAR(36) PRIMARY KEY NOT NULL,
+		"name" VARCHAR(255) NOT NULL,
+		"keyHash" VARCHAR(64) NOT NULL UNIQUE,
+		"keyPrefix" VARCHAR(20) NOT NULL,
+		"createdBy" VARCHAR(36) NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
+		"role" VARCHAR(50) NOT NULL DEFAULT 'user',
+		"expiresAt" TIMESTAMPTZ,
+		"lastUsedAt" TIMESTAMPTZ,
+		"createdAt" TIMESTAMPTZ NOT NULL,
+		"updatedAt" TIMESTAMPTZ NOT NULL
+	);
+
+	CREATE INDEX IF NOT EXISTS "idx_api_keys_keyHash" ON "_api_keys"("keyHash");
+	CREATE INDEX IF NOT EXISTS "idx_api_keys_createdBy" ON "_api_keys"("createdBy");
 `;
 
 /**
@@ -254,6 +296,18 @@ export interface PostgresAdapterWithRaw extends DatabaseAdapter {
 }
 
 /**
+ * Query helpers type returned by createHelpers.
+ */
+interface QueryHelpers {
+	query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]>;
+	queryOne<T extends Record<string, unknown>>(
+		sql: string,
+		params?: unknown[],
+	): Promise<T | null>;
+	execute(sql: string, params?: unknown[]): Promise<number>;
+}
+
+/**
  * Creates a PostgreSQL database adapter.
  */
 export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapterWithRaw {
@@ -263,34 +317,561 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 	});
 
 	/**
-	 * Execute a query and return all rows.
+	 * Create query helpers scoped to a database connection.
+	 * Used for both pool-level and client-level (transactional) queries.
 	 */
-	async function query<T extends Record<string, unknown>>(
-		sql: string,
-		params: unknown[] = [],
-	): Promise<T[]> {
-		const result: QueryResult = await pool.query(sql, params);
-		return result.rows.filter((row): row is T => typeof row === 'object' && row !== null);
+	function createHelpers(conn: {
+		query(text: string, values?: unknown[]): Promise<QueryResult>;
+	}): QueryHelpers {
+		async function query<T extends Record<string, unknown>>(
+			sql: string,
+			params: unknown[] = [],
+		): Promise<T[]> {
+			const result: QueryResult = await conn.query(sql, params);
+			return result.rows.filter((row): row is T => typeof row === 'object' && row !== null);
+		}
+
+		async function queryOne<T extends Record<string, unknown>>(
+			sql: string,
+			params: unknown[] = [],
+		): Promise<T | null> {
+			const rows = await query<T>(sql, params);
+			return rows[0] ?? null;
+		}
+
+		async function execute(sql: string, params: unknown[] = []): Promise<number> {
+			const result: QueryResult = await conn.query(sql, params);
+			return result.rowCount ?? 0;
+		}
+
+		return { query, queryOne, execute };
 	}
 
 	/**
-	 * Execute a query and return a single row.
+	 * Build all CRUD and version adapter methods from query helpers.
+	 * This allows the same method implementations to be used for both
+	 * pool-level and transaction-level (client-level) operations.
 	 */
-	async function queryOne<T extends Record<string, unknown>>(
-		sql: string,
-		params: unknown[] = [],
-	): Promise<T | null> {
-		const rows = await query<T>(sql, params);
-		return rows[0] ?? null;
+	function buildMethods(
+		h: QueryHelpers,
+	): Omit<DatabaseAdapter, 'initialize' | 'transaction'> {
+		return {
+			async find(
+				collection: string,
+				queryParams: Record<string, unknown>,
+			): Promise<Record<string, unknown>[]> {
+				validateCollectionSlug(collection);
+				const limitValue =
+					typeof queryParams['limit'] === 'number' ? queryParams['limit'] : 100;
+				const pageValue =
+					typeof queryParams['page'] === 'number' ? queryParams['page'] : 1;
+				const offset = (pageValue - 1) * limitValue;
+
+				// Build WHERE clause from query parameters (excluding pagination params)
+				const whereClauses: string[] = [];
+				const whereValues: unknown[] = [];
+				const reservedParams = new Set(['limit', 'page', 'sort', 'order']);
+				let paramIndex = 1;
+
+				// Regex to validate column names (alphanumeric and underscore only, must start with letter or underscore)
+				const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+				for (const [key, value] of Object.entries(queryParams)) {
+					if (reservedParams.has(key)) {
+						continue;
+					}
+					if (value !== undefined && value !== null) {
+						// Validate column name to prevent SQL injection
+						if (!validColumnName.test(key)) {
+							throw new Error(`Invalid column name: ${key}`);
+						}
+						whereClauses.push(`"${key}" = $${paramIndex}`);
+						whereValues.push(value);
+						paramIndex++;
+					}
+				}
+
+				const whereClause =
+					whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+				// limit: 0 means "no limit" (return all rows for count queries)
+				if (limitValue === 0) {
+					return h.query(
+						`SELECT * FROM "${collection}" ${whereClause}`,
+						whereValues,
+					);
+				}
+				return h.query(
+					`SELECT * FROM "${collection}" ${whereClause} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+					[...whereValues, limitValue, offset],
+				);
+			},
+
+			async search(
+				collection: string,
+				searchQuery: string,
+				fields: string[],
+				options?: { limit?: number; page?: number },
+			): Promise<Record<string, unknown>[]> {
+				validateCollectionSlug(collection);
+				if (!searchQuery || fields.length === 0) return [];
+
+				const limitValue = options?.limit ?? 20;
+				const pageValue = options?.page ?? 1;
+				const offset = (pageValue - 1) * limitValue;
+
+				// Validate field names
+				const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+				for (const field of fields) {
+					if (!validColumnName.test(field)) {
+						throw new Error(`Invalid column name: ${field}`);
+					}
+				}
+
+				// Build tsvector from the requested fields, coalescing to handle NULL
+				const tsvectorParts = fields
+					.map((f) => `coalesce("${f}"::text, '')`)
+					.join(" || ' ' || ");
+				const tsvectorExpr = `to_tsvector('simple', ${tsvectorParts})`;
+				const tsqueryExpr = `plainto_tsquery('simple', $1)`;
+
+				// Rank by relevance, fall back to ILIKE for partial matches
+				const ilikeClauses = fields
+					.map((f, i) => `"${f}"::text ILIKE $${i + 2}`)
+					.join(' OR ');
+				const escapedQuery = searchQuery.replace(/[%_\\]/g, '\\$&');
+				const ilikePattern = `%${escapedQuery}%`;
+				const ilikeParams = fields.map(() => ilikePattern);
+
+				const sql = `
+					SELECT *, ts_rank(${tsvectorExpr}, ${tsqueryExpr}) AS _search_rank
+					FROM "${collection}"
+					WHERE ${tsvectorExpr} @@ ${tsqueryExpr} OR ${ilikeClauses}
+					ORDER BY _search_rank DESC
+					LIMIT $${fields.length + 2} OFFSET $${fields.length + 3}
+				`;
+
+				const results = await h.query(sql, [
+					searchQuery,
+					...ilikeParams,
+					limitValue,
+					offset,
+				]);
+
+				// Remove internal ranking column
+				return results.map((row) => {
+					const { _search_rank, ...doc } = row;
+					return doc;
+				});
+			},
+
+			async findById(
+				collection: string,
+				id: string,
+			): Promise<Record<string, unknown> | null> {
+				validateCollectionSlug(collection);
+				return h.queryOne(`SELECT * FROM "${collection}" WHERE id = $1`, [id]);
+			},
+
+			async create(
+				collection: string,
+				data: Record<string, unknown>,
+			): Promise<Record<string, unknown>> {
+				validateCollectionSlug(collection);
+				const id = randomUUID();
+				const now = new Date().toISOString();
+
+				const doc: Record<string, unknown> = {
+					...data,
+					id,
+					createdAt: now,
+					updatedAt: now,
+				};
+
+				const columns = Object.keys(doc);
+				const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+				const values = columns.map((col) => {
+					const val = doc[col];
+					// Handle undefined
+					if (val === undefined) {
+						return null;
+					}
+					// Serialize objects/arrays as JSON (PostgreSQL will handle JSONB conversion)
+					if (typeof val === 'object' && val !== null && !(val instanceof Date)) {
+						return JSON.stringify(val);
+					}
+					return val;
+				});
+
+				const quotedColumns = columns.map((c) => `"${c}"`).join(', ');
+				await h.execute(
+					`INSERT INTO "${collection}" (${quotedColumns}) VALUES (${placeholders})`,
+					values,
+				);
+
+				return doc;
+			},
+
+			async update(
+				collection: string,
+				id: string,
+				data: Record<string, unknown>,
+			): Promise<Record<string, unknown>> {
+				validateCollectionSlug(collection);
+				const now = new Date().toISOString();
+				const updateData: Record<string, unknown> = { ...data, updatedAt: now };
+
+				// Remove id and createdAt from update data if present
+				delete updateData['id'];
+				delete updateData['createdAt'];
+
+				const setClauses: string[] = [];
+				const values: unknown[] = [];
+				let paramIndex = 1;
+
+				for (const [key, value] of Object.entries(updateData)) {
+					setClauses.push(`"${key}" = $${paramIndex}`);
+					paramIndex++;
+					// Handle undefined
+					if (value === undefined) {
+						values.push(null);
+					} else if (
+						typeof value === 'object' &&
+						value !== null &&
+						!(value instanceof Date)
+					) {
+						values.push(JSON.stringify(value));
+					} else {
+						values.push(value);
+					}
+				}
+				values.push(id);
+
+				await h.execute(
+					`UPDATE "${collection}" SET ${setClauses.join(', ')} WHERE id = $${paramIndex}`,
+					values,
+				);
+
+				// Fetch and return the updated document
+				const updated = await h.queryOne<Record<string, unknown>>(
+					`SELECT * FROM "${collection}" WHERE id = $1`,
+					[id],
+				);
+				if (!updated) {
+					throw new Error('Failed to fetch updated document');
+				}
+				return updated;
+			},
+
+			async delete(collection: string, id: string): Promise<boolean> {
+				validateCollectionSlug(collection);
+				const rowCount = await h.execute(
+					`DELETE FROM "${collection}" WHERE id = $1`,
+					[id],
+				);
+				return rowCount > 0;
+			},
+
+			// ==========================================
+			// Version Operations
+			// ==========================================
+
+			async createVersion(
+				collection: string,
+				parentId: string,
+				data: Record<string, unknown>,
+				options?: CreateVersionOptions,
+			): Promise<DocumentVersion> {
+				validateCollectionSlug(collection);
+				const id = randomUUID();
+				const now = new Date().toISOString();
+				const status = options?.status ?? 'draft';
+				const autosave = options?.autosave ?? false;
+				const publishedAt = status === 'published' ? now : null;
+
+				const versionData = JSON.stringify(data);
+				const tableName = `${collection}_versions`;
+
+				await h.execute(
+					`INSERT INTO "${tableName}" ("id", "parent", "version", "_status", "autosave", "publishedAt", "createdAt", "updatedAt")
+					 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+					[id, parentId, versionData, status, autosave, publishedAt, now, now],
+				);
+
+				return {
+					id,
+					parent: parentId,
+					version: versionData,
+					_status: status,
+					autosave,
+					publishedAt: publishedAt ?? undefined,
+					createdAt: now,
+					updatedAt: now,
+				};
+			},
+
+			async findVersions(
+				collection: string,
+				parentId: string,
+				options?: VersionQueryOptions,
+			): Promise<DocumentVersion[]> {
+				validateCollectionSlug(collection);
+				const tableName = `${collection}_versions`;
+				const limit = options?.limit ?? 10;
+				const page = options?.page ?? 1;
+				const offset = (page - 1) * limit;
+				const sortDirection = options?.sort === 'asc' ? 'ASC' : 'DESC';
+
+				const whereClauses: string[] = ['"parent" = $1'];
+				const params: unknown[] = [parentId];
+				let paramIndex = 2;
+
+				if (!options?.includeAutosave) {
+					whereClauses.push('"autosave" = false');
+				}
+
+				if (options?.status) {
+					whereClauses.push(`"_status" = $${paramIndex}`);
+					params.push(options.status);
+					paramIndex++;
+				}
+
+				const whereClause = whereClauses.join(' AND ');
+				params.push(limit, offset);
+
+				const rows = await h.query<Record<string, unknown>>(
+					`SELECT * FROM "${tableName}" WHERE ${whereClause} ORDER BY "createdAt" ${sortDirection} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+					params,
+				);
+
+				return rows.map((row) => ({
+					id: String(row['id']),
+					parent: String(row['parent']),
+					version: String(row['version']),
+					_status: getStatusFromRow(row),
+					autosave: Boolean(row['autosave']),
+					publishedAt: row['publishedAt'] ? String(row['publishedAt']) : undefined,
+					createdAt: String(row['createdAt']),
+					updatedAt: String(row['updatedAt']),
+				}));
+			},
+
+			async findVersionById(
+				collection: string,
+				versionId: string,
+			): Promise<DocumentVersion | null> {
+				validateCollectionSlug(collection);
+				const tableName = `${collection}_versions`;
+				const row = await h.queryOne<Record<string, unknown>>(
+					`SELECT * FROM "${tableName}" WHERE "id" = $1`,
+					[versionId],
+				);
+
+				if (!row) return null;
+
+				return {
+					id: String(row['id']),
+					parent: String(row['parent']),
+					version: String(row['version']),
+					_status: getStatusFromRow(row),
+					autosave: Boolean(row['autosave']),
+					publishedAt: row['publishedAt'] ? String(row['publishedAt']) : undefined,
+					createdAt: String(row['createdAt']),
+					updatedAt: String(row['updatedAt']),
+				};
+			},
+
+			async restoreVersion(
+				collection: string,
+				versionId: string,
+			): Promise<Record<string, unknown>> {
+				validateCollectionSlug(collection);
+				const tableName = `${collection}_versions`;
+
+				// Get the version
+				const version = await h.queryOne<Record<string, unknown>>(
+					`SELECT * FROM "${tableName}" WHERE "id" = $1`,
+					[versionId],
+				);
+
+				if (!version) {
+					throw new Error('Version not found');
+				}
+
+				const parentId = String(version['parent']);
+				const versionData = parseJsonToRecord(String(version['version']));
+				const originalStatus = getStatusFromRow(version);
+
+				// Update the main document with the version data
+				const now = new Date().toISOString();
+				const updateData: Record<string, unknown> = { ...versionData, updatedAt: now };
+
+				// Remove id and createdAt from update data
+				delete updateData['id'];
+				delete updateData['createdAt'];
+
+				const setClauses: string[] = [];
+				const values: unknown[] = [];
+				let paramIndex = 1;
+				const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+				for (const [key, value] of Object.entries(updateData)) {
+					if (!validColumnName.test(key)) {
+						throw new Error(`Invalid column name in version data: ${key}`);
+					}
+					setClauses.push(`"${key}" = $${paramIndex}`);
+					paramIndex++;
+					if (value === undefined) {
+						values.push(null);
+					} else if (
+						typeof value === 'object' &&
+						value !== null &&
+						!(value instanceof Date)
+					) {
+						values.push(JSON.stringify(value));
+					} else {
+						values.push(value);
+					}
+				}
+				values.push(parentId);
+
+				await h.execute(
+					`UPDATE "${collection}" SET ${setClauses.join(', ')} WHERE "id" = $${paramIndex}`,
+					values,
+				);
+
+				// Create a new version record preserving the original status
+				const newVersionId = randomUUID();
+				await h.execute(
+					`INSERT INTO "${tableName}" ("id", "parent", "version", "_status", "autosave", "createdAt", "updatedAt")
+					 VALUES ($1, $2, $3, $4, false, $5, $6)`,
+					[
+						newVersionId,
+						parentId,
+						String(version['version']),
+						originalStatus,
+						now,
+						now,
+					],
+				);
+
+				// Return the updated document
+				const updated = await h.queryOne<Record<string, unknown>>(
+					`SELECT * FROM "${collection}" WHERE "id" = $1`,
+					[parentId],
+				);
+
+				if (!updated) {
+					throw new Error('Failed to fetch restored document');
+				}
+
+				return updated;
+			},
+
+			async deleteVersions(
+				collection: string,
+				parentId: string,
+				keepLatest?: number,
+			): Promise<number> {
+				validateCollectionSlug(collection);
+				const tableName = `${collection}_versions`;
+
+				if (keepLatest && keepLatest > 0) {
+					// Get IDs to keep
+					const toKeep = await h.query<Record<string, unknown>>(
+						`SELECT "id" FROM "${tableName}" WHERE "parent" = $1 ORDER BY "createdAt" DESC LIMIT $2`,
+						[parentId, keepLatest],
+					);
+					const keepIds = toKeep.map((r) => String(r['id']));
+
+					if (keepIds.length === 0) {
+						return 0;
+					}
+
+					const placeholders = keepIds.map((_, i) => `$${i + 2}`).join(', ');
+					return h.execute(
+						`DELETE FROM "${tableName}" WHERE "parent" = $1 AND "id" NOT IN (${placeholders})`,
+						[parentId, ...keepIds],
+					);
+				}
+
+				return h.execute(`DELETE FROM "${tableName}" WHERE "parent" = $1`, [parentId]);
+			},
+
+			async countVersions(
+				collection: string,
+				parentId: string,
+				options?: VersionCountOptions,
+			): Promise<number> {
+				validateCollectionSlug(collection);
+				const tableName = `${collection}_versions`;
+
+				const whereClauses: string[] = ['"parent" = $1'];
+				const params: unknown[] = [parentId];
+
+				if (!options?.includeAutosave) {
+					whereClauses.push('"autosave" = false');
+				}
+
+				if (options?.status) {
+					whereClauses.push(`"_status" = $${params.length + 1}`);
+					params.push(options.status);
+				}
+
+				const whereClause = whereClauses.join(' AND ');
+				const result = await h.queryOne<Record<string, unknown>>(
+					`SELECT COUNT(*) as count FROM "${tableName}" WHERE ${whereClause}`,
+					params,
+				);
+				return Number(result?.['count'] ?? 0);
+			},
+
+			async updateStatus(
+				collection: string,
+				id: string,
+				status: DocumentStatus,
+			): Promise<void> {
+				validateCollectionSlug(collection);
+				const now = new Date().toISOString();
+				await h.execute(
+					`UPDATE "${collection}" SET "_status" = $1, "updatedAt" = $2 WHERE "id" = $3`,
+					[status, now, id],
+				);
+			},
+
+			async setScheduledPublishAt(
+				collection: string,
+				id: string,
+				publishAt: string | null,
+			): Promise<void> {
+				validateCollectionSlug(collection);
+				const now = new Date().toISOString();
+				await h.execute(
+					`UPDATE "${collection}" SET "scheduledPublishAt" = $1, "updatedAt" = $2 WHERE "id" = $3`,
+					[publishAt, now, id],
+				);
+			},
+
+			async findScheduledDocuments(
+				collection: string,
+				before: string,
+			): Promise<Array<{ id: string; scheduledPublishAt: string }>> {
+				validateCollectionSlug(collection);
+				const rows = await h.query(
+					`SELECT "id", "scheduledPublishAt" FROM "${collection}" WHERE "scheduledPublishAt" IS NOT NULL AND "scheduledPublishAt" <= $1`,
+					[before],
+				);
+				return rows.map((row) => ({
+					id: String(row['id']),
+					scheduledPublishAt: String(row['scheduledPublishAt']),
+				}));
+			},
+		};
 	}
 
-	/**
-	 * Execute a statement and return the number of affected rows.
-	 */
-	async function execute(sql: string, params: unknown[] = []): Promise<number> {
-		const result: QueryResult = await pool.query(sql, params);
-		return result.rowCount ?? 0;
-	}
+	// Create pool-scoped helpers and build adapter methods
+	const helpers = createHelpers(pool);
+	const methods = buildMethods(helpers);
 
 	return {
 		/**
@@ -303,17 +884,20 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 		/**
 		 * Execute a raw SQL query.
 		 */
-		query,
+		query: helpers.query,
 
 		/**
 		 * Execute a raw SQL query and return a single row.
 		 */
-		queryOne,
+		queryOne: helpers.queryOne,
 
 		/**
 		 * Execute a raw SQL statement.
 		 */
-		execute,
+		execute: helpers.execute,
+
+		// Spread all CRUD + version methods
+		...methods,
 
 		async initialize(collections: CollectionConfig[]): Promise<void> {
 			// Create Better Auth tables first
@@ -327,6 +911,25 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				const createSql = createTableSql(collection);
 				await pool.query(createSql);
 
+				// Ensure all field columns exist (handles tables created before new fields were added)
+				const dataFields = flattenDataFields(collection.fields);
+				for (const field of dataFields) {
+					const colType = getColumnType(field);
+					await pool.query(
+						`ALTER TABLE "${collection.slug}" ADD COLUMN IF NOT EXISTS "${field.name}" ${colType}`,
+					);
+				}
+
+				// Ensure versioning columns exist (handles tables created before versioning was enabled)
+				if (hasVersionDrafts(collection)) {
+					await pool.query(
+						`ALTER TABLE "${collection.slug}" ADD COLUMN IF NOT EXISTS "_status" VARCHAR(20) DEFAULT 'draft'`,
+					);
+					await pool.query(
+						`ALTER TABLE "${collection.slug}" ADD COLUMN IF NOT EXISTS "scheduledPublishAt" TIMESTAMPTZ`,
+					);
+				}
+
 				// Create versions table for versioned collections
 				const versionTableSql = createVersionTableSql(collection);
 				if (versionTableSql) {
@@ -335,384 +938,24 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 			}
 		},
 
-		async find(
-			collection: string,
-			queryParams: Record<string, unknown>,
-		): Promise<Record<string, unknown>[]> {
-			validateCollectionSlug(collection);
-			const limitValue = typeof queryParams['limit'] === 'number' ? queryParams['limit'] : 100;
-			const pageValue = typeof queryParams['page'] === 'number' ? queryParams['page'] : 1;
-			const offset = (pageValue - 1) * limitValue;
-
-			// Build WHERE clause from query parameters (excluding pagination params)
-			const whereClauses: string[] = [];
-			const whereValues: unknown[] = [];
-			const reservedParams = new Set(['limit', 'page', 'sort', 'order']);
-			let paramIndex = 1;
-
-			// Regex to validate column names (alphanumeric and underscore only, must start with letter or underscore)
-			const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
-
-			for (const [key, value] of Object.entries(queryParams)) {
-				if (reservedParams.has(key)) {
-					continue;
-				}
-				if (value !== undefined && value !== null) {
-					// Validate column name to prevent SQL injection
-					if (!validColumnName.test(key)) {
-						throw new Error(`Invalid column name: ${key}`);
-					}
-					whereClauses.push(`"${key}" = $${paramIndex}`);
-					whereValues.push(value);
-					paramIndex++;
-				}
+		async transaction<T>(
+			callback: (txAdapter: DatabaseAdapter) => Promise<T>,
+		): Promise<T> {
+			const client = await pool.connect();
+			try {
+				await client.query('BEGIN');
+				const txHelpers = createHelpers(client);
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- buildMethods returns all required DatabaseAdapter methods
+				const txAdapter = buildMethods(txHelpers) as DatabaseAdapter;
+				const result = await callback(txAdapter);
+				await client.query('COMMIT');
+				return result;
+			} catch (error) {
+				await client.query('ROLLBACK');
+				throw error;
+			} finally {
+				client.release();
 			}
-
-			const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-
-			return query(
-				`SELECT * FROM "${collection}" ${whereClause} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-				[...whereValues, limitValue, offset],
-			);
-		},
-
-		async findById(collection: string, id: string): Promise<Record<string, unknown> | null> {
-			validateCollectionSlug(collection);
-			return queryOne(`SELECT * FROM "${collection}" WHERE id = $1`, [id]);
-		},
-
-		async create(
-			collection: string,
-			data: Record<string, unknown>,
-		): Promise<Record<string, unknown>> {
-			validateCollectionSlug(collection);
-			const id = randomUUID();
-			const now = new Date().toISOString();
-
-			const doc: Record<string, unknown> = {
-				...data,
-				id,
-				createdAt: now,
-				updatedAt: now,
-			};
-
-			const columns = Object.keys(doc);
-			const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
-			const values = columns.map((col) => {
-				const val = doc[col];
-				// Handle undefined
-				if (val === undefined) {
-					return null;
-				}
-				// Serialize objects/arrays as JSON (PostgreSQL will handle JSONB conversion)
-				if (typeof val === 'object' && val !== null && !(val instanceof Date)) {
-					return JSON.stringify(val);
-				}
-				return val;
-			});
-
-			const quotedColumns = columns.map((c) => `"${c}"`).join(', ');
-			await pool.query(
-				`INSERT INTO "${collection}" (${quotedColumns}) VALUES (${placeholders})`,
-				values,
-			);
-
-			return doc;
-		},
-
-		async update(
-			collection: string,
-			id: string,
-			data: Record<string, unknown>,
-		): Promise<Record<string, unknown>> {
-			validateCollectionSlug(collection);
-			const now = new Date().toISOString();
-			const updateData: Record<string, unknown> = { ...data, updatedAt: now };
-
-			// Remove id and createdAt from update data if present
-			delete updateData['id'];
-			delete updateData['createdAt'];
-
-			const setClauses: string[] = [];
-			const values: unknown[] = [];
-			let paramIndex = 1;
-
-			for (const [key, value] of Object.entries(updateData)) {
-				setClauses.push(`"${key}" = $${paramIndex}`);
-				paramIndex++;
-				// Handle undefined
-				if (value === undefined) {
-					values.push(null);
-				} else if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
-					values.push(JSON.stringify(value));
-				} else {
-					values.push(value);
-				}
-			}
-			values.push(id);
-
-			await pool.query(
-				`UPDATE "${collection}" SET ${setClauses.join(', ')} WHERE id = $${paramIndex}`,
-				values,
-			);
-
-			// Fetch and return the updated document
-			const updated = await queryOne<Record<string, unknown>>(
-				`SELECT * FROM "${collection}" WHERE id = $1`,
-				[id],
-			);
-			if (!updated) {
-				throw new Error('Failed to fetch updated document');
-			}
-			return updated;
-		},
-
-		async delete(collection: string, id: string): Promise<boolean> {
-			validateCollectionSlug(collection);
-			const rowCount = await execute(`DELETE FROM "${collection}" WHERE id = $1`, [id]);
-			return rowCount > 0;
-		},
-
-		// ==========================================
-		// Version Operations
-		// ==========================================
-
-		async createVersion(
-			collection: string,
-			parentId: string,
-			data: Record<string, unknown>,
-			options?: CreateVersionOptions,
-		): Promise<DocumentVersion> {
-			validateCollectionSlug(collection);
-			const id = randomUUID();
-			const now = new Date().toISOString();
-			const status = options?.status ?? 'draft';
-			const autosave = options?.autosave ?? false;
-			const publishedAt = status === 'published' ? now : null;
-
-			const versionData = JSON.stringify(data);
-			const tableName = `${collection}_versions`;
-
-			await pool.query(
-				`INSERT INTO "${tableName}" ("id", "parent", "version", "_status", "autosave", "publishedAt", "createdAt", "updatedAt")
-				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-				[id, parentId, versionData, status, autosave, publishedAt, now, now],
-			);
-
-			return {
-				id,
-				parent: parentId,
-				version: versionData,
-				_status: status,
-				autosave,
-				publishedAt: publishedAt ?? undefined,
-				createdAt: now,
-				updatedAt: now,
-			};
-		},
-
-		async findVersions(
-			collection: string,
-			parentId: string,
-			options?: VersionQueryOptions,
-		): Promise<DocumentVersion[]> {
-			validateCollectionSlug(collection);
-			const tableName = `${collection}_versions`;
-			const limit = options?.limit ?? 10;
-			const page = options?.page ?? 1;
-			const offset = (page - 1) * limit;
-			const sortDirection = options?.sort === 'asc' ? 'ASC' : 'DESC';
-
-			const whereClauses: string[] = ['"parent" = $1'];
-			const params: unknown[] = [parentId];
-			let paramIndex = 2;
-
-			if (!options?.includeAutosave) {
-				whereClauses.push('"autosave" = false');
-			}
-
-			if (options?.status) {
-				whereClauses.push(`"_status" = $${paramIndex}`);
-				params.push(options.status);
-				paramIndex++;
-			}
-
-			const whereClause = whereClauses.join(' AND ');
-			params.push(limit, offset);
-
-			const rows = await query<Record<string, unknown>>(
-				`SELECT * FROM "${tableName}" WHERE ${whereClause} ORDER BY "createdAt" ${sortDirection} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-				params,
-			);
-
-			return rows.map((row) => ({
-				id: String(row['id']),
-				parent: String(row['parent']),
-				version: String(row['version']),
-				_status: getStatusFromRow(row),
-				autosave: Boolean(row['autosave']),
-				publishedAt: row['publishedAt'] ? String(row['publishedAt']) : undefined,
-				createdAt: String(row['createdAt']),
-				updatedAt: String(row['updatedAt']),
-			}));
-		},
-
-		async findVersionById(collection: string, versionId: string): Promise<DocumentVersion | null> {
-			validateCollectionSlug(collection);
-			const tableName = `${collection}_versions`;
-			const row = await queryOne<Record<string, unknown>>(
-				`SELECT * FROM "${tableName}" WHERE "id" = $1`,
-				[versionId],
-			);
-
-			if (!row) return null;
-
-			return {
-				id: String(row['id']),
-				parent: String(row['parent']),
-				version: String(row['version']),
-				_status: getStatusFromRow(row),
-				autosave: Boolean(row['autosave']),
-				publishedAt: row['publishedAt'] ? String(row['publishedAt']) : undefined,
-				createdAt: String(row['createdAt']),
-				updatedAt: String(row['updatedAt']),
-			};
-		},
-
-		async restoreVersion(collection: string, versionId: string): Promise<Record<string, unknown>> {
-			validateCollectionSlug(collection);
-			const tableName = `${collection}_versions`;
-
-			// Get the version
-			const version = await queryOne<Record<string, unknown>>(
-				`SELECT * FROM "${tableName}" WHERE "id" = $1`,
-				[versionId],
-			);
-
-			if (!version) {
-				throw new Error('Version not found');
-			}
-
-			const parentId = String(version['parent']);
-			const versionData = parseJsonToRecord(String(version['version']));
-			const originalStatus = getStatusFromRow(version);
-
-			// Update the main document with the version data
-			const now = new Date().toISOString();
-			const updateData: Record<string, unknown> = { ...versionData, updatedAt: now };
-
-			// Remove id and createdAt from update data
-			delete updateData['id'];
-			delete updateData['createdAt'];
-
-			const setClauses: string[] = [];
-			const values: unknown[] = [];
-			let paramIndex = 1;
-
-			for (const [key, value] of Object.entries(updateData)) {
-				setClauses.push(`"${key}" = $${paramIndex}`);
-				paramIndex++;
-				if (value === undefined) {
-					values.push(null);
-				} else if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
-					values.push(JSON.stringify(value));
-				} else {
-					values.push(value);
-				}
-			}
-			values.push(parentId);
-
-			await pool.query(
-				`UPDATE "${collection}" SET ${setClauses.join(', ')} WHERE "id" = $${paramIndex}`,
-				values,
-			);
-
-			// Create a new version record preserving the original status
-			const newVersionId = randomUUID();
-			await pool.query(
-				`INSERT INTO "${tableName}" ("id", "parent", "version", "_status", "autosave", "createdAt", "updatedAt")
-				 VALUES ($1, $2, $3, $4, false, $5, $6)`,
-				[newVersionId, parentId, String(version['version']), originalStatus, now, now],
-			);
-
-			// Return the updated document
-			const updated = await queryOne<Record<string, unknown>>(
-				`SELECT * FROM "${collection}" WHERE "id" = $1`,
-				[parentId],
-			);
-
-			if (!updated) {
-				throw new Error('Failed to fetch restored document');
-			}
-
-			return updated;
-		},
-
-		async deleteVersions(
-			collection: string,
-			parentId: string,
-			keepLatest?: number,
-		): Promise<number> {
-			validateCollectionSlug(collection);
-			const tableName = `${collection}_versions`;
-
-			if (keepLatest && keepLatest > 0) {
-				// Get IDs to keep
-				const toKeep = await query<Record<string, unknown>>(
-					`SELECT "id" FROM "${tableName}" WHERE "parent" = $1 ORDER BY "createdAt" DESC LIMIT $2`,
-					[parentId, keepLatest],
-				);
-				const keepIds = toKeep.map((r) => String(r['id']));
-
-				if (keepIds.length === 0) {
-					return 0;
-				}
-
-				const placeholders = keepIds.map((_, i) => `$${i + 2}`).join(', ');
-				return execute(
-					`DELETE FROM "${tableName}" WHERE "parent" = $1 AND "id" NOT IN (${placeholders})`,
-					[parentId, ...keepIds],
-				);
-			}
-
-			return execute(`DELETE FROM "${tableName}" WHERE "parent" = $1`, [parentId]);
-		},
-
-		async countVersions(
-			collection: string,
-			parentId: string,
-			options?: VersionCountOptions,
-		): Promise<number> {
-			validateCollectionSlug(collection);
-			const tableName = `${collection}_versions`;
-
-			const whereClauses: string[] = ['"parent" = $1'];
-			const params: unknown[] = [parentId];
-
-			if (!options?.includeAutosave) {
-				whereClauses.push('"autosave" = false');
-			}
-
-			if (options?.status) {
-				whereClauses.push(`"_status" = $${params.length + 1}`);
-				params.push(options.status);
-			}
-
-			const whereClause = whereClauses.join(' AND ');
-			const result = await queryOne<Record<string, unknown>>(
-				`SELECT COUNT(*) as count FROM "${tableName}" WHERE ${whereClause}`,
-				params,
-			);
-			return Number(result?.['count'] ?? 0);
-		},
-
-		async updateStatus(collection: string, id: string, status: DocumentStatus): Promise<void> {
-			validateCollectionSlug(collection);
-			const now = new Date().toISOString();
-			await pool.query(
-				`UPDATE "${collection}" SET "_status" = $1, "updatedAt" = $2 WHERE "id" = $3`,
-				[status, now, id],
-			);
 		},
 	};
 }

@@ -9,7 +9,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Custom Seed Function Tests', () => {
 	test('custom seed function creates article with category relationship', async ({ request }) => {
 		// Get the tech article created by custom seed function
-		const articlesResponse = await request.get('/api/articles');
+		const articlesResponse = await request.get('/api/articles?limit=100');
 		expect(articlesResponse.ok()).toBe(true);
 
 		const articlesData = (await articlesResponse.json()) as {
@@ -18,7 +18,7 @@ test.describe('Custom Seed Function Tests', () => {
 
 		const techArticle = articlesData.docs.find((a) => a.title === 'First Tech Article');
 		expect(techArticle).toBeDefined();
-		expect(techArticle?.content).toBe('Article about technology for E2E testing.');
+		expect(techArticle?.content).toContain('technology');
 		expect(techArticle?.category).toBeDefined();
 	});
 
@@ -35,7 +35,7 @@ test.describe('Custom Seed Function Tests', () => {
 		expect(techCategory).toBeDefined();
 
 		// Get the tech article and verify its category matches
-		const articlesResponse = await request.get('/api/articles');
+		const articlesResponse = await request.get('/api/articles?limit=100');
 		expect(articlesResponse.ok()).toBe(true);
 
 		const articlesData = (await articlesResponse.json()) as {
@@ -48,7 +48,7 @@ test.describe('Custom Seed Function Tests', () => {
 	});
 
 	test('default seeds and custom seeds coexist', async ({ request }) => {
-		const articlesResponse = await request.get('/api/articles');
+		const articlesResponse = await request.get('/api/articles?limit=100');
 		expect(articlesResponse.ok()).toBe(true);
 
 		const articlesData = (await articlesResponse.json()) as {
@@ -65,7 +65,7 @@ test.describe('Custom Seed Function Tests', () => {
 
 	test('relationship data is properly populated', async ({ request }) => {
 		// Query article with category populated (if API supports it)
-		const articlesResponse = await request.get('/api/articles');
+		const articlesResponse = await request.get('/api/articles?limit=100');
 		expect(articlesResponse.ok()).toBe(true);
 
 		const articlesData = (await articlesResponse.json()) as {

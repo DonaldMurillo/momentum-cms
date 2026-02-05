@@ -12,6 +12,7 @@ import type {
 	VersionQueryResult,
 	RestoreVersionOptions,
 	PublishOptions,
+	SchedulePublishResult,
 	AccessArgs,
 	RequestContext,
 } from '@momentum-cms/core';
@@ -149,6 +150,30 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 			throw new Error('Version operations not supported by database adapter');
 		}
 
+		// Use transaction if available for atomicity
+		if (this.adapter.transaction) {
+			return this.adapter.transaction(async (txAdapter) => {
+				if (!txAdapter.restoreVersion) {
+					throw new Error('Version operations not supported by database adapter');
+				}
+
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record, safe cast
+				const restored = (await txAdapter.restoreVersion(
+					this.slug,
+					options.versionId,
+				)) as T;
+
+				// If publish option is set, publish the restored document
+				if (options.publish && txAdapter.updateStatus) {
+					const docId = isRecord(restored) ? String(restored['id']) : '';
+					await txAdapter.updateStatus(this.slug, docId, 'published');
+				}
+
+				return restored;
+			});
+		}
+
+		// Fallback: non-transactional
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record, safe cast
 		const restored = (await this.adapter.restoreVersion(this.slug, options.versionId)) as T;
 
@@ -176,8 +201,32 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 			throw new Error('Version operations not supported by database adapter');
 		}
 
-		// Perform status update, fetch, and version creation in sequence
-		// Uses adapter-level write queue/transactions for atomicity
+		// Use transaction if available for atomicity
+		if (this.adapter.transaction) {
+			return this.adapter.transaction(async (txAdapter) => {
+				if (!txAdapter.updateStatus) {
+					throw new Error('Version operations not supported by database adapter');
+				}
+
+				await txAdapter.updateStatus(this.slug, docId, 'published');
+
+				const updatedDoc = await txAdapter.findById(this.slug, docId);
+				if (!updatedDoc) {
+					throw new Error('Failed to fetch document after status update');
+				}
+
+				if (txAdapter.createVersion) {
+					await txAdapter.createVersion(this.slug, docId, updatedDoc, {
+						status: 'published',
+					});
+				}
+
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record, safe cast
+				return updatedDoc as T;
+			});
+		}
+
+		// Fallback: non-transactional publish
 		await this.adapter.updateStatus(this.slug, docId, 'published');
 
 		const updatedDoc = await this.adapter.findById(this.slug, docId);
@@ -319,6 +368,51 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 		}
 
 		return differences;
+	}
+
+	async schedulePublish(docId: string, publishAt: string): Promise<SchedulePublishResult> {
+		// Check publishVersions access
+		await this.checkAccess('publishVersions');
+
+		// Verify document exists
+		const doc = await this.adapter.findById(this.slug, docId);
+		if (!doc) {
+			throw new DocumentNotFoundError(this.slug, docId);
+		}
+
+		// Validate the date is in the future
+		const scheduledDate = new Date(publishAt);
+		if (isNaN(scheduledDate.getTime())) {
+			throw new Error('Invalid date format for scheduledPublishAt');
+		}
+
+		if (!this.adapter.setScheduledPublishAt) {
+			throw new Error('Scheduled publishing not supported by database adapter');
+		}
+
+		await this.adapter.setScheduledPublishAt(this.slug, docId, scheduledDate.toISOString());
+
+		return {
+			id: docId,
+			scheduledPublishAt: scheduledDate.toISOString(),
+		};
+	}
+
+	async cancelScheduledPublish(docId: string): Promise<void> {
+		// Check publishVersions access
+		await this.checkAccess('publishVersions');
+
+		// Verify document exists
+		const doc = await this.adapter.findById(this.slug, docId);
+		if (!doc) {
+			throw new DocumentNotFoundError(this.slug, docId);
+		}
+
+		if (!this.adapter.setScheduledPublishAt) {
+			throw new Error('Scheduled publishing not supported by database adapter');
+		}
+
+		await this.adapter.setScheduledPublishAt(this.slug, docId, null);
 	}
 
 	// ============================================

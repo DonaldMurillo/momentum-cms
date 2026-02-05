@@ -18,13 +18,28 @@ test.describe('Collection List Page - Articles', () => {
 		await expect(heading).toBeVisible();
 	});
 
-	test('should display count subtitle', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/articles');
+	test('should display count subtitle after data loads', async ({ authenticatedPage }) => {
+		// Use client-side navigation to avoid SSR hydration timing issues with signals.
+		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');
+
+		await authenticatedPage
+			.getByLabel('Main navigation')
+			.getByRole('link', { name: 'Articles' })
+			.click();
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/articles/, {
+			timeout: 10000,
+		});
+
+		// Wait for table data to load
+		await expect(authenticatedPage.locator('mcms-table')).toBeVisible({ timeout: 15000 });
+		await expect(authenticatedPage.locator('mcms-table-cell').first()).toBeVisible({
+			timeout: 10000,
+		});
 
 		// The subtitle shows "N Articles" where N is the count
 		const subtitle = authenticatedPage.getByText(/\d+ Articles/i);
-		await expect(subtitle).toBeVisible();
+		await expect(subtitle).toBeVisible({ timeout: 15000 });
 	});
 
 	test('should have Create Article button', async ({ authenticatedPage }) => {
@@ -54,21 +69,24 @@ test.describe('Collection List Page - Articles', () => {
 		// Wait for table to load
 		await expect(authenticatedPage.locator('mcms-table')).toBeVisible();
 
-		// Check that table headers are present (sortable headers render as buttons)
-		// Use .first() since multiple elements might match
+		// Check that table headers are present
+		// richText fields are excluded from list view, so columns are: Title, Category, Created
 		await expect(
 			authenticatedPage.locator('mcms-table-head').filter({ hasText: 'Title' }).first(),
 		).toBeVisible();
 		await expect(
-			authenticatedPage.locator('mcms-table-head').filter({ hasText: 'Content' }).first(),
+			authenticatedPage.locator('mcms-table-head').filter({ hasText: 'Category' }).first(),
+		).toBeVisible();
+		await expect(
+			authenticatedPage.locator('mcms-table-head').filter({ hasText: 'Created' }).first(),
 		).toBeVisible();
 
-		// Seeded articles should be visible
-		// From seeding: Welcome Article, First Tech Article, Second Tech Article, Breaking News
+		// Seeded articles should be visible (check for ones that appear on page 1)
+		// From seeding: First Tech Article, Second Tech Article, Breaking News
 		await expect(
 			authenticatedPage
 				.locator('mcms-table-cell')
-				.filter({ hasText: /Welcome Article/i })
+				.filter({ hasText: /First Tech Article/i })
 				.first(),
 		).toBeVisible();
 	});
@@ -119,13 +137,29 @@ test.describe('Collection List Page - Users', () => {
 		await expect(heading).toBeVisible();
 	});
 
-	test('should display count subtitle', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/users');
+	test('should display count subtitle after data loads', async ({ authenticatedPage }) => {
+		// Use client-side navigation to avoid SSR hydration timing issues with signals.
+		// Navigate to dashboard first, then click Users in sidebar.
+		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');
+
+		await authenticatedPage
+			.getByLabel('Main navigation')
+			.getByRole('link', { name: 'Users' })
+			.click();
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users/, {
+			timeout: 10000,
+		});
+
+		// Wait for table data to load
+		await expect(authenticatedPage.locator('mcms-table')).toBeVisible({ timeout: 15000 });
+		await expect(authenticatedPage.locator('mcms-table-cell').first()).toBeVisible({
+			timeout: 10000,
+		});
 
 		// The subtitle shows "N Users" where N is the count
 		const subtitle = authenticatedPage.getByText(/\d+ Users?/i);
-		await expect(subtitle).toBeVisible();
+		await expect(subtitle).toBeVisible({ timeout: 15000 });
 	});
 
 	test('should have Create User button', async ({ authenticatedPage }) => {

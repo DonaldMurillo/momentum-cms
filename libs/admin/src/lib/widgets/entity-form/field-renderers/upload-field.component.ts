@@ -128,6 +128,7 @@ function getInputFromEvent(event: Event): HTMLInputElement | null {
 					tabindex="0"
 					role="button"
 					[attr.aria-disabled]="isDisabled()"
+					[attr.aria-label]="'Upload ' + label() + ' file. Drag and drop or click to browse.'"
 					(dragover)="onDragOver($event)"
 					(dragleave)="onDragLeave($event)"
 					(drop)="onDrop($event)"
@@ -136,7 +137,7 @@ function getInputFromEvent(event: Event): HTMLInputElement | null {
 					(keydown.space)="triggerFileInput()"
 				>
 					<div class="flex flex-col items-center justify-center gap-2 p-8">
-						<ng-icon [name]="uploadIcon" class="h-10 w-10 text-mcms-muted-foreground" />
+						<ng-icon [name]="uploadIcon" class="h-10 w-10 text-mcms-muted-foreground" aria-hidden="true" />
 						<div class="text-center">
 							<p class="text-sm font-medium">
 								@if (isDragging()) {
@@ -178,6 +179,7 @@ function getInputFromEvent(event: Event): HTMLInputElement | null {
 						[accept]="acceptAttribute()"
 						[disabled]="isDisabled()"
 						(change)="onFileSelected($event)"
+						[attr.aria-label]="'Choose file for ' + label()"
 					/>
 				</div>
 			}

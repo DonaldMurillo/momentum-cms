@@ -52,7 +52,7 @@ test.describe('Seed Tracking Tests', () => {
 		expect(categories.docs.find((c) => c.slug === 'news')).toBeDefined();
 
 		// Verify articles
-		const articlesResponse = await request.get('/api/articles');
+		const articlesResponse = await request.get('/api/articles?limit=100');
 		expect(articlesResponse.ok()).toBe(true);
 		const articles = (await articlesResponse.json()) as {
 			docs: Array<{ title: string }>;
@@ -64,13 +64,13 @@ test.describe('Seed Tracking Tests', () => {
 
 	test('checksum tracking prevents duplicate creation', async ({ request }) => {
 		// Get initial article count
-		const response1 = await request.get('/api/articles');
+		const response1 = await request.get('/api/articles?limit=100');
 		expect(response1.ok()).toBe(true);
 		const data1 = (await response1.json()) as { docs: Array<{ id: string }> };
 		const initialCount = data1.docs.length;
 
 		// Get count again - should be same (no duplicates created)
-		const response2 = await request.get('/api/articles');
+		const response2 = await request.get('/api/articles?limit=100');
 		expect(response2.ok()).toBe(true);
 		const data2 = (await response2.json()) as { docs: Array<{ id: string }> };
 
@@ -89,7 +89,7 @@ test.describe('Seed Tracking Tests', () => {
 		expect(techCategory).toBeDefined();
 
 		// Get articles to verify tech article has correct category
-		const articlesResponse = await request.get('/api/articles');
+		const articlesResponse = await request.get('/api/articles?limit=100');
 		expect(articlesResponse.ok()).toBe(true);
 		const articles = (await articlesResponse.json()) as {
 			docs: Array<{ title: string; category?: string }>;
