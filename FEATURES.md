@@ -34,7 +34,7 @@
 | blocks       | 🚧     | Types defined, rendering incomplete |
 | json         | ✅     | Arbitrary JSON storage              |
 | point        | ✅     | Lat/lng geolocation                 |
-| upload       | 🚧     | Field defined, no file handling     |
+| upload       | ✅     | File upload with storage adapters   |
 | tabs         | ❌     | Layout field for form organization  |
 | collapsible  | ❌     | Collapsible field group             |
 | row          | ❌     | Horizontal field layout             |
@@ -103,48 +103,52 @@
 
 ### Admin UI
 
-| Feature            | Status | Notes               |
-| ------------------ | ------ | ------------------- |
-| Dashboard          | ✅     | Overview page       |
-| Collection list    | ✅     | Paginated, sortable |
-| Document view      | ✅     | Read-only display   |
-| Document edit      | ✅     | Form-based editing  |
-| Login/logout       | ✅     | Auth flow           |
-| Setup wizard       | ✅     | First-run setup     |
-| Dark mode          | ✅     | Theme toggle        |
-| Sidebar navigation | ✅     | Collection groups   |
-| Custom branding    | 🚧     | Logo/title only     |
-| Custom components  | ❌     | Not extensible      |
-| Custom views       | ❌     | Not extensible      |
+| Feature            | Status | Notes                              |
+| ------------------ | ------ | ---------------------------------- |
+| Dashboard          | ✅     | Overview page                      |
+| Collection list    | ✅     | Paginated, sortable                |
+| Document view      | ✅     | Read-only display                  |
+| Document edit      | ✅     | Form-based editing                 |
+| Login/logout       | ✅     | Auth flow                          |
+| Setup wizard       | ✅     | First-run setup                    |
+| Dark mode          | ✅     | Theme toggle                       |
+| Sidebar navigation | ✅     | Collection groups                  |
+| Media library page | ✅     | Upload, preview, delete            |
+| Version history    | ✅     | List, view, restore widget         |
+| Publish controls   | ✅     | Publish/unpublish/draft buttons    |
+| Command palette    | ✅     | Keyboard nav, filtering, autofocus |
+| Custom branding    | 🚧     | Logo/title only                    |
+| Custom components  | ❌     | Not extensible                     |
+| Custom views       | ❌     | Not extensible                     |
 
 ---
 
-## 🎯 Priority Features (Not Implemented)
+## 🎯 Priority Features
 
 ### 1. Upload/Media Management
 
-| Feature               | Status | Priority    |
-| --------------------- | ------ | ----------- |
-| File upload endpoint  | ❌     | 🎯 Critical |
-| Local storage adapter | ❌     | 🎯 Critical |
-| S3 storage adapter    | ❌     | High        |
-| Image resizing        | ❌     | High        |
-| Image focal points    | ❌     | Medium      |
-| Media library UI      | ❌     | 🎯 Critical |
-| MIME type detection   | ❌     | High        |
-| File size limits      | ❌     | High        |
+| Feature               | Status | Priority                 |
+| --------------------- | ------ | ------------------------ |
+| File upload endpoint  | ✅     | Done                     |
+| Local storage adapter | ✅     | Done                     |
+| S3 storage adapter    | ✅     | Done                     |
+| Image resizing        | ❌     | High                     |
+| Image focal points    | 🚧     | Field exists, no crop UI |
+| Media library UI      | ✅     | Done                     |
+| MIME type detection   | ✅     | Done                     |
+| File size limits      | ✅     | Done                     |
 
 ### 2. Versioning & Drafts
 
-| Feature                   | Status | Priority    |
-| ------------------------- | ------ | ----------- |
-| Version history           | 🚧     | 🎯 Critical |
-| Restore version           | ❌     | 🎯 Critical |
-| Compare versions          | ❌     | Medium      |
-| Draft status field        | 🚧     | 🎯 Critical |
-| Auto-save drafts          | ❌     | High        |
-| Scheduled publishing      | ❌     | Medium      |
-| Publish/unpublish actions | ❌     | 🎯 Critical |
+| Feature                   | Status | Priority                          |
+| ------------------------- | ------ | --------------------------------- |
+| Version history           | ✅     | Done                              |
+| Restore version           | ✅     | Done                              |
+| Compare versions          | 🚧     | Server logic exists, no diff UI   |
+| Draft status field        | ✅     | Done                              |
+| Auto-save drafts          | 🚧     | Backend ready, no client interval |
+| Scheduled publishing      | 🚧     | Types exist, no scheduler         |
+| Publish/unpublish actions | ✅     | Done                              |
 
 ### 3. Localization (i18n)
 
@@ -204,19 +208,19 @@
 
 ## Comparison: Payload CMS Feature Parity
 
-| Category     | Payload    | Momentum    | Gap         |
-| ------------ | ---------- | ----------- | ----------- |
-| Field types  | 20+        | 15          | 5 missing   |
-| Upload/Media | Full       | None        | 🔴 Critical |
-| Versioning   | Full       | Types only  | 🔴 Critical |
-| Drafts       | Full       | Types only  | 🔴 Critical |
-| Localization | Full       | None        | 🔴 Critical |
-| Live Preview | Full       | Preview URL | 🟡 Medium   |
-| GraphQL      | Full       | Types only  | 🟡 Medium   |
-| Rich Text    | Lexical    | Basic       | 🟡 Medium   |
-| Search       | Full-text  | WHERE only  | 🟡 Medium   |
-| Auth         | OAuth, 2FA | Basic       | 🟢 Low      |
-| Plugins      | Full       | None        | 🟢 Low      |
+| Category     | Payload    | Momentum      | Gap         |
+| ------------ | ---------- | ------------- | ----------- |
+| Field types  | 20+        | 16            | 4 missing   |
+| Upload/Media | Full       | Core complete | 🟡 Medium   |
+| Versioning   | Full       | Core complete | 🟡 Medium   |
+| Drafts       | Full       | Core complete | 🟡 Medium   |
+| Localization | Full       | None          | 🔴 Critical |
+| Live Preview | Full       | Preview URL   | 🟡 Medium   |
+| GraphQL      | Full       | Types only    | 🟡 Medium   |
+| Rich Text    | Lexical    | Basic         | 🟡 Medium   |
+| Search       | Full-text  | WHERE only    | 🟡 Medium   |
+| Auth         | OAuth, 2FA | Basic         | 🟢 Low      |
+| Plugins      | Full       | None          | 🟢 Low      |
 
 ---
 
@@ -224,9 +228,9 @@
 
 ### Phase 1: Core Content Features
 
-- [ ] Upload/Media management
-- [ ] Versioning system
-- [ ] Drafts & publishing
+- [x] Upload/Media management
+- [x] Versioning system
+- [x] Drafts & publishing
 
 ### Phase 2: Multi-language & Preview
 
