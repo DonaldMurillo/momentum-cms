@@ -10,8 +10,8 @@ import { MomentumAuthService } from '../services/auth.service';
  * - /admin/setup if no users exist (first-time setup)
  * - /admin if user is already authenticated
  *
- * Note: During SSR, the guard allows access and defers auth checks to client-side
- * hydration. This is necessary because SSR doesn't have access to browser cookies.
+ * During SSR, the guard allows access and defers redirect decisions to
+ * client-side hydration to avoid hydration conflicts.
  *
  * Use this guard for login/register pages.
  *
@@ -31,8 +31,8 @@ export const guestGuard: CanActivateFn = async () => {
 	const auth = inject(MomentumAuthService);
 	const router = inject(Router);
 
-	// During SSR, allow access - auth checks will run on client after hydration
-	// SSR doesn't have access to browser cookies, so auth would always fail
+	// During SSR, allow access - redirect decisions deferred to client-side
+	// to avoid hydration conflicts.
 	if (!isPlatformBrowser(platformId)) {
 		return true;
 	}

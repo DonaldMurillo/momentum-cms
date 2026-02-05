@@ -60,8 +60,8 @@ test.describe('Seeding Idempotency Tests', () => {
 			seeds: { completed: number; expected: number; ready: boolean };
 		};
 
-		// Total should match expected (4 seeds: 2 categories + 2 articles)
+		// Total should match expected (7 seeds: 3 categories + 4 articles from defaults + custom seed)
 		expect(data.seeds.completed).toBe(data.seeds.expected);
-		expect(data.seeds.completed).toBe(4);
+		expect(data.seeds.completed).toBe(7);
 	});
 });

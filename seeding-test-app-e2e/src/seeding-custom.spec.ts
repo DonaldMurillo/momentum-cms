@@ -18,7 +18,7 @@ test.describe('Custom Seed Function Tests', () => {
 
 		const techArticle = articlesData.docs.find((a) => a.title === 'First Tech Article');
 		expect(techArticle).toBeDefined();
-		expect(techArticle?.content).toBe('Article linked to tech category via custom seed function.');
+		expect(techArticle?.content).toBe('Article about technology for E2E testing.');
 		expect(techArticle?.category).toBeDefined();
 	});
 

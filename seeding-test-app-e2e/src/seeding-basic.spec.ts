@@ -38,7 +38,7 @@ test.describe('Seeding Basic Tests', () => {
 		// Verify seeded article data
 		const welcomeArticle = data.docs.find((a) => a.title === 'Welcome Article');
 		expect(welcomeArticle).toBeDefined();
-		expect(welcomeArticle?.content).toBe('This is a seeded welcome article.');
+		expect(welcomeArticle?.content).toBe('This is a seeded welcome article for E2E testing.');
 	});
 
 	test('health endpoint reports seeding completed', async ({ request }) => {

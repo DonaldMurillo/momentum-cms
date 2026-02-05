@@ -72,12 +72,18 @@ export {
 
 // Components (for direct usage in Analog apps)
 export { AdminShellComponent } from './lib/components/shell/admin-shell.component';
+export { ForgotPasswordFormComponent } from './lib/components/forgot-password-form/forgot-password-form.component';
+export { ResetPasswordFormComponent } from './lib/components/reset-password-form/reset-password-form.component';
+
+// Pages
 export { DashboardPage } from './lib/pages/dashboard/dashboard.page';
 export { CollectionListPage } from './lib/pages/collection-list/collection-list.page';
 export { CollectionViewPage } from './lib/pages/collection-view/collection-view.page';
 export { CollectionEditPage } from './lib/pages/collection-edit/collection-edit.page';
 export { LoginPage } from './lib/pages/login/login.page';
 export { SetupPage } from './lib/pages/setup/setup.page';
+export { ForgotPasswordPage } from './lib/pages/forgot-password/forgot-password.page';
+export { ResetPasswordPage } from './lib/pages/reset-password/reset-password.page';
 
 // Widgets
 export { AdminSidebarWidget } from './lib/widgets/admin-sidebar/admin-sidebar.component';
