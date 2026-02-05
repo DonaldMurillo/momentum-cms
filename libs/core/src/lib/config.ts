@@ -1,5 +1,12 @@
 import type { CollectionConfig } from './collections';
 import type { SeedingConfig, SeedingOptions } from './seeding';
+import type {
+	DocumentVersion,
+	DocumentStatus,
+	VersionQueryOptions,
+	VersionCountOptions,
+	CreateVersionOptions,
+} from './versions';
 
 /**
  * Database adapter type for Momentum CMS.
@@ -20,6 +27,80 @@ export interface DatabaseAdapter {
 	 * Called once when the server starts.
 	 */
 	initialize?(collections: CollectionConfig[]): Promise<void>;
+
+	// ============================================
+	// Version Operations (optional, for versioned collections)
+	// ============================================
+
+	/**
+	 * Create a new version for a document.
+	 * @param collection - The collection slug
+	 * @param parentId - The parent document ID
+	 * @param data - The document data to snapshot
+	 * @param options - Version creation options
+	 */
+	createVersion?(
+		collection: string,
+		parentId: string,
+		data: Record<string, unknown>,
+		options?: CreateVersionOptions,
+	): Promise<DocumentVersion>;
+
+	/**
+	 * Find all versions for a document.
+	 * @param collection - The collection slug
+	 * @param parentId - The parent document ID
+	 * @param options - Query options (limit, page, etc.)
+	 */
+	findVersions?(
+		collection: string,
+		parentId: string,
+		options?: VersionQueryOptions,
+	): Promise<DocumentVersion[]>;
+
+	/**
+	 * Find a specific version by ID.
+	 * @param collection - The collection slug
+	 * @param versionId - The version ID
+	 */
+	findVersionById?(collection: string, versionId: string): Promise<DocumentVersion | null>;
+
+	/**
+	 * Restore a document to a previous version.
+	 * Creates a new version with the restored data.
+	 * @param collection - The collection slug
+	 * @param versionId - The version ID to restore
+	 */
+	restoreVersion?(collection: string, versionId: string): Promise<Record<string, unknown>>;
+
+	/**
+	 * Delete old versions for a document.
+	 * @param collection - The collection slug
+	 * @param parentId - The parent document ID
+	 * @param keepLatest - Number of latest versions to keep (default: all)
+	 * @returns Number of versions deleted
+	 */
+	deleteVersions?(collection: string, parentId: string, keepLatest?: number): Promise<number>;
+
+	/**
+	 * Count versions for a document.
+	 * @param collection - The collection slug
+	 * @param parentId - The parent document ID
+	 * @param options - Filter options (includeAutosave, status) to match findVersions filters
+	 */
+	countVersions?(
+		collection: string,
+		parentId: string,
+		options?: VersionCountOptions,
+	): Promise<number>;
+
+	/**
+	 * Update a document's status (draft/published).
+	 * @param collection - The collection slug
+	 * @param id - The document ID
+	 * @param status - The new status
+	 */
+	updateStatus?(collection: string, id: string, status: DocumentStatus): Promise<void>;
 }
 
 /**

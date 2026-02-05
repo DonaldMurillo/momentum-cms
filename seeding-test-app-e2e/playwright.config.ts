@@ -92,12 +92,19 @@ export default defineConfig({
 			use: { ...devices['Desktop Chrome'] },
 			dependencies: ['seeding-idempotency'],
 		},
-		// Seed tracking table tests - run last
+		// Seed tracking table tests
 		{
 			name: 'seeding-tracking',
 			testMatch: /seeding-tracking\.spec\.ts$/,
 			use: { ...devices['Desktop Chrome'] },
 			dependencies: ['seeding-custom'],
+		},
+		// Versioning tests - run last (tests version/draft functionality)
+		{
+			name: 'versioning',
+			testMatch: /versioning\.spec\.ts$/,
+			use: { ...devices['Desktop Chrome'] },
+			dependencies: ['seeding-tracking'],
 		},
 	],
 });

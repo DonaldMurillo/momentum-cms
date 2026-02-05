@@ -203,6 +203,39 @@ export class FeedbackService {
 	}
 
 	/**
+	 * Confirm restore version operation.
+	 * @param collectionLabel The collection label
+	 * @returns Promise resolving to true if confirmed
+	 */
+	confirmRestore(collectionLabel: string): Promise<boolean> {
+		return this.confirmation.confirm({
+			title: `Restore this version?`,
+			description: `This will revert the ${collectionLabel.toLowerCase()} to this previous version. The current version will be preserved in history.`,
+			confirmText: 'Restore',
+			cancelText: 'Cancel',
+			variant: 'default',
+			icon: 'question',
+		});
+	}
+
+	/**
+	 * Show success message when a version is restored.
+	 */
+	versionRestored(collectionLabel: string): void {
+		this.toast.success(
+			`Version restored`,
+			`The ${collectionLabel.toLowerCase()} has been restored to the selected version.`,
+		);
+	}
+
+	/**
+	 * Show success message when a draft is saved.
+	 */
+	draftSaved(): void {
+		this.toast.success('Draft saved', 'Your changes have been saved as a draft.');
+	}
+
+	/**
 	 * Show confirmation with custom config.
 	 */
 	confirm(config: {

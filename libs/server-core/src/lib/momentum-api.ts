@@ -22,7 +22,9 @@ import type {
 	DeleteResult,
 	WhereClause,
 	FieldValidationError,
+	VersionOperations,
 } from './momentum-api.types';
+import { VersionOperationsImpl } from './version-operations';
 import {
 	CollectionNotFoundError,
 	DocumentNotFoundError,
@@ -315,6 +317,24 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		return docs.length;
 	}
 
+	/**
+	 * Get version operations for this collection.
+	 * Returns null if versioning is not enabled for this collection.
+	 */
+	versions(): VersionOperations<T> | null {
+		// Check if versioning is enabled for this collection
+		if (!this.collectionConfig.versions) {
+			return null;
+		}
+
+		return new VersionOperationsImpl<T>(
+			this.slug,
+			this.collectionConfig,
+			this.adapter,
+			this.context,
+		);
+	}
+
 	// ============================================
 	// Private Helpers
 	// ============================================
@@ -491,6 +511,8 @@ export type {
 	DeleteResult,
 	WhereClause,
 	FieldValidationError,
+	VersionOperations,
+	VersionFindOptions,
 } from './momentum-api.types';
 
 export {

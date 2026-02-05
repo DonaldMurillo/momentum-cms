@@ -31,6 +31,11 @@ export const Posts = defineCollection({
 		}),
 		checkbox('featured', { label: 'Featured Post' }),
 	],
+	// Enable versioning with drafts
+	versions: {
+		drafts: true,
+		maxPerDoc: 10,
+	},
 	access: {
 		// Anyone can read posts (public content)
 		read: allowAll(),
@@ -42,5 +47,9 @@ export const Posts = defineCollection({
 		delete: hasRole('admin'),
 		// Authenticated users can access posts in admin panel
 		admin: isAuthenticated(),
+		// Version access controls
+		readVersions: isAuthenticated(),
+		publishVersions: hasAnyRole(['admin', 'editor']),
+		restoreVersions: hasRole('admin'),
 	},
 });

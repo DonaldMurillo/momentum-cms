@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from 'express';
 import {
 	createMomentumHandlers,
 	getCollectionPermissions,
+	getMomentumAPI,
 	type MomentumRequest,
 } from '@momentum-cms/server-core';
 import type { MomentumConfig, ResolvedMomentumConfig, UserContext } from '@momentum-cms/core';
@@ -106,6 +107,231 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		const permissions = await getCollectionPermissions(config, user);
 		res.json({ collections: permissions });
 	});
+
+	// ============================================
+	// Version Routes
+	// Must be defined BEFORE generic /:collection/:id routes
+	// ============================================
+
+	// Route: GET /:collection/:id/versions - List versions for a document
+	router.get('/:collection/:id/versions', async (req: Request, res: Response) => {
+		try {
+			const api = getMomentumAPI();
+			const user = extractUserFromRequest(req);
+			const contextApi = user ? api.setContext({ user }) : api;
+
+			const collectionOps = contextApi.collection(req.params['collection']);
+			const versionOps = collectionOps.versions();
+
+			if (!versionOps) {
+				res.status(400).json({
+					error: 'Versioning not enabled',
+					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
+				});
+				return;
+			}
+
+			const result = await versionOps.findVersions(req.params['id'], {
+				limit: req.query['limit'] ? Number(req.query['limit']) : undefined,
+				page: req.query['page'] ? Number(req.query['page']) : undefined,
+				includeAutosave: req.query['includeAutosave'] === 'true',
+			});
+
+			res.json(result);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			res.status(500).json({ error: 'Failed to fetch versions', message });
+		}
+	});
+
+	// Route: GET /:collection/:id/versions/:versionId - Get specific version
+	router.get('/:collection/:id/versions/:versionId', async (req: Request, res: Response) => {
+		try {
+			const api = getMomentumAPI();
+			const user = extractUserFromRequest(req);
+			const contextApi = user ? api.setContext({ user }) : api;
+
+			const collectionOps = contextApi.collection(req.params['collection']);
+			const versionOps = collectionOps.versions();
+
+			if (!versionOps) {
+				res.status(400).json({
+					error: 'Versioning not enabled',
+					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
+				});
+				return;
+			}
+
+			const version = await versionOps.findVersionById(req.params['versionId']);
+
+			if (!version) {
+				res.status(404).json({
+					error: 'Version not found',
+					message: `Version "${req.params['versionId']}" not found`,
+				});
+				return;
+			}
+
+			res.json(version);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			res.status(500).json({ error: 'Failed to fetch version', message });
+		}
+	});
+
+	// Route: POST /:collection/:id/versions/restore - Restore a version
+	router.post('/:collection/:id/versions/restore', async (req: Request, res: Response) => {
+		try {
+			const api = getMomentumAPI();
+			const user = extractUserFromRequest(req);
+			const contextApi = user ? api.setContext({ user }) : api;
+
+			const collectionOps = contextApi.collection(req.params['collection']);
+			const versionOps = collectionOps.versions();
+
+			if (!versionOps) {
+				res.status(400).json({
+					error: 'Versioning not enabled',
+					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
+				});
+				return;
+			}
+
+			const body = getBody(req);
+			const versionId = body['versionId'];
+
+			if (typeof versionId !== 'string') {
+				res.status(400).json({
+					error: 'Invalid request',
+					message: 'versionId is required in request body',
+				});
+				return;
+			}
+
+			const restored = await versionOps.restore({
+				versionId,
+				publish: body['publish'] === true,
+			});
+
+			res.json({ doc: restored, message: 'Version restored successfully' });
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			res.status(500).json({ error: 'Failed to restore version', message });
+		}
+	});
+
+	// Route: POST /:collection/:id/publish - Publish a document
+	router.post('/:collection/:id/publish', async (req: Request, res: Response) => {
+		try {
+			const api = getMomentumAPI();
+			const user = extractUserFromRequest(req);
+			const contextApi = user ? api.setContext({ user }) : api;
+
+			const collectionOps = contextApi.collection(req.params['collection']);
+			const versionOps = collectionOps.versions();
+
+			if (!versionOps) {
+				res.status(400).json({
+					error: 'Versioning not enabled',
+					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
+				});
+				return;
+			}
+
+			const published = await versionOps.publish(req.params['id']);
+
+			res.json({ doc: published, message: 'Document published successfully' });
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			res.status(500).json({ error: 'Failed to publish document', message });
+		}
+	});
+
+	// Route: POST /:collection/:id/unpublish - Unpublish a document
+	router.post('/:collection/:id/unpublish', async (req: Request, res: Response) => {
+		try {
+			const api = getMomentumAPI();
+			const user = extractUserFromRequest(req);
+			const contextApi = user ? api.setContext({ user }) : api;
+
+			const collectionOps = contextApi.collection(req.params['collection']);
+			const versionOps = collectionOps.versions();
+
+			if (!versionOps) {
+				res.status(400).json({
+					error: 'Versioning not enabled',
+					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
+				});
+				return;
+			}
+
+			const unpublished = await versionOps.unpublish(req.params['id']);
+
+			res.json({ doc: unpublished, message: 'Document unpublished successfully' });
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			res.status(500).json({ error: 'Failed to unpublish document', message });
+		}
+	});
+
+	// Route: POST /:collection/:id/draft - Save a draft (autosave)
+	router.post('/:collection/:id/draft', async (req: Request, res: Response) => {
+		try {
+			const api = getMomentumAPI();
+			const user = extractUserFromRequest(req);
+			const contextApi = user ? api.setContext({ user }) : api;
+
+			const collectionOps = contextApi.collection(req.params['collection']);
+			const versionOps = collectionOps.versions();
+
+			if (!versionOps) {
+				res.status(400).json({
+					error: 'Versioning not enabled',
+					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
+				});
+				return;
+			}
+
+			const body = getBody(req);
+			const draft = await versionOps.saveDraft(req.params['id'], body);
+
+			res.json({ version: draft, message: 'Draft saved successfully' });
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			res.status(500).json({ error: 'Failed to save draft', message });
+		}
+	});
+
+	// Route: GET /:collection/:id/status - Get document status
+	router.get('/:collection/:id/status', async (req: Request, res: Response) => {
+		try {
+			const api = getMomentumAPI();
+			const user = extractUserFromRequest(req);
+			const contextApi = user ? api.setContext({ user }) : api;
+
+			const collectionOps = contextApi.collection(req.params['collection']);
+			const versionOps = collectionOps.versions();
+
+			if (!versionOps) {
+				res.status(400).json({
+					error: 'Versioning not enabled',
+					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
+				});
+				return;
+			}
+
+			const status = await versionOps.getStatus(req.params['id']);
+
+			res.json({ status });
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'Unknown error';
+			res.status(500).json({ error: 'Failed to get status', message });
+		}
+	});
+
+	// ============================================
+	// Standard Collection Routes
+	// ============================================
 
 	// Route: GET /:collection - Find all documents
 	// Route: GET /:collection/:id - Find document by ID

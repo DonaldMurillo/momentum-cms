@@ -9,7 +9,7 @@ import {
 	signal,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import type { CollectionConfig, Field } from '@momentum-cms/core';
+import type { CollectionConfig, Field, DocumentStatus } from '@momentum-cms/core';
 import {
 	Card,
 	CardHeader,
@@ -29,6 +29,8 @@ import { CollectionAccessService } from '../../services/collection-access.servic
 import { FeedbackService } from '../feedback/feedback.service';
 import type { Entity, EntityAction } from '../widget.types';
 import type { EntityViewFieldConfig } from './entity-view.types';
+import { VersionHistoryWidget } from '../version-history/version-history.component';
+import { PublishControlsWidget } from '../publish-controls/publish-controls.component';
 
 /**
  * Entity View Widget
@@ -59,6 +61,8 @@ import type { EntityViewFieldConfig } from './entity-view.types';
 		Breadcrumbs,
 		BreadcrumbItem,
 		BreadcrumbSeparator,
+		VersionHistoryWidget,
+		PublishControlsWidget,
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
@@ -79,7 +83,18 @@ import type { EntityViewFieldConfig } from './entity-view.types';
 			<!-- Page Header -->
 			<div class="mb-8 flex items-start justify-between">
 				<div>
-					<h1 class="text-2xl font-semibold tracking-tight">{{ entityTitle() }}</h1>
+					<div class="flex items-center gap-3">
+						<h1 class="text-2xl font-semibold tracking-tight">{{ entityTitle() }}</h1>
+						@if (hasVersioning() && entity()) {
+							<mcms-publish-controls
+								[collection]="collection().slug"
+								[documentId]="entityId()"
+								[documentLabel]="collectionLabelSingular()"
+								[initialStatus]="documentStatus()"
+								(statusChanged)="onStatusChanged($event)"
+							/>
+						}
+					</div>
 					<p class="mt-1 text-muted-foreground">
 						Viewing {{ collectionLabelSingular().toLowerCase() }} details
 					</p>
@@ -151,6 +166,17 @@ import type { EntityViewFieldConfig } from './entity-view.types';
 					</button>
 				</mcms-card-footer>
 			</mcms-card>
+
+			@if (hasVersioning() && entity() && showVersionHistory()) {
+				<div class="mt-8">
+					<mcms-version-history
+						[collection]="collection().slug"
+						[documentId]="entityId()"
+						[documentLabel]="collectionLabelSingular()"
+						(restored)="onVersionRestored()"
+					/>
+				</div>
+			}
 		</div>
 	`,
 })
@@ -178,8 +204,12 @@ export class EntityViewWidget<T extends Entity = Entity> {
 	/** Additional actions to show */
 	readonly actions = input<EntityAction[]>([]);
 
+	/** Whether to show version history (only shown if versioning is enabled) */
+	readonly showVersionHistory = input(true);
+
 	/** Outputs */
 	readonly edit = output<T>();
+	readonly statusChanged = output<DocumentStatus>();
 	readonly delete_ = output<T>();
 	readonly actionClick = output<{ action: EntityAction; entity: T }>();
 
@@ -262,6 +292,21 @@ export class EntityViewWidget<T extends Entity = Entity> {
 	/** Whether user can delete */
 	readonly canDelete = computed(() => {
 		return this.collectionAccess.canDelete(this.collection().slug);
+	});
+
+	/** Whether collection has versioning enabled */
+	readonly hasVersioning = computed(() => {
+		const col = this.collection();
+		return !!col.versions;
+	});
+
+	/** Current document status (from entity or default to 'draft') */
+	readonly documentStatus = computed((): DocumentStatus => {
+		const e = this.entity();
+		if (!e) return 'draft';
+		const status = e['_status'];
+		if (status === 'published') return 'published';
+		return 'draft';
 	});
 
 	constructor() {
@@ -397,5 +442,25 @@ export class EntityViewWidget<T extends Entity = Entity> {
 	 */
 	navigateBack(): void {
 		this.router.navigate([this.collectionListPath()]);
+	}
+
+	/**
+	 * Handle status change from publish controls.
+	 */
+	onStatusChanged(status: DocumentStatus): void {
+		// Update the entity's status in the local state
+		const e = this.entity();
+		if (e) {
+			this.entity.set({ ...e, _status: status });
+		}
+		this.statusChanged.emit(status);
+	}
+
+	/**
+	 * Handle version restoration.
+	 */
+	onVersionRestored(): void {
+		// Reload the entity to get the restored data
+		this.loadEntity(this.collection().slug, this.entityId());
 	}
 }

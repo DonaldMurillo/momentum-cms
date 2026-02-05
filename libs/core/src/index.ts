@@ -19,3 +19,6 @@ export * from './lib/config';
 
 // Seeding
 export * from './lib/seeding';
+
+// Versions
+export * from './lib/versions';
