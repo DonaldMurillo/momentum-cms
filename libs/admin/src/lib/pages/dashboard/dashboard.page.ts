@@ -33,6 +33,7 @@ import { CollectionCardWidget } from '../../widgets/collection-card/collection-c
 					>
 						<div class="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
 							<svg
+								aria-hidden="true"
 								class="w-8 h-8 text-muted-foreground"
 								fill="none"
 								viewBox="0 0 24 24"

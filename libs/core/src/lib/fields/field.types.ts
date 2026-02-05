@@ -82,7 +82,13 @@ export type FieldType =
 	| 'blocks'
 	| 'json'
 	| 'point'
-	| 'slug';
+	| 'slug'
+	| 'tabs'
+	| 'collapsible'
+	| 'row';
+
+/** Layout field types that organize form fields visually but don't store data */
+export const LAYOUT_FIELD_TYPES: ReadonlySet<FieldType> = new Set(['tabs', 'collapsible', 'row']);
 
 // Base field interface
 export interface BaseField {
@@ -237,6 +243,37 @@ export interface SlugField extends BaseField {
 	from: string; // Field to generate slug from
 }
 
+// ============================================
+// Layout Fields (visual organization, no data storage)
+// ============================================
+
+/** Tab definition within a tabs layout field */
+export interface TabConfig {
+	label: string;
+	description?: string;
+	fields: Field[];
+}
+
+/** Tabs layout field - organizes fields into tabbed sections */
+export interface TabsField extends BaseField {
+	type: 'tabs';
+	tabs: TabConfig[];
+}
+
+/** Collapsible layout field - wraps fields in an expandable section */
+export interface CollapsibleField extends BaseField {
+	type: 'collapsible';
+	fields: Field[];
+	/** Whether the section starts expanded (default: false) */
+	defaultOpen?: boolean;
+}
+
+/** Row layout field - displays child fields in a horizontal row */
+export interface RowField extends BaseField {
+	type: 'row';
+	fields: Field[];
+}
+
 // Union type of all fields
 export type Field =
 	| TextField
@@ -256,4 +293,33 @@ export type Field =
 	| BlocksField
 	| JSONField
 	| PointField
-	| SlugField;
+	| SlugField
+	| TabsField
+	| CollapsibleField
+	| RowField;
+
+/** Check if a field type is a layout type (no data storage) */
+export function isLayoutField(field: Field): field is TabsField | CollapsibleField | RowField {
+	return LAYOUT_FIELD_TYPES.has(field.type);
+}
+
+/**
+ * Extracts all data fields from a field list, flattening through layout fields.
+ * Layout fields (tabs, collapsible, row) are containers that don't store data;
+ * their child data fields are stored at the same level as sibling fields.
+ */
+export function flattenDataFields(fields: Field[]): Field[] {
+	const result: Field[] = [];
+	for (const field of fields) {
+		if (field.type === 'tabs') {
+			for (const tab of field.tabs) {
+				result.push(...flattenDataFields(tab.fields));
+			}
+		} else if (field.type === 'collapsible' || field.type === 'row') {
+			result.push(...flattenDataFields(field.fields));
+		} else {
+			result.push(field);
+		}
+	}
+	return result;
+}

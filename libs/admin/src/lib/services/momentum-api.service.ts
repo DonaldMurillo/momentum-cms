@@ -55,8 +55,6 @@ export interface UserContext {
  */
 export interface MomentumAPIContext {
 	user?: UserContext;
-	locale?: string;
-	fallbackLocale?: string;
 	depth?: number;
 	showHiddenFields?: boolean;
 }

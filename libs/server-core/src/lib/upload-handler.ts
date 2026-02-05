@@ -167,9 +167,8 @@ export async function handleUpload(
 		// Store file using the storage adapter
 		const storedFile: StoredFile = await adapter.upload(file);
 
-		// Create media document in the database
-		const api = getMomentumAPI().setContext({ user });
-		const mediaData = {
+		// Build media data
+		const mediaData: Record<string, unknown> = {
 			filename: file.originalName,
 			mimeType: file.mimeType,
 			filesize: file.size,
@@ -178,6 +177,8 @@ export async function handleUpload(
 			alt: alt ?? '',
 		};
 
+		// Create media document in the database
+		const api = getMomentumAPI().setContext({ user });
 		const doc = await api.collection<MediaDocument>(collection).create(mediaData);
 
 		return {

@@ -88,7 +88,7 @@ test.describe('Admin Sidebar Navigation', () => {
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		// Dashboard link in sidebar navigation (not breadcrumbs)
-		const sidebar = authenticatedPage.getByLabel('Sidebar navigation');
+		const sidebar = authenticatedPage.getByLabel('Main navigation');
 		const dashboardLink = sidebar.getByRole('link', { name: 'Dashboard' });
 		await expect(dashboardLink).toBeVisible();
 	});
@@ -98,7 +98,7 @@ test.describe('Admin Sidebar Navigation', () => {
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		// Use sidebar label to avoid conflicts with breadcrumbs
-		const sidebar = authenticatedPage.getByLabel('Sidebar navigation');
+		const sidebar = authenticatedPage.getByLabel('Main navigation');
 
 		// Seeding test app collections: Categories, Articles, Users
 		const categoriesLink = sidebar.getByRole('link', { name: 'Categories' });
@@ -116,7 +116,7 @@ test.describe('Admin Sidebar Navigation', () => {
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		// Use sidebar label to avoid conflicts with breadcrumbs
-		const sidebar = authenticatedPage.getByLabel('Sidebar navigation');
+		const sidebar = authenticatedPage.getByLabel('Main navigation');
 
 		// Click Articles in sidebar
 		await sidebar.getByRole('link', { name: 'Articles' }).click();
@@ -124,7 +124,7 @@ test.describe('Admin Sidebar Navigation', () => {
 
 		// Click Dashboard in sidebar (re-query navigation after page change)
 		const dashboardLink = authenticatedPage
-			.getByLabel('Sidebar navigation')
+			.getByLabel('Main navigation')
 			.getByRole('link', { name: 'Dashboard' });
 		// Ensure link is visible and stable before clicking
 		await expect(dashboardLink).toBeVisible();
@@ -140,7 +140,7 @@ test.describe('Admin Sidebar Navigation', () => {
 
 		// Click Users in sidebar
 		await authenticatedPage
-			.getByLabel('Sidebar navigation')
+			.getByLabel('Main navigation')
 			.getByRole('link', { name: 'Users' })
 			.click();
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users/, { timeout: 10000 });

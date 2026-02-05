@@ -1,36 +1,55 @@
 import { test as base, expect, type Page, type BrowserContext } from '@playwright/test';
-import * as path from 'path';
 import * as fs from 'fs';
-import { waitForAuthState, TEST_CREDENTIALS } from './e2e-utils';
+import {
+	waitForAuthState,
+	getAuthFilePath,
+	TEST_CREDENTIALS,
+	TEST_EDITOR_CREDENTIALS,
+	TEST_VIEWER_CREDENTIALS,
+	TEST_AUTHOR1_CREDENTIALS,
+	TEST_AUTHOR2_CREDENTIALS,
+	TEST_AUTHOR3_CREDENTIALS,
+	type TestUserCredentials,
+} from './e2e-utils';
 
 /**
- * Authentication Test Fixture
+ * Authentication Test Fixtures
  *
- * Provides an authenticatedPage fixture that ensures the user is logged in.
+ * Provides per-role fixtures that ensure the correct user is logged in.
  * Loads stored auth state from global setup, and falls back to logging in
  * if the session is invalid.
  */
 
-// Auth file path - matches the path used in global-setup.ts
-const AUTH_FILE = path.join(__dirname, '..', '..', 'playwright/.auth/user.json');
-
-export const test = base.extend<{ authenticatedPage: Page }>({
-	authenticatedPage: async ({ browser }, use) => {
+/**
+ * Create an authenticated page fixture for a given set of credentials.
+ * Loads stored auth state if available, falls back to API sign-in.
+ */
+function createAuthPageFixture(
+	credentials: TestUserCredentials,
+): (
+	args: { browser: import('@playwright/test').Browser },
+	use: (page: Page) => Promise<void>,
+) => Promise<void> {
+	return async ({ browser }, use) => {
+		const label = `[Auth:${credentials.role}]`;
 		// eslint-disable-next-line no-console
-		console.log('[Auth Fixture] Starting...');
+		console.log(`${label} Starting fixture for ${credentials.email}...`);
+
+		const authFile = getAuthFilePath(credentials.email);
 
 		// Try to load storage state if it exists
 		let storageState: string | undefined;
-		if (fs.existsSync(AUTH_FILE)) {
+		if (fs.existsSync(authFile)) {
 			try {
-				const content = JSON.parse(fs.readFileSync(AUTH_FILE, 'utf-8'));
+				const content = JSON.parse(fs.readFileSync(authFile, 'utf-8'));
 				if (content.cookies && content.cookies.length > 0) {
-					storageState = AUTH_FILE;
+					storageState = authFile;
 					// eslint-disable-next-line no-console
-					console.log(`[Auth Fixture] Found ${content.cookies.length} cookies in storage`);
+					console.log(`${label} Found ${content.cookies.length} cookies in storage`);
 				}
-			} catch {
-				// Failed to read auth file
+			} catch (err) {
+				// eslint-disable-next-line no-console
+				console.warn(`${label} Failed to parse auth file ${authFile}:`, err);
 			}
 		}
 
@@ -42,7 +61,7 @@ export const test = base.extend<{ authenticatedPage: Page }>({
 		const page = await context.newPage();
 
 		// eslint-disable-next-line no-console
-		console.log('[Auth Fixture] Navigating to /admin...');
+		console.log(`${label} Navigating to /admin...`);
 
 		// Navigate to admin
 		await page.goto('/admin');
@@ -50,52 +69,88 @@ export const test = base.extend<{ authenticatedPage: Page }>({
 		// Wait for auth state to settle after client-side hydration
 		const authState = await waitForAuthState(page);
 		// eslint-disable-next-line no-console
-		console.log(`[Auth Fixture] Auth state: ${authState}`);
+		console.log(`${label} Auth state: ${authState}`);
 
-		// If on login page, the session is invalid - log in
+		// If on login page, the session is invalid - log in via API
 		if (authState === 'login') {
 			// eslint-disable-next-line no-console
-			console.log('[Auth Fixture] On login page, logging in...');
+			console.log(`${label} On login page, signing in via API...`);
 
-			await page.getByLabel(/email/i).fill(TEST_CREDENTIALS.email);
-			await page.getByLabel(/password/i).fill(TEST_CREDENTIALS.password);
-			await page.getByRole('button', { name: /sign in|login/i }).click();
+			const signInResponse = await context.request.post('/api/auth/sign-in/email', {
+				headers: { 'Content-Type': 'application/json' },
+				data: {
+					email: credentials.email,
+					password: credentials.password,
+				},
+			});
 
-			// eslint-disable-next-line no-console
-			console.log('[Auth Fixture] Submitted login form, waiting for redirect...');
-
-			// Wait for auth state to become authenticated
-			const postLoginState = await waitForAuthState(page);
-			// eslint-disable-next-line no-console
-			console.log(`[Auth Fixture] Post-login state: ${postLoginState}`);
-
-			if (postLoginState !== 'authenticated') {
-				throw new Error(`[Auth Fixture] Login failed. State: ${postLoginState}`);
+			if (!signInResponse.ok()) {
+				throw new Error(
+					`${label} Sign-in failed: ${signInResponse.status()} ${await signInResponse.text()}`,
+				);
 			}
 
-			// Save the new session cookies to the auth file for reuse
-			await context.storageState({ path: AUTH_FILE });
+			// Refresh to load with new session
+			await page.goto('/admin');
+			await page.waitForLoadState('networkidle');
+
+			const postLoginState = await waitForAuthState(page);
 			// eslint-disable-next-line no-console
-			console.log('[Auth Fixture] Saved new session to storage file');
+			console.log(`${label} Post-login state: ${postLoginState}`);
+
+			if (postLoginState !== 'authenticated') {
+				throw new Error(`${label} Login failed. State: ${postLoginState}`);
+			}
+
+			// Save updated session
+			await context.storageState({ path: authFile });
+			// eslint-disable-next-line no-console
+			console.log(`${label} Saved new session to storage file`);
 		} else if (authState === 'setup') {
-			// No users exist - this shouldn't happen if global setup ran
 			throw new Error(
-				'[Auth Fixture] Unexpected: no users exist. Run tests with global setup enabled.',
+				`${label} Unexpected: no users exist. Run tests with global setup enabled.`,
 			);
 		} else {
 			// eslint-disable-next-line no-console
-			console.log('[Auth Fixture] Already authenticated');
+			console.log(`${label} Already authenticated`);
 		}
 
 		// eslint-disable-next-line no-console
-		console.log('[Auth Fixture] Passing authenticated page to test');
+		console.log(`${label} Passing authenticated page to test`);
 
 		await use(page);
 
 		// Clean up
 		await context.close();
-	},
+	};
+}
+
+/**
+ * Extended test fixtures with per-role authenticated pages.
+ * Each fixture creates a browser context logged in as the specified role.
+ */
+export const test = base.extend<{
+	authenticatedPage: Page;
+	editorPage: Page;
+	viewerPage: Page;
+	author1Page: Page;
+	author2Page: Page;
+	author3Page: Page;
+}>({
+	authenticatedPage: createAuthPageFixture(TEST_CREDENTIALS),
+	editorPage: createAuthPageFixture(TEST_EDITOR_CREDENTIALS),
+	viewerPage: createAuthPageFixture(TEST_VIEWER_CREDENTIALS),
+	author1Page: createAuthPageFixture(TEST_AUTHOR1_CREDENTIALS),
+	author2Page: createAuthPageFixture(TEST_AUTHOR2_CREDENTIALS),
+	author3Page: createAuthPageFixture(TEST_AUTHOR3_CREDENTIALS),
 });
 
 export { expect };
-export { TEST_CREDENTIALS };
+export {
+	TEST_CREDENTIALS,
+	TEST_EDITOR_CREDENTIALS,
+	TEST_VIEWER_CREDENTIALS,
+	TEST_AUTHOR1_CREDENTIALS,
+	TEST_AUTHOR2_CREDENTIALS,
+	TEST_AUTHOR3_CREDENTIALS,
+};

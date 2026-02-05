@@ -1,4 +1,4 @@
-import { defineCollection, text, textarea, relationship, allowAll } from '@momentum-cms/core';
+import { defineCollection, text, richText, relationship, allowAll } from '@momentum-cms/core';
 import { Categories } from './categories.collection';
 
 /**
@@ -14,7 +14,7 @@ export const Articles = defineCollection({
 	},
 	fields: [
 		text('title', { required: true, label: 'Title' }),
-		textarea('content', { label: 'Content' }),
+		richText('content', { label: 'Content' }),
 		relationship('category', {
 			label: 'Category',
 			collection: () => Categories,

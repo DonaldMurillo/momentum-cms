@@ -82,7 +82,7 @@ import { McmsThemeService } from '../../ui/theme/theme.service';
 			<div mcmsSidebarHeader>
 				<div class="flex items-center gap-3">
 					@if (branding()?.logo) {
-						<img [src]="branding()!.logo" alt="Logo" class="h-8 w-8" />
+						<img [src]="branding()!.logo" [alt]="(branding()?.title || 'Momentum CMS') + ' logo'" class="h-8 w-8" />
 					} @else {
 						<!-- Default logo icon -->
 						<div
@@ -104,7 +104,7 @@ import { McmsThemeService } from '../../ui/theme/theme.service';
 
 			<!-- Navigation -->
 			<div mcmsSidebarContent>
-				<mcms-sidebar-nav>
+				<mcms-sidebar-nav ariaLabel="Main navigation">
 					<!-- Dashboard -->
 					<mcms-sidebar-nav-item
 						label="Dashboard"
@@ -137,6 +137,8 @@ import { McmsThemeService } from '../../ui/theme/theme.service';
 						[mcmsDropdownTrigger]="userMenu"
 						dropdownSide="top"
 						dropdownAlign="start"
+						aria-haspopup="menu"
+						[attr.aria-label]="'User menu for ' + u.name"
 					>
 						<mcms-avatar size="sm">
 							<mcms-avatar-fallback [delayMs]="0">

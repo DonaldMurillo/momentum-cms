@@ -114,6 +114,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 					[value]="searchQuery()"
 					(valueChange)="onSearchChange($event)"
 					class="flex-1"
+					aria-label="Search media files"
 				/>
 				@if (selectedItems().size > 0) {
 					<div class="flex items-center gap-2">
@@ -146,7 +147,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 								/>
 								<div class="min-w-0 flex-1">
 									<p class="truncate text-sm">{{ upload.file.name }}</p>
-									<div class="mt-1 h-2 overflow-hidden rounded-full bg-mcms-muted">
+									<div class="mt-1 h-2 overflow-hidden rounded-full bg-mcms-muted" role="progressbar" [attr.aria-valuenow]="upload.progress" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="'Uploading ' + upload.file.name">
 										<div
 											class="h-full bg-mcms-primary transition-all"
 											[style.width.%]="upload.progress"
@@ -169,7 +170,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 				</div>
 			} @else if (mediaItems().length === 0) {
 				<div class="flex h-64 flex-col items-center justify-center text-mcms-muted-foreground">
-					<ng-icon [name]="uploadIcon" class="mb-4 h-16 w-16 opacity-50" />
+					<ng-icon [name]="uploadIcon" class="mb-4 h-16 w-16 opacity-50" aria-hidden="true" />
 					@if (searchQuery()) {
 						<p class="text-lg">No media found</p>
 						<p class="text-sm">Try a different search term</p>
@@ -196,6 +197,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 									class="h-4 w-4 cursor-pointer rounded border-mcms-border"
 									[checked]="selectedItems().has(media.id)"
 									(change)="toggleSelection(media)"
+									[attr.aria-label]="'Select ' + media.filename"
 								/>
 							</div>
 
@@ -204,6 +206,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 								type="button"
 								class="block aspect-square w-full"
 								(click)="viewMedia(media)"
+								[attr.aria-label]="'View ' + media.filename"
 							>
 								<mcms-media-preview
 									[media]="media"
@@ -230,8 +233,9 @@ function getInputElement(event: Event): HTMLInputElement | null {
 										size="sm"
 										type="button"
 										(click)="$event.stopPropagation(); viewMedia(media)"
+										aria-label="View file"
 									>
-										<ng-icon [name]="eyeIcon" class="h-3 w-3" />
+										<ng-icon [name]="eyeIcon" class="h-3 w-3" aria-hidden="true" />
 									</button>
 									<a
 										mcms-button
@@ -241,8 +245,9 @@ function getInputElement(event: Event): HTMLInputElement | null {
 										target="_blank"
 										download
 										(click)="$event.stopPropagation()"
+										aria-label="Download file"
 									>
-										<ng-icon [name]="downloadIcon" class="h-3 w-3" />
+										<ng-icon [name]="downloadIcon" class="h-3 w-3" aria-hidden="true" />
 									</a>
 									<button
 										mcms-button
@@ -250,8 +255,9 @@ function getInputElement(event: Event): HTMLInputElement | null {
 										size="sm"
 										type="button"
 										(click)="$event.stopPropagation(); deleteMedia(media)"
+										aria-label="Delete file"
 									>
-										<ng-icon [name]="trashIcon" class="h-3 w-3" />
+										<ng-icon [name]="trashIcon" class="h-3 w-3" aria-hidden="true" />
 									</button>
 								</div>
 							</div>

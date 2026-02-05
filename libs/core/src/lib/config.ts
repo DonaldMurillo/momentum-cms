@@ -102,6 +102,55 @@ export interface DatabaseAdapter {
 	 * @param status - The new status
 	 */
 	updateStatus?(collection: string, id: string, status: DocumentStatus): Promise<void>;
+
+	/**
+	 * Set or clear the scheduled publish date on a document.
+	 * @param collection - The collection slug
+	 * @param id - The document ID
+	 * @param publishAt - ISO date string for scheduled publish, or null to cancel
+	 */
+	setScheduledPublishAt?(
+		collection: string,
+		id: string,
+		publishAt: string | null,
+	): Promise<void>;
+
+	/**
+	 * Find all documents scheduled for publishing at or before the given date.
+	 * @param collection - The collection slug
+	 * @param before - ISO date string; returns docs with scheduledPublishAt <= this value
+	 */
+	findScheduledDocuments?(
+		collection: string,
+		before: string,
+	): Promise<Array<{ id: string; scheduledPublishAt: string }>>;
+
+	/**
+	 * Full-text search across specified fields.
+	 * Uses PostgreSQL tsvector/tsquery for efficient text search.
+	 *
+	 * @param collection - The collection slug
+	 * @param query - The search query string
+	 * @param fields - Field names to search in
+	 * @param options - Pagination options
+	 * @returns Array of matching documents sorted by relevance
+	 */
+	search?(
+		collection: string,
+		query: string,
+		fields: string[],
+		options?: { limit?: number; page?: number },
+	): Promise<Record<string, unknown>[]>;
+
+	/**
+	 * Execute multiple operations within a database transaction.
+	 * All operations succeed or all are rolled back.
+	 *
+	 * @param callback - Async function receiving a transactional adapter.
+	 *   All adapter calls inside this callback share the same transaction.
+	 * @returns The value returned by the callback
+	 */
+	transaction?<T>(callback: (txAdapter: DatabaseAdapter) => Promise<T>): Promise<T>;
 }
 
 /**
@@ -307,3 +356,4 @@ export function getDbAdapter(config: MomentumConfig): DatabaseAdapter {
 export function getCollections(config: MomentumConfig): CollectionConfig[] {
 	return config.collections;
 }
+

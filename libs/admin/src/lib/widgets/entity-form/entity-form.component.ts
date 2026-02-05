@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import type { CollectionConfig, Field } from '@momentum-cms/core';
+import { flattenDataFields } from '@momentum-cms/core';
 import {
 	Card,
 	CardHeader,
@@ -36,6 +37,7 @@ import {
 	getValueAtPath,
 } from './entity-form.types';
 import { FieldRenderer } from './field-renderers/field-renderer.component';
+import { VersionHistoryWidget } from '../version-history/version-history.component';
 
 /**
  * Entity Form Widget
@@ -67,6 +69,7 @@ import { FieldRenderer } from './field-renderers/field-renderer.component';
 		Breadcrumbs,
 		BreadcrumbItem,
 		BreadcrumbSeparator,
+		VersionHistoryWidget,
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
@@ -86,24 +89,28 @@ import { FieldRenderer } from './field-renderers/field-renderer.component';
 
 			<!-- Page Header -->
 			<div class="mb-8">
-				<h1 class="text-2xl font-semibold tracking-tight">
-					@if (mode() === 'create') {
-						Create {{ collectionLabelSingular() }}
-					} @else if (mode() === 'edit') {
-						Edit {{ collectionLabelSingular() }}
-					} @else {
-						View {{ collectionLabelSingular() }}
-					}
-				</h1>
-				<p class="mt-1 text-muted-foreground">
-					@if (mode() === 'create') {
-						Add a new {{ collectionLabelSingular().toLowerCase() }} to your collection.
-					} @else if (mode() === 'edit') {
-						Update the {{ collectionLabelSingular().toLowerCase() }} details below.
-					} @else {
-						Viewing {{ collectionLabelSingular().toLowerCase() }} details.
-					}
-				</p>
+				<div class="flex items-start justify-between gap-4">
+					<div>
+						<h1 class="text-2xl font-semibold tracking-tight">
+							@if (mode() === 'create') {
+								Create {{ collectionLabelSingular() }}
+							} @else if (mode() === 'edit') {
+								Edit {{ collectionLabelSingular() }}
+							} @else {
+								View {{ collectionLabelSingular() }}
+							}
+						</h1>
+						<p class="mt-1 text-muted-foreground">
+							@if (mode() === 'create') {
+								Add a new {{ collectionLabelSingular().toLowerCase() }} to your collection.
+							} @else if (mode() === 'edit') {
+								Update the {{ collectionLabelSingular().toLowerCase() }} details below.
+							} @else {
+								Viewing {{ collectionLabelSingular().toLowerCase() }} details.
+							}
+						</p>
+					</div>
+				</div>
 			</div>
 
 			<mcms-card>
@@ -114,7 +121,7 @@ import { FieldRenderer } from './field-renderers/field-renderer.component';
 						</div>
 					} @else {
 						@if (formError()) {
-							<mcms-alert variant="destructive" class="mb-6">
+							<mcms-alert variant="destructive" class="mb-6" role="alert" aria-live="assertive">
 								{{ formError() }}
 							</mcms-alert>
 						}
@@ -177,6 +184,17 @@ import { FieldRenderer } from './field-renderers/field-renderer.component';
 					}
 				</mcms-card-footer>
 			</mcms-card>
+
+			@if (hasVersioning() && mode() === 'edit' && entityId()) {
+				<div class="mt-8">
+					<mcms-version-history
+						[collection]="collection().slug"
+						[documentId]="entityId()!"
+						[documentLabel]="collectionLabelSingular()"
+						(restored)="onVersionRestored()"
+					/>
+				</div>
+			}
 		</div>
 	`,
 })
@@ -273,11 +291,12 @@ export class EntityFormWidget<T extends Entity = Entity> {
 
 	/** Whether form can be submitted */
 	readonly canSubmit = computed(() => {
-		// Check required fields have values
+		// Check required fields have values (flatten through layout fields)
 		const data = this.formData();
 		const col = this.collection();
+		const dataFields = flattenDataFields(col.fields);
 
-		for (const field of col.fields) {
+		for (const field of dataFields) {
 			if (field.required) {
 				const value = getValueAtPath(data, field.name);
 				if (value === null || value === undefined || value === '') {
@@ -433,6 +452,16 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	 */
 	switchToEdit(): void {
 		this.modeChange.emit('edit');
+	}
+
+	/**
+	 * Handle version restore - reload the entity data.
+	 */
+	onVersionRestored(): void {
+		const id = this.entityId();
+		if (id) {
+			this.loadEntity(this.collection().slug, id);
+		}
 	}
 
 	/**

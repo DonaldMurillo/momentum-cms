@@ -38,18 +38,27 @@ export interface MailpitMessageDetail {
 
 /**
  * Check if Mailpit is running and accessible.
+ * Returns true if Mailpit is reachable, false otherwise.
  */
-export async function checkMailpitHealth(): Promise<void> {
+export async function isMailpitAvailable(): Promise<boolean> {
 	try {
 		const response = await fetch(`${MAILPIT_API}/messages`);
-		if (!response.ok) {
-			throw new Error(`Mailpit returned ${response.status}`);
-		}
-	} catch (err) {
+		return response.ok;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Check if Mailpit is running and accessible.
+ * Throws an error if Mailpit is not available.
+ */
+export async function checkMailpitHealth(): Promise<void> {
+	const available = await isMailpitAvailable();
+	if (!available) {
 		throw new Error(
 			`Mailpit is not running at ${MAILPIT_API}. ` +
-				`Start it with: docker run -d -p 8025:8025 -p 1025:1025 axllent/mailpit\n` +
-				`Error: ${err}`,
+				`Start it with: docker run -d -p 8025:8025 -p 1025:1025 axllent/mailpit`,
 		);
 	}
 }
@@ -112,6 +121,26 @@ export async function waitForEmail(
 	throw new Error(
 		`Timeout waiting for email to ${toEmail} with subject containing "${subjectContains}"`,
 	);
+}
+
+/**
+ * Extract email verification URL from email body.
+ * Better Auth generates URLs like: {baseURL}/api/auth/verify-email?token=xxx&callbackURL=...
+ */
+export function extractVerificationUrl(htmlBody: string): string | null {
+	// Look for verify-email URL in the HTML href
+	const match = htmlBody.match(/href="([^"]*verify-email[^"]*)"/);
+	if (match) {
+		return match[1];
+	}
+
+	// Fallback: look for plain text URL
+	const textMatch = htmlBody.match(/(https?:\/\/[^\s<>"]*verify-email[^\s<>"]*)/);
+	if (textMatch) {
+		return textMatch[1];
+	}
+
+	return null;
 }
 
 /**

@@ -65,6 +65,41 @@ export {
 	type CreateSeedTrackingData,
 } from './lib/seeding';
 
+// Webhooks
+export { registerWebhookHooks } from './lib/webhooks';
+
+// Publish Scheduler
+export {
+	startPublishScheduler,
+	type PublishSchedulerOptions,
+	type PublishSchedulerHandle,
+} from './lib/publish-scheduler';
+
+// GraphQL
+export { buildGraphQLSchema, type GraphQLContext } from './lib/graphql-schema';
+export {
+	executeGraphQL,
+	type GraphQLRequestBody,
+	type GraphQLResult,
+} from './lib/graphql-handler';
+export { GraphQLJSON } from './lib/graphql-scalars';
+
+// API Keys
+export {
+	generateApiKey,
+	hashApiKey,
+	getKeyPrefix,
+	isValidApiKeyFormat,
+	generateApiKeyId,
+	createPostgresApiKeyStore,
+	API_KEYS_TABLE_SQL_POSTGRES,
+	API_KEYS_TABLE_SQL_SQLITE,
+	type ApiKeyRecord,
+	type CreateApiKeyResult,
+	type CreateApiKeyOptions,
+	type ApiKeyStore,
+} from './lib/api-keys';
+
 // Upload Handler
 export {
 	handleUpload,
@@ -75,3 +110,30 @@ export {
 	type UploadResponse,
 	type UploadConfig,
 } from './lib/upload-handler';
+
+// OpenAPI
+export {
+	generateOpenAPISpec,
+	type OpenAPIDocument,
+	type OpenAPIGeneratorOptions,
+} from './lib/openapi-generator';
+
+// Preview Renderer
+export {
+	renderPreviewHTML,
+	type PreviewRenderOptions,
+} from './lib/preview-renderer';
+
+// Import/Export
+export {
+	exportToJson,
+	exportToCsv,
+	parseJsonImport,
+	parseCsvImport,
+	type ExportFormat,
+	type ExportOptions,
+	type ExportResult,
+	type ImportOptions,
+	type ImportResult,
+	type ImportError,
+} from './lib/import-export';
