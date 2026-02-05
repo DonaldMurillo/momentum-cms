@@ -1,3 +1,6 @@
+// Load environment variables from .env file
+import 'dotenv/config';
+
 import {
 	AngularNodeAppEngine,
 	createNodeRequestHandler,
@@ -43,10 +46,18 @@ const dbAdapter = momentumConfig.db.adapter as PostgresAdapterWithRaw;
 const pool = dbAdapter.getPool();
 
 // Create Better Auth instance with PostgreSQL
+// Email is enabled automatically if SMTP_HOST env var is set
+// Defaults to Mailpit settings (localhost:1025) for local development
 const auth = createMomentumAuth({
 	db: { type: 'postgres', pool },
 	baseURL: `http://localhost:${momentumConfig.server.port}`,
 	trustedOrigins: ['http://localhost:4200', `http://localhost:${momentumConfig.server.port}`],
+	email: {
+		// Email is auto-enabled when SMTP_HOST is set
+		// Configure via environment variables:
+		// SMTP_HOST=localhost SMTP_PORT=1025 SMTP_FROM=noreply@momentum.local
+		appName: 'Momentum CMS',
+	},
 });
 
 // Add user sync hooks to users collection

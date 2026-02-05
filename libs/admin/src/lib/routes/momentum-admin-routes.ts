@@ -68,7 +68,7 @@ export function momentumAdminRoutes(options: MomentumAdminOptions): Routes {
 
 	const routes: Routes = [];
 
-	// Auth routes (login, setup) - outside the admin shell
+	// Auth routes (login, setup, password reset) - outside the admin shell
 	if (includeAuthRoutes) {
 		routes.push(
 			// Login page - only for unauthenticated users
@@ -84,6 +84,20 @@ export function momentumAdminRoutes(options: MomentumAdminOptions): Routes {
 				loadComponent: (): Promise<Type<unknown>> =>
 					import('../pages/setup/setup.page').then((m) => m.SetupPage),
 				canActivate: [setupGuard],
+			},
+			// Forgot password page - only for unauthenticated users
+			{
+				path: `${basePath}/forgot-password`,
+				loadComponent: (): Promise<Type<unknown>> =>
+					import('../pages/forgot-password/forgot-password.page').then((m) => m.ForgotPasswordPage),
+				canActivate: [guestGuard],
+			},
+			// Reset password page - only for unauthenticated users
+			{
+				path: `${basePath}/reset-password`,
+				loadComponent: (): Promise<Type<unknown>> =>
+					import('../pages/reset-password/reset-password.page').then((m) => m.ResetPasswordPage),
+				canActivate: [guestGuard],
 			},
 		);
 	}

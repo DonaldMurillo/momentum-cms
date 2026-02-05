@@ -1,6 +1,6 @@
 import { defineMomentumConfig } from '@momentum-cms/core';
 import { postgresAdapter } from '@momentum-cms/db-drizzle';
-import { Categories, Articles } from './collections';
+import { Categories, Articles, Users } from './collections';
 
 /**
  * Document types for type-safe seeding
@@ -20,12 +20,17 @@ interface ArticleDoc {
 }
 
 /**
- * Momentum CMS Configuration for Seeding E2E Tests
+ * Momentum CMS Configuration for E2E Tests
  *
- * This app tests the seeding feature with:
- * - Default seeds via helpers
- * - Custom seed function with dependency resolution
- * - Relationship seeding between collections
+ * This app tests:
+ * - Seeding feature with default and custom seeds
+ * - Authentication with Better Auth
+ * - Password reset flow
+ * - Admin UI functionality
+ *
+ * Note: Admin users are created via the setup page flow (not seeded)
+ * because Better Auth handles password hashing internally.
+ * Collection data is seeded for consistent test state.
  */
 export default defineMomentumConfig({
 	db: {
@@ -35,7 +40,7 @@ export default defineMomentumConfig({
 				'postgresql://postgres:postgres@localhost:5434/momentum_seeding_test',
 		}),
 	},
-	collections: [Categories, Articles],
+	collections: [Categories, Articles, Users],
 	admin: {
 		basePath: '/admin',
 		branding: {
@@ -52,7 +57,7 @@ export default defineMomentumConfig({
 	},
 	seeding: {
 		defaults: ({ collection }) => [
-			// Test basic collection seeding
+			// Seed categories for testing
 			collection<CategoryDoc>('categories').create('cat-tech', {
 				name: 'Technology',
 				slug: 'technology',
@@ -61,30 +66,56 @@ export default defineMomentumConfig({
 				name: 'News',
 				slug: 'news',
 			}),
-			// Test seeding without relationship (will be linked in custom seed)
+			collection<CategoryDoc>('categories').create('cat-sports', {
+				name: 'Sports',
+				slug: 'sports',
+			}),
+			// Seed articles for testing
 			collection<ArticleDoc>('articles').create('article-welcome', {
 				title: 'Welcome Article',
-				content: 'This is a seeded welcome article.',
+				content: 'This is a seeded welcome article for E2E testing.',
 			}),
 		],
 		seed: async (ctx) => {
-			// Test getSeeded() dependency resolution
+			// Create articles with category relationships
 			const techCategory = await ctx.getSeeded<{ id: string } & CategoryDoc>('cat-tech');
+			const newsCategory = await ctx.getSeeded<{ id: string } & CategoryDoc>('cat-news');
 
 			if (techCategory) {
-				// Test seeding with relationship
 				await ctx.seed<ArticleDoc>({
 					seedId: 'article-tech-1',
 					collection: 'articles',
 					data: {
 						title: 'First Tech Article',
-						content: 'Article linked to tech category via custom seed function.',
+						content: 'Article about technology for E2E testing.',
+						category: techCategory.id,
+					},
+				});
+
+				await ctx.seed<ArticleDoc>({
+					seedId: 'article-tech-2',
+					collection: 'articles',
+					data: {
+						title: 'Second Tech Article',
+						content: 'Another tech article for testing pagination.',
 						category: techCategory.id,
 					},
 				});
 			}
 
-			ctx.log('Custom seeding complete');
+			if (newsCategory) {
+				await ctx.seed<ArticleDoc>({
+					seedId: 'article-news-1',
+					collection: 'articles',
+					data: {
+						title: 'Breaking News',
+						content: 'Important news article for testing.',
+						category: newsCategory.id,
+					},
+				});
+			}
+
+			ctx.log('Custom seeding complete - created category-linked articles');
 		},
 		options: {
 			runOnStart: 'always', // Always run for E2E testing

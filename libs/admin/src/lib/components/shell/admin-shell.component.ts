@@ -13,6 +13,7 @@ import { SidebarService, SidebarTrigger } from '@momentum-cms/ui';
 import { getCollectionsFromRouteData, getBrandingFromRouteData } from '../../utils/route-data';
 import { MomentumAuthService } from '../../services/auth.service';
 import { CollectionAccessService } from '../../services/collection-access.service';
+import { injectUser } from '../../utils/inject-user';
 import { AdminSidebarWidget } from '../../widgets/admin-sidebar/admin-sidebar.component';
 import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
 
@@ -94,9 +95,12 @@ export class AdminShellComponent implements OnInit {
 		};
 	});
 
+	/** SSR-aware user signal (reads from MOMENTUM_API_CONTEXT during SSR, auth service in browser) */
+	private readonly currentUser = injectUser();
+
 	/** User for sidebar */
 	readonly sidebarUser = computed((): AdminUser | null => {
-		const user = this.auth.user();
+		const user = this.currentUser();
 		if (!user) return null;
 		return {
 			id: user.id,
@@ -107,16 +111,13 @@ export class AdminShellComponent implements OnInit {
 	});
 
 	ngOnInit(): void {
-		// Only run on client side - SSR doesn't have access to auth cookies
+		// Keyboard shortcuts and auth service initialization only run in the browser.
+		// SSR user is provided via MOMENTUM_API_CONTEXT (used by injectUser above).
 		if (!isPlatformBrowser(this.platformId)) {
 			return;
 		}
 
-		// Setup keyboard shortcuts for sidebar (Cmd+B / Ctrl+B)
 		this.sidebar.setupKeyboardShortcuts();
-
-		// Initialize auth and check session on client-side hydration
-		// This is needed because guards don't re-run on hydration
 		this.initializeAuth();
 	}
 

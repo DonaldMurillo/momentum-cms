@@ -61,18 +61,17 @@ export default defineConfig({
 		timeout: 5000,
 	},
 
-	// Run production build before tests
+	// Run production server (nx builds the app as a dependency before running e2e)
 	webServer: {
-		command:
-			'npx nx build seeding-test-app --configuration=production && node dist/seeding-test-app/server/server.mjs',
-		url: 'http://localhost:4001',
+		command: 'node dist/seeding-test-app/server/server.mjs',
+		url: 'http://localhost:4001/api/health',
 		reuseExistingServer: !process.env['CI'],
 		cwd: workspaceRoot,
-		timeout: 180000,
+		timeout: 60000,
 	},
 
 	projects: [
-		// Basic seeding tests - run first
+		// Basic seeding tests - run first to verify data is seeded
 		{
 			name: 'seeding-basic',
 			testMatch: /seeding-basic\.spec\.ts$/,
@@ -92,12 +91,42 @@ export default defineConfig({
 			use: { ...devices['Desktop Chrome'] },
 			dependencies: ['seeding-idempotency'],
 		},
-		// Seed tracking table tests - run last
+		// Seed tracking table tests
 		{
 			name: 'seeding-tracking',
 			testMatch: /seeding-tracking\.spec\.ts$/,
 			use: { ...devices['Desktop Chrome'] },
 			dependencies: ['seeding-custom'],
+		},
+		// Auth tests - run after seeding tests, tests unauthenticated behavior
+		{
+			name: 'auth-tests',
+			testMatch: /auth\.spec\.ts$/,
+			use: {
+				...devices['Desktop Chrome'],
+				// No storage state - tests unauthenticated behavior
+			},
+			dependencies: ['seeding-tracking'],
+		},
+		// Authenticated tests - admin dashboard, collections
+		{
+			name: 'authenticated-tests',
+			testMatch: /(admin-dashboard|collection-list|collection-edit)\.spec\.ts$/,
+			use: {
+				...devices['Desktop Chrome'],
+			},
+			dependencies: ['auth-tests'],
+		},
+		// Password reset tests - require Mailpit running
+		// Run LAST because the full flow test changes the admin password
+		{
+			name: 'password-reset-tests',
+			testMatch: /password-reset\.spec\.ts$/,
+			use: {
+				...devices['Desktop Chrome'],
+				// No storage state - tests unauthenticated behavior
+			},
+			dependencies: ['authenticated-tests'],
 		},
 	],
 });

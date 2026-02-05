@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
 	Input,
 	Button,
@@ -21,6 +21,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 @Component({
 	selector: 'mcms-login-page',
 	imports: [
+		RouterLink,
 		Input,
 		Button,
 		FormField,
@@ -81,6 +82,12 @@ import { MomentumAuthService } from '../../services/auth.service';
 							[disabled]="isSubmitting()"
 						/>
 					</mcms-form-field>
+
+					<div class="flex justify-end">
+						<a routerLink="/admin/forgot-password" class="text-sm text-primary hover:underline">
+							Forgot your password?
+						</a>
+					</div>
 
 					<button
 						mcms-button
