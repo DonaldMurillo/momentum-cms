@@ -5,7 +5,16 @@
  * direct database access (server-side) and HTTP calls (browser-side).
  */
 
-import type { MomentumConfig, UserContext } from '@momentum-cms/core';
+import type {
+	MomentumConfig,
+	UserContext,
+	DocumentStatus,
+	DocumentVersionParsed,
+	VersionQueryResult,
+	VersionQueryOptions,
+	RestoreVersionOptions,
+	PublishOptions,
+} from '@momentum-cms/core';
 
 // ============================================
 // Context
@@ -130,6 +139,104 @@ export interface CollectionOperations<T = Record<string, unknown>> {
 	 * Count documents matching the query.
 	 */
 	count(where?: WhereClause): Promise<number>;
+
+	/**
+	 * Get version operations for this collection.
+	 * Returns null if versioning is not enabled for this collection.
+	 */
+	versions(): VersionOperations<T> | null;
+}
+
+// ============================================
+// Version Operations
+// ============================================
+
+/**
+ * Options for finding versions.
+ */
+export interface VersionFindOptions extends VersionQueryOptions {
+	/** Depth for relationship population in version data */
+	depth?: number;
+}
+
+/**
+ * Operations available for managing document versions.
+ * Only available for collections with versioning enabled.
+ */
+export interface VersionOperations<T = Record<string, unknown>> {
+	/**
+	 * Find all versions for a document.
+	 * Returns versions in descending order (newest first) by default.
+	 *
+	 * @param parentId - The document ID to get versions for
+	 * @param options - Query options for pagination and filtering
+	 */
+	findVersions(parentId: string, options?: VersionFindOptions): Promise<VersionQueryResult<T>>;
+
+	/**
+	 * Find a specific version by ID.
+	 *
+	 * @param versionId - The version ID to retrieve
+	 */
+	findVersionById(versionId: string): Promise<DocumentVersionParsed<T> | null>;
+
+	/**
+	 * Restore a document to a previous version.
+	 * Creates a new version with the restored data.
+	 *
+	 * @param options - Restore options including version ID
+	 * @returns The updated document
+	 */
+	restore(options: RestoreVersionOptions): Promise<T>;
+
+	/**
+	 * Publish a document (change status from draft to published).
+	 * Creates a new published version.
+	 *
+	 * @param docId - The document ID to publish
+	 * @param options - Publish options (e.g., scheduled publish)
+	 * @returns The published document
+	 */
+	publish(docId: string, options?: PublishOptions): Promise<T>;
+
+	/**
+	 * Unpublish a document (change status from published to draft).
+	 *
+	 * @param docId - The document ID to unpublish
+	 * @returns The unpublished document
+	 */
+	unpublish(docId: string): Promise<T>;
+
+	/**
+	 * Save a draft version without changing the main document.
+	 * Used for autosave functionality.
+	 *
+	 * @param docId - The document ID to save draft for
+	 * @param data - The draft data
+	 * @returns The created draft version
+	 */
+	saveDraft(docId: string, data: Partial<T>): Promise<DocumentVersionParsed<T>>;
+
+	/**
+	 * Get the current status of a document.
+	 *
+	 * @param docId - The document ID
+	 * @returns The document status ('draft' or 'published')
+	 */
+	getStatus(docId: string): Promise<DocumentStatus>;
+
+	/**
+	 * Compare two versions of a document.
+	 * Returns the differences between the versions.
+	 *
+	 * @param versionId1 - First version ID
+	 * @param versionId2 - Second version ID
+	 * @returns Object with field-level differences
+	 */
+	compare(
+		versionId1: string,
+		versionId2: string,
+	): Promise<{ field: string; oldValue: unknown; newValue: unknown }[]>;
 }
 
 // ============================================

@@ -2,13 +2,68 @@ import Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import type { DatabaseAdapter, CollectionConfig, Field } from '@momentum-cms/core';
+import type {
+	DatabaseAdapter,
+	CollectionConfig,
+	Field,
+	DocumentVersion,
+	DocumentStatus,
+	VersionQueryOptions,
+	VersionCountOptions,
+	CreateVersionOptions,
+} from '@momentum-cms/core';
 
 /**
  * Type guard to check if a value is a record object.
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null;
+}
+
+/**
+ * Type guard to check if a value is a valid DocumentStatus.
+ */
+function isDocumentStatus(value: unknown): value is DocumentStatus {
+	return value === 'draft' || value === 'published';
+}
+
+/**
+ * Safely get DocumentStatus from a row value.
+ */
+function getStatusFromRow(row: Record<string, unknown>): DocumentStatus {
+	const status = row['_status'];
+	if (isDocumentStatus(status)) {
+		return status;
+	}
+	return 'draft'; // Default fallback
+}
+
+/**
+ * Safely parse JSON to Record<string, unknown>.
+ */
+function parseJsonToRecord(jsonString: string): Record<string, unknown> {
+	try {
+		const parsed: unknown = JSON.parse(jsonString);
+		if (isRecord(parsed)) {
+			return parsed;
+		}
+		return {};
+	} catch {
+		return {};
+	}
+}
+
+/**
+ * Validates that a collection slug is safe for use in SQL.
+ * Prevents potential SQL injection via table names.
+ */
+function validateCollectionSlug(slug: string): void {
+	const validSlug = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
+	if (!validSlug.test(slug)) {
+		throw new Error(
+			`Invalid collection slug: "${slug}". Slugs must start with a letter or underscore and contain only alphanumeric characters, underscores, and hyphens.`,
+		);
+	}
 }
 
 /**
@@ -84,6 +139,11 @@ function createTableSql(collection: CollectionConfig): string {
 		'updatedAt TEXT NOT NULL',
 	];
 
+	// Add _status column for versioned collections with drafts enabled
+	if (hasVersionDrafts(collection)) {
+		columns.push('"_status" TEXT NOT NULL DEFAULT \'draft\'');
+	}
+
 	for (const field of collection.fields) {
 		const colType = getColumnType(field);
 		const notNull = field.required ? ' NOT NULL' : '';
@@ -91,6 +151,48 @@ function createTableSql(collection: CollectionConfig): string {
 	}
 
 	return `CREATE TABLE IF NOT EXISTS "${collection.slug}" (${columns.join(', ')})`;
+}
+
+/**
+ * Check if a collection has versioning with drafts enabled.
+ */
+function hasVersionDrafts(collection: CollectionConfig): boolean {
+	if (!collection.versions) {
+		return false;
+	}
+	if (collection.versions === true) {
+		return true; // versions: true implies drafts enabled
+	}
+	return !!collection.versions.drafts;
+}
+
+/**
+ * Creates the SQL for a collection's versions table.
+ * Returns null if versioning is not enabled for the collection.
+ */
+function createVersionTableSql(collection: CollectionConfig): string | null {
+	if (!collection.versions) {
+		return null;
+	}
+
+	const tableName = `${collection.slug}_versions`;
+	return `
+		CREATE TABLE IF NOT EXISTS "${tableName}" (
+			"id" TEXT PRIMARY KEY NOT NULL,
+			"parent" TEXT NOT NULL,
+			"version" TEXT NOT NULL,
+			"_status" TEXT NOT NULL DEFAULT 'draft',
+			"autosave" INTEGER NOT NULL DEFAULT 0,
+			"publishedAt" TEXT,
+			"createdAt" TEXT NOT NULL,
+			"updatedAt" TEXT NOT NULL,
+			FOREIGN KEY ("parent") REFERENCES "${collection.slug}"("id") ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS "idx_${tableName}_parent" ON "${tableName}"("parent");
+		CREATE INDEX IF NOT EXISTS "idx_${tableName}_status" ON "${tableName}"("_status");
+		CREATE INDEX IF NOT EXISTS "idx_${tableName}_createdAt" ON "${tableName}"("createdAt");
+	`;
 }
 
 /**
@@ -218,16 +320,23 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 
 		async initialize(collections: CollectionConfig[]): Promise<void> {
 			// Create Better Auth tables first
-			// Note: Using better-sqlite3's exec() method which is safe for SQL strings
+			// Note: Using better-sqlite3's method which is safe for SQL strings
 			sqlite.exec(AUTH_TABLES_SQL);
 
 			// Create seed tracking table for idempotent seeding
 			sqlite.exec(SEED_TRACKING_TABLE_SQL);
 
-			// Then create collection tables
+			// Then create collection tables and version tables
 			for (const collection of collections) {
+				// Create main collection table
 				const createSql = createTableSql(collection);
 				sqlite.exec(createSql);
+
+				// Create versions table for versioned collections
+				const versionTableSql = createVersionTableSql(collection);
+				if (versionTableSql) {
+					sqlite.exec(versionTableSql);
+				}
 			}
 		},
 
@@ -370,6 +479,270 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 			return writeQueue.enqueue(() => {
 				const result = sqlite.prepare(`DELETE FROM "${collection}" WHERE id = ?`).run(id);
 				return result.changes > 0;
+			});
+		},
+
+		// ============================================
+		// Version Operations
+		// ============================================
+
+		async createVersion(
+			collection: string,
+			parentId: string,
+			data: Record<string, unknown>,
+			options?: CreateVersionOptions,
+		): Promise<DocumentVersion> {
+			validateCollectionSlug(collection);
+			return writeQueue.enqueue(() => {
+				const id = randomUUID();
+				const now = new Date().toISOString();
+				const tableName = `${collection}_versions`;
+				const status: DocumentStatus = options?.status ?? 'draft';
+				const autosave = options?.autosave ? 1 : 0;
+
+				const doc: DocumentVersion = {
+					id,
+					parent: parentId,
+					version: JSON.stringify(data),
+					_status: status,
+					autosave: autosave === 1,
+					publishedAt: status === 'published' ? now : undefined,
+					createdAt: now,
+					updatedAt: now,
+				};
+
+				sqlite
+					.prepare(
+						`INSERT INTO "${tableName}" ("id", "parent", "version", "_status", "autosave", "publishedAt", "createdAt", "updatedAt")
+						 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+					)
+					.run(
+						doc.id,
+						doc.parent,
+						doc.version,
+						doc._status,
+						autosave,
+						doc.publishedAt ?? null,
+						doc.createdAt,
+						doc.updatedAt,
+					);
+
+				return doc;
+			});
+		},
+
+		async findVersions(
+			collection: string,
+			parentId: string,
+			options?: VersionQueryOptions,
+		): Promise<DocumentVersion[]> {
+			validateCollectionSlug(collection);
+			const tableName = `${collection}_versions`;
+			const limit = options?.limit ?? 10;
+			const page = options?.page ?? 1;
+			const offset = (page - 1) * limit;
+			const sortOrder = options?.sort === 'asc' ? 'ASC' : 'DESC';
+
+			// Build WHERE clauses
+			const whereClauses: string[] = ['"parent" = ?'];
+			const whereValues: unknown[] = [parentId];
+
+			if (!options?.includeAutosave) {
+				whereClauses.push('"autosave" = 0');
+			}
+
+			if (options?.status) {
+				whereClauses.push('"_status" = ?');
+				whereValues.push(options.status);
+			}
+
+			const whereClause = whereClauses.join(' AND ');
+
+			const sql = `SELECT * FROM "${tableName}" WHERE ${whereClause} ORDER BY "createdAt" ${sortOrder} LIMIT ? OFFSET ?`;
+			const rows = sqlite.prepare(sql).all(...whereValues, limit, offset);
+
+			return rows.filter(isRecord).map((row) => ({
+				id: String(row['id']),
+				parent: String(row['parent']),
+				version: String(row['version']),
+				_status: getStatusFromRow(row),
+				autosave: row['autosave'] === 1,
+				publishedAt: row['publishedAt'] ? String(row['publishedAt']) : undefined,
+				createdAt: String(row['createdAt']),
+				updatedAt: String(row['updatedAt']),
+			}));
+		},
+
+		async findVersionById(collection: string, versionId: string): Promise<DocumentVersion | null> {
+			validateCollectionSlug(collection);
+			const tableName = `${collection}_versions`;
+			const row: unknown = sqlite
+				.prepare(`SELECT * FROM "${tableName}" WHERE "id" = ?`)
+				.get(versionId);
+
+			if (!isRecord(row)) {
+				return null;
+			}
+
+			return {
+				id: String(row['id']),
+				parent: String(row['parent']),
+				version: String(row['version']),
+				_status: getStatusFromRow(row),
+				autosave: row['autosave'] === 1,
+				publishedAt: row['publishedAt'] ? String(row['publishedAt']) : undefined,
+				createdAt: String(row['createdAt']),
+				updatedAt: String(row['updatedAt']),
+			};
+		},
+
+		async restoreVersion(collection: string, versionId: string): Promise<Record<string, unknown>> {
+			validateCollectionSlug(collection);
+			return writeQueue.enqueue(() => {
+				const tableName = `${collection}_versions`;
+
+				// Get the version to restore
+				const versionRow: unknown = sqlite
+					.prepare(`SELECT * FROM "${tableName}" WHERE "id" = ?`)
+					.get(versionId);
+
+				if (!isRecord(versionRow)) {
+					throw new Error(`Version "${versionId}" not found in collection "${collection}"`);
+				}
+
+				const parentId = String(versionRow['parent']);
+				const versionData = parseJsonToRecord(String(versionRow['version']));
+				const originalStatus = getStatusFromRow(versionRow);
+				const now = new Date().toISOString();
+
+				// Update the main document with version data
+				const setClauses: string[] = [];
+				const values: unknown[] = [];
+
+				for (const [key, value] of Object.entries(versionData)) {
+					if (key === 'id' || key === 'createdAt') continue;
+					setClauses.push(`"${key}" = ?`);
+					if (value === undefined) {
+						values.push(null);
+					} else if (typeof value === 'boolean') {
+						values.push(value ? 1 : 0);
+					} else if (typeof value === 'object' && value !== null) {
+						values.push(JSON.stringify(value));
+					} else {
+						values.push(value);
+					}
+				}
+
+				setClauses.push('"updatedAt" = ?');
+				values.push(now);
+				values.push(parentId);
+
+				sqlite
+					.prepare(`UPDATE "${collection}" SET ${setClauses.join(', ')} WHERE "id" = ?`)
+					.run(...values);
+
+				// Create a new version preserving the original status
+				const newVersionId = randomUUID();
+				sqlite
+					.prepare(
+						`INSERT INTO "${tableName}" ("id", "parent", "version", "_status", "autosave", "createdAt", "updatedAt")
+						 VALUES (?, ?, ?, ?, 0, ?, ?)`,
+					)
+					.run(newVersionId, parentId, String(versionRow['version']), originalStatus, now, now);
+
+				// Return the updated document
+				const updated: unknown = sqlite
+					.prepare(`SELECT * FROM "${collection}" WHERE "id" = ?`)
+					.get(parentId);
+
+				if (!isRecord(updated)) {
+					throw new Error('Failed to fetch restored document');
+				}
+
+				return updated;
+			});
+		},
+
+		async deleteVersions(
+			collection: string,
+			parentId: string,
+			keepLatest?: number,
+		): Promise<number> {
+			validateCollectionSlug(collection);
+			return writeQueue.enqueue(() => {
+				const tableName = `${collection}_versions`;
+
+				if (keepLatest === undefined || keepLatest <= 0) {
+					// Delete all versions for this parent
+					const result = sqlite
+						.prepare(`DELETE FROM "${tableName}" WHERE "parent" = ?`)
+						.run(parentId);
+					return result.changes;
+				}
+
+				// Keep the latest N versions, delete the rest
+				// First, get the IDs to keep
+				const keepIds = sqlite
+					.prepare(
+						`SELECT "id" FROM "${tableName}" WHERE "parent" = ? ORDER BY "createdAt" DESC LIMIT ?`,
+					)
+					.all(parentId, keepLatest)
+					.filter(isRecord)
+					.map((row) => String(row['id']));
+
+				if (keepIds.length === 0) {
+					return 0;
+				}
+
+				const placeholders = keepIds.map(() => '?').join(', ');
+				const result = sqlite
+					.prepare(
+						`DELETE FROM "${tableName}" WHERE "parent" = ? AND "id" NOT IN (${placeholders})`,
+					)
+					.run(parentId, ...keepIds);
+
+				return result.changes;
+			});
+		},
+
+		async countVersions(
+			collection: string,
+			parentId: string,
+			options?: VersionCountOptions,
+		): Promise<number> {
+			validateCollectionSlug(collection);
+			const tableName = `${collection}_versions`;
+
+			const whereClauses: string[] = ['"parent" = ?'];
+			const whereValues: unknown[] = [parentId];
+
+			if (!options?.includeAutosave) {
+				whereClauses.push('"autosave" = 0');
+			}
+
+			if (options?.status) {
+				whereClauses.push('"_status" = ?');
+				whereValues.push(options.status);
+			}
+
+			const whereClause = whereClauses.join(' AND ');
+			const result = sqlite
+				.prepare(`SELECT COUNT(*) as count FROM "${tableName}" WHERE ${whereClause}`)
+				.get(...whereValues);
+
+			if (isRecord(result) && typeof result['count'] === 'number') {
+				return result['count'];
+			}
+			return 0;
+		},
+
+		async updateStatus(collection: string, id: string, status: DocumentStatus): Promise<void> {
+			validateCollectionSlug(collection);
+			return writeQueue.enqueue(() => {
+				const now = new Date().toISOString();
+				sqlite
+					.prepare(`UPDATE "${collection}" SET "_status" = ?, "updatedAt" = ? WHERE "id" = ?`)
+					.run(status, now, id);
 			});
 		},
 	};

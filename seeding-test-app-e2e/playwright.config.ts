@@ -98,6 +98,13 @@ export default defineConfig({
 			use: { ...devices['Desktop Chrome'] },
 			dependencies: ['seeding-custom'],
 		},
+		// Versioning tests - tests version/draft functionality
+		{
+			name: 'versioning',
+			testMatch: /versioning\.spec\.ts$/,
+			use: { ...devices['Desktop Chrome'] },
+			dependencies: ['seeding-tracking'],
+		},
 		// Auth tests - run after seeding tests, tests unauthenticated behavior
 		{
 			name: 'auth-tests',

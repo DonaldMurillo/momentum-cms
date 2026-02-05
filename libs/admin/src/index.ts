@@ -38,6 +38,21 @@ export {
 	type TypedFindByIdOptions,
 } from './lib/services/momentum-api.service';
 
+// Version Service
+export {
+	VersionService,
+	injectVersionService,
+	type DocumentStatus,
+	type VersionFindOptions,
+	type DocumentVersionParsed,
+	type VersionQueryResult,
+	type RestoreVersionOptions,
+	type RestoreResult,
+	type PublishResult,
+	type DraftSaveResult,
+	type StatusResult,
+} from './lib/services/version.service';
+
 // Guards
 export * from './lib/guards';
 
@@ -77,6 +92,8 @@ export { EntityListWidget } from './lib/widgets/entity-list/entity-list.componen
 export { EntityFormWidget } from './lib/widgets/entity-form/entity-form.component';
 export { EntityViewWidget } from './lib/widgets/entity-view/entity-view.component';
 export { FeedbackService } from './lib/widgets/feedback/feedback.service';
+export { VersionHistoryWidget } from './lib/widgets/version-history/version-history.component';
+export { PublishControlsWidget } from './lib/widgets/publish-controls/publish-controls.component';
 
 // Field Renderers (for custom forms)
 export { FieldRenderer } from './lib/widgets/entity-form/field-renderers/field-renderer.component';

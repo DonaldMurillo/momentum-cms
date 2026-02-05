@@ -30,7 +30,12 @@ export {
 	type DeleteResult,
 	type WhereClause,
 	type FieldValidationError,
+	type VersionOperations,
+	type VersionFindOptions,
 } from './lib/momentum-api';
+
+// Version Operations
+export { VersionOperationsImpl } from './lib/version-operations';
 
 // Collection Access
 export {
