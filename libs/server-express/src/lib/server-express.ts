@@ -71,7 +71,13 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	router.use((_req: Request, res: Response, next: NextFunction) => {
 		const corsConfig = config.server?.cors ?? {};
 		const origin = Array.isArray(corsConfig.origin) ? corsConfig.origin[0] : corsConfig.origin;
-		res.setHeader('Access-Control-Allow-Origin', origin ?? '*');
+		const allowOrigin = origin ?? '*';
+		if (allowOrigin === '*' && process.env['NODE_ENV'] === 'production') {
+			console.warn(
+				'[Momentum] CORS origin is set to "*" in production. Configure explicit origins via config.server.cors.origin.',
+			);
+		}
+		res.setHeader('Access-Control-Allow-Origin', allowOrigin);
 		res.setHeader(
 			'Access-Control-Allow-Methods',
 			corsConfig.methods?.join(', ') ?? 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
@@ -354,39 +360,52 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	});
 
 	// Route: POST /media/upload - Upload a file
-	router.post('/media/upload', upload.single('file'), async (req: Request, res: Response) => {
-		const uploadConfig = getUploadConfig(config);
-		if (!uploadConfig) {
-			res.status(500).json({ error: 'Storage not configured' });
-			return;
-		}
+	// Auth check runs BEFORE multer to reject unauthenticated requests before file processing
+	router.post(
+		'/media/upload',
+		(req: Request, res: Response, next: NextFunction) => {
+			const user = extractUserFromRequest(req);
+			if (!user) {
+				res.status(401).json({ error: 'Authentication required to upload files' });
+				return;
+			}
+			next();
+		},
+		upload.single('file'),
+		async (req: Request, res: Response) => {
+			const uploadConfig = getUploadConfig(config);
+			if (!uploadConfig) {
+				res.status(500).json({ error: 'Storage not configured' });
+				return;
+			}
 
-		const multerFile = req.file;
-		if (!multerFile) {
-			res.status(400).json({ error: 'No file provided' });
-			return;
-		}
+			const multerFile = req.file;
+			if (!multerFile) {
+				res.status(400).json({ error: 'No file provided' });
+				return;
+			}
 
-		// Convert multer file to UploadedFile
-		const file: UploadedFile = {
-			originalName: multerFile.originalname,
-			mimeType: multerFile.mimetype,
-			size: multerFile.size,
-			buffer: multerFile.buffer,
-		};
+			// Convert multer file to UploadedFile
+			const file: UploadedFile = {
+				originalName: multerFile.originalname,
+				mimeType: multerFile.mimetype,
+				size: multerFile.size,
+				buffer: multerFile.buffer,
+			};
 
-		// Get alt text from body if provided
-		const alt = typeof req.body?.alt === 'string' ? req.body.alt : undefined;
+			// Get alt text from body if provided
+			const alt = typeof req.body?.alt === 'string' ? req.body.alt : undefined;
 
-		const uploadRequest: UploadRequest = {
-			file,
-			user: extractUserFromRequest(req),
-			alt,
-		};
+			const uploadRequest: UploadRequest = {
+				file,
+				user: extractUserFromRequest(req),
+				alt,
+			};
 
-		const response = await handleUpload(uploadConfig, uploadRequest);
-		res.status(response.status).json(response);
-	});
+			const response = await handleUpload(uploadConfig, uploadRequest);
+			res.status(response.status).json(response);
+		},
+	);
 
 	// Route: GET /media/file/:path(*) - Serve uploaded files
 	router.get('/media/file/*', async (req: Request, res: Response) => {
@@ -397,9 +416,17 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		}
 
 		// Extract path from URL (everything after /media/file/)
-		const filePath = req.params[0];
-		if (!filePath) {
+		const rawPath = req.params[0];
+		if (!rawPath) {
 			res.status(400).json({ error: 'File path required' });
+			return;
+		}
+
+		// Sanitize path to prevent directory traversal
+		const { normalize, isAbsolute } = await import('node:path');
+		const filePath = normalize(rawPath).replace(/^(\.\.(\/|\\|$))+/, '');
+		if (isAbsolute(filePath) || filePath.includes('..')) {
+			res.status(403).json({ error: 'Invalid file path' });
 			return;
 		}
 

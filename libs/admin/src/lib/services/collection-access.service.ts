@@ -76,11 +76,29 @@ export class CollectionAccessService {
 			.map((p) => p.slug),
 	);
 
+	/** Tracks in-flight load to prevent duplicate requests */
+	private loadPromise: Promise<void> | null = null;
+
 	/**
 	 * Load collection permissions from the server.
 	 * Should be called when the user authenticates or on app init.
+	 * Safe to call concurrently from multiple guards.
 	 */
 	async loadAccess(): Promise<void> {
+		// Return existing promise if loading is already in progress
+		if (this.loadPromise) {
+			return this.loadPromise;
+		}
+
+		this.loadPromise = this.doLoadAccess();
+		try {
+			await this.loadPromise;
+		} finally {
+			this.loadPromise = null;
+		}
+	}
+
+	private async doLoadAccess(): Promise<void> {
 		this.loading.set(true);
 		this.error.set(null);
 

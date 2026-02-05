@@ -297,6 +297,7 @@ export function isOwner(ownerField = 'createdBy'): AccessFunction {
 	return ({ req, data }): boolean => {
 		if (!req.user?.id) return false;
 		const ownerId = data?.[ownerField];
+		if (ownerId === undefined || ownerId === null) return false;
 		return ownerId === req.user.id || String(ownerId) === String(req.user.id);
 	};
 }

@@ -1,4 +1,12 @@
-import { Component, ChangeDetectionStrategy, inject, signal, effect } from '@angular/core';
+import {
+	Component,
+	ChangeDetectionStrategy,
+	inject,
+	signal,
+	effect,
+	DestroyRef,
+} from '@angular/core';
+import { type Subscription } from 'rxjs';
 import { Button, Spinner, Pagination, SearchInput, Badge, ToastService } from '@momentum-cms/ui';
 import { NgIcon } from '@ng-icons/core';
 import {
@@ -270,6 +278,8 @@ export class MediaLibraryPage {
 	private readonly uploadService = inject(UploadService);
 	private readonly feedback = inject(FeedbackService);
 	private readonly toast = inject(ToastService);
+	private readonly destroyRef = inject(DestroyRef);
+	private readonly uploadSubscriptions: Subscription[] = [];
 
 	/** Icon references */
 	readonly uploadIcon = heroCloudArrowUp;
@@ -294,6 +304,14 @@ export class MediaLibraryPage {
 			const query = this.searchQuery();
 			const page = this.currentPage();
 			this.loadMedia(query, page);
+		});
+
+		// Clean up upload subscriptions on destroy
+		this.destroyRef.onDestroy(() => {
+			for (const sub of this.uploadSubscriptions) {
+				sub.unsubscribe();
+			}
+			this.uploadSubscriptions.length = 0;
 		});
 	}
 
@@ -369,7 +387,7 @@ export class MediaLibraryPage {
 
 		// Upload each file
 		for (const file of Array.from(files)) {
-			this.uploadService.upload(file).subscribe({
+			const sub = this.uploadService.upload(file).subscribe({
 				next: (progress) => {
 					this.updateUploadProgress(file, progress);
 
@@ -387,6 +405,7 @@ export class MediaLibraryPage {
 					this.toast.error(`Upload failed`, `Failed to upload ${file.name}: ${err.message}`);
 				},
 			});
+			this.uploadSubscriptions.push(sub);
 		}
 
 		// Reset input

@@ -1,4 +1,12 @@
-import { Injectable, signal, computed, effect, PLATFORM_ID, inject } from '@angular/core';
+import {
+	Injectable,
+	signal,
+	computed,
+	effect,
+	PLATFORM_ID,
+	inject,
+	DestroyRef,
+} from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 
 /**
@@ -154,5 +162,11 @@ export class McmsThemeService {
 		};
 
 		mediaQuery.addEventListener('change', handleChange);
+
+		// Clean up the listener when the service is destroyed
+		const destroyRef = inject(DestroyRef);
+		destroyRef.onDestroy(() => {
+			mediaQuery.removeEventListener('change', handleChange);
+		});
 	}
 }

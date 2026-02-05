@@ -3,8 +3,8 @@
  * Stores files on the local filesystem
  */
 
-import { existsSync, mkdirSync, writeFileSync, unlinkSync, readFileSync } from 'node:fs';
-import { join, extname } from 'node:path';
+import { existsSync, mkdirSync, writeFileSync, unlinkSync, readFileSync, lstatSync } from 'node:fs';
+import { join, extname, resolve, normalize } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { StorageAdapter, UploadedFile, StoredFile, UploadOptions } from '@momentum-cms/core';
 import type { LocalStorageOptions } from './storage.types';
@@ -22,10 +22,28 @@ import type { LocalStorageOptions } from './storage.types';
  */
 export function localStorageAdapter(options: LocalStorageOptions): StorageAdapter {
 	const { directory, baseUrl } = options;
+	const resolvedRoot = resolve(directory);
 
 	// Ensure the upload directory exists
-	if (!existsSync(directory)) {
-		mkdirSync(directory, { recursive: true });
+	if (!existsSync(resolvedRoot)) {
+		mkdirSync(resolvedRoot, { recursive: true });
+	}
+
+	/**
+	 * Sanitize a path to prevent directory traversal attacks.
+	 * Resolves the path relative to the upload root and verifies it stays within bounds.
+	 */
+	function safePath(unsafePath: string): string {
+		const normalized = normalize(unsafePath).replace(/^(\.\.(\/|\\|$))+/, '');
+		const full = resolve(resolvedRoot, normalized);
+		if (!full.startsWith(resolvedRoot)) {
+			throw new Error('Invalid path: directory traversal not allowed');
+		}
+		// Reject symlinks to prevent escape via symlink chains
+		if (existsSync(full) && lstatSync(full).isSymbolicLink()) {
+			throw new Error('Invalid path: symbolic links not allowed');
+		}
+		return full;
 	}
 
 	return {
@@ -36,18 +54,18 @@ export function localStorageAdapter(options: LocalStorageOptions): StorageAdapte
 				? `${uploadOptions.filename}${ext}`
 				: `${randomUUID()}${ext}`;
 
-			// Determine subdirectory
+			// Determine subdirectory (sanitized)
 			const subdir = uploadOptions?.directory ?? '';
-			const targetDir = subdir ? join(directory, subdir) : directory;
+			const targetDir = subdir ? safePath(subdir) : resolvedRoot;
 
 			// Ensure subdirectory exists
 			if (subdir && !existsSync(targetDir)) {
 				mkdirSync(targetDir, { recursive: true });
 			}
 
-			// Write file to disk
-			const filePath = join(targetDir, filename);
-			const relativePath = subdir ? join(subdir, filename) : filename;
+			// Write file to disk (validate full path)
+			const filePath = safePath(subdir ? join(subdir, filename) : filename);
+			const relativePath = subdir ? join(normalize(subdir), filename) : filename;
 			writeFileSync(filePath, file.buffer);
 
 			// Generate URL
@@ -63,7 +81,7 @@ export function localStorageAdapter(options: LocalStorageOptions): StorageAdapte
 		},
 
 		async delete(path: string): Promise<boolean> {
-			const filePath = join(directory, path);
+			const filePath = safePath(path);
 			if (existsSync(filePath)) {
 				unlinkSync(filePath);
 				return true;
@@ -76,11 +94,12 @@ export function localStorageAdapter(options: LocalStorageOptions): StorageAdapte
 		},
 
 		async exists(path: string): Promise<boolean> {
-			return existsSync(join(directory, path));
+			const filePath = safePath(path);
+			return existsSync(filePath);
 		},
 
 		async read(path: string): Promise<Buffer | null> {
-			const filePath = join(directory, path);
+			const filePath = safePath(path);
 			if (existsSync(filePath)) {
 				return readFileSync(filePath);
 			}

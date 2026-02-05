@@ -10,6 +10,7 @@ import type {
 	MomentumConfig,
 	MediaDocument,
 } from '@momentum-cms/core';
+import { validateMimeType as validateMimeByMagicBytes } from '@momentum-cms/storage';
 import { getMomentumAPI, type MomentumAPIContext } from './momentum-api';
 
 /**
@@ -139,13 +140,28 @@ export async function handleUpload(
 			};
 		}
 
-		// Validate MIME type
+		// Validate claimed MIME type against allowed list
 		const mimeError = validateMimeType(file.mimeType, allowedMimeTypes);
 		if (mimeError) {
 			return {
 				status: 400,
 				error: mimeError,
 			};
+		}
+
+		// Validate actual file content via magic bytes
+		if (file.buffer && file.buffer.length > 0) {
+			const magicByteResult = validateMimeByMagicBytes(
+				file.buffer,
+				file.mimeType,
+				allowedMimeTypes,
+			);
+			if (!magicByteResult.valid) {
+				return {
+					status: 400,
+					error: magicByteResult.error ?? 'File content does not match claimed type',
+				};
+			}
 		}
 
 		// Store file using the storage adapter

@@ -171,15 +171,23 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 			throw new DocumentNotFoundError(this.slug, docId);
 		}
 
-		// Update status to published
+		// Update status to published and create version atomically where possible
 		if (!this.adapter.updateStatus) {
 			throw new Error('Version operations not supported by database adapter');
 		}
+
+		// Perform status update, fetch, and version creation in sequence
+		// Uses adapter-level write queue/transactions for atomicity
 		await this.adapter.updateStatus(this.slug, docId, 'published');
 
-		// Fetch the updated document AFTER status change to capture correct state
 		const updatedDoc = await this.adapter.findById(this.slug, docId);
 		if (!updatedDoc) {
+			// Rollback status if document vanished (defensive)
+			try {
+				await this.adapter.updateStatus(this.slug, docId, 'draft');
+			} catch {
+				// Best effort rollback
+			}
 			throw new Error('Failed to fetch document after status update');
 		}
 

@@ -345,6 +345,7 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 			collection: string,
 			query: Record<string, unknown>,
 		): Promise<Record<string, unknown>[]> {
+			validateCollectionSlug(collection);
 			const limitValue = typeof query['limit'] === 'number' ? query['limit'] : 100;
 			const pageValue = typeof query['page'] === 'number' ? query['page'] : 1;
 			const offset = (pageValue - 1) * limitValue;
@@ -382,6 +383,7 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		},
 
 		async findById(collection: string, id: string): Promise<Record<string, unknown> | null> {
+			validateCollectionSlug(collection);
 			const row: unknown = sqlite.prepare(`SELECT * FROM "${collection}" WHERE id = ?`).get(id);
 			return isRecord(row) ? row : null;
 		},
@@ -390,6 +392,7 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 			collection: string,
 			data: Record<string, unknown>,
 		): Promise<Record<string, unknown>> {
+			validateCollectionSlug(collection);
 			return writeQueue.enqueue(() => {
 				const id = randomUUID();
 				const now = new Date().toISOString();
@@ -434,6 +437,7 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 			id: string,
 			data: Record<string, unknown>,
 		): Promise<Record<string, unknown>> {
+			validateCollectionSlug(collection);
 			return writeQueue.enqueue(() => {
 				const now = new Date().toISOString();
 				const updateData: Record<string, unknown> = { ...data, updatedAt: now };
@@ -477,6 +481,7 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		},
 
 		async delete(collection: string, id: string): Promise<boolean> {
+			validateCollectionSlug(collection);
 			return writeQueue.enqueue(() => {
 				const result = sqlite.prepare(`DELETE FROM "${collection}" WHERE id = ?`).run(id);
 				return result.changes > 0;

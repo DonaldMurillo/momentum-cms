@@ -29,27 +29,28 @@ export default defineEventHandler(async (event) => {
 		};
 	}
 
-	// For demo purposes, accept 'password123' as password
-	// In production, this would verify against a real auth system
-	if (password !== 'password123') {
-		return {
-			error: { message: 'Invalid email or password' },
-		};
-	}
-
 	const api = getMomentumAPI();
 
-	// Use system context to find user
+	// Use system context to find user by email
 	const systemApi = api.setContext({
 		user: { id: 'system', email: 'system@localhost', role: 'admin' },
 	});
 
 	try {
 		const usersCollection = systemApi.collection('users');
-		const result = await usersCollection.find({ limit: 1000 });
-		const user = result.docs.find((u: { email: string }) => u.email === email);
+		const result = await usersCollection.find({ where: { email }, limit: 1 });
+		const user = result.docs[0];
 
 		if (!user) {
+			return {
+				error: { message: 'Invalid email or password' },
+			};
+		}
+
+		// Verify password against stored hash
+		// In demo mode without hashed passwords, compare against the password field
+		const storedPassword = user.password ?? user.passwordHash;
+		if (!storedPassword || String(storedPassword) !== password) {
 			return {
 				error: { message: 'Invalid email or password' },
 			};

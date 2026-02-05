@@ -122,8 +122,8 @@ export function checkbox(name: string, options: CheckboxFieldOptions = {}): Chec
 	return {
 		name,
 		type: 'checkbox',
-		defaultValue: options.defaultValue ?? false,
 		...options,
+		defaultValue: options.defaultValue ?? false,
 	};
 }
 

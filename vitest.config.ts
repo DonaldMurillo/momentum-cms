@@ -26,6 +26,7 @@ export default defineConfig({
 			'@momentum-cms/admin': resolve(__dirname, 'libs/admin/src/index.ts'),
 			'@momentum-cms/db-drizzle': resolve(__dirname, 'libs/db-drizzle/src/index.ts'),
 			'@momentum-cms/auth': resolve(__dirname, 'libs/auth/src/index.ts'),
+			'@momentum-cms/storage': resolve(__dirname, 'libs/storage/src/index.ts'),
 		},
 	},
 });

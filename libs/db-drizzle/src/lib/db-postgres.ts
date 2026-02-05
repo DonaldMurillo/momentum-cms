@@ -339,6 +339,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 			collection: string,
 			queryParams: Record<string, unknown>,
 		): Promise<Record<string, unknown>[]> {
+			validateCollectionSlug(collection);
 			const limitValue = typeof queryParams['limit'] === 'number' ? queryParams['limit'] : 100;
 			const pageValue = typeof queryParams['page'] === 'number' ? queryParams['page'] : 1;
 			const offset = (pageValue - 1) * limitValue;
@@ -376,6 +377,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 		},
 
 		async findById(collection: string, id: string): Promise<Record<string, unknown> | null> {
+			validateCollectionSlug(collection);
 			return queryOne(`SELECT * FROM "${collection}" WHERE id = $1`, [id]);
 		},
 
@@ -383,6 +385,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 			collection: string,
 			data: Record<string, unknown>,
 		): Promise<Record<string, unknown>> {
+			validateCollectionSlug(collection);
 			const id = randomUUID();
 			const now = new Date().toISOString();
 
@@ -422,6 +425,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 			id: string,
 			data: Record<string, unknown>,
 		): Promise<Record<string, unknown>> {
+			validateCollectionSlug(collection);
 			const now = new Date().toISOString();
 			const updateData: Record<string, unknown> = { ...data, updatedAt: now };
 
@@ -464,6 +468,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 		},
 
 		async delete(collection: string, id: string): Promise<boolean> {
+			validateCollectionSlug(collection);
 			const rowCount = await execute(`DELETE FROM "${collection}" WHERE id = $1`, [id]);
 			return rowCount > 0;
 		},
