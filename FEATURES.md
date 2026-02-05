@@ -89,33 +89,35 @@
 
 ### Authentication
 
-| Feature            | Status | Notes                           |
-| ------------------ | ------ | ------------------------------- |
-| Email/password     | ✅     | Better Auth                     |
-| Sessions           | ✅     | Cookie-based                    |
-| Roles              | ✅     | Custom role field               |
-| Token expiration   | ✅     | Configurable                    |
-| Email verification | 🚧     | Config exists, no email adapter |
-| Password reset     | ❌     | Needs email adapter             |
-| OAuth providers    | ❌     | Not implemented                 |
-| Two-factor auth    | ❌     | Not implemented                 |
-| API keys           | ❌     | Machine auth                    |
+| Feature            | Status | Notes                              |
+| ------------------ | ------ | ---------------------------------- |
+| Email/password     | ✅     | Better Auth                        |
+| Sessions           | ✅     | Cookie-based                       |
+| Roles              | ✅     | Custom role field                  |
+| Token expiration   | ✅     | Configurable                       |
+| Email verification | 🚧     | Config exists, email adapter added |
+| Password reset     | ✅     | Full flow with email templates     |
+| OAuth providers    | ❌     | Not implemented                    |
+| Two-factor auth    | ❌     | Not implemented                    |
+| API keys           | ❌     | Machine auth                       |
 
 ### Admin UI
 
-| Feature            | Status | Notes               |
-| ------------------ | ------ | ------------------- |
-| Dashboard          | ✅     | Overview page       |
-| Collection list    | ✅     | Paginated, sortable |
-| Document view      | ✅     | Read-only display   |
-| Document edit      | ✅     | Form-based editing  |
-| Login/logout       | ✅     | Auth flow           |
-| Setup wizard       | ✅     | First-run setup     |
-| Dark mode          | ✅     | Theme toggle        |
-| Sidebar navigation | ✅     | Collection groups   |
-| Custom branding    | 🚧     | Logo/title only     |
-| Custom components  | ❌     | Not extensible      |
-| Custom views       | ❌     | Not extensible      |
+| Feature            | Status | Notes                           |
+| ------------------ | ------ | ------------------------------- |
+| Dashboard          | ✅     | Overview page                   |
+| Collection list    | ✅     | Paginated, sortable             |
+| Document view      | ✅     | Read-only display               |
+| Document edit      | ✅     | Form-based editing              |
+| Login/logout       | ✅     | Auth flow                       |
+| Setup wizard       | ✅     | First-run setup                 |
+| Dark mode          | ✅     | Theme toggle                    |
+| Sidebar navigation | ✅     | Collection groups               |
+| Custom branding    | 🚧     | Logo/title only                 |
+| Command palette    | ✅     | Autofocus, filter, keyboard nav |
+| UI component lib   | ✅     | 38+ components with Storybook   |
+| Custom components  | ❌     | Not extensible                  |
+| Custom views       | ❌     | Not extensible                  |
 
 ---
 
@@ -136,15 +138,15 @@
 
 ### 2. Versioning & Drafts
 
-| Feature                   | Status | Priority    |
-| ------------------------- | ------ | ----------- |
-| Version history           | 🚧     | 🎯 Critical |
-| Restore version           | ❌     | 🎯 Critical |
-| Compare versions          | ❌     | Medium      |
-| Draft status field        | 🚧     | 🎯 Critical |
-| Auto-save drafts          | ❌     | High        |
-| Scheduled publishing      | ❌     | Medium      |
-| Publish/unpublish actions | ❌     | 🎯 Critical |
+| Feature                   | Status | Priority |
+| ------------------------- | ------ | -------- |
+| Version history           | ✅     | Done     |
+| Restore version           | ✅     | Done     |
+| Compare versions          | ❌     | Medium   |
+| Draft status field        | ✅     | Done     |
+| Auto-save drafts          | ✅     | Done     |
+| Scheduled publishing      | ❌     | Medium   |
+| Publish/unpublish actions | ✅     | Done     |
 
 ### 3. Localization (i18n)
 
@@ -208,14 +210,14 @@
 | ------------ | ---------- | ----------- | ----------- |
 | Field types  | 20+        | 15          | 5 missing   |
 | Upload/Media | Full       | None        | 🔴 Critical |
-| Versioning   | Full       | Types only  | 🔴 Critical |
-| Drafts       | Full       | Types only  | 🔴 Critical |
+| Versioning   | Full       | Full        | ✅ Done     |
+| Drafts       | Full       | Full        | ✅ Done     |
 | Localization | Full       | None        | 🔴 Critical |
 | Live Preview | Full       | Preview URL | 🟡 Medium   |
 | GraphQL      | Full       | Types only  | 🟡 Medium   |
 | Rich Text    | Lexical    | Basic       | 🟡 Medium   |
 | Search       | Full-text  | WHERE only  | 🟡 Medium   |
-| Auth         | OAuth, 2FA | Basic       | 🟢 Low      |
+| Auth         | OAuth, 2FA | Email+Reset | 🟢 Low      |
 | Plugins      | Full       | None        | 🟢 Low      |
 
 ---
@@ -225,8 +227,8 @@
 ### Phase 1: Core Content Features
 
 - [ ] Upload/Media management
-- [ ] Versioning system
-- [ ] Drafts & publishing
+- [x] Versioning system
+- [x] Drafts & publishing
 
 ### Phase 2: Multi-language & Preview
 
