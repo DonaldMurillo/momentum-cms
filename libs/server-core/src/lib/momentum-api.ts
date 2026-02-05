@@ -173,15 +173,24 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			page,
 		};
 
-		// Execute query
+		// Execute query with pagination (adapter handles LIMIT/OFFSET)
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
 		const docs = (await this.adapter.find(this.slug, query)) as T[];
 
 		// Run afterRead hooks on each document
 		const processedDocs = await this.processAfterReadHooks(docs);
 
-		// Calculate pagination
-		const totalDocs = docs.length; // TODO: Implement proper count query
+		// Get total count for pagination metadata
+		// Use a separate count query without limit/offset to get the true total
+		const countQuery: Record<string, unknown> = { ...options };
+		delete countQuery['limit'];
+		delete countQuery['page'];
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
+		const allDocs = (await this.adapter.find(this.slug, {
+			...countQuery,
+			limit: 0, // Signal to adapter: count-only (returns all if not supported)
+		})) as T[];
+		const totalDocs = allDocs.length;
 		const totalPages = Math.ceil(totalDocs / limit) || 1;
 
 		return {
@@ -229,7 +238,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		processedData = await this.runHooks('beforeValidate', processedData, 'create');
 
 		// Validate required fields
-		const errors = this.validateData(processedData, false);
+		const errors = await this.validateData(processedData, false);
 		if (errors.length > 0) {
 			throw new ValidationError(errors);
 		}
@@ -266,7 +275,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		processedData = await this.runHooks('beforeValidate', processedData, 'update', originalDoc);
 
 		// Validate fields (partial validation for updates)
-		const errors = this.validateData(processedData, true);
+		const errors = await this.validateData(processedData, true);
 		if (errors.length > 0) {
 			throw new ValidationError(errors);
 		}
@@ -312,8 +321,9 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		await this.checkAccess('read');
 
 		// Use find with where clause and count results
-		// TODO: Implement proper count query in adapter
-		const docs = await this.adapter.find(this.slug, where ?? {});
+		// Pass limit: 0 to signal we want all matching docs for counting
+		const query: Record<string, unknown> = where ? { ...where, limit: 0 } : { limit: 0 };
+		const docs = await this.adapter.find(this.slug, query);
 		return docs.length;
 	}
 
@@ -368,7 +378,10 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		};
 	}
 
-	private validateData(data: Record<string, unknown>, isUpdate: boolean): FieldValidationError[] {
+	private async validateData(
+		data: Record<string, unknown>,
+		isUpdate: boolean,
+	): Promise<FieldValidationError[]> {
 		const errors: FieldValidationError[] = [];
 		const fields = this.collectionConfig.fields;
 
@@ -386,9 +399,9 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 				}
 			}
 
-			// Run custom validator if present
+			// Run custom validator if present (supports both sync and async validators)
 			if (field.validate && value !== undefined) {
-				const result = field.validate(value, { data, req: {} });
+				const result = await Promise.resolve(field.validate(value, { data, req: {} }));
 				// ValidateFunction returns string (error message) or true (valid)
 				if (typeof result === 'string') {
 					errors.push({
@@ -396,8 +409,6 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 						message: result,
 					});
 				}
-				// Note: if result is a Promise, we'd need async validation
-				// For now, we only handle synchronous validators
 			}
 		}
 

@@ -116,6 +116,12 @@ export function momentumAdminRoutes(options: MomentumAdminOptions): Routes {
 				loadComponent: (): Promise<Type<unknown>> =>
 					import('../pages/dashboard/dashboard.page').then((m) => m.DashboardPage),
 			},
+			// Media library
+			{
+				path: 'media',
+				loadComponent: (): Promise<Type<unknown>> =>
+					import('../pages/media-library/media-library.page').then((m) => m.MediaLibraryPage),
+			},
 			// Collection list
 			{
 				path: 'collections/:slug',

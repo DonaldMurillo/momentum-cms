@@ -105,6 +105,13 @@ export default defineConfig({
 			use: { ...devices['Desktop Chrome'] },
 			dependencies: ['seeding-tracking'],
 		},
+		// Media upload tests (tests file upload/storage)
+		{
+			name: 'media-upload',
+			testMatch: /media-upload\.spec\.ts$/,
+			use: { ...devices['Desktop Chrome'] },
+			dependencies: ['versioning'],
+		},
 		// Auth tests - run after seeding tests, tests unauthenticated behavior
 		{
 			name: 'auth-tests',

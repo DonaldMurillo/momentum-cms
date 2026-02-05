@@ -118,11 +118,28 @@ export class MomentumAuthService {
 	/** Whether current user has verified their email */
 	readonly emailVerified = computed(() => this.user()?.emailVerified ?? false);
 
+	/** Tracks in-flight initialization to prevent duplicate requests */
+	private initPromise: Promise<void> | null = null;
+
 	/**
 	 * Initialize auth state by checking current session.
-	 * Should be called on app startup.
+	 * Should be called on app startup. Safe to call concurrently from multiple guards.
 	 */
 	async initialize(): Promise<void> {
+		// Return existing promise if initialization is already in progress
+		if (this.initPromise) {
+			return this.initPromise;
+		}
+
+		this.initPromise = this.doInitialize();
+		try {
+			await this.initPromise;
+		} finally {
+			this.initPromise = null;
+		}
+	}
+
+	private async doInitialize(): Promise<void> {
 		this.loading.set(true);
 		try {
 			// Check setup status first

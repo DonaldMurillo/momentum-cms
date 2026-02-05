@@ -5,6 +5,7 @@
 	"main": "./index.cjs",
 	"types": "./index.d.ts",
 	"peerDependencies": {
-		"@momentum-cms/core": "^0.0.1"
+		"@momentum-cms/core": "^0.0.1",
+		"@momentum-cms/storage": "^0.0.1"
 	}
 }

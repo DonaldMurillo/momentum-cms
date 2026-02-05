@@ -7,6 +7,8 @@
 		"@angular/router": "^21.1.0",
 		"@momentum-cms/core": "^0.0.1",
 		"@momentum-cms/ui": "^0.0.1",
+		"@ng-icons/core": "^33.0.0",
+		"@ng-icons/heroicons": "^33.0.0",
 		"rxjs": "~7.8.0"
 	},
 	"sideEffects": false

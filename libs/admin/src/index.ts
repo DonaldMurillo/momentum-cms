@@ -14,6 +14,7 @@ export {
 	CollectionAccessService,
 	type CollectionPermissions,
 } from './lib/services/collection-access.service';
+export { UploadService, type UploadProgress } from './lib/services/upload.service';
 
 // Momentum API (unified SSR/Browser)
 export {
@@ -82,6 +83,7 @@ export { CollectionViewPage } from './lib/pages/collection-view/collection-view.
 export { CollectionEditPage } from './lib/pages/collection-edit/collection-edit.page';
 export { LoginPage } from './lib/pages/login/login.page';
 export { SetupPage } from './lib/pages/setup/setup.page';
+export { MediaLibraryPage } from './lib/pages/media-library/media-library.page';
 export { ForgotPasswordPage } from './lib/pages/forgot-password/forgot-password.page';
 export { ResetPasswordPage } from './lib/pages/reset-password/reset-password.page';
 
@@ -94,6 +96,10 @@ export { EntityViewWidget } from './lib/widgets/entity-view/entity-view.componen
 export { FeedbackService } from './lib/widgets/feedback/feedback.service';
 export { VersionHistoryWidget } from './lib/widgets/version-history/version-history.component';
 export { PublishControlsWidget } from './lib/widgets/publish-controls/publish-controls.component';
+export {
+	MediaPreviewComponent,
+	type MediaPreviewData,
+} from './lib/widgets/media-preview/media-preview.component';
 
 // Field Renderers (for custom forms)
 export { FieldRenderer } from './lib/widgets/entity-form/field-renderers/field-renderer.component';
@@ -102,6 +108,12 @@ export { NumberFieldRenderer } from './lib/widgets/entity-form/field-renderers/n
 export { SelectFieldRenderer } from './lib/widgets/entity-form/field-renderers/select-field.component';
 export { CheckboxFieldRenderer } from './lib/widgets/entity-form/field-renderers/checkbox-field.component';
 export { DateFieldRenderer } from './lib/widgets/entity-form/field-renderers/date-field.component';
+export { UploadFieldRenderer } from './lib/widgets/entity-form/field-renderers/upload-field.component';
+export {
+	MediaPickerDialog,
+	type MediaPickerDialogData,
+	type MediaPickerResult,
+} from './lib/widgets/entity-form/field-renderers/media-picker-dialog.component';
 
 // Widget Types
 export type {

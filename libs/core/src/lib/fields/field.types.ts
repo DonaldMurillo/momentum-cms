@@ -172,8 +172,14 @@ export interface PasswordField extends BaseField {
 // Upload field
 export interface UploadField extends BaseField {
 	type: 'upload';
+	/** Collection slug where media documents are stored (default: 'media') */
 	relationTo: string;
-	// Upload specific options
+	/** Allowed MIME types (e.g., ['image/*', 'application/pdf']) */
+	mimeTypes?: string[];
+	/** Maximum file size in bytes */
+	maxSize?: number;
+	/** Allow multiple file uploads */
+	hasMany?: boolean;
 }
 
 // Relationship field - uses lazy reference to avoid circular imports

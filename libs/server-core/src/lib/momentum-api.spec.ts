@@ -306,7 +306,7 @@ describe('MomentumAPI', () => {
 
 			await api.collection('posts').count({ status: 'published' });
 
-			expect(mockAdapter.find).toHaveBeenCalledWith('posts', { status: 'published' });
+			expect(mockAdapter.find).toHaveBeenCalledWith('posts', { status: 'published', limit: 0 });
 		});
 	});
 

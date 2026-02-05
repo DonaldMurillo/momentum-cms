@@ -68,3 +68,4 @@ data/
 .env.*.local
 
 storybook-static
+vitest.config.*.timestamp*
