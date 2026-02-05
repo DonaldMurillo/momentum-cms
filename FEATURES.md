@@ -89,17 +89,17 @@
 
 ### Authentication
 
-| Feature            | Status | Notes                           |
-| ------------------ | ------ | ------------------------------- |
-| Email/password     | ✅     | Better Auth                     |
-| Sessions           | ✅     | Cookie-based                    |
-| Roles              | ✅     | Custom role field               |
-| Token expiration   | ✅     | Configurable                    |
-| Email verification | 🚧     | Config exists, no email adapter |
-| Password reset     | ❌     | Needs email adapter             |
-| OAuth providers    | ❌     | Not implemented                 |
-| Two-factor auth    | ❌     | Not implemented                 |
-| API keys           | ❌     | Machine auth                    |
+| Feature            | Status | Notes                              |
+| ------------------ | ------ | ---------------------------------- |
+| Email/password     | ✅     | Better Auth                        |
+| Sessions           | ✅     | Cookie-based                       |
+| Roles              | ✅     | Custom role field                  |
+| Token expiration   | ✅     | Configurable                       |
+| Email verification | 🚧     | Config exists, email adapter added |
+| Password reset     | ✅     | Full flow with email templates     |
+| OAuth providers    | ❌     | Not implemented                    |
+| Two-factor auth    | ❌     | Not implemented                    |
+| API keys           | ❌     | Machine auth                       |
 
 ### Admin UI
 
@@ -117,6 +117,7 @@
 | Version history    | ✅     | List, view, restore widget         |
 | Publish controls   | ✅     | Publish/unpublish/draft buttons    |
 | Command palette    | ✅     | Keyboard nav, filtering, autofocus |
+| UI component lib   | ✅     | 38+ components with Storybook      |
 | Custom branding    | 🚧     | Logo/title only                    |
 | Custom components  | ❌     | Not extensible                     |
 | Custom views       | ❌     | Not extensible                     |
@@ -140,15 +141,15 @@
 
 ### 2. Versioning & Drafts
 
-| Feature                   | Status | Priority                          |
-| ------------------------- | ------ | --------------------------------- |
-| Version history           | ✅     | Done                              |
-| Restore version           | ✅     | Done                              |
-| Compare versions          | 🚧     | Server logic exists, no diff UI   |
-| Draft status field        | ✅     | Done                              |
-| Auto-save drafts          | 🚧     | Backend ready, no client interval |
-| Scheduled publishing      | 🚧     | Types exist, no scheduler         |
-| Publish/unpublish actions | ✅     | Done                              |
+| Feature                   | Status | Priority                        |
+| ------------------------- | ------ | ------------------------------- |
+| Version history           | ✅     | Done                            |
+| Restore version           | ✅     | Done                            |
+| Compare versions          | 🚧     | Server logic exists, no diff UI |
+| Draft status field        | ✅     | Done                            |
+| Auto-save drafts          | ✅     | Done                            |
+| Scheduled publishing      | 🚧     | Types exist, no scheduler       |
+| Publish/unpublish actions | ✅     | Done                            |
 
 ### 3. Localization (i18n)
 
@@ -212,14 +213,14 @@
 | ------------ | ---------- | ------------- | ----------- |
 | Field types  | 20+        | 16            | 4 missing   |
 | Upload/Media | Full       | Core complete | 🟡 Medium   |
-| Versioning   | Full       | Core complete | 🟡 Medium   |
-| Drafts       | Full       | Core complete | 🟡 Medium   |
+| Versioning   | Full       | Full          | ✅ Done     |
+| Drafts       | Full       | Full          | ✅ Done     |
 | Localization | Full       | None          | 🔴 Critical |
 | Live Preview | Full       | Preview URL   | 🟡 Medium   |
 | GraphQL      | Full       | Types only    | 🟡 Medium   |
 | Rich Text    | Lexical    | Basic         | 🟡 Medium   |
 | Search       | Full-text  | WHERE only    | 🟡 Medium   |
-| Auth         | OAuth, 2FA | Basic         | 🟢 Low      |
+| Auth         | OAuth, 2FA | Email+Reset   | 🟢 Low      |
 | Plugins      | Full       | None          | 🟢 Low      |
 
 ---
