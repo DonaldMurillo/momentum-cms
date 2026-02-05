@@ -1,6 +1,8 @@
 import { betterAuth } from 'better-auth';
 import type { Pool } from 'pg';
 import type { Database } from 'better-sqlite3';
+import { createEmailService, type EmailConfig, type EmailService } from './email';
+import { getPasswordResetEmail, getVerificationEmail } from './email-templates';
 
 /**
  * Database configuration for Better Auth.
@@ -9,6 +11,18 @@ import type { Database } from 'better-sqlite3';
 export type DatabaseConfig =
 	| { type: 'sqlite'; database: Database }
 	| { type: 'postgres'; pool: Pool };
+
+/**
+ * Email configuration options for Momentum Auth.
+ */
+export interface MomentumEmailOptions extends EmailConfig {
+	/** Enable email features (password reset, verification). Default: auto-detect from SMTP_HOST env var */
+	enabled?: boolean;
+	/** Application name shown in emails. Default: 'Momentum CMS' */
+	appName?: string;
+	/** Require email verification on signup. Default: false */
+	requireEmailVerification?: boolean;
+}
 
 /**
  * Configuration options for Momentum Auth.
@@ -22,6 +36,8 @@ export interface MomentumAuthConfig {
 	secret?: string;
 	/** Trusted origins for CORS */
 	trustedOrigins?: string[];
+	/** Email configuration for password reset and verification */
+	email?: MomentumEmailOptions;
 }
 
 /**
@@ -36,6 +52,8 @@ export interface MomentumAuthConfigLegacy {
 	secret?: string;
 	/** Trusted origins for CORS */
 	trustedOrigins?: string[];
+	/** Email configuration for password reset and verification */
+	email?: MomentumEmailOptions;
 }
 
 /**
@@ -106,7 +124,7 @@ export function createMomentumAuth(
 		? { type: 'sqlite', database: config.database }
 		: config.db;
 
-	const { baseURL, secret, trustedOrigins } = config;
+	const { baseURL, secret, trustedOrigins, email: emailConfig } = config;
 
 	// Configure database based on type
 	// Better Auth auto-detects the database type from the instance:
@@ -114,17 +132,96 @@ export function createMomentumAuth(
 	// - pg Pool: detected via 'connect' method
 	const databaseOption = dbConfig.type === 'sqlite' ? dbConfig.database : dbConfig.pool;
 
+	// Determine if email is enabled
+	// Priority: explicit config > SMTP_HOST env var presence
+	const emailEnabled = emailConfig?.enabled ?? !!process.env['SMTP_HOST'];
+	const appName = emailConfig?.appName ?? 'Momentum CMS';
+
+	// Create email service if email is enabled
+	let emailService: EmailService | null = null;
+	if (emailEnabled) {
+		emailService = createEmailService(emailConfig);
+	}
+
+	// Build email/password config
+	const emailAndPasswordConfig: {
+		enabled: boolean;
+		minPasswordLength: number;
+		sendResetPassword?: (params: {
+			user: { email: string; name: string };
+			url: string;
+			token: string;
+		}) => Promise<void>;
+	} = {
+		enabled: true,
+		minPasswordLength: 8,
+	};
+
+	// Add password reset callback if email is enabled
+	if (emailService) {
+		emailAndPasswordConfig.sendResetPassword = async ({ user, url }) => {
+			const { subject, text, html } = getPasswordResetEmail({
+				name: user.name,
+				url,
+				appName,
+				expiresIn: '1 hour',
+			});
+			// Don't await to prevent timing attacks, but log errors for debugging
+			emailService
+				.sendEmail({
+					to: user.email,
+					subject,
+					text,
+					html,
+				})
+				.catch((err) => {
+					console.error('[MomentumAuth] Failed to send password reset email:', err);
+				});
+		};
+	}
+
+	// Build email verification config if enabled
+	const emailVerificationConfig = emailService
+		? {
+				sendVerificationEmail: async ({
+					user,
+					url,
+				}: {
+					user: { email: string; name: string };
+					url: string;
+				}) => {
+					const { subject, text, html } = getVerificationEmail({
+						name: user.name,
+						url,
+						appName,
+						expiresIn: '24 hours',
+					});
+					// Don't await to prevent timing attacks, but log errors for debugging
+					emailService
+						.sendEmail({
+							to: user.email,
+							subject,
+							text,
+							html,
+						})
+						.catch((err) => {
+							console.error('[MomentumAuth] Failed to send verification email:', err);
+						});
+				},
+			}
+		: undefined;
+
 	return betterAuth({
 		database: databaseOption,
 		baseURL: baseURL ?? 'http://localhost:4000',
 		secret: secret ?? process.env['AUTH_SECRET'] ?? 'momentum-cms-dev-secret-change-in-production',
 		trustedOrigins: trustedOrigins ?? [baseURL ?? 'http://localhost:4000'],
 
-		// Enable email/password authentication
-		emailAndPassword: {
-			enabled: true,
-			minPasswordLength: 8,
-		},
+		// Enable email/password authentication with optional password reset
+		emailAndPassword: emailAndPasswordConfig,
+
+		// Email verification (only if email is enabled)
+		...(emailVerificationConfig && { emailVerification: emailVerificationConfig }),
 
 		// Add custom role field to users
 		user: {

@@ -91,6 +91,17 @@ export default defineConfig({
 			},
 			dependencies: ['api-access-control-tests'],
 		},
+		// Password reset tests - require Mailpit running
+		// Run LAST because the full flow test changes the admin password
+		{
+			name: 'password-reset-tests',
+			testMatch: /password-reset\.spec\.ts$/,
+			use: {
+				...devices['Desktop Chrome'],
+				// No storage state - tests unauthenticated behavior
+			},
+			dependencies: ['authenticated-tests', 'unauthenticated-tests', 'general-tests'],
+		},
 		// General tests (example.spec.ts, api.spec.ts, transfer-state.spec.ts, storybook.spec.ts) run without storage state
 		{
 			name: 'general-tests',

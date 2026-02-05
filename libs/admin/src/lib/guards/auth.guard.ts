@@ -10,8 +10,10 @@ import { MomentumAuthService } from '../services/auth.service';
  * - /admin/setup if no users exist (first-time setup)
  * - /admin/login if user is not authenticated
  *
- * Note: During SSR, the guard allows access and defers auth checks to client-side
- * hydration. This is necessary because SSR doesn't have access to browser cookies.
+ * During SSR, the guard allows access and defers redirect decisions to
+ * client-side hydration. The session resolver middleware provides user
+ * context for SSR rendering via MOMENTUM_API_CONTEXT/injectUser(), but
+ * guards return true during SSR to avoid hydration conflicts.
  *
  * @example
  * ```typescript
@@ -29,8 +31,9 @@ export const authGuard: CanActivateFn = async () => {
 	const auth = inject(MomentumAuthService);
 	const router = inject(Router);
 
-	// During SSR, allow access - auth checks will run on client after hydration
-	// SSR doesn't have access to browser cookies, so auth would always fail
+	// During SSR, allow access - redirect decisions deferred to client-side
+	// to avoid hydration conflicts. User context is available for rendering
+	// via MOMENTUM_API_CONTEXT/injectUser().
 	if (!isPlatformBrowser(platformId)) {
 		return true;
 	}
@@ -61,8 +64,8 @@ export const authGuard: CanActivateFn = async () => {
  * - /admin/login if user is not authenticated
  * - /admin if user is not an admin
  *
- * Note: During SSR, the guard allows access and defers auth checks to client-side
- * hydration. This is necessary because SSR doesn't have access to browser cookies.
+ * During SSR, the guard allows access and defers redirect decisions to
+ * client-side hydration to avoid hydration conflicts.
  *
  * @example
  * ```typescript
@@ -80,8 +83,7 @@ export const adminGuard: CanActivateFn = async () => {
 	const auth = inject(MomentumAuthService);
 	const router = inject(Router);
 
-	// During SSR, allow access - auth checks will run on client after hydration
-	// SSR doesn't have access to browser cookies, so auth would always fail
+	// During SSR, allow access - redirect decisions deferred to client-side
 	if (!isPlatformBrowser(platformId)) {
 		return true;
 	}

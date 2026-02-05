@@ -115,6 +115,9 @@ export class MomentumAuthService {
 	/** Whether current user is an admin */
 	readonly isAdmin = computed(() => this.role() === 'admin');
 
+	/** Whether current user has verified their email */
+	readonly emailVerified = computed(() => this.user()?.emailVerified ?? false);
+
 	/** Tracks in-flight initialization to prevent duplicate requests */
 	private initPromise: Promise<void> | null = null;
 
@@ -271,6 +274,61 @@ export class MomentumAuthService {
 			);
 		} finally {
 			this.user.set(null);
+		}
+	}
+
+	/**
+	 * Request a password reset email.
+	 *
+	 * @param email The email address to send the reset link to
+	 * @param redirectTo URL to redirect user after clicking the reset link (defaults to /admin/reset-password)
+	 * @returns Always returns success to prevent email enumeration attacks
+	 */
+	async requestPasswordReset(email: string, redirectTo?: string): Promise<AuthResult> {
+		try {
+			// Use current origin for the redirect URL
+			const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+			const resetUrl = redirectTo ?? `${baseUrl}/admin/reset-password`;
+
+			await firstValueFrom(
+				this.http.post<AuthResponse>(
+					`${this.baseUrl}/request-password-reset`,
+					{ email, redirectTo: resetUrl },
+					{ withCredentials: true },
+				),
+			);
+			// Always return success to prevent email enumeration
+			return { success: true };
+		} catch {
+			// Still return success to prevent email enumeration
+			return { success: true };
+		}
+	}
+
+	/**
+	 * Reset password using a reset token.
+	 *
+	 * @param token The reset token from the email link
+	 * @param newPassword The new password to set
+	 */
+	async resetPassword(token: string, newPassword: string): Promise<AuthResult> {
+		try {
+			const response = await firstValueFrom(
+				this.http.post<AuthResponse>(
+					`${this.baseUrl}/reset-password`,
+					{ token, newPassword },
+					{ withCredentials: true },
+				),
+			);
+
+			if (response.error) {
+				return { success: false, error: response.error.message };
+			}
+
+			return { success: true };
+		} catch (error) {
+			const message = this.extractErrorMessage(error);
+			return { success: false, error: message };
 		}
 	}
 

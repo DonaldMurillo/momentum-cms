@@ -62,6 +62,10 @@ test-results/
 # Data directory (seeded/local data)
 data/
 
+# Environment variables
+.env
+.env.local
+.env.*.local
 
 storybook-static
 vitest.config.*.timestamp*
