@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
-import { chromium, type FullConfig, type Page } from '@playwright/test';
+import { chromium, type FullConfig } from '@playwright/test';
 import * as path from 'path';
+import { waitForAuthState, TEST_CREDENTIALS } from './fixtures/e2e-utils';
 
 const MAX_WAIT_TIME = 60000; // 60 seconds max wait for seeds
 const POLL_INTERVAL = 1000; // Poll every second
@@ -10,73 +11,6 @@ const AUTH_FILE = path.join(__dirname, '..', 'playwright/.auth/user.json');
 
 // Mailpit API for password reset recovery
 const MAILPIT_API = 'http://localhost:8025/api/v1';
-
-// Test credentials
-const TEST_USER = {
-	name: 'Test Admin',
-	email: 'admin@test.com',
-	password: 'TestPassword123!',
-};
-
-/**
- * Wait for the page to settle on a final auth state.
- * With SSR, the server may return one page but client-side redirects to another.
- */
-async function waitForAuthState(
-	page: Page,
-	timeout = 30000,
-): Promise<'setup' | 'login' | 'authenticated'> {
-	const startTime = Date.now();
-
-	while (Date.now() - startTime < timeout) {
-		// Wait for any pending navigations
-		await page.waitForLoadState('networkidle');
-
-		const url = page.url();
-
-		// Check if we're on a stable auth-related page
-		if (url.includes('/setup')) {
-			// Verify the setup form is visible to confirm we're really on setup
-			const nameField = page.getByLabel(/full name/i);
-			if (await nameField.isVisible().catch(() => false)) {
-				return 'setup';
-			}
-		} else if (url.includes('/login')) {
-			// Verify the login form is visible to confirm we're really on login
-			const emailField = page.getByLabel(/email/i);
-			if (await emailField.isVisible().catch(() => false)) {
-				return 'login';
-			}
-		} else if (url.includes('/admin')) {
-			// Verify we're on the dashboard (not redirecting)
-			const dashboardHeading = page.getByRole('heading', { name: 'Dashboard' });
-			if (await dashboardHeading.isVisible().catch(() => false)) {
-				return 'authenticated';
-			}
-		}
-
-		// Wait a bit before checking again
-		await page.waitForTimeout(500);
-	}
-
-	// Debug: capture page content and screenshot before throwing
-	const html = await page.content();
-	console.log('[Auth Debug] Page HTML snippet:', html.substring(0, 2000));
-	console.log('[Auth Debug] Looking for elements...');
-
-	// Check what elements exist
-	const h1Count = await page.locator('h1').count();
-	const h1Texts = await page.locator('h1').allTextContents();
-	console.log(`[Auth Debug] Found ${h1Count} h1 elements:`, h1Texts);
-
-	const formCount = await page.locator('form').count();
-	console.log(`[Auth Debug] Found ${formCount} form elements`);
-
-	const inputCount = await page.locator('input').count();
-	console.log(`[Auth Debug] Found ${inputCount} input elements`);
-
-	throw new Error(`Timed out waiting for auth state. Current URL: ${page.url()}`);
-}
 
 /**
  * Wait for seeding to complete via health endpoint.
@@ -141,7 +75,7 @@ async function recoverPasswordViaReset(baseURL: string): Promise<boolean> {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
-				email: TEST_USER.email,
+				email: TEST_CREDENTIALS.email,
 				redirectTo: `${baseURL}/admin/reset-password`,
 			}),
 		});
@@ -158,7 +92,7 @@ async function recoverPasswordViaReset(baseURL: string): Promise<boolean> {
 
 		while (Date.now() - startTime < maxWaitTime) {
 			const messagesResponse = await fetch(
-				`${MAILPIT_API}/search?query=to:${TEST_USER.email} subject:reset`,
+				`${MAILPIT_API}/search?query=to:${TEST_CREDENTIALS.email} subject:reset`,
 			);
 			if (messagesResponse.ok) {
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Mailpit API response
@@ -207,7 +141,7 @@ async function recoverPasswordViaReset(baseURL: string): Promise<boolean> {
 		const resetResponse = await fetch(`${baseURL}/api/auth/reset-password`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ token, newPassword: TEST_USER.password }),
+			body: JSON.stringify({ token, newPassword: TEST_CREDENTIALS.password }),
 		});
 
 		if (!resetResponse.ok) {
@@ -271,10 +205,12 @@ async function globalSetup(config: FullConfig): Promise<void> {
 			// No users exist - create the first admin user
 			console.log('[Auth Setup] Creating test admin user...');
 
-			await page.getByLabel(/full name/i).fill(TEST_USER.name);
-			await page.getByLabel(/email address/i).fill(TEST_USER.email);
-			await page.getByRole('textbox', { name: /^password$/i }).fill(TEST_USER.password);
-			await page.getByRole('textbox', { name: /confirm password/i }).fill(TEST_USER.password);
+			await page.getByLabel(/full name/i).fill(TEST_CREDENTIALS.name);
+			await page.getByLabel(/email address/i).fill(TEST_CREDENTIALS.email);
+			await page.getByRole('textbox', { name: /^password$/i }).fill(TEST_CREDENTIALS.password);
+			await page
+				.getByRole('textbox', { name: /confirm password/i })
+				.fill(TEST_CREDENTIALS.password);
 
 			// Wait for button to be enabled
 			const submitButton = page.getByRole('button', { name: /create|submit|sign up/i });
@@ -293,8 +229,8 @@ async function globalSetup(config: FullConfig): Promise<void> {
 					'Content-Type': 'application/json',
 				},
 				data: {
-					email: TEST_USER.email,
-					password: TEST_USER.password,
+					email: TEST_CREDENTIALS.email,
+					password: TEST_CREDENTIALS.password,
 				},
 			});
 
@@ -316,8 +252,8 @@ async function globalSetup(config: FullConfig): Promise<void> {
 								'Content-Type': 'application/json',
 							},
 							data: {
-								email: TEST_USER.email,
-								password: TEST_USER.password,
+								email: TEST_CREDENTIALS.email,
+								password: TEST_CREDENTIALS.password,
 							},
 						});
 						console.log(`[Auth Setup] Retry sign-in status: ${signInResponse.status()}`);

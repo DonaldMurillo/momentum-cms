@@ -148,8 +148,3 @@ export function createEmailService(config?: EmailConfig): EmailService {
 		},
 	};
 }
-
-/**
- * Type for the email service instance.
- */
-export type MomentumEmailService = ReturnType<typeof createEmailService>;

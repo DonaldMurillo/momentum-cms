@@ -41,8 +41,6 @@ import { ResetPasswordFormComponent } from '../../components/reset-password-form
 			<mcms-card-content>
 				<mcms-reset-password-form
 					[token]="token()"
-					(resetComplete)="onResetComplete()"
-					(resetFailed)="onResetFailed($event)"
 					(goToLogin)="navigateToLogin()"
 					(goToForgotPassword)="navigateToForgotPassword()"
 				/>
@@ -66,15 +64,6 @@ export class ResetPasswordPage implements OnInit {
 		if (tokenParam) {
 			this.token.set(tokenParam);
 		}
-	}
-
-	onResetComplete(): void {
-		// Could add analytics or logging here
-	}
-
-	onResetFailed(error: string): void {
-		// Could add error tracking here
-		void error;
 	}
 
 	navigateToLogin(): void {

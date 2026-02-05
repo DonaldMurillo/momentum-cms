@@ -41,10 +41,7 @@ import { ForgotPasswordFormComponent } from '../../components/forgot-password-fo
 			</mcms-card-header>
 
 			<mcms-card-content>
-				<mcms-forgot-password-form
-					(resetRequested)="onResetRequested($event)"
-					(backToLogin)="navigateToLogin()"
-				/>
+				<mcms-forgot-password-form (backToLogin)="navigateToLogin()" />
 			</mcms-card-content>
 
 			<mcms-card-footer class="justify-center">
@@ -55,11 +52,6 @@ import { ForgotPasswordFormComponent } from '../../components/forgot-password-fo
 })
 export class ForgotPasswordPage {
 	private readonly router = inject(Router);
-
-	onResetRequested(email: string): void {
-		// Could add analytics or logging here
-		void email;
-	}
 
 	navigateToLogin(): void {
 		void this.router.navigate(['/admin/login']);

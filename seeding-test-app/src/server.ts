@@ -125,12 +125,11 @@ app.use(
 				const systemApi = api.setContext({
 					user: { id: 'system', email: 'system@localhost', role: 'admin' },
 				});
-				// Fetch all users and filter client-side
+				// Filter by email server-side to avoid fetching all users
 				const result = await systemApi
 					.collection<{ email: string; role?: string }>('users')
-					.find({ limit: 1000 });
-				const user = result.docs.find((u) => u.email === email);
-				return user?.role;
+					.find({ where: { email: { equals: email } }, limit: 1 });
+				return result.docs[0]?.role;
 			} catch {
 				return undefined;
 			}

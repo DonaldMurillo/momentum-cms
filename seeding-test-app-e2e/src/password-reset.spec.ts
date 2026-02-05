@@ -1,4 +1,13 @@
 import { test, expect } from '@playwright/test';
+import {
+	checkMailpitHealth,
+	clearMailpit,
+	getEmails,
+	getEmailById,
+	waitForEmail,
+	extractResetUrl,
+} from './fixtures/mailpit-helpers';
+import { TEST_CREDENTIALS } from './fixtures/e2e-utils';
 
 /**
  * Password Reset E2E Tests
@@ -11,167 +20,14 @@ import { test, expect } from '@playwright/test';
  * - Test user exists (created by global setup)
  */
 
-// Mailpit API endpoint
-const MAILPIT_API = 'http://localhost:8025/api/v1';
-
 // Base URL for API calls (matches playwright config)
 const BASE_URL = process.env['BASE_URL'] || 'http://localhost:4001';
 
-// Test credentials from global setup
+// Extend shared credentials with the new password used in reset tests
 const TEST_USER = {
-	email: 'admin@test.com',
-	password: 'TestPassword123!',
+	...TEST_CREDENTIALS,
 	newPassword: 'NewPassword456!',
 };
-
-/**
- * Check if Mailpit is running and accessible
- */
-async function checkMailpitHealth(): Promise<void> {
-	try {
-		const response = await fetch(`${MAILPIT_API}/messages`);
-		if (!response.ok) {
-			throw new Error(`Mailpit returned ${response.status}`);
-		}
-	} catch (err) {
-		throw new Error(
-			`Mailpit is not running at ${MAILPIT_API}. ` +
-				`Start it with: docker run -d -p 8025:8025 -p 1025:1025 axllent/mailpit\n` +
-				`Error: ${err}`,
-		);
-	}
-}
-
-/**
- * Helper to clear all emails from Mailpit
- */
-async function clearMailpit(): Promise<void> {
-	try {
-		await fetch(`${MAILPIT_API}/messages`, { method: 'DELETE' });
-	} catch (err) {
-		throw new Error(`Failed to clear Mailpit messages: ${err}`);
-	}
-}
-
-/**
- * Helper to get emails from Mailpit
- */
-async function getEmails(): Promise<MailpitMessage[]> {
-	const response = await fetch(`${MAILPIT_API}/messages`);
-	const data = (await response.json()) as MailpitMessagesResponse;
-	return data.messages || [];
-}
-
-/**
- * Helper to get a specific email by ID
- */
-async function getEmailById(id: string): Promise<MailpitMessageDetail> {
-	const response = await fetch(`${MAILPIT_API}/message/${id}`);
-	return (await response.json()) as MailpitMessageDetail;
-}
-
-/**
- * Helper to wait for an email to arrive
- */
-async function waitForEmail(
-	toEmail: string,
-	subjectContains: string,
-	timeout = 10000,
-): Promise<MailpitMessage> {
-	const startTime = Date.now();
-
-	while (Date.now() - startTime < timeout) {
-		const emails = await getEmails();
-		const email = emails.find(
-			(e) =>
-				e.To.some((t) => t.Address === toEmail) &&
-				e.Subject.toLowerCase().includes(subjectContains.toLowerCase()),
-		);
-
-		if (email) {
-			return email;
-		}
-
-		await new Promise((resolve) => setTimeout(resolve, 500));
-	}
-
-	throw new Error(
-		`Timeout waiting for email to ${toEmail} with subject containing "${subjectContains}"`,
-	);
-}
-
-/**
- * Extract reset URL from email body and validate it has a token.
- * Better Auth generates URLs in format: {baseURL}/reset-password/{token}?callbackURL=...
- * The token is in the path, not query params. Returns the full URL for navigation.
- */
-function extractResetUrl(htmlBody: string): string | null {
-	// Look for the reset URL in the HTML
-	// The email template contains: <a href="URL" ...>Reset Password</a>
-	// Better Auth URL format: /reset-password/{token}?callbackURL=...
-	const match = htmlBody.match(/href="([^"]*reset-password[^"]*)"/);
-	if (match) {
-		const url = match[1];
-		try {
-			const urlObj = new URL(url);
-			// Check for token in path (Better Auth format) or query params (final redirect)
-			const pathMatch = urlObj.pathname.match(/\/reset-password\/([a-zA-Z0-9_-]+)/);
-			if (pathMatch || urlObj.searchParams.has('token')) {
-				return url;
-			}
-		} catch {
-			// Invalid URL, try next pattern
-		}
-	}
-
-	// Also try plain text URL pattern
-	const textMatch = htmlBody.match(/(https?:\/\/[^\s<>"]*reset-password[^\s<>"]*)/);
-	if (textMatch) {
-		const url = textMatch[1];
-		try {
-			const urlObj = new URL(url);
-			const pathMatch = urlObj.pathname.match(/\/reset-password\/([a-zA-Z0-9_-]+)/);
-			if (pathMatch || urlObj.searchParams.has('token')) {
-				return url;
-			}
-		} catch {
-			// Invalid URL
-		}
-	}
-
-	return null;
-}
-
-// Mailpit types
-interface MailpitAddress {
-	Name: string;
-	Address: string;
-}
-
-interface MailpitMessage {
-	ID: string;
-	MessageID: string;
-	From: MailpitAddress;
-	To: MailpitAddress[];
-	Subject: string;
-	Created: string;
-}
-
-interface MailpitMessagesResponse {
-	total: number;
-	unread: number;
-	messages: MailpitMessage[];
-}
-
-interface MailpitMessageDetail {
-	ID: string;
-	MessageID: string;
-	From: MailpitAddress;
-	To: MailpitAddress[];
-	Subject: string;
-	Text: string;
-	HTML: string;
-}
 
 test.describe('Password Reset Flow', () => {
 	test.beforeAll(async () => {

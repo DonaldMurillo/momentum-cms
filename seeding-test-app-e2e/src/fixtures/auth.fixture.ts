@@ -1,6 +1,7 @@
 import { test as base, expect, type Page, type BrowserContext } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
+import { waitForAuthState, TEST_CREDENTIALS } from './e2e-utils';
 
 /**
  * Authentication Test Fixture
@@ -12,55 +13,6 @@ import * as fs from 'fs';
 
 // Auth file path - matches the path used in global-setup.ts
 const AUTH_FILE = path.join(__dirname, '..', '..', 'playwright/.auth/user.json');
-
-const TEST_USER = {
-	email: 'admin@test.com',
-	password: 'TestPassword123!',
-};
-
-/**
- * Wait for the page to settle on a final auth state.
- * With SSR, the server may return one page but client-side redirects to another.
- */
-async function waitForAuthState(
-	page: Page,
-	timeout = 30000,
-): Promise<'setup' | 'login' | 'authenticated'> {
-	const startTime = Date.now();
-
-	while (Date.now() - startTime < timeout) {
-		// Wait for any pending navigations
-		await page.waitForLoadState('networkidle');
-
-		const url = page.url();
-
-		// Check if we're on a stable auth-related page
-		if (url.includes('/setup')) {
-			// Verify the setup form is visible to confirm we're really on setup
-			const nameField = page.getByLabel(/full name/i);
-			if (await nameField.isVisible().catch(() => false)) {
-				return 'setup';
-			}
-		} else if (url.includes('/login')) {
-			// Verify the login form is visible to confirm we're really on login
-			const emailField = page.getByLabel(/email/i);
-			if (await emailField.isVisible().catch(() => false)) {
-				return 'login';
-			}
-		} else if (url.includes('/admin')) {
-			// Verify we're on the dashboard (not redirecting)
-			const dashboardHeading = page.getByRole('heading', { name: 'Dashboard' });
-			if (await dashboardHeading.isVisible().catch(() => false)) {
-				return 'authenticated';
-			}
-		}
-
-		// Wait a bit before checking again
-		await page.waitForTimeout(500);
-	}
-
-	throw new Error(`Timed out waiting for auth state. Current URL: ${page.url()}`);
-}
 
 export const test = base.extend<{ authenticatedPage: Page }>({
 	authenticatedPage: async ({ browser }, use) => {
@@ -105,8 +57,8 @@ export const test = base.extend<{ authenticatedPage: Page }>({
 			// eslint-disable-next-line no-console
 			console.log('[Auth Fixture] On login page, logging in...');
 
-			await page.getByLabel(/email/i).fill(TEST_USER.email);
-			await page.getByLabel(/password/i).fill(TEST_USER.password);
+			await page.getByLabel(/email/i).fill(TEST_CREDENTIALS.email);
+			await page.getByLabel(/password/i).fill(TEST_CREDENTIALS.password);
 			await page.getByRole('button', { name: /sign in|login/i }).click();
 
 			// eslint-disable-next-line no-console
@@ -146,8 +98,4 @@ export const test = base.extend<{ authenticatedPage: Page }>({
 });
 
 export { expect };
-
-/**
- * Test credentials used by global setup.
- */
-export const TEST_CREDENTIALS = TEST_USER;
+export { TEST_CREDENTIALS };
