@@ -32,6 +32,21 @@ nx run-many -t lint         # Lint all projects
 - Write tests BEFORE implementation (Red-Green-Refactor)
 - Test files: `*.spec.ts` in `__tests__/` or alongside source
 
+## E2E Test Rules (Playwright)
+
+Three patterns are **banned** in E2E tests:
+
+1. **NO `.catch(() => false/null/{})` on Playwright calls** — silently swallows failures, making tests pass regardless of actual behavior. `request.delete()` returns a response (never throws on 404), so `.catch()` is unnecessary even in cleanup.
+
+2. **NO `waitForTimeout(N)` or `page.waitForTimeout(N)`** — hardcoded waits are flaky. Use:
+   - `await expect(locator).toBeVisible({ timeout: N })` for waiting on elements
+   - `expect.poll(() => ..., { timeout: N })` for polling async conditions
+   - Raw `setTimeout` only for negative proofs (verifying something does NOT happen), with a comment explaining why
+
+3. **NO ambiguous OR-logic status assertions** like `.ok() || .status() === 201` — Use exact assertions:
+   - `expect(response.status()).toBe(201)` for creates
+   - `expect(response.ok()).toBe(true)` for reads/updates/deletes
+
 ## Code Style
 
 - **Standalone components** (default in Angular 21 - don't add `standalone: true`)
