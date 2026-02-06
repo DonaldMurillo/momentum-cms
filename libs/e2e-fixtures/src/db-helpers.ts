@@ -23,6 +23,11 @@ export function getDatabaseUrl(dbName: string): string {
  * Format: e2e_{appName}_w{workerIndex}
  */
 export function getDatabaseName(appName: string, workerIndex: number): string {
+	if (!/^[a-zA-Z0-9_-]+$/.test(appName)) {
+		throw new Error(
+			`Invalid appName "${appName}": must contain only alphanumeric characters, underscores, and hyphens`,
+		);
+	}
 	return `e2e_${appName}_w${workerIndex}`;
 }
 

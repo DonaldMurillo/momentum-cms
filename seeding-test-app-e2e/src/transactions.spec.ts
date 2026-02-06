@@ -119,7 +119,6 @@ test.describe('Database transactions', () => {
 
 		// Verify it's gone
 		const verifyResponse = await request.get(`/api/categories/${docId}`);
-		// Should be 404 or return null doc
-		expect(verifyResponse.status() === 404 || verifyResponse.ok()).toBe(true);
+		expect(verifyResponse.status(), 'Deleted document should return 404').toBe(404);
 	});
 });

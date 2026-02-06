@@ -107,15 +107,12 @@ app.use(
 				const systemApi = api.setContext({
 					user: { id: 'system', email: 'system@localhost', role: 'admin' },
 				});
-				// Note: where clause filtering has issues with the current API, so fetch all and filter client-side
-				// Use high limit to get all users (default limit is 10)
+				// Filter by email server-side to avoid fetching all users
 				const result = await systemApi
 					.collection<{ email: string; role?: string }>('users')
-					.find({ limit: 1000 });
-				const user = result.docs.find((u) => u.email === email);
-				return user?.role;
-			} catch (error) {
-				console.error(`[SessionResolver] Role lookup error for ${email}:`, error);
+					.find({ where: { email: { equals: email } }, limit: 1 });
+				return result.docs[0]?.role;
+			} catch {
 				return undefined;
 			}
 		},

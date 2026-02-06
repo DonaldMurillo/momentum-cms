@@ -236,7 +236,8 @@ async function setupUsers(
 export function createWorkerFixture(config: WorkerServerConfig): ReturnType<typeof base.extend> {
 	return base.extend<object, { workerBaseURL: string }>({
 		workerBaseURL: [
-			async (_deps, use, workerInfo) => {
+			// eslint-disable-next-line no-empty-pattern -- Playwright fixture requires destructured first arg
+			async ({}, use, workerInfo) => {
 				const workerIndex = workerInfo.workerIndex;
 				const dbName = getDatabaseName(config.appName, workerIndex);
 				const dbUrl = getDatabaseUrl(dbName);

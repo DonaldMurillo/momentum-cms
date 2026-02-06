@@ -29,8 +29,11 @@ export default defineConfig({
 	// Reporter configuration
 	reporter: process.env['CI'] ? 'github' : 'html',
 
-	// Precondition checks (build artifact exists, PG reachable)
+	// Precondition checks (build artifact exists, PG reachable, Mailpit running)
 	globalSetup: require.resolve('./src/global-setup'),
+
+	// Cleanup (stop Mailpit if we started it)
+	globalTeardown: require.resolve('./src/global-teardown'),
 
 	use: {
 		// baseURL is provided per-worker by the worker fixture (random port)
@@ -61,17 +64,9 @@ export default defineConfig({
 	// No webServer — workers spawn their own servers via fixtures
 
 	projects: [
-		// Default project — all tests run in parallel across workers
 		{
 			name: 'default',
 			testMatch: /\.spec\.ts$/,
-			testIgnore: /password-reset\.spec\.ts$/,
-			use: { ...devices['Desktop Chrome'] },
-		},
-		// Email tests — need Mailpit running
-		{
-			name: 'email-tests',
-			testMatch: /password-reset\.spec\.ts$/,
 			use: { ...devices['Desktop Chrome'] },
 		},
 	],

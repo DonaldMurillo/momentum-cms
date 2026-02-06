@@ -1563,11 +1563,7 @@ test.describe('Lifecycle hooks', () => {
 			const findByIdResponse = await request.get(
 				'/api/hook-test-items/00000000-0000-0000-0000-000000000000',
 			);
-			// May be 404 or return null doc
-			expect(
-				findByIdResponse.status() === 404 || findByIdResponse.ok(),
-				'Response should be 404 or ok',
-			).toBe(true);
+			expect(findByIdResponse.status(), 'Deleted document should return 404').toBe(404);
 
 			const logResponse = await request.get('/api/test-hook-log');
 

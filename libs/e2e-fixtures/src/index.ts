@@ -8,3 +8,4 @@ export {
 	type TestUserCredentials,
 } from './auth-helpers';
 export { createWorkerFixture, type WorkerServerConfig } from './worker-server';
+export { ensureMailpit, stopMailpit } from './mailpit-docker';

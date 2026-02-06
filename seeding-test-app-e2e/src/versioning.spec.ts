@@ -11,7 +11,7 @@ import { test, expect } from './fixtures';
  * - Draft saving
  * - Status endpoints
  */
-test.describe('Versioning API Tests', () => {
+test.describe.serial('Versioning API Tests', () => {
 	let testArticleId: string;
 
 	test('should create a versioned article', async ({ request }) => {
@@ -27,6 +27,10 @@ test.describe('Versioning API Tests', () => {
 		expect(data.doc).toBeDefined();
 		expect(data.doc.id).toBeDefined();
 		testArticleId = data.doc.id;
+
+		// Verify article is retrievable
+		const getResponse = await request.get(`/api/articles/${testArticleId}`);
+		expect(getResponse.ok()).toBeTruthy();
 	});
 
 	test('should get document status (default draft)', async ({ request }) => {
@@ -94,6 +98,14 @@ test.describe('Versioning API Tests', () => {
 		expect(data.message).toBe('Draft saved successfully');
 		expect(data.version).toBeDefined();
 		expect(data.version.autosave).toBe(true);
+
+		// Verify the draft version has the correct content
+		const versionResponse = await request.get(
+			`/api/articles/${testArticleId}/versions/${data.version.id}`,
+		);
+		expect(versionResponse.ok()).toBeTruthy();
+		const versionData = await versionResponse.json();
+		expect(versionData.version.title).toBe('Draft Updated Title');
 	});
 
 	test('should get specific version by ID', async ({ request }) => {
@@ -132,9 +144,9 @@ test.describe('Versioning API Tests', () => {
 		const listData = await listResponse.json();
 		expect(listData.docs.length).toBeGreaterThan(0);
 
-		// Find a version that isn't the autosave draft (if possible)
-		const versionToRestore =
-			listData.docs.find((v: Record<string, unknown>) => !v.autosave) || listData.docs[0];
+		// Find a version that isn't the autosave draft
+		const versionToRestore = listData.docs.find((v: Record<string, unknown>) => !v.autosave);
+		expect(versionToRestore, 'Expected at least one non-autosave version').toBeDefined();
 
 		// Restore version
 		const response = await request.post(`/api/articles/${testArticleId}/versions/restore`, {
@@ -147,6 +159,13 @@ test.describe('Versioning API Tests', () => {
 		const data = await response.json();
 		expect(data.message).toBe('Version restored successfully');
 		expect(data.doc).toBeDefined();
+
+		// Verify the article content actually reverted
+		const getResponse = await request.get(`/api/articles/${testArticleId}`);
+		expect(getResponse.ok()).toBeTruthy();
+		const articleData = await getResponse.json();
+		// After restoring, the title should no longer be "Modified Title Before Restore"
+		expect(articleData.doc.title).not.toBe('Modified Title Before Restore');
 	});
 
 	test('should return 400 for non-versioned collection', async ({ request }) => {
@@ -158,10 +177,9 @@ test.describe('Versioning API Tests', () => {
 		expect(data.error).toBe('Versioning not enabled');
 	});
 
-	test('should cleanup test article', async ({ request }) => {
+	test.afterAll(async ({ request }) => {
 		if (testArticleId) {
-			const response = await request.delete(`/api/articles/${testArticleId}`);
-			expect(response.ok()).toBeTruthy();
+			await request.delete(`/api/articles/${testArticleId}`);
 		}
 	});
 });
@@ -175,19 +193,19 @@ test.describe('Versioning with Seeded Data', () => {
 			(a: Record<string, unknown>) => a.title === 'Welcome Article',
 		);
 
-		if (welcomeArticle) {
-			// Publish the seeded article
-			const publishResponse = await request.post(`/api/articles/${welcomeArticle.id}/publish`);
-			expect(publishResponse.ok()).toBeTruthy();
+		expect(welcomeArticle, 'Seeded "Welcome Article" must exist').toBeDefined();
 
-			// Verify it's published
-			const statusResponse = await request.get(`/api/articles/${welcomeArticle.id}/status`);
-			const statusData = await statusResponse.json();
-			expect(statusData.status).toBe('published');
+		// Publish the seeded article
+		const publishResponse = await request.post(`/api/articles/${welcomeArticle.id}/publish`);
+		expect(publishResponse.ok()).toBeTruthy();
 
-			// Unpublish to restore original state
-			await request.post(`/api/articles/${welcomeArticle.id}/unpublish`);
-		}
+		// Verify it's published
+		const statusResponse = await request.get(`/api/articles/${welcomeArticle.id}/status`);
+		const statusData = await statusResponse.json();
+		expect(statusData.status).toBe('published');
+
+		// Unpublish to restore original state
+		await request.post(`/api/articles/${welcomeArticle.id}/unpublish`);
 	});
 
 	test('should list versions for seeded article after modifications', async ({ request }) => {
@@ -198,13 +216,13 @@ test.describe('Versioning with Seeded Data', () => {
 			(a: Record<string, unknown>) => a.title === 'Welcome Article',
 		);
 
-		if (welcomeArticle) {
-			const versionsResponse = await request.get(`/api/articles/${welcomeArticle.id}/versions`);
-			expect(versionsResponse.ok()).toBeTruthy();
+		expect(welcomeArticle, 'Seeded "Welcome Article" must exist').toBeDefined();
 
-			const versionsData = await versionsResponse.json();
-			expect(versionsData.docs).toBeDefined();
-			expect(Array.isArray(versionsData.docs)).toBeTruthy();
-		}
+		const versionsResponse = await request.get(`/api/articles/${welcomeArticle.id}/versions`);
+		expect(versionsResponse.ok()).toBeTruthy();
+
+		const versionsData = await versionsResponse.json();
+		expect(versionsData.docs).toBeDefined();
+		expect(Array.isArray(versionsData.docs)).toBeTruthy();
 	});
 });

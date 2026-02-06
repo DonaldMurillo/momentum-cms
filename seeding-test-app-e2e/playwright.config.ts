@@ -55,23 +55,18 @@ export default defineConfig({
 		timeout: 5000,
 	},
 
-	// Precondition checks (build artifact exists, PG reachable)
+	// Precondition checks (build artifact exists, PG reachable, Mailpit running)
 	globalSetup: require.resolve('./src/global-setup'),
+
+	// Cleanup (stop Mailpit if we started it)
+	globalTeardown: require.resolve('./src/global-teardown'),
 
 	// No webServer — workers spawn their own servers via fixtures
 
 	projects: [
-		// Default project — all tests run in parallel across workers
 		{
 			name: 'default',
 			testMatch: /\.spec\.ts$/,
-			testIgnore: /(email-verification|password-reset)\.spec\.ts$/,
-			use: { ...devices['Desktop Chrome'] },
-		},
-		// Email tests — need Mailpit running
-		{
-			name: 'email-tests',
-			testMatch: /(email-verification|password-reset)\.spec\.ts$/,
 			use: { ...devices['Desktop Chrome'] },
 		},
 	],

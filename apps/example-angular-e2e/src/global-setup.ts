@@ -2,6 +2,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Client } from 'pg';
+import { ensureMailpit } from '@momentum-cms/e2e-fixtures';
 
 const WORKSPACE_ROOT = path.resolve(__dirname, '..', '..', '..');
 const SERVER_BINARY = path.join(WORKSPACE_ROOT, 'dist/apps/example-angular/server/server.mjs');
@@ -46,6 +47,9 @@ async function globalSetup(): Promise<void> {
 	} finally {
 		await client.end();
 	}
+
+	// 3. Ensure Mailpit is running (starts via Docker if not)
+	await ensureMailpit();
 
 	console.log('[Global Setup] All preconditions met.');
 }

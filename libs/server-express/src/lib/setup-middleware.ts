@@ -3,7 +3,7 @@ import { Router as createRouter } from 'express';
 import type { Pool } from 'pg';
 import type { Database } from 'better-sqlite3';
 import type { MomentumAuth } from '@momentum-cms/auth';
-import type { DatabaseAdapter } from '@momentum-cms/core';
+import { MIN_PASSWORD_LENGTH, type DatabaseAdapter } from '@momentum-cms/core';
 
 /**
  * Response type for the setup status endpoint.
@@ -291,9 +291,9 @@ export function createSetupMiddleware(
 			}
 
 			// Validate password length
-			if (password.length < 8) {
+			if (password.length < MIN_PASSWORD_LENGTH) {
 				res.status(400).json({
-					error: { message: 'Password must be at least 8 characters.' },
+					error: { message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` },
 				});
 				return;
 			}

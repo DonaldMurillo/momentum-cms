@@ -112,7 +112,7 @@ describe('initializeMomentum', () => {
 			await result.ready;
 
 			expect(shouldRunSeeding).toHaveBeenCalledWith(true);
-			expect(runSeeding).toHaveBeenCalledWith(seedingConfig, adapter);
+			expect(runSeeding).toHaveBeenCalledWith(seedingConfig, adapter, { auth: undefined });
 		});
 
 		it('should run seeding when configured with runOnStart: "always"', async () => {

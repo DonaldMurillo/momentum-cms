@@ -10,6 +10,12 @@ import type {
 import type { StorageAdapter } from './storage';
 
 /**
+ * Minimum password length for user accounts.
+ * Shared across seeding, user sync hooks, and setup middleware.
+ */
+export const MIN_PASSWORD_LENGTH = 8;
+
+/**
  * Database adapter type for Momentum CMS.
  * This is a placeholder type - actual adapters implement this interface.
  */
@@ -109,11 +115,7 @@ export interface DatabaseAdapter {
 	 * @param id - The document ID
 	 * @param publishAt - ISO date string for scheduled publish, or null to cancel
 	 */
-	setScheduledPublishAt?(
-		collection: string,
-		id: string,
-		publishAt: string | null,
-	): Promise<void>;
+	setScheduledPublishAt?(collection: string, id: string, publishAt: string | null): Promise<void>;
 
 	/**
 	 * Find all documents scheduled for publishing at or before the given date.
@@ -356,4 +358,3 @@ export function getDbAdapter(config: MomentumConfig): DatabaseAdapter {
 export function getCollections(config: MomentumConfig): CollectionConfig[] {
 	return config.collections;
 }
-

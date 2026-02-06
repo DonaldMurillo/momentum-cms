@@ -1,8 +1,8 @@
 import { test, expect } from './fixtures';
 import {
 	isMailpitAvailable,
-	clearMailpit,
 	waitForEmail,
+	getEmails,
 	getEmailById,
 	extractVerificationUrl,
 } from './fixtures/mailpit-helpers';
@@ -32,7 +32,9 @@ test.describe('Email Verification Flow', () => {
 
 	test.beforeEach(async () => {
 		test.skip(!mailpitRunning, 'Mailpit is not running - skipping email verification tests');
-		await clearMailpit();
+		// No clearMailpit() — each test uses unique Date.now() emails,
+		// so waitForEmail filtering works without clearing.
+		// Clearing would cause parallel interference across workers.
 	});
 
 	test('signup triggers verification email', async ({ request }) => {
@@ -156,7 +158,7 @@ test.describe('Email Verification Flow', () => {
 		expect(detail.HTML).toContain('Seeding Test App');
 	});
 
-	test('resend verification email works', async ({ request }) => {
+	test('resend verification email works', async ({ request, baseURL }) => {
 		// Sign up
 		const resendEmail = `verify-resend-${Date.now()}@test.com`;
 		await request.post(`/api/auth/sign-up/email`, {
@@ -168,15 +170,13 @@ test.describe('Email Verification Flow', () => {
 			},
 		});
 
-		// Wait for initial verification email
-		await waitForEmail(resendEmail, 'verify', 15000);
-
-		// Clear mailpit to isolate the resend
-		await clearMailpit();
+		// Wait for initial verification email and save its ID
+		const initialEmail = await waitForEmail(resendEmail, 'verify', 15000);
 
 		// Sign in first (needed for the resend endpoint)
+		// Origin header required by Better Auth CSRF protection
 		await request.post(`/api/auth/sign-in/email`, {
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', Origin: baseURL ?? '' },
 			data: {
 				email: resendEmail,
 				password: VERIFY_USER_PASSWORD,
@@ -185,7 +185,7 @@ test.describe('Email Verification Flow', () => {
 
 		// Request resend verification email via Better Auth
 		const resendResponse = await request.post(`/api/auth/send-verification-email`, {
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', Origin: baseURL ?? '' },
 			data: { email: resendEmail },
 		});
 
@@ -193,10 +193,26 @@ test.describe('Email Verification Flow', () => {
 		// (may return 200 even if already verified as a security measure)
 		expect(resendResponse.status()).toBeLessThan(500);
 
-		// If resend was accepted, check for the second email
+		// If resend was accepted, wait for a NEW email (different ID from initial)
 		if (resendResponse.ok()) {
-			const resendMail = await waitForEmail(resendEmail, 'verify', 15000);
-			expect(resendMail).toBeDefined();
+			const startTime = Date.now();
+			const timeout = 15000;
+			let found = false;
+			while (Date.now() - startTime < timeout) {
+				const emails = await getEmails();
+				const newEmail = emails.find(
+					(e) =>
+						e.ID !== initialEmail.ID &&
+						e.To.some((t) => t.Address === resendEmail) &&
+						e.Subject.toLowerCase().includes('verify'),
+				);
+				if (newEmail) {
+					found = true;
+					break;
+				}
+				await new Promise((resolve) => setTimeout(resolve, 500));
+			}
+			expect(found, 'Resend verification email should arrive').toBe(true);
 		}
 	});
 });

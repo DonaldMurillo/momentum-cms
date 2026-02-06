@@ -645,13 +645,17 @@ class ServerCollectionAPI<T> implements MomentumCollectionAPI<T> {
 	// Signal methods (read-only operations)
 	findSignal(options?: FindOptions): Signal<FindResult<T> | undefined> {
 		const result = signal<FindResult<T> | undefined>(undefined);
-		this.find(options).then((data) => result.set(data));
+		this.find(options)
+			.then((data) => result.set(data))
+			.catch((err: unknown) => console.error('[MomentumAPI] findSignal failed:', err));
 		return result.asReadonly();
 	}
 
 	findByIdSignal(id: string, options?: FindByIdOptions): Signal<T | null | undefined> {
 		const result = signal<T | null | undefined>(undefined);
-		this.findById(id, options).then((data) => result.set(data));
+		this.findById(id, options)
+			.then((data) => result.set(data))
+			.catch((err: unknown) => console.error('[MomentumAPI] findByIdSignal failed:', err));
 		return result.asReadonly();
 	}
 }
@@ -759,8 +763,8 @@ class BrowserCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		// Check TransferState cache first (enabled by default, opt-out with transfer: false)
 		if (options?.transfer !== false && this.transferState && !isPlatformServer(this.platformId)) {
 			const key = generateTransferKey<T | null>(this.slug, 'findById', options, id);
-			const cached = this.transferState.get(key, null);
-			if (cached !== null) {
+			if (this.transferState.hasKey(key)) {
+				const cached = this.transferState.get(key, null);
 				this.transferState.remove(key);
 				return of(cached);
 			}
@@ -860,13 +864,17 @@ class BrowserCollectionAPI<T> implements MomentumCollectionAPI<T> {
 	// Signal methods (read-only operations)
 	findSignal(options?: FindOptions): Signal<FindResult<T> | undefined> {
 		const result = signal<FindResult<T> | undefined>(undefined);
-		this.find(options).then((data) => result.set(data));
+		this.find(options)
+			.then((data) => result.set(data))
+			.catch((err: unknown) => console.error('[MomentumAPI] findSignal failed:', err));
 		return result.asReadonly();
 	}
 
 	findByIdSignal(id: string, options?: FindByIdOptions): Signal<T | null | undefined> {
 		const result = signal<T | null | undefined>(undefined);
-		this.findById(id, options).then((data) => result.set(data));
+		this.findById(id, options)
+			.then((data) => result.set(data))
+			.catch((err: unknown) => console.error('[MomentumAPI] findByIdSignal failed:', err));
 		return result.asReadonly();
 	}
 

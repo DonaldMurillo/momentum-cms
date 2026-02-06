@@ -350,7 +350,16 @@ async function ensureDatabaseExists(connectionString: string): Promise<void> {
 	}
 
 	// Database doesn't exist - create it via the default 'postgres' database
-	const adminConnString = connectionString.replace(`/${dbName}`, '/postgres');
+	// Use URL parsing to safely replace the database name
+	let adminConnString: string;
+	try {
+		const url = new URL(connectionString);
+		url.pathname = '/postgres';
+		adminConnString = url.toString();
+	} catch {
+		// Fallback for non-URL connection strings
+		adminConnString = connectionString.replace(`/${dbName}`, '/postgres');
+	}
 	const adminClient = new Client({ connectionString: adminConnString });
 
 	try {
@@ -360,6 +369,15 @@ async function ensureDatabaseExists(connectionString: string): Promise<void> {
 		await adminClient.query(`CREATE DATABASE "${safeName}"`);
 
 		console.warn(`[Momentum DB] Created database "${dbName}"`);
+	} catch (createError: unknown) {
+		// Handle race condition: another process may have created it concurrently
+		const pgCreateError =
+			createError instanceof Object && 'code' in createError ? createError : null;
+		if (pgCreateError && pgCreateError.code === '42P04') {
+			// 42P04 = "database already exists" — safe to ignore
+			return;
+		}
+		throw createError;
 	} finally {
 		await adminClient.end();
 	}

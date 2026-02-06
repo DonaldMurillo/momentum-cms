@@ -24,7 +24,7 @@
  * ```
  */
 
-import type { HookArgs, HookFunction } from '@momentum-cms/core';
+import { MIN_PASSWORD_LENGTH, type HookArgs, type HookFunction } from '@momentum-cms/core';
 
 /**
  * Better Auth API interface for user creation.
@@ -121,8 +121,8 @@ export function createUserSyncHook(config: UserSyncConfig): HookFunction {
 		}
 
 		// Validate password length (Better Auth requires min 8 chars)
-		if (password.length < 8) {
-			throw new Error('Password must be at least 8 characters');
+		if (password.length < MIN_PASSWORD_LENGTH) {
+			throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
 		}
 
 		try {

@@ -18,7 +18,12 @@ import type {
 	SeedingOptions,
 	RolledBackSeed,
 } from '@momentum-cms/core';
-import { createSeedHelpers, SeedConflictError, SeedRollbackError } from '@momentum-cms/core';
+import {
+	createSeedHelpers,
+	SeedConflictError,
+	SeedRollbackError,
+	MIN_PASSWORD_LENGTH,
+} from '@momentum-cms/core';
 import type { MomentumAuthLike } from '../user-sync-hooks';
 import { createSeedTracker, type SeedTracker } from './seed-tracker';
 
@@ -178,9 +183,9 @@ async function processSeedEntity<T = Record<string, unknown>>(
 			const name = dataToInsert['name'];
 
 			if (typeof password === 'string' && typeof email === 'string' && typeof name === 'string') {
-				if (password.length < 8) {
+				if (password.length < MIN_PASSWORD_LENGTH) {
 					throw new Error(
-						`Auth sync failed for seed "${entity.seedId}": Password must be at least 8 characters`,
+						`Auth sync failed for seed "${entity.seedId}": Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
 					);
 				}
 
