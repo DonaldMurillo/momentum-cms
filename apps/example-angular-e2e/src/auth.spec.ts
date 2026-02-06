@@ -46,52 +46,6 @@ test.describe('Authentication Flow', () => {
 			}
 		});
 
-		// Skip: Angular's signal-based forms don't detect Playwright input events
-		// This is a known limitation with Angular 21's model() signals
-		test.skip('setup form should enable submit with valid data', async ({ page }) => {
-			await page.goto('/admin/setup');
-			await page.waitForLoadState('networkidle');
-
-			if (page.url().includes('/setup')) {
-				// Wait for Angular hydration
-				await page.waitForFunction(() => {
-					const appRoot = document.querySelector('app-root');
-					return appRoot && appRoot.hasAttribute('ng-version');
-				});
-				await page.waitForTimeout(500);
-
-				const submitButton = page.getByRole('button', { name: /create|submit|sign up/i });
-
-				// Initially disabled
-				await expect(submitButton).toBeDisabled();
-
-				// Fill with valid data using keyboard typing
-				await page.getByLabel(/full name/i).click();
-				await page.getByLabel(/full name/i).pressSequentially('Test User', { delay: 20 });
-
-				await page.getByLabel(/email address/i).click();
-				await page
-					.getByLabel(/email address/i)
-					.pressSequentially('test@example.com', { delay: 20 });
-
-				await page.getByRole('textbox', { name: /^password$/i }).click();
-				await page
-					.getByRole('textbox', { name: /^password$/i })
-					.pressSequentially('ValidPassword123!', { delay: 20 });
-
-				await page.getByRole('textbox', { name: /confirm password/i }).click();
-				await page
-					.getByRole('textbox', { name: /confirm password/i })
-					.pressSequentially('ValidPassword123!', { delay: 20 });
-
-				// Wait for Angular to process
-				await page.waitForTimeout(500);
-
-				// Submit button should now be enabled
-				await expect(submitButton).toBeEnabled({ timeout: 5000 });
-			}
-		});
-
 		test('setup form should keep submit disabled for short password', async ({ page }) => {
 			await page.goto('/admin/setup');
 			await page.waitForLoadState('networkidle');
@@ -142,107 +96,9 @@ test.describe('Authentication Flow', () => {
 				await expect(page.getByRole('button', { name: /sign in|login/i })).toBeVisible();
 			}
 		});
-
-		// Skip: Angular's signal-based forms don't detect Playwright input events
-		test.skip('login form should validate required fields', async ({ page }) => {
-			await page.goto('/admin/login');
-			await page.waitForLoadState('networkidle');
-
-			if (page.url().includes('/login')) {
-				// Wait for Angular hydration
-				await page.waitForFunction(() => {
-					const appRoot = document.querySelector('app-root');
-					return appRoot && appRoot.hasAttribute('ng-version');
-				});
-				await page.waitForTimeout(500);
-
-				const submitButton = page.getByRole('button', { name: /sign in|login/i });
-
-				// Button should be disabled when form is empty
-				await expect(submitButton).toBeDisabled();
-
-				// Fill email only using keyboard typing - button should still be disabled
-				await page.getByLabel(/email/i).click();
-				await page.getByLabel(/email/i).pressSequentially('test@example.com', { delay: 20 });
-				await page.waitForTimeout(200);
-				await expect(submitButton).toBeDisabled();
-
-				// Fill password - button should be enabled
-				await page.getByLabel(/password/i).click();
-				await page.getByLabel(/password/i).pressSequentially('somepassword', { delay: 20 });
-				await page.waitForTimeout(200);
-				await expect(submitButton).toBeEnabled({ timeout: 5000 });
-
-				// Clear email using keyboard - button should be disabled again
-				await page.getByLabel(/email/i).click();
-				await page.getByLabel(/email/i).selectText();
-				await page.keyboard.press('Backspace');
-				await page.waitForTimeout(200);
-				await expect(submitButton).toBeDisabled();
-			}
-		});
-
-		// Skip: Angular's signal-based forms don't detect Playwright input events
-		test.skip('login should show error for invalid credentials', async ({ page }) => {
-			await page.goto('/admin/login');
-			await page.waitForLoadState('networkidle');
-
-			if (page.url().includes('/login')) {
-				// Wait for Angular hydration
-				await page.waitForFunction(() => {
-					const appRoot = document.querySelector('app-root');
-					return appRoot && appRoot.hasAttribute('ng-version');
-				});
-				await page.waitForTimeout(500);
-
-				// Fill with invalid credentials using keyboard typing
-				await page.getByLabel(/email/i).click();
-				await page.getByLabel(/email/i).pressSequentially('invalid@example.com', { delay: 20 });
-
-				await page.getByLabel(/password/i).click();
-				await page.getByLabel(/password/i).pressSequentially('wrongpassword', { delay: 20 });
-
-				// Wait for button to be enabled
-				const submitButton = page.getByRole('button', { name: /sign in|login/i });
-				await expect(submitButton).toBeEnabled({ timeout: 5000 });
-
-				// Submit
-				await submitButton.click();
-
-				// Should show authentication error
-				await expect(
-					page.getByText(/invalid|incorrect|failed|unauthorized|not found/i),
-				).toBeVisible({ timeout: 10000 });
-			}
-		});
 	});
 
 	test.describe('Protected Routes', () => {
-		// Skip: With SSR, Angular guards run during route activation but SSR pre-renders
-		// the dashboard. After hydration, the guard doesn't re-run because the route
-		// is already active. The auth redirect happens via auth service effect, which
-		// has timing issues in E2E tests. Access control is verified by API tests instead.
-		test.skip('should redirect unauthenticated users to login or setup', async ({ page }) => {
-			// Clear any existing session
-			await page.context().clearCookies();
-
-			await page.goto('/admin');
-			await page.waitForLoadState('networkidle');
-
-			// Wait for Angular to hydrate (SSR renders page first, then client redirects)
-			await page.waitForFunction(() => {
-				const appRoot = document.querySelector('app-root');
-				return appRoot && appRoot.hasAttribute('ng-version');
-			});
-
-			// Wait for client-side redirect after hydration
-			await page.waitForURL(/\/(admin\/setup|admin\/login)$/, { timeout: 10000 });
-
-			// Should be on login or setup page, not the dashboard
-			const url = page.url();
-			expect(url.includes('/login') || url.includes('/setup')).toBeTruthy();
-		});
-
 		test('should redirect authenticated login page to dashboard', async ({ page }) => {
 			// If user is already authenticated and tries to access login page
 			// This test depends on having an authenticated session

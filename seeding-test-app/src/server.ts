@@ -116,7 +116,11 @@ app.get('/api/test-hook-config', (_req, res) => {
 });
 
 app.post('/api/test-hook-config', (req, res) => {
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Test infrastructure, body is HookBehaviorConfig
+	if (!req.body || typeof req.body !== 'object') {
+		res.status(400).json({ error: 'Invalid request body' });
+		return;
+	}
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Test infrastructure, validated above
 	setHookBehavior(req.body as HookBehaviorConfig);
 	res.json({ configured: true });
 });

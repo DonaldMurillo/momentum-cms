@@ -213,10 +213,12 @@ async function setupUsers(
 		for (const user of allUsers) {
 			await ensureMomentumUser(pool, user, authUserIds.get(user.email));
 		}
-	} catch (error) {
-		console.warn('[Setup] Momentum user sync failed:', error);
 	} finally {
-		await pool.end();
+		try {
+			await pool.end();
+		} catch (endError) {
+			console.warn('[Setup] Failed to close pool:', endError);
+		}
 	}
 }
 

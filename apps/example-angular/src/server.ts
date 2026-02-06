@@ -12,16 +12,13 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
 	momentumApiMiddleware,
+	initializeMomentum,
 	createAuthMiddleware,
 	createSetupMiddleware,
 	createSessionResolverMiddleware,
 } from '@momentum-cms/server-express';
 import { createMomentumAuth } from '@momentum-cms/auth';
-import {
-	initializeMomentumAPI,
-	getMomentumAPI,
-	createUserSyncHook,
-} from '@momentum-cms/server-core';
+import { getMomentumAPI, createUserSyncHook } from '@momentum-cms/server-core';
 import { provideMomentumAPI } from '@momentum-cms/admin';
 import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
 import momentumConfig from './momentum.config';
@@ -34,11 +31,6 @@ const angularApp = new AngularNodeAppEngine();
 
 // Parse JSON request bodies (required for auth endpoints)
 app.use(express.json());
-
-// Initialize database schema if the adapter supports it
-if (momentumConfig.db.adapter.initialize) {
-	momentumConfig.db.adapter.initialize(momentumConfig.collections).catch(console.error);
-}
 
 // Get the pg pool from the adapter for Better Auth
 // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- PostgresAdapter implements PostgresAdapterWithRaw
@@ -73,8 +65,14 @@ if (usersCollection) {
 	usersCollection.hooks.beforeChange = [createUserSyncHook({ auth }), ...existingHooks];
 }
 
-// Initialize Momentum API singleton (after hooks are configured)
-initializeMomentumAPI(momentumConfig);
+// Initialize Momentum CMS (database schema, API, seeding — after hooks are configured)
+const momentum = initializeMomentum(momentumConfig);
+
+// Handle initialization errors
+momentum.ready.catch((error) => {
+	console.error('[Example Angular] Initialization failed:', error);
+	process.exit(1);
+});
 
 /**
  * Auth endpoints (Better Auth)

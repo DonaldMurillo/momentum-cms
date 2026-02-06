@@ -20,8 +20,10 @@ test.describe('TransferState SSR Hydration', () => {
 		await page.goto('/experiments');
 		await page.waitForLoadState('networkidle');
 
-		// Wait for hydration to complete
-		await page.waitForTimeout(500);
+		// Verify no additional API calls happen after SSR hydration (negative proof:
+		// we're confirming the browser does NOT make a duplicate call, so a short
+		// wait is the only way to observe the absence of an event)
+		await new Promise((resolve) => setTimeout(resolve, 500));
 
 		// Should have at most 1 API call (SSR only, not browser)
 		// If TransferState works, browser skips the HTTP call
