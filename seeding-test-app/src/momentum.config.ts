@@ -75,16 +75,15 @@ interface SettingsDoc {
  * - Password reset flow
  * - Admin UI functionality
  *
- * Note: Admin users are created via the setup page flow (not seeded)
- * because Better Auth handles password hashing internally.
- * Collection data is seeded for consistent test state.
+ * Note: Admin user is seeded as the first user for consistent test state.
+ * User password hashing is handled by Better Auth hooks in server.ts.
  */
 export default defineMomentumConfig({
 	db: {
 		adapter: postgresAdapter({
 			connectionString:
 				process.env['DATABASE_URL'] ??
-				'postgresql://postgres:postgres@localhost:5434/momentum_seeding_test',
+				'postgresql://postgres:postgres@localhost:5432/momentum_seeding_test',
 		}),
 	},
 	collections: [
@@ -118,7 +117,15 @@ export default defineMomentumConfig({
 		},
 	},
 	seeding: {
-		defaults: ({ collection }) => [
+		defaults: ({ authUser, collection }) => [
+			// Seed admin user first for E2E tests (synced with Better Auth)
+			authUser('user-admin', {
+				name: 'Test Admin',
+				email: 'admin@test.com',
+				password: 'TestPassword123!',
+				role: 'admin',
+				active: true,
+			}),
 			// Seed categories for testing
 			collection<CategoryDoc>('categories').create('cat-tech', {
 				name: 'Technology',

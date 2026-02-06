@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { TEST_AUTHOR1_CREDENTIALS } from './fixtures/e2e-utils';
+import { test, expect, TEST_AUTHOR1_CREDENTIALS } from './fixtures';
 
 /**
  * Webhook E2E tests.

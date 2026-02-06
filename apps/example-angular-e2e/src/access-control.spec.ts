@@ -1,5 +1,4 @@
-import { test as authTest, expect } from './fixtures/auth.fixture';
-import { test } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 /**
  * Access Control E2E Tests
@@ -77,9 +76,9 @@ test.describe('Backend Access Control', () => {
 	});
 });
 
-authTest.describe('Authenticated Access Control', () => {
-	authTest.describe('API Access', () => {
-		authTest('authenticated user can create posts', async ({ authenticatedPage }) => {
+test.describe('Authenticated Access Control', () => {
+	test.describe('API Access', () => {
+		test('authenticated user can create posts', async ({ authenticatedPage }) => {
 			// Debug: Log cookies
 			const cookies = await authenticatedPage.context().cookies();
 
@@ -106,7 +105,7 @@ authTest.describe('Authenticated Access Control', () => {
 			expect(data.doc.title).toBe('E2E Test Post');
 		});
 
-		authTest('authenticated user can read posts', async ({ authenticatedPage }) => {
+		test('authenticated user can read posts', async ({ authenticatedPage }) => {
 			// Use the page's request context which automatically includes cookies
 			const response = await authenticatedPage.request.get('/api/posts');
 
@@ -115,28 +114,27 @@ authTest.describe('Authenticated Access Control', () => {
 			expect(data.docs).toBeDefined();
 		});
 
-		authTest(
-			'/api/access returns correct permissions for authenticated user',
-			async ({ authenticatedPage }) => {
-				// Use the page's request context which automatically includes cookies
-				const response = await authenticatedPage.request.get('/api/access');
+		test('/api/access returns correct permissions for authenticated user', async ({
+			authenticatedPage,
+		}) => {
+			// Use the page's request context which automatically includes cookies
+			const response = await authenticatedPage.request.get('/api/access');
 
-				expect(response.status()).toBe(200);
-				const data = await response.json();
+			expect(response.status()).toBe(200);
+			const data = await response.json();
 
-				const posts = data.collections.find((c: { slug: string }) => c.slug === 'posts');
+			const posts = data.collections.find((c: { slug: string }) => c.slug === 'posts');
 
-				// Admin user should have full access to posts
-				expect(posts).toBeDefined();
-				if (posts) {
-					expect(posts.canAccess).toBe(true);
-					expect(posts.canCreate).toBe(true);
-					expect(posts.canRead).toBe(true);
-					expect(posts.canUpdate).toBe(true);
-					// canDelete depends on role - admin can delete, regular users cannot
-				}
-			},
-		);
+			// Admin user should have full access to posts
+			expect(posts).toBeDefined();
+			if (posts) {
+				expect(posts.canAccess).toBe(true);
+				expect(posts.canCreate).toBe(true);
+				expect(posts.canRead).toBe(true);
+				expect(posts.canUpdate).toBe(true);
+				// canDelete depends on role - admin can delete, regular users cannot
+			}
+		});
 	});
 });
 
@@ -187,8 +185,8 @@ test.describe('Frontend Access Control', () => {
 	});
 });
 
-authTest.describe('Authenticated Frontend Access Control', () => {
-	authTest('admin user sees collections in sidebar', async ({ authenticatedPage }) => {
+test.describe('Authenticated Frontend Access Control', () => {
+	test('admin user sees collections in sidebar', async ({ authenticatedPage }) => {
 		// Navigate to dashboard
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');
@@ -203,7 +201,7 @@ authTest.describe('Authenticated Frontend Access Control', () => {
 		await expect(postsLink).toBeVisible();
 	});
 
-	authTest('can navigate to accessible collection', async ({ authenticatedPage }) => {
+	test('can navigate to accessible collection', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');
 
@@ -221,7 +219,7 @@ authTest.describe('Authenticated Frontend Access Control', () => {
 		).toBeVisible();
 	});
 
-	authTest('collection list page loads correctly', async ({ authenticatedPage }) => {
+	test('collection list page loads correctly', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/posts');
 		await authenticatedPage.waitForLoadState('networkidle');
 
@@ -232,17 +230,14 @@ authTest.describe('Authenticated Frontend Access Control', () => {
 		await expect(authenticatedPage.getByRole('heading', { name: /posts/i })).toBeVisible();
 	});
 
-	authTest(
-		'create button visible for authenticated users on posts',
-		async ({ authenticatedPage }) => {
-			await authenticatedPage.goto('/admin/collections/posts');
-			await authenticatedPage.waitForLoadState('networkidle');
+	test('create button visible for authenticated users on posts', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/posts');
+		await authenticatedPage.waitForLoadState('networkidle');
 
-			// Create button should be visible (authenticated users can create posts)
-			const createButton = authenticatedPage.getByRole('link', { name: /create|new|add/i });
-			await expect(createButton).toBeVisible();
-		},
-	);
+		// Create button should be visible (authenticated users can create posts)
+		const createButton = authenticatedPage.getByRole('button', { name: /Create Post/i });
+		await expect(createButton).toBeVisible();
+	});
 });
 
 test.describe('Access Control Edge Cases', () => {
@@ -269,9 +264,9 @@ test.describe('Access Control Edge Cases', () => {
 	});
 });
 
-authTest.describe('Role-Based Access Control', () => {
-	authTest.describe('Admin Role Permissions', () => {
-		authTest('admin user can access users collection via API', async ({ authenticatedPage }) => {
+test.describe('Role-Based Access Control', () => {
+	test.describe('Admin Role Permissions', () => {
+		test('admin user can access users collection via API', async ({ authenticatedPage }) => {
 			// The test user is admin (created by global setup)
 			// Use the page's request context which automatically includes cookies
 			const response = await authenticatedPage.request.get('/api/users');
@@ -280,7 +275,7 @@ authTest.describe('Role-Based Access Control', () => {
 			expect(response.status()).toBe(200);
 		});
 
-		authTest('admin user has delete permission on posts', async ({ authenticatedPage }) => {
+		test('admin user has delete permission on posts', async ({ authenticatedPage }) => {
 			// Use the page's request context which automatically includes cookies
 			const response = await authenticatedPage.request.get('/api/access');
 

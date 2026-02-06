@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { TEST_AUTHOR3_CREDENTIALS } from './fixtures/e2e-utils';
+import { test, expect, TEST_AUTHOR3_CREDENTIALS } from './fixtures';
 
 /**
  * GraphQL API E2E tests.
@@ -52,7 +51,6 @@ test.describe('GraphQL API', () => {
 		});
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			data: {
 				__schema: {
@@ -90,7 +88,6 @@ test.describe('GraphQL API', () => {
 		});
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			data: {
 				categories: {
@@ -126,7 +123,6 @@ test.describe('GraphQL API', () => {
 		});
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			data: {
 				createCategory: { id: string; name: string; slug: string };
@@ -150,7 +146,6 @@ test.describe('GraphQL API', () => {
 		});
 		expect(createResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			data: { createCategory: { id: string } };
 		};
@@ -173,7 +168,6 @@ test.describe('GraphQL API', () => {
 		});
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			data: {
 				category: { id: string; name: string; slug: string };
@@ -192,7 +186,7 @@ test.describe('GraphQL API', () => {
 				query: `mutation { createCategory(data: { name: "GQL-Update Original", slug: "gql-update" }) { id } }`,
 			},
 		});
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const created = (await createResponse.json()) as {
 			data: { createCategory: { id: string } };
 		};
@@ -218,7 +212,6 @@ test.describe('GraphQL API', () => {
 		});
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			data: {
 				updateCategory: { id: string; name: string; slug: string };
@@ -238,7 +231,7 @@ test.describe('GraphQL API', () => {
 				query: `mutation { createCategory(data: { name: "GQL-Delete Me", slug: "gql-delete" }) { id } }`,
 			},
 		});
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const created = (await createResponse.json()) as {
 			data: { createCategory: { id: string } };
 		};
@@ -259,7 +252,6 @@ test.describe('GraphQL API', () => {
 		});
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			data: {
 				deleteCategory: { id: string; deleted: boolean };
@@ -288,7 +280,6 @@ test.describe('GraphQL API', () => {
 		});
 		expect(gqlResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const gqlData = (await gqlResponse.json()) as {
 			data: { createCategory: { id: string; name: string } };
 		};
@@ -299,7 +290,6 @@ test.describe('GraphQL API', () => {
 		const restResponse = await request.get(`/api/categories/${id}`);
 		expect(restResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const restData = (await restResponse.json()) as {
 			doc: { id: string; name: string; slug: string };
 		};
@@ -316,7 +306,6 @@ test.describe('GraphQL API', () => {
 		});
 		expect(response.ok()).toBe(true); // GraphQL returns 200 even for errors
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			errors?: Array<{ message: string }>;
 		};

@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { TEST_CREDENTIALS } from './fixtures/e2e-utils';
+import { test, expect, TEST_CREDENTIALS } from './fixtures';
 
 /**
  * Relationship field E2E tests.
@@ -27,11 +26,10 @@ test.describe('Relationship field', () => {
 		expect(articlesResponse.ok()).toBe(true);
 		expect(categoriesResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const articles = (await articlesResponse.json()) as {
 			docs: Array<{ id: string; title: string; category?: string }>;
 		};
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const categories = (await categoriesResponse.json()) as {
 			docs: Array<{ id: string; name: string }>;
 		};
@@ -74,7 +72,6 @@ test.describe('Relationship field', () => {
 		const catResponse = await request.get('/api/categories?limit=10');
 		expect(catResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const catData = (await catResponse.json()) as {
 			docs: Array<{ id: string; name: string }>;
 		};
@@ -94,7 +91,6 @@ test.describe('Relationship field', () => {
 		});
 		expect(createResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const createBody = (await createResponse.json()) as {
 			doc: {
 				id: string;
@@ -110,7 +106,6 @@ test.describe('Relationship field', () => {
 		const getResponse = await request.get(`/api/articles/${created.id}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const getBody = (await getResponse.json()) as { doc: { category?: string } };
 		expect(getBody.doc.category).toBe(sportsCat?.id);
 
@@ -128,7 +123,6 @@ test.describe('Relationship field', () => {
 		const catResponse = await request.get('/api/categories?limit=10');
 		expect(catResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const catData = (await catResponse.json()) as {
 			docs: Array<{ id: string; name: string }>;
 		};
@@ -153,7 +147,6 @@ test.describe('Relationship field', () => {
 		});
 		expect(createResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const createBody = (await createResponse.json()) as { doc: { id: string; category?: string } };
 		const created = createBody.doc;
 		expect(created.category).toBe(techCat?.id);
@@ -169,7 +162,6 @@ test.describe('Relationship field', () => {
 		const getResponse = await request.get(`/api/articles/${created.id}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const getBody = (await getResponse.json()) as { doc: { category?: string } };
 		expect(getBody.doc.category).toBe(newsCat?.id);
 		// Verify old category is gone
@@ -189,7 +181,6 @@ test.describe('Relationship field', () => {
 		const catResponse = await request.get('/api/categories?limit=10');
 		expect(catResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const catData = (await catResponse.json()) as {
 			docs: Array<{ id: string; name: string }>;
 		};
@@ -209,7 +200,6 @@ test.describe('Relationship field', () => {
 		});
 		expect(createResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const createBody = (await createResponse.json()) as { doc: { id: string; category?: string } };
 		const created = createBody.doc;
 		expect(created.category).toBe(techCat?.id);
@@ -225,7 +215,6 @@ test.describe('Relationship field', () => {
 		const getResponse = await request.get(`/api/articles/${created.id}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const getBody = (await getResponse.json()) as { doc: { category?: string | null } };
 		// Use explicit null check rather than toBeFalsy() which would also pass for empty string
 		expect(getBody.doc.category ?? null).toBeNull();

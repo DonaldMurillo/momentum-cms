@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures/auth.fixture';
+import { test, expect } from './fixtures';
 
 /**
  * Collection Edit/Create Form E2E Tests

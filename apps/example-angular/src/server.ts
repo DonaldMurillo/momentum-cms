@@ -48,10 +48,13 @@ const pool = dbAdapter.getPool();
 // Create Better Auth instance with PostgreSQL
 // Email is enabled automatically if SMTP_HOST env var is set
 // Defaults to Mailpit settings (localhost:1025) for local development
+const authBaseURL =
+	process.env['BETTER_AUTH_URL'] || `http://localhost:${momentumConfig.server.port}`;
+
 const auth = createMomentumAuth({
 	db: { type: 'postgres', pool },
-	baseURL: `http://localhost:${momentumConfig.server.port}`,
-	trustedOrigins: ['http://localhost:4200', `http://localhost:${momentumConfig.server.port}`],
+	baseURL: authBaseURL,
+	trustedOrigins: ['http://localhost:4200', authBaseURL],
 	email: {
 		// Email is auto-enabled when SMTP_HOST is set
 		// Configure via environment variables:

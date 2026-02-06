@@ -1,9 +1,10 @@
-import { test, expect } from '@playwright/test';
 import {
+	test,
+	expect,
 	TEST_CREDENTIALS,
 	ADDITIONAL_TEST_USERS,
 	type TestUserCredentials,
-} from './fixtures/e2e-utils';
+} from './fixtures';
 
 /**
  * Multi-user setup verification tests.
@@ -25,7 +26,7 @@ test.describe('Multi-user setup', () => {
 			expect(response.ok(), `Sign-in should succeed for ${user.email}`).toBe(true);
 
 			// Verify response contains user data
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 			const body = (await response.json()) as {
 				user?: { email?: string };
 				token?: string;
@@ -49,7 +50,6 @@ test.describe('Multi-user setup', () => {
 		const response = await request.get('/api/users?limit=100');
 		expect(response.ok(), 'Users list should be accessible').toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			docs: Array<{ email: string; role?: string }>;
 		};
@@ -58,10 +58,7 @@ test.describe('Multi-user setup', () => {
 		for (const user of allUsers) {
 			const found = data.docs.find((doc) => doc.email === user.email);
 			expect(found, `User ${user.email} should exist in users collection`).toBeTruthy();
-			expect(
-				found?.role,
-				`User ${user.email} should have role '${user.role}'`,
-			).toBe(user.role);
+			expect(found?.role, `User ${user.email} should have role '${user.role}'`).toBe(user.role);
 		}
 	});
 });

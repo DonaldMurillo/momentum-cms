@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, TEST_CREDENTIALS } from './fixtures';
 import {
 	checkMailpitHealth,
 	clearMailpit,
@@ -7,7 +7,6 @@ import {
 	waitForEmail,
 	extractResetUrl,
 } from './fixtures/mailpit-helpers';
-import { TEST_CREDENTIALS } from './fixtures/auth.fixture';
 
 /**
  * Password Reset E2E Tests
@@ -19,9 +18,6 @@ import { TEST_CREDENTIALS } from './fixtures/auth.fixture';
  * - SMTP_HOST=localhost set in environment
  * - Test user exists (created by global setup)
  */
-
-// Base URL for API calls (matches playwright config)
-const BASE_URL = process.env['BASE_URL'] || 'http://localhost:4000';
 
 // Extend shared credentials with the new password used in reset tests
 const TEST_USER = {
@@ -185,22 +181,19 @@ test.describe('Password Reset Flow', () => {
 			// Wrap in try/catch so test doesn't fail if cleanup fails
 			try {
 				// Wait for session to stabilize before cleanup
-				await page.waitForTimeout(2000);
+				await new Promise((resolve) => setTimeout(resolve, 2000));
 				await clearMailpit();
 
 				// Wait a bit after clearing
-				await page.waitForTimeout(500);
+				await new Promise((resolve) => setTimeout(resolve, 500));
 
-				const resetResponse = await context.request.post(
-					`${BASE_URL}/api/auth/request-password-reset`,
-					{
-						headers: { 'Content-Type': 'application/json' },
-						data: {
-							email: TEST_USER.email,
-							redirectTo: `${BASE_URL}/admin/reset-password`,
-						},
+				const resetResponse = await context.request.post(`/api/auth/request-password-reset`, {
+					headers: { 'Content-Type': 'application/json' },
+					data: {
+						email: TEST_USER.email,
+						redirectTo: `/admin/reset-password`,
 					},
-				);
+				});
 
 				console.log('[Cleanup] Password reset request status:', resetResponse.status());
 
@@ -215,7 +208,7 @@ test.describe('Password Reset Flow', () => {
 					const token = pathMatch ? pathMatch[1] : urlObj.searchParams.get('token');
 
 					if (token) {
-						const resetResult = await context.request.post(`${BASE_URL}/api/auth/reset-password`, {
+						const resetResult = await context.request.post(`/api/auth/reset-password`, {
 							headers: { 'Content-Type': 'application/json' },
 							data: { token, newPassword: TEST_USER.password },
 						});
@@ -243,8 +236,8 @@ test.describe('Password Reset Flow', () => {
 			// Should still show success message (no indication email doesn't exist)
 			await expect(page.getByText(/check your email/i)).toBeVisible({ timeout: 10000 });
 
-			// Wait a bit for any email to arrive
-			await page.waitForTimeout(2000);
+			// Allow time for any email delivery (intentional wait for negative proof)
+			await new Promise((resolve) => setTimeout(resolve, 2000));
 
 			// Verify no email was actually sent
 			const emails = await getEmails();

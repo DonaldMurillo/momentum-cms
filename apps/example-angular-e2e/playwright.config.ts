@@ -1,16 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 import { nxE2EPreset } from '@nx/playwright/preset';
-import { workspaceRoot } from '@nx/devkit';
-
-// For CI, you may want to set BASE_URL to the deployed application.
-const baseURL = process.env['BASE_URL'] || 'http://localhost:4000';
 
 /**
- * Strict Playwright configuration for E2E testing.
- * - No mocks allowed - tests run against real server
- * - Strict timeouts to catch slow operations
- * - CI-aware retries and parallelization
- * - Global setup creates admin user before tests
+ * Parallel Playwright configuration for Example Angular E2E Tests.
+ *
+ * - 4 concurrent workers, each with its own database and server
+ * - Worker-scoped fixtures handle DB creation, server startup, and user setup
+ * - globalSetup runs precondition checks (build artifact, PG reachable)
+ * - No webServer block — workers spawn their own servers on random ports
  *
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -23,27 +20,27 @@ export default defineConfig({
 	// Retry failed tests on CI only
 	retries: process.env['CI'] ? 2 : 0,
 
-	// Run tests in parallel
+	// Run tests in parallel — each worker has its own isolated server + DB
 	fullyParallel: true,
 
-	// Limit workers on CI for stability
-	workers: process.env['CI'] ? 1 : undefined,
+	// 4 concurrent workers for local development, 2 on CI for stability
+	workers: process.env['CI'] ? 2 : 4,
 
 	// Reporter configuration
 	reporter: process.env['CI'] ? 'github' : 'html',
 
-	// Global setup runs once before all tests - creates admin user
+	// Precondition checks (build artifact exists, PG reachable)
 	globalSetup: require.resolve('./src/global-setup'),
 
-	/* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
 	use: {
-		baseURL,
+		// baseURL is provided per-worker by the worker fixture (random port)
+		// No static baseURL here — it's overridden by the fixture
 
 		// Strict timeouts - catch slow operations early
 		actionTimeout: 10000,
 		navigationTimeout: 30000,
 
-		// Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer
+		// Collect trace when retrying the failed test
 		trace: 'on-first-retry',
 
 		// Screenshot on failure
@@ -61,84 +58,21 @@ export default defineConfig({
 		timeout: 5000,
 	},
 
-	/* Run the production server before starting the tests - NO MOCKS */
-	webServer: {
-		command:
-			'npx nx build example-angular --configuration=production && node dist/apps/example-angular/server/server.mjs',
-		url: 'http://localhost:4000',
-		reuseExistingServer: !process.env['CI'],
-		cwd: workspaceRoot,
-		timeout: 180000,
-	},
+	// No webServer — workers spawn their own servers via fixtures
 
 	projects: [
-		// API Access Control tests - run FIRST and in SERIAL
-		// Creates test users (editor, viewer) for other tests to use
+		// Default project — all tests run in parallel across workers
 		{
-			name: 'api-access-control-tests',
-			testMatch: /api-access-control\.spec\.ts$/,
-			use: {
-				...devices['Desktop Chrome'],
-			},
+			name: 'default',
+			testMatch: /\.spec\.ts$/,
+			testIgnore: /password-reset\.spec\.ts$/,
+			use: { ...devices['Desktop Chrome'] },
 		},
-		// Auth tests run without storage state to test login/logout flows
+		// Email tests — need Mailpit running
 		{
-			name: 'auth-tests',
-			testMatch: /auth\.spec\.ts$/,
-			use: {
-				...devices['Desktop Chrome'],
-				// No storage state - tests unauthenticated behavior
-			},
-			dependencies: ['api-access-control-tests'],
-		},
-		// Password reset tests - require Mailpit running
-		// Run LAST because the full flow test changes the admin password
-		{
-			name: 'password-reset-tests',
+			name: 'email-tests',
 			testMatch: /password-reset\.spec\.ts$/,
-			use: {
-				...devices['Desktop Chrome'],
-				// No storage state - tests unauthenticated behavior
-			},
-			dependencies: ['authenticated-tests', 'unauthenticated-tests', 'general-tests'],
-		},
-		// General tests (example.spec.ts, api.spec.ts, transfer-state.spec.ts, storybook.spec.ts) run without storage state
-		{
-			name: 'general-tests',
-			testMatch: /(example|api|transfer-state|storybook)\.spec\.ts$/,
-			use: {
-				...devices['Desktop Chrome'],
-				// No storage state - tests handle auth as needed
-			},
-			dependencies: ['api-access-control-tests'],
-		},
-		// Unauthenticated access control tests
-		{
-			name: 'unauthenticated-tests',
-			testMatch: /access-control\.spec\.ts$/,
-			use: {
-				...devices['Desktop Chrome'],
-				// No storage state - tests unauthenticated API behavior
-			},
-			dependencies: ['api-access-control-tests'],
-		},
-		// Authenticated tests - auth fixture loads storage state from global setup
-		{
-			name: 'authenticated-tests',
-			testMatch: /(admin-dashboard|collection-list|collection-edit)\.spec\.ts$/,
-			use: {
-				...devices['Desktop Chrome'],
-			},
-			dependencies: ['api-access-control-tests'],
-		},
-		// Versioning tests - test version history, publish/unpublish, drafts
-		{
-			name: 'versioning-tests',
-			testMatch: /versioning\.spec\.ts$/,
-			use: {
-				...devices['Desktop Chrome'],
-			},
-			dependencies: ['api-access-control-tests'],
+			use: { ...devices['Desktop Chrome'] },
 		},
 	],
 });

@@ -30,6 +30,18 @@ export interface SeedEntityOptions {
 	 * @default true
 	 */
 	skipAccessControl?: boolean;
+
+	/**
+	 * Sync with Better Auth when creating this seed.
+	 * When true, the seed executor will call auth.api.signUpEmail() to create
+	 * a Better Auth user with a hashed password, then link the Momentum user
+	 * via the authId field.
+	 *
+	 * Requires `auth` to be passed to `initializeMomentum` options.
+	 * Only applies to new seeds (not on 'skip' or 'update').
+	 * @default false
+	 */
+	syncAuth?: boolean;
 }
 
 /**
@@ -181,6 +193,43 @@ export interface AdminSeedData {
 }
 
 /**
+ * Auth-aware user seed data structure.
+ * Creates both a Better Auth user (with hashed password) and a Momentum users collection entry.
+ * Use with the `authUser()` helper in seeding defaults.
+ */
+export interface AuthUserSeedData {
+	[key: string]: unknown;
+
+	/**
+	 * User's display name.
+	 */
+	name: string;
+
+	/**
+	 * User's email address (unique).
+	 */
+	email: string;
+
+	/**
+	 * User's password (will be hashed by Better Auth).
+	 * Must be at least 8 characters.
+	 */
+	password: string;
+
+	/**
+	 * User's role in the Momentum users collection.
+	 * @default 'user'
+	 */
+	role?: string;
+
+	/**
+	 * Whether the user is active.
+	 * @default true
+	 */
+	active?: boolean;
+}
+
+/**
  * Default entity helpers with IntelliSense support.
  * Used in the `defaults` function of SeedingConfig.
  */
@@ -246,6 +295,32 @@ export interface DefaultEntityHelpers {
 	 * ```
 	 */
 	collection: <TDoc>(slug: string) => CollectionSeedBuilder<TDoc>;
+
+	/**
+	 * Create an auth-aware user seed entity.
+	 * Creates a Better Auth user (with hashed password) and a Momentum users collection entry.
+	 * The seed executor will call auth.api.signUpEmail() and link via authId.
+	 *
+	 * @param seedId - Unique identifier for this seed
+	 * @param data - User data including password
+	 * @param options - Optional seed options
+	 * @returns Seed entity definition with syncAuth enabled
+	 *
+	 * @example
+	 * ```typescript
+	 * authUser('admin-user', {
+	 *   name: 'Admin',
+	 *   email: 'admin@example.com',
+	 *   password: 'SecurePass123!',
+	 *   role: 'admin',
+	 * });
+	 * ```
+	 */
+	authUser: (
+		seedId: string,
+		data: AuthUserSeedData,
+		options?: SeedEntityOptions,
+	) => SeedEntity<AuthUserSeedData>;
 }
 
 /**

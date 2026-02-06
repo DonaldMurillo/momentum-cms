@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { TEST_CREDENTIALS } from './fixtures/e2e-utils';
+import { test, expect, TEST_CREDENTIALS } from './fixtures';
 
 /**
  * Array field renderer E2E tests.
@@ -22,7 +21,6 @@ test.describe('Array field renderer', () => {
 		const response = await request.get('/api/products?limit=10');
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			docs: Array<{
 				id: string;
@@ -54,7 +52,6 @@ test.describe('Array field renderer', () => {
 		const response = await request.get('/api/products?limit=10');
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			docs: Array<{
 				id: string;
@@ -88,7 +85,6 @@ test.describe('Array field renderer', () => {
 
 		expect(createResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const createBody = (await createResponse.json()) as {
 			doc: {
 				id: string;
@@ -107,7 +103,6 @@ test.describe('Array field renderer', () => {
 		const getResponse = await request.get(`/api/products/${created.id}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const getBody = (await getResponse.json()) as {
 			doc: {
 				features?: Array<{ label: string; description?: string; highlighted?: boolean }>;
@@ -136,7 +131,6 @@ test.describe('Array field renderer', () => {
 		});
 		expect(createResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const createBody = (await createResponse.json()) as { doc: { id: string } };
 
 		// Update: replace array with new items
@@ -155,7 +149,6 @@ test.describe('Array field renderer', () => {
 		const getResponse = await request.get(`/api/products/${createBody.doc.id}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const getBody = (await getResponse.json()) as {
 			doc: {
 				features?: Array<{ label: string; description?: string; highlighted?: boolean }>;
@@ -188,7 +181,6 @@ test.describe('Array field renderer', () => {
 		});
 		expect(createResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const createBody = (await createResponse.json()) as {
 			doc: { id: string; features?: unknown[] };
 		};
@@ -197,7 +189,6 @@ test.describe('Array field renderer', () => {
 		const getResponse = await request.get(`/api/products/${createBody.doc.id}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const getBody = (await getResponse.json()) as { doc: { features?: unknown[] } };
 		expect(Array.isArray(getBody.doc.features)).toBe(true);
 		expect(getBody.doc.features).toHaveLength(0);

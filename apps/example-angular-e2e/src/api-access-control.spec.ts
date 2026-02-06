@@ -1,4 +1,11 @@
-import { test, expect, APIRequestContext } from '@playwright/test';
+import {
+	test,
+	expect,
+	TEST_CREDENTIALS,
+	TEST_EDITOR_CREDENTIALS,
+	TEST_VIEWER_CREDENTIALS,
+} from './fixtures';
+import type { APIRequestContext } from '@playwright/test';
 
 /**
  * API Access Control E2E Tests
@@ -9,37 +16,20 @@ import { test, expect, APIRequestContext } from '@playwright/test';
  * IMPORTANT: Tests run in SERIAL to avoid race conditions with user creation.
  *
  * Test Users:
- * - admin (admin@test.com) - Full access, created by global setup
- * - editor (editor@test.com) - Can create/update posts, no user access
- * - viewer (viewer@test.com) - Read-only access
+ * - admin - Full access, created by worker fixture
+ * - editor - Can create/update posts, no user access
+ * - viewer - Read-only access
  */
 
 // Configure ALL tests in this file to run in serial
 test.describe.configure({ mode: 'serial' });
 
-const BASE_URL = 'http://localhost:4000';
-
-// Test user credentials
+// Test user credentials (from worker fixture)
 const TEST_USERS = {
-	admin: {
-		email: 'admin@test.com',
-		password: 'TestPassword123!',
-		name: 'Test Admin',
-		role: 'admin',
-	},
-	editor: {
-		email: 'editor@test.com',
-		password: 'EditorPass123!',
-		name: 'Test Editor',
-		role: 'editor',
-	},
-	viewer: {
-		email: 'viewer@test.com',
-		password: 'ViewerPass123!',
-		name: 'Test Viewer',
-		role: 'viewer',
-	},
-} as const;
+	admin: TEST_CREDENTIALS,
+	editor: TEST_EDITOR_CREDENTIALS,
+	viewer: TEST_VIEWER_CREDENTIALS,
+};
 
 // Session cookies for each user (persisted across tests in serial mode)
 const sessions: Record<string, string[]> = {};
@@ -70,7 +60,7 @@ async function trySignIn(
 	email: string,
 	password: string,
 ): Promise<string[] | null> {
-	const response = await request.post(`${BASE_URL}/api/auth/sign-in/email`, {
+	const response = await request.post(`/api/auth/sign-in/email`, {
 		data: { email, password },
 	});
 
@@ -91,7 +81,7 @@ async function trySignUp(
 	email: string,
 	password: string,
 ): Promise<string[] | null> {
-	const response = await request.post(`${BASE_URL}/api/auth/sign-up/email`, {
+	const response = await request.post(`/api/auth/sign-up/email`, {
 		data: { name, email, password },
 	});
 
@@ -138,7 +128,7 @@ async function authenticatedRequest(
 	}
 
 	let response;
-	const url = `${BASE_URL}${path}`;
+	const url = path;
 	switch (method) {
 		case 'GET':
 			response = await request.get(url, options);
@@ -347,14 +337,14 @@ test.describe('API Access Control - Setup', () => {
 
 test.describe('API Access Control - Posts Collection', () => {
 	test('unauthenticated: can read posts (public)', async ({ request }) => {
-		const response = await request.get(`${BASE_URL}/api/posts`);
+		const response = await request.get(`/api/posts`);
 		expect(response.status()).toBe(200);
 		const body = await response.json();
 		expect(body.docs).toBeDefined();
 	});
 
 	test('unauthenticated: cannot create posts (403)', async ({ request }) => {
-		const response = await request.post(`${BASE_URL}/api/posts`, {
+		const response = await request.post(`/api/posts`, {
 			data: {
 				title: 'Unauthorized Post',
 				slug: `unauthorized-${Date.now()}`,
@@ -518,7 +508,7 @@ test.describe('API Access Control - Posts Collection', () => {
 
 test.describe('API Access Control - Users Collection', () => {
 	test('unauthenticated: cannot read users (403)', async ({ request }) => {
-		const response = await request.get(`${BASE_URL}/api/users`);
+		const response = await request.get(`/api/users`);
 		expect(response.status()).toBe(403);
 	});
 
@@ -609,7 +599,7 @@ test.describe('API Access Control - Users Collection', () => {
 
 test.describe('API Access Control - /api/access Endpoint', () => {
 	test('returns correct permissions for unauthenticated user', async ({ request }) => {
-		const response = await request.get(`${BASE_URL}/api/access`);
+		const response = await request.get(`/api/access`);
 		expect(response.status()).toBe(200);
 
 		const data = await response.json();
@@ -735,7 +725,7 @@ test.describe('API Access Control - /api/access Endpoint', () => {
 
 test.describe('API Access Control - Error Responses', () => {
 	test('403 response includes error message', async ({ request }) => {
-		const response = await request.post(`${BASE_URL}/api/posts`, {
+		const response = await request.post(`/api/posts`, {
 			data: { title: 'Test', slug: 'test' },
 		});
 		expect(response.status()).toBe(403);
@@ -746,7 +736,7 @@ test.describe('API Access Control - Error Responses', () => {
 	});
 
 	test('404 for non-existent collection, not 403', async ({ request }) => {
-		const response = await request.get(`${BASE_URL}/api/nonexistent`);
+		const response = await request.get(`/api/nonexistent`);
 		expect(response.status()).toBe(404);
 	});
 });

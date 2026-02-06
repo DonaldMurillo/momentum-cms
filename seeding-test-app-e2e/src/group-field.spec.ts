@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { TEST_CREDENTIALS } from './fixtures/e2e-utils';
+import { test, expect, TEST_CREDENTIALS } from './fixtures';
 
 /**
  * Group field renderer E2E tests.
@@ -24,7 +23,6 @@ test.describe('Group field renderer', () => {
 		const response = await request.get('/api/products?limit=10');
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			docs: Array<{
 				id: string;
@@ -61,7 +59,6 @@ test.describe('Group field renderer', () => {
 
 		expect(createResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const createBody = (await createResponse.json()) as {
 			doc: {
 				id: string;
@@ -80,7 +77,6 @@ test.describe('Group field renderer', () => {
 		const getResponse = await request.get(`/api/products/${created.id}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const getBody = (await getResponse.json()) as {
 			doc: {
 				seo?: { metaTitle?: string; metaDescription?: string; ogImage?: string };
@@ -108,7 +104,6 @@ test.describe('Group field renderer', () => {
 		});
 		expect(createResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const createBody = (await createResponse.json()) as { doc: { id: string } };
 
 		// Update the group field
@@ -128,7 +123,6 @@ test.describe('Group field renderer', () => {
 		const getResponse = await request.get(`/api/products/${createBody.doc.id}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const getBody = (await getResponse.json()) as {
 			doc: {
 				seo?: { metaTitle?: string; metaDescription?: string; ogImage?: string };

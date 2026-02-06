@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, TEST_CREDENTIALS } from './fixtures';
 import {
 	isMailpitAvailable,
 	clearMailpit,
@@ -7,7 +7,6 @@ import {
 	waitForEmail,
 	extractResetUrl,
 } from './fixtures/mailpit-helpers';
-import { TEST_CREDENTIALS } from './fixtures/e2e-utils';
 
 /**
  * Password Reset E2E Tests
@@ -17,11 +16,8 @@ import { TEST_CREDENTIALS } from './fixtures/e2e-utils';
  * Prerequisites:
  * - Mailpit running on localhost:8025 (web) and localhost:1025 (SMTP)
  * - SMTP_HOST=localhost set in environment
- * - Test user exists (created by global setup)
+ * - Test user exists (created by worker fixture)
  */
-
-// Base URL for API calls (matches playwright config)
-const BASE_URL = process.env['BASE_URL'] || 'http://localhost:4001';
 
 // Extend shared credentials with the new password used in reset tests
 const TEST_USER = {
@@ -187,16 +183,13 @@ test.describe('Password Reset Flow', () => {
 			try {
 				await clearMailpit();
 
-				const resetResponse = await context.request.post(
-					`${BASE_URL}/api/auth/request-password-reset`,
-					{
-						headers: { 'Content-Type': 'application/json' },
-						data: {
-							email: TEST_USER.email,
-							redirectTo: `${BASE_URL}/admin/reset-password`,
-						},
+				const resetResponse = await context.request.post(`/api/auth/request-password-reset`, {
+					headers: { 'Content-Type': 'application/json' },
+					data: {
+						email: TEST_USER.email,
+						redirectTo: `/admin/reset-password`,
 					},
-				);
+				});
 
 				console.log('[Cleanup] Password reset request status:', resetResponse.status());
 
@@ -211,7 +204,7 @@ test.describe('Password Reset Flow', () => {
 					const token = pathMatch ? pathMatch[1] : urlObj.searchParams.get('token');
 
 					if (token) {
-						const resetResult = await context.request.post(`${BASE_URL}/api/auth/reset-password`, {
+						const resetResult = await context.request.post(`/api/auth/reset-password`, {
 							headers: { 'Content-Type': 'application/json' },
 							data: { token, newPassword: TEST_USER.password },
 						});

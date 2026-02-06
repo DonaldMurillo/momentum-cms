@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { TEST_AUTHOR3_CREDENTIALS } from './fixtures/e2e-utils';
+import { test, expect, TEST_AUTHOR3_CREDENTIALS } from './fixtures';
 
 /**
  * Live Preview E2E tests.

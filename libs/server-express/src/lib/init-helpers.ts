@@ -5,6 +5,7 @@ import {
 	runSeeding,
 	shouldRunSeeding,
 	type SeedingResult,
+	type MomentumAuthLike,
 } from '@momentum-cms/server-core';
 import type { MomentumConfig, ResolvedMomentumConfig } from '@momentum-cms/core';
 
@@ -61,6 +62,13 @@ export interface InitializeMomentumOptions {
 	 * @default console.log
 	 */
 	logger?: (message: string) => void;
+
+	/**
+	 * Auth instance for auth-aware user seeding.
+	 * When provided, seeds created with `authUser()` will automatically
+	 * create Better Auth users with hashed passwords.
+	 */
+	auth?: MomentumAuthLike;
 }
 
 /**
@@ -90,7 +98,7 @@ export function initializeMomentum(
 	options: InitializeMomentumOptions = {},
 ): MomentumInitResult {
 	// eslint-disable-next-line no-console -- Default logger for server initialization, can be overridden via options
-	const { logging = true, logger = console.log } = options;
+	const { logging = true, logger = console.log, auth } = options;
 
 	let isInitialized = false;
 	let seedingResult: SeedingResult | null = null;
@@ -116,7 +124,7 @@ export function initializeMomentum(
 		const runOnStart = config.seeding?.options?.runOnStart ?? 'development';
 		if (config.seeding && shouldRunSeeding(runOnStart)) {
 			log('Running seeding...');
-			seedingResult = await runSeeding(config.seeding, config.db.adapter);
+			seedingResult = await runSeeding(config.seeding, config.db.adapter, { auth });
 			log(
 				`Seeding complete: ${seedingResult.created} created, ${seedingResult.updated} updated, ${seedingResult.skipped} skipped`,
 			);

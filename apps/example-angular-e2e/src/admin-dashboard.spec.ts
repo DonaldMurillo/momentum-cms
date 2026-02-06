@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures/auth.fixture';
+import { test, expect } from './fixtures';
 
 /**
  * Admin Dashboard E2E Tests
@@ -16,11 +16,11 @@ test.describe('Admin Dashboard', () => {
 		await expect(heading).toBeVisible();
 	});
 
-	test('should display welcome subtitle', async ({ authenticatedPage }) => {
+	test('should display dashboard subtitle', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		const subtitle = authenticatedPage.getByText('Welcome to Momentum CMS');
+		const subtitle = authenticatedPage.getByText('Manage your content and collections');
 		await expect(subtitle).toBeVisible();
 	});
 
@@ -28,45 +28,57 @@ test.describe('Admin Dashboard', () => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		// Check Posts collection card
-		const postsCard = authenticatedPage.getByRole('link', { name: /Posts.*posts.*fields/i });
-		await expect(postsCard).toBeVisible();
+		// Collection cards have H3 headings
+		const postsHeading = authenticatedPage.getByRole('heading', { name: 'Posts', level: 3 });
+		await expect(postsHeading).toBeVisible();
 
-		// Check Users collection card
-		const usersCard = authenticatedPage.getByRole('link', { name: /Users.*users.*fields/i });
-		await expect(usersCard).toBeVisible();
+		const usersHeading = authenticatedPage.getByRole('heading', { name: 'Users', level: 3 });
+		await expect(usersHeading).toBeVisible();
 	});
 
-	test('should show field count on collection cards', async ({ authenticatedPage }) => {
+	test('should show document count badges on collection cards', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		// Posts has 5 fields (title, slug, content, author, status)
-		const postsCard = authenticatedPage.getByRole('link', { name: /Posts.*posts.*5 fields/i });
-		await expect(postsCard).toBeVisible();
+		// Cards show document count badges (e.g., "3 docs")
+		// Verify the cards have badge elements
+		const cards = authenticatedPage.locator('mcms-collection-card');
+		await expect(cards).toHaveCount(2);
 
-		// Users has 5 fields (name, email, authId, role, active)
-		const usersCard = authenticatedPage.getByRole('link', { name: /Users.*users.*5 fields/i });
-		await expect(usersCard).toBeVisible();
+		// Each card should have a badge with a count
+		for (const card of await cards.all()) {
+			const badge = card.locator('mcms-badge');
+			await expect(badge).toBeVisible();
+		}
 	});
 
-	test('should navigate to Posts collection when clicking card', async ({ authenticatedPage }) => {
+	test('should navigate to Posts collection when clicking View all', async ({
+		authenticatedPage,
+	}) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		const postsCard = authenticatedPage.getByRole('link', { name: /Posts.*posts.*fields/i });
-		await postsCard.click();
+		// Find the Posts card section and click "View all"
+		const postsCard = authenticatedPage
+			.locator('mcms-collection-card')
+			.filter({ hasText: 'Posts' });
+		await postsCard.getByRole('link', { name: /View all/i }).click();
 
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/posts/);
 		await expect(authenticatedPage.getByRole('heading', { name: 'Posts' })).toBeVisible();
 	});
 
-	test('should navigate to Users collection when clicking card', async ({ authenticatedPage }) => {
+	test('should navigate to Users collection when clicking View all', async ({
+		authenticatedPage,
+	}) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		const usersCard = authenticatedPage.getByRole('link', { name: /Users.*users.*fields/i });
-		await usersCard.click();
+		// Find the Users card section and click "View all"
+		const usersCard = authenticatedPage
+			.locator('mcms-collection-card')
+			.filter({ hasText: 'Users' });
+		await usersCard.getByRole('link', { name: /View all/i }).click();
 
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users/);
 		await expect(authenticatedPage.getByRole('heading', { name: 'Users' })).toBeVisible();
@@ -111,19 +123,19 @@ test.describe('Admin Sidebar Navigation', () => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');
 
+		// Use specific aria-label to avoid ambiguity with breadcrumb nav
+		const sidebarNav = authenticatedPage.getByLabel('Main navigation');
+
 		// Click Posts in sidebar
-		await authenticatedPage.getByRole('navigation').getByRole('link', { name: 'Posts' }).click();
+		await sidebarNav.getByRole('link', { name: 'Posts' }).click();
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/posts/);
 
-		// Click Dashboard in sidebar (re-query navigation after page change)
-		await authenticatedPage
-			.getByRole('navigation')
-			.getByRole('link', { name: 'Dashboard' })
-			.click();
+		// Click Dashboard in sidebar (page now has breadcrumb nav too)
+		await sidebarNav.getByRole('link', { name: 'Dashboard' }).click();
 		await expect(authenticatedPage).toHaveURL(/\/admin$/);
 
 		// Click Users in sidebar
-		await authenticatedPage.getByRole('navigation').getByRole('link', { name: 'Users' }).click();
+		await sidebarNav.getByRole('link', { name: 'Users' }).click();
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users/);
 	});
 

@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { TEST_AUTHOR1_CREDENTIALS } from './fixtures/e2e-utils';
+import { test, expect, TEST_AUTHOR1_CREDENTIALS } from './fixtures';
 
 /**
  * Import/Export E2E Tests.
@@ -187,9 +186,9 @@ test.describe('Import/Export', () => {
 		}
 	});
 
-	test('import JSON: requires authentication', async ({ request: _request }) => {
+	test('import JSON: requires authentication', async ({ request: _request, baseURL }) => {
 		// Use a fresh request context without auth cookies
-		const fetchResponse = await fetch('http://localhost:4001/api/categories/import', {
+		const fetchResponse = await fetch(`${baseURL}/api/categories/import`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({

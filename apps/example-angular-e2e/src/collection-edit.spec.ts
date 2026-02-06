@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures/auth.fixture';
+import { test, expect } from './fixtures';
 
 /**
  * Collection Edit/Create Form E2E Tests
@@ -9,7 +9,7 @@ import { test, expect } from './fixtures/auth.fixture';
 
 test.describe('Collection Create Form - Posts', () => {
 	test('should display Create heading', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/posts/create');
+		await authenticatedPage.goto('/admin/collections/posts/new');
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
@@ -18,30 +18,37 @@ test.describe('Collection Create Form - Posts', () => {
 		await expect(heading).toBeVisible();
 	});
 
-	test('should have back link to list', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/posts/create');
+	test('should have breadcrumb link back to list', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/posts/new');
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
 
-		const backLink = authenticatedPage.getByRole('link', { name: /Back to list/i });
-		await expect(backLink).toBeVisible();
+		// Breadcrumb has a link back to the collection list
+		const breadcrumbLink = authenticatedPage
+			.locator('nav[aria-label="Breadcrumb"]')
+			.getByRole('link', { name: 'Posts' });
+		await expect(breadcrumbLink).toBeVisible();
 	});
 
-	test('should navigate back to list when clicking back link', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/posts/create');
+	test('should navigate back to list when clicking breadcrumb link', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin/collections/posts/new');
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
 
-		const backLink = authenticatedPage.getByRole('link', { name: /Back to list/i });
-		await backLink.click();
+		const breadcrumbLink = authenticatedPage
+			.locator('nav[aria-label="Breadcrumb"]')
+			.getByRole('link', { name: 'Posts' });
+		await breadcrumbLink.click();
 
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/posts$/);
 	});
 
 	test('should display all Posts fields', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/posts/create');
+		await authenticatedPage.goto('/admin/collections/posts/new');
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
@@ -49,36 +56,36 @@ test.describe('Collection Create Form - Posts', () => {
 		// Title field
 		const titleLabel = authenticatedPage.getByText('Title');
 		await expect(titleLabel).toBeVisible();
-		const titleInput = authenticatedPage.locator('input#title');
+		const titleInput = authenticatedPage.locator('input#field-title');
 		await expect(titleInput).toBeVisible();
 
 		// URL Slug field
 		const slugLabel = authenticatedPage.getByText('URL Slug');
 		await expect(slugLabel).toBeVisible();
-		const slugInput = authenticatedPage.locator('input#slug');
+		const slugInput = authenticatedPage.locator('input#field-slug');
 		await expect(slugInput).toBeVisible();
 
 		// Content field (textarea)
 		const contentLabel = authenticatedPage.getByText('Content');
 		await expect(contentLabel).toBeVisible();
-		const contentTextarea = authenticatedPage.locator('textarea#content');
+		const contentTextarea = authenticatedPage.locator('textarea#field-content');
 		await expect(contentTextarea).toBeVisible();
 
 		// Status field (select)
 		const statusLabel = authenticatedPage.getByText('Status');
 		await expect(statusLabel).toBeVisible();
-		const statusSelect = authenticatedPage.locator('select#status');
+		const statusSelect = authenticatedPage.locator('select#field-status');
 		await expect(statusSelect).toBeVisible();
 
-		// Featured field (checkbox)
+		// Featured field (checkbox rendered as button)
 		const featuredLabel = authenticatedPage.getByText('Featured Post');
 		await expect(featuredLabel).toBeVisible();
-		const featuredCheckbox = authenticatedPage.locator('input#featured');
+		const featuredCheckbox = authenticatedPage.locator('[role="checkbox"]#field-featured');
 		await expect(featuredCheckbox).toBeVisible();
 	});
 
 	test('should show required indicator on required fields', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/posts/create');
+		await authenticatedPage.goto('/admin/collections/posts/new');
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
@@ -91,12 +98,12 @@ test.describe('Collection Create Form - Posts', () => {
 	});
 
 	test('should have status select with correct options', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/posts/create');
+		await authenticatedPage.goto('/admin/collections/posts/new');
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
 
-		const statusSelect = authenticatedPage.locator('select#status');
+		const statusSelect = authenticatedPage.locator('select#field-status');
 
 		// Check for placeholder
 		await expect(statusSelect.locator('option[value=""]')).toHaveText('Select...');
@@ -108,50 +115,53 @@ test.describe('Collection Create Form - Posts', () => {
 	});
 
 	test('should have Create submit button', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/posts/create');
+		await authenticatedPage.goto('/admin/collections/posts/new');
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		const submitButton = authenticatedPage.getByRole('button', { name: 'Create' });
 		await expect(submitButton).toBeVisible();
 	});
 
-	test('should have Cancel link', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/posts/create');
+	test('should have Cancel button', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/posts/new');
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
 
-		const cancelLink = authenticatedPage.getByRole('link', { name: 'Cancel' });
-		await expect(cancelLink).toBeVisible();
+		const cancelButton = authenticatedPage.getByRole('button', { name: 'Cancel' });
+		await expect(cancelButton).toBeVisible();
 	});
 
 	test('should fill out form fields', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/posts/create');
+		await authenticatedPage.goto('/admin/collections/posts/new');
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
 
 		// Fill title
-		await authenticatedPage.locator('input#title').fill('Test Post Title');
-		await expect(authenticatedPage.locator('input#title')).toHaveValue('Test Post Title');
+		await authenticatedPage.locator('input#field-title').fill('Test Post Title');
+		await expect(authenticatedPage.locator('input#field-title')).toHaveValue('Test Post Title');
 
 		// Fill slug
-		await authenticatedPage.locator('input#slug').fill('test-post-title');
-		await expect(authenticatedPage.locator('input#slug')).toHaveValue('test-post-title');
+		await authenticatedPage.locator('input#field-slug').fill('test-post-title');
+		await expect(authenticatedPage.locator('input#field-slug')).toHaveValue('test-post-title');
 
 		// Fill content
-		await authenticatedPage.locator('textarea#content').fill('This is the test content.');
-		await expect(authenticatedPage.locator('textarea#content')).toHaveValue(
+		await authenticatedPage.locator('textarea#field-content').fill('This is the test content.');
+		await expect(authenticatedPage.locator('textarea#field-content')).toHaveValue(
 			'This is the test content.',
 		);
 
 		// Select status
-		await authenticatedPage.locator('select#status').selectOption('published');
-		await expect(authenticatedPage.locator('select#status')).toHaveValue('published');
+		await authenticatedPage.locator('select#field-status').selectOption('published');
+		await expect(authenticatedPage.locator('select#field-status')).toHaveValue('published');
 
-		// Check featured
-		await authenticatedPage.locator('input#featured').check();
-		await expect(authenticatedPage.locator('input#featured')).toBeChecked();
+		// Toggle featured checkbox (rendered as button role="checkbox")
+		await authenticatedPage.locator('[role="checkbox"]#field-featured').click();
+		await expect(authenticatedPage.locator('[role="checkbox"]#field-featured')).toHaveAttribute(
+			'aria-checked',
+			'true',
+		);
 	});
 
 	test('should successfully create a new post and redirect to list', async ({
@@ -218,7 +228,7 @@ test.describe('Collection Create Form - Posts', () => {
 
 test.describe('Collection Create Form - Users', () => {
 	test('should display Create heading', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/users/create');
+		await authenticatedPage.goto('/admin/collections/users/new');
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
@@ -228,7 +238,7 @@ test.describe('Collection Create Form - Users', () => {
 	});
 
 	test('should display all Users fields', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/users/create');
+		await authenticatedPage.goto('/admin/collections/users/new');
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
@@ -236,36 +246,36 @@ test.describe('Collection Create Form - Users', () => {
 		// Name field
 		const nameLabel = authenticatedPage.getByText('Name');
 		await expect(nameLabel).toBeVisible();
-		const nameInput = authenticatedPage.locator('input#name');
+		const nameInput = authenticatedPage.locator('input#field-name');
 		await expect(nameInput).toBeVisible();
 
 		// Email field
 		const emailLabel = authenticatedPage.getByText('Email');
 		await expect(emailLabel).toBeVisible();
-		const emailInput = authenticatedPage.locator('input#email');
+		const emailInput = authenticatedPage.locator('input#field-email');
 		await expect(emailInput).toBeVisible();
 		await expect(emailInput).toHaveAttribute('type', 'email');
 
 		// Role field (select)
 		const roleLabel = authenticatedPage.getByText('Role');
 		await expect(roleLabel).toBeVisible();
-		const roleSelect = authenticatedPage.locator('select#role');
+		const roleSelect = authenticatedPage.locator('select#field-role');
 		await expect(roleSelect).toBeVisible();
 
-		// Active field (checkbox)
+		// Active field (checkbox rendered as button)
 		const activeLabel = authenticatedPage.getByText('Active');
 		await expect(activeLabel).toBeVisible();
-		const activeCheckbox = authenticatedPage.locator('input#active');
+		const activeCheckbox = authenticatedPage.locator('[role="checkbox"]#field-active');
 		await expect(activeCheckbox).toBeVisible();
 	});
 
 	test('should have role select with correct options', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/users/create');
+		await authenticatedPage.goto('/admin/collections/users/new');
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
 
-		const roleSelect = authenticatedPage.locator('select#role');
+		const roleSelect = authenticatedPage.locator('select#field-role');
 
 		await expect(roleSelect.locator('option[value="admin"]')).toHaveText('Admin');
 		await expect(roleSelect.locator('option[value="editor"]')).toHaveText('Editor');
@@ -273,34 +283,34 @@ test.describe('Collection Create Form - Users', () => {
 	});
 
 	test('should fill out user form fields', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/users/create');
+		await authenticatedPage.goto('/admin/collections/users/new');
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
 
 		// Fill name
-		const nameInput = authenticatedPage.locator('input#name');
+		const nameInput = authenticatedPage.locator('input#field-name');
 		await expect(nameInput).toBeVisible();
 		await nameInput.click();
 		await nameInput.fill('John Doe');
 		await expect(nameInput).toHaveValue('John Doe');
 
 		// Fill email
-		const emailInput = authenticatedPage.locator('input#email');
+		const emailInput = authenticatedPage.locator('input#field-email');
 		await expect(emailInput).toBeVisible();
 		await emailInput.click();
 		await emailInput.fill('john@example.com');
 		await expect(emailInput).toHaveValue('john@example.com');
 
 		// Select role
-		const roleSelect = authenticatedPage.locator('select#role');
+		const roleSelect = authenticatedPage.locator('select#field-role');
 		await roleSelect.selectOption('admin');
 		await expect(roleSelect).toHaveValue('admin');
 
-		// Check active
-		const activeCheckbox = authenticatedPage.locator('input#active');
-		await activeCheckbox.check();
-		await expect(activeCheckbox).toBeChecked();
+		// Toggle active checkbox (rendered as button role="checkbox")
+		const activeCheckbox = authenticatedPage.locator('[role="checkbox"]#field-active');
+		await activeCheckbox.click();
+		await expect(activeCheckbox).toHaveAttribute('aria-checked', 'true');
 	});
 
 	test('should successfully create a new user and redirect to list', async ({
@@ -335,11 +345,11 @@ test.describe('Collection Edit Form - Cancel Navigation', () => {
 	test('should navigate back to list when clicking Cancel on Posts', async ({
 		authenticatedPage,
 	}) => {
-		await authenticatedPage.goto('/admin/collections/posts/create');
+		await authenticatedPage.goto('/admin/collections/posts/new');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		const cancelLink = authenticatedPage.getByRole('link', { name: 'Cancel' });
-		await cancelLink.click();
+		const cancelButton = authenticatedPage.getByRole('button', { name: 'Cancel' });
+		await cancelButton.click();
 
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/posts$/);
 	});
@@ -347,11 +357,11 @@ test.describe('Collection Edit Form - Cancel Navigation', () => {
 	test('should navigate back to list when clicking Cancel on Users', async ({
 		authenticatedPage,
 	}) => {
-		await authenticatedPage.goto('/admin/collections/users/create');
+		await authenticatedPage.goto('/admin/collections/users/new');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		const cancelLink = authenticatedPage.getByRole('link', { name: 'Cancel' });
-		await cancelLink.click();
+		const cancelButton = authenticatedPage.getByRole('button', { name: 'Cancel' });
+		await cancelButton.click();
 
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users$/);
 	});

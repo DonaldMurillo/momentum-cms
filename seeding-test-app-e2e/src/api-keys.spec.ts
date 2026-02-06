@@ -1,5 +1,5 @@
-import { test, expect, type APIRequestContext } from '@playwright/test';
-import { TEST_CREDENTIALS, TEST_EDITOR_CREDENTIALS } from './fixtures/e2e-utils';
+import { test, expect, TEST_CREDENTIALS, TEST_EDITOR_CREDENTIALS } from './fixtures';
+import type { APIRequestContext } from '@playwright/test';
 
 /**
  * API Keys E2E Tests
@@ -14,15 +14,13 @@ import { TEST_CREDENTIALS, TEST_EDITOR_CREDENTIALS } from './fixtures/e2e-utils'
  * Uses the admin test user for management operations.
  */
 
-const BASE_URL = process.env['BASE_URL'] || 'http://localhost:4001';
-
 test.describe('API Key Management', () => {
 	let adminContext: APIRequestContext;
 
-	test.beforeAll(async ({ playwright }) => {
+	test.beforeAll(async ({ playwright, workerBaseURL }) => {
 		adminContext = await playwright.request.newContext({
-			baseURL: BASE_URL,
-			extraHTTPHeaders: { Origin: BASE_URL },
+			baseURL: workerBaseURL,
+			extraHTTPHeaders: { Origin: workerBaseURL },
 		});
 
 		const signInResponse = await adminContext.post('/api/auth/sign-in/email', {
@@ -45,7 +43,6 @@ test.describe('API Key Management', () => {
 
 		expect(response.status()).toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			id: string;
 			name: string;
@@ -86,7 +83,6 @@ test.describe('API Key Management', () => {
 		const response = await adminContext.get('/api/api-keys');
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			keys: Array<{ id: string; name: string; keyPrefix: string; role: string }>;
 		};
@@ -103,14 +99,14 @@ test.describe('API Key Management', () => {
 		const createResponse = await adminContext.post('/api/api-keys', {
 			data: { name: 'To Delete', role: 'user' },
 		});
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const created = (await createResponse.json()) as { id: string };
 
 		const deleteResponse = await adminContext.delete(`/api/api-keys/${created.id}`);
 		expect(deleteResponse.ok()).toBe(true);
 
 		const listResponse = await adminContext.get('/api/api-keys');
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const listData = (await listResponse.json()) as {
 			keys: Array<{ id: string; name: string }>;
 		};
@@ -127,10 +123,10 @@ test.describe('API Key Authentication', () => {
 	let adminContext: APIRequestContext;
 	let apiKey: string;
 
-	test.beforeAll(async ({ playwright }) => {
+	test.beforeAll(async ({ playwright, workerBaseURL }) => {
 		adminContext = await playwright.request.newContext({
-			baseURL: BASE_URL,
-			extraHTTPHeaders: { Origin: BASE_URL },
+			baseURL: workerBaseURL,
+			extraHTTPHeaders: { Origin: workerBaseURL },
 		});
 
 		const signInResponse = await adminContext.post('/api/auth/sign-in/email', {
@@ -145,7 +141,7 @@ test.describe('API Key Authentication', () => {
 			data: { name: 'Auth Test Key', role: 'admin' },
 		});
 		expect(createResponse.status()).toBe(201);
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const data = (await createResponse.json()) as { key: string };
 		apiKey = data.key;
 	});
@@ -154,9 +150,12 @@ test.describe('API Key Authentication', () => {
 		await adminContext?.dispose();
 	});
 
-	test('API key authenticates requests to collection endpoints', async ({ playwright }) => {
+	test('API key authenticates requests to collection endpoints', async ({
+		playwright,
+		baseURL,
+	}) => {
 		const keyContext = await playwright.request.newContext({
-			baseURL: BASE_URL,
+			baseURL,
 			extraHTTPHeaders: { 'X-API-Key': apiKey },
 		});
 
@@ -164,7 +163,6 @@ test.describe('API Key Authentication', () => {
 			const response = await keyContext.get('/api/articles');
 			expect(response.ok()).toBe(true);
 
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 			const data = (await response.json()) as { docs: unknown[] };
 			expect(Array.isArray(data.docs)).toBe(true);
 		} finally {
@@ -172,9 +170,9 @@ test.describe('API Key Authentication', () => {
 		}
 	});
 
-	test('invalid API key is rejected', async ({ playwright }) => {
+	test('invalid API key is rejected', async ({ playwright, baseURL }) => {
 		const keyContext = await playwright.request.newContext({
-			baseURL: BASE_URL,
+			baseURL,
 			extraHTTPHeaders: {
 				'X-API-Key': 'mcms_0000000000000000000000000000000000000000',
 			},
@@ -188,9 +186,9 @@ test.describe('API Key Authentication', () => {
 		}
 	});
 
-	test('malformed API key is rejected', async ({ playwright }) => {
+	test('malformed API key is rejected', async ({ playwright, baseURL }) => {
 		const keyContext = await playwright.request.newContext({
-			baseURL: BASE_URL,
+			baseURL,
 			extraHTTPHeaders: { 'X-API-Key': 'bad-key' },
 		});
 
@@ -204,8 +202,9 @@ test.describe('API Key Authentication', () => {
 
 	test('request without API key or session returns appropriate response', async ({
 		playwright,
+		baseURL,
 	}) => {
-		const anonContext = await playwright.request.newContext({ baseURL: BASE_URL });
+		const anonContext = await playwright.request.newContext({ baseURL });
 
 		try {
 			const response = await anonContext.get('/api/articles');
@@ -218,10 +217,10 @@ test.describe('API Key Authentication', () => {
 });
 
 test.describe('API Key Access Control', () => {
-	test('non-admin user cannot create API keys', async ({ playwright }) => {
+	test('non-admin user cannot create API keys', async ({ playwright, baseURL }) => {
 		const editorContext = await playwright.request.newContext({
-			baseURL: BASE_URL,
-			extraHTTPHeaders: { Origin: BASE_URL },
+			baseURL,
+			extraHTTPHeaders: { Origin: baseURL },
 		});
 
 		try {
@@ -242,10 +241,10 @@ test.describe('API Key Access Control', () => {
 		}
 	});
 
-	test('non-admin user cannot list API keys', async ({ playwright }) => {
+	test('non-admin user cannot list API keys', async ({ playwright, baseURL }) => {
 		const editorContext = await playwright.request.newContext({
-			baseURL: BASE_URL,
-			extraHTTPHeaders: { Origin: BASE_URL },
+			baseURL,
+			extraHTTPHeaders: { Origin: baseURL },
 		});
 
 		try {
@@ -264,8 +263,8 @@ test.describe('API Key Access Control', () => {
 		}
 	});
 
-	test('unauthenticated user cannot manage API keys', async ({ playwright }) => {
-		const anonContext = await playwright.request.newContext({ baseURL: BASE_URL });
+	test('unauthenticated user cannot manage API keys', async ({ playwright, baseURL }) => {
+		const anonContext = await playwright.request.newContext({ baseURL });
 
 		try {
 			const listResponse = await anonContext.get('/api/api-keys');

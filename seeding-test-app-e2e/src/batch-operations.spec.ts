@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { TEST_AUTHOR1_CREDENTIALS } from './fixtures/e2e-utils';
+import { test, expect, TEST_AUTHOR1_CREDENTIALS } from './fixtures';
 
 /**
  * Batch operations E2E tests.
@@ -19,7 +18,6 @@ test.describe('Batch operations', () => {
 		// Clean up any leftover batch test data
 		const listResponse = await request.get('/api/categories?limit=1000');
 		if (listResponse.ok()) {
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 			const listData = (await listResponse.json()) as {
 				docs: Array<{ id: string; slug?: string }>;
 			};
@@ -45,7 +43,6 @@ test.describe('Batch operations', () => {
 		});
 		expect(response.status()).toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const body = (await response.json()) as {
 			docs: Array<{ id: string; name: string; slug: string }>;
 			message: string;
@@ -55,7 +52,7 @@ test.describe('Batch operations', () => {
 
 		// Verify all three exist
 		const slugsResponse = await request.get('/api/categories/slugs');
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const slugsData = (await slugsResponse.json()) as { slugs: string[] };
 		expect(slugsData.slugs).toContain('batch-cat-1');
 		expect(slugsData.slugs).toContain('batch-cat-2');
@@ -76,7 +73,6 @@ test.describe('Batch operations', () => {
 		});
 		expect(createResponse.status()).toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			docs: Array<{ id: string }>;
 		};
@@ -94,7 +90,6 @@ test.describe('Batch operations', () => {
 		});
 		expect(updateResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const updated = (await updateResponse.json()) as {
 			docs: Array<{ id: string; name: string }>;
 			message: string;
@@ -104,7 +99,7 @@ test.describe('Batch operations', () => {
 
 		// Verify updates
 		const doc1Response = await request.get(`/api/categories/${created.docs[0].id}`);
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const doc1 = (await doc1Response.json()) as { doc: { name: string } };
 		expect(doc1.doc.name).toBe('Batch Update A (Updated)');
 	});
@@ -123,7 +118,6 @@ test.describe('Batch operations', () => {
 		});
 		expect(createResponse.status()).toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			docs: Array<{ id: string }>;
 		};
@@ -136,7 +130,6 @@ test.describe('Batch operations', () => {
 		});
 		expect(deleteResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const deleted = (await deleteResponse.json()) as {
 			results: Array<{ id: string; deleted: boolean }>;
 			message: string;
@@ -147,7 +140,7 @@ test.describe('Batch operations', () => {
 
 		// Verify deletions
 		const slugsResponse = await request.get('/api/categories/slugs');
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const slugsData = (await slugsResponse.json()) as { slugs: string[] };
 		expect(slugsData.slugs).not.toContain('batch-delete-a');
 		expect(slugsData.slugs).not.toContain('batch-delete-b');
@@ -160,7 +153,6 @@ test.describe('Batch operations', () => {
 		});
 		expect(response.status()).toBe(400);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const body = (await response.json()) as { error: string };
 		expect(body.error).toContain('Invalid operation');
 	});
@@ -172,7 +164,6 @@ test.describe('Batch operations', () => {
 		});
 		expect(response.status()).toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const body = (await response.json()) as { docs: unknown[] };
 		expect(body.docs).toHaveLength(0);
 	});

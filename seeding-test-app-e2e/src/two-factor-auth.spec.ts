@@ -1,4 +1,5 @@
-import { test, expect, type APIRequestContext } from '@playwright/test';
+import { test, expect } from './fixtures';
+import type { APIRequestContext } from '@playwright/test';
 
 /**
  * Two-Factor Authentication E2E Tests
@@ -12,8 +13,6 @@ import { test, expect, type APIRequestContext } from '@playwright/test';
  * All tests share a single authenticated API context created in beforeAll.
  */
 
-const BASE_URL = process.env['BASE_URL'] || 'http://localhost:4001';
-
 // Unique test user for 2FA tests
 const TFA_USER_EMAIL = `tfa-test-${Date.now()}@test.com`;
 const TFA_USER_PASSWORD = 'TfaTest123!';
@@ -22,12 +21,12 @@ const TFA_USER_NAME = '2FA Test User';
 test.describe('Two-Factor Authentication', () => {
 	let apiContext: APIRequestContext;
 
-	test.beforeAll(async ({ playwright }) => {
+	test.beforeAll(async ({ playwright, workerBaseURL }) => {
 		// Create a fresh user for 2FA tests using a persistent API context
 		apiContext = await playwright.request.newContext({
-			baseURL: BASE_URL,
+			baseURL: workerBaseURL,
 			extraHTTPHeaders: {
-				Origin: BASE_URL,
+				Origin: workerBaseURL,
 			},
 		});
 
@@ -63,7 +62,6 @@ test.describe('Two-Factor Authentication', () => {
 
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			totpURI?: string;
 			backupCodes?: string[];

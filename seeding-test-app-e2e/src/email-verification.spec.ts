@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import {
 	isMailpitAvailable,
 	clearMailpit,
@@ -17,9 +17,6 @@ import {
  * - Mailpit running on localhost:8025 (web) and localhost:1025 (SMTP)
  * - SMTP_HOST=localhost set in server environment
  */
-
-// Base URL for API calls
-const BASE_URL = process.env['BASE_URL'] || 'http://localhost:4001';
 
 // Unique email to avoid conflicts with other test users
 const VERIFY_USER_EMAIL = `verify-test-${Date.now()}@test.com`;
@@ -40,7 +37,7 @@ test.describe('Email Verification Flow', () => {
 
 	test('signup triggers verification email', async ({ request }) => {
 		// Sign up a new user
-		const signupResponse = await request.post(`${BASE_URL}/api/auth/sign-up/email`, {
+		const signupResponse = await request.post(`/api/auth/sign-up/email`, {
 			headers: { 'Content-Type': 'application/json' },
 			data: {
 				name: VERIFY_USER_NAME,
@@ -60,7 +57,7 @@ test.describe('Email Verification Flow', () => {
 	test('verification email contains valid verify link', async ({ request }) => {
 		// Sign up
 		const signupEmail = `verify-link-${Date.now()}@test.com`;
-		await request.post(`${BASE_URL}/api/auth/sign-up/email`, {
+		await request.post(`/api/auth/sign-up/email`, {
 			headers: { 'Content-Type': 'application/json' },
 			data: {
 				name: 'Link Test User',
@@ -79,10 +76,10 @@ test.describe('Email Verification Flow', () => {
 		expect(verifyUrl).toContain('verify-email');
 	});
 
-	test('clicking verification link verifies email', async ({ request }) => {
+	test('clicking verification link verifies email', async ({ request, baseURL }) => {
 		// Sign up a fresh user
 		const freshEmail = `verify-click-${Date.now()}@test.com`;
-		const signupResponse = await request.post(`${BASE_URL}/api/auth/sign-up/email`, {
+		const signupResponse = await request.post(`/api/auth/sign-up/email`, {
 			headers: { 'Content-Type': 'application/json' },
 			data: {
 				name: 'Click Verify User',
@@ -116,8 +113,8 @@ test.describe('Email Verification Flow', () => {
 
 		// Sign in with the verified user to confirm email is now verified
 		// Origin header required by Better Auth CSRF protection
-		const signInResponse = await request.post(`${BASE_URL}/api/auth/sign-in/email`, {
-			headers: { 'Content-Type': 'application/json', Origin: BASE_URL },
+		const signInResponse = await request.post(`/api/auth/sign-in/email`, {
+			headers: { 'Content-Type': 'application/json', Origin: baseURL ?? '' },
 			data: {
 				email: freshEmail,
 				password: VERIFY_USER_PASSWORD,
@@ -138,7 +135,7 @@ test.describe('Email Verification Flow', () => {
 
 	test('verification email has correct sender and template', async ({ request }) => {
 		const templateEmail = `verify-template-${Date.now()}@test.com`;
-		await request.post(`${BASE_URL}/api/auth/sign-up/email`, {
+		await request.post(`/api/auth/sign-up/email`, {
 			headers: { 'Content-Type': 'application/json' },
 			data: {
 				name: 'Template Test',
@@ -162,7 +159,7 @@ test.describe('Email Verification Flow', () => {
 	test('resend verification email works', async ({ request }) => {
 		// Sign up
 		const resendEmail = `verify-resend-${Date.now()}@test.com`;
-		await request.post(`${BASE_URL}/api/auth/sign-up/email`, {
+		await request.post(`/api/auth/sign-up/email`, {
 			headers: { 'Content-Type': 'application/json' },
 			data: {
 				name: 'Resend Test',
@@ -178,7 +175,7 @@ test.describe('Email Verification Flow', () => {
 		await clearMailpit();
 
 		// Sign in first (needed for the resend endpoint)
-		await request.post(`${BASE_URL}/api/auth/sign-in/email`, {
+		await request.post(`/api/auth/sign-in/email`, {
 			headers: { 'Content-Type': 'application/json' },
 			data: {
 				email: resendEmail,
@@ -187,7 +184,7 @@ test.describe('Email Verification Flow', () => {
 		});
 
 		// Request resend verification email via Better Auth
-		const resendResponse = await request.post(`${BASE_URL}/api/auth/send-verification-email`, {
+		const resendResponse = await request.post(`/api/auth/send-verification-email`, {
 			headers: { 'Content-Type': 'application/json' },
 			data: { email: resendEmail },
 		});

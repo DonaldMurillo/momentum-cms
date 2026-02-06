@@ -30,7 +30,7 @@ import type { HookArgs, HookFunction } from '@momentum-cms/core';
  * Better Auth API interface for user creation.
  * This matches the api property from createMomentumAuth().
  */
-interface BetterAuthAPI {
+export interface BetterAuthAPI {
 	signUpEmail: (options: {
 		body: { name: string; email: string; password: string };
 	}) => Promise<{ user?: { id: string } | null } | null>;
@@ -40,7 +40,7 @@ interface BetterAuthAPI {
  * Momentum Auth instance type.
  * We use a minimal interface to avoid circular dependencies.
  */
-interface MomentumAuthLike {
+export interface MomentumAuthLike {
 	api: BetterAuthAPI;
 }
 

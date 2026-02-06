@@ -1,4 +1,4 @@
-import { Pool, type QueryResult } from 'pg';
+import { Pool, Client, type QueryResult } from 'pg';
 import { randomUUID } from 'node:crypto';
 import type {
 	DatabaseAdapter,
@@ -300,11 +300,69 @@ export interface PostgresAdapterWithRaw extends DatabaseAdapter {
  */
 interface QueryHelpers {
 	query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]>;
-	queryOne<T extends Record<string, unknown>>(
-		sql: string,
-		params?: unknown[],
-	): Promise<T | null>;
+	queryOne<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T | null>;
 	execute(sql: string, params?: unknown[]): Promise<number>;
+}
+
+/**
+ * Extracts the database name from a PostgreSQL connection string.
+ */
+function extractDatabaseName(connectionString: string): string | null {
+	try {
+		const url = new URL(connectionString);
+		const dbName = url.pathname.slice(1); // Remove leading '/'
+		return dbName || null;
+	} catch {
+		// Fallback: regex match for non-URL formats
+		const match = connectionString.match(/\/([^/?]+)(\?|$)/);
+		return match?.[1] ?? null;
+	}
+}
+
+/**
+ * Ensures the target database exists, creating it if necessary.
+ * Uses a temporary connection to the default 'postgres' database for creation.
+ *
+ * @param connectionString - The full PostgreSQL connection string
+ */
+async function ensureDatabaseExists(connectionString: string): Promise<void> {
+	const dbName = extractDatabaseName(connectionString);
+	if (!dbName) {
+		return; // Can't determine database name, let it fail naturally
+	}
+
+	// Try connecting to the target database
+	const testClient = new Client({ connectionString });
+	try {
+		await testClient.connect();
+		await testClient.end();
+		return; // Database exists, all good
+	} catch (error: unknown) {
+		await testClient.end().catch(() => {
+			/* ignore cleanup errors */
+		});
+
+		// Check if error is "database does not exist" (PostgreSQL error code 3D000)
+		const pgError = error instanceof Object && 'code' in error ? error : null;
+		if (!pgError || pgError.code !== '3D000') {
+			throw error; // Some other connection error, rethrow
+		}
+	}
+
+	// Database doesn't exist - create it via the default 'postgres' database
+	const adminConnString = connectionString.replace(`/${dbName}`, '/postgres');
+	const adminClient = new Client({ connectionString: adminConnString });
+
+	try {
+		await adminClient.connect();
+		// Use double quotes to handle names with special characters
+		const safeName = dbName.replace(/"/g, '""');
+		await adminClient.query(`CREATE DATABASE "${safeName}"`);
+
+		console.warn(`[Momentum DB] Created database "${dbName}"`);
+	} finally {
+		await adminClient.end();
+	}
 }
 
 /**
@@ -352,19 +410,15 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 	 * This allows the same method implementations to be used for both
 	 * pool-level and transaction-level (client-level) operations.
 	 */
-	function buildMethods(
-		h: QueryHelpers,
-	): Omit<DatabaseAdapter, 'initialize' | 'transaction'> {
+	function buildMethods(h: QueryHelpers): Omit<DatabaseAdapter, 'initialize' | 'transaction'> {
 		return {
 			async find(
 				collection: string,
 				queryParams: Record<string, unknown>,
 			): Promise<Record<string, unknown>[]> {
 				validateCollectionSlug(collection);
-				const limitValue =
-					typeof queryParams['limit'] === 'number' ? queryParams['limit'] : 100;
-				const pageValue =
-					typeof queryParams['page'] === 'number' ? queryParams['page'] : 1;
+				const limitValue = typeof queryParams['limit'] === 'number' ? queryParams['limit'] : 100;
+				const pageValue = typeof queryParams['page'] === 'number' ? queryParams['page'] : 1;
 				const offset = (pageValue - 1) * limitValue;
 
 				// Build WHERE clause from query parameters (excluding pagination params)
@@ -391,15 +445,11 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 					}
 				}
 
-				const whereClause =
-					whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+				const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
 				// limit: 0 means "no limit" (return all rows for count queries)
 				if (limitValue === 0) {
-					return h.query(
-						`SELECT * FROM "${collection}" ${whereClause}`,
-						whereValues,
-					);
+					return h.query(`SELECT * FROM "${collection}" ${whereClause}`, whereValues);
 				}
 				return h.query(
 					`SELECT * FROM "${collection}" ${whereClause} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -429,16 +479,12 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				}
 
 				// Build tsvector from the requested fields, coalescing to handle NULL
-				const tsvectorParts = fields
-					.map((f) => `coalesce("${f}"::text, '')`)
-					.join(" || ' ' || ");
+				const tsvectorParts = fields.map((f) => `coalesce("${f}"::text, '')`).join(" || ' ' || ");
 				const tsvectorExpr = `to_tsvector('simple', ${tsvectorParts})`;
 				const tsqueryExpr = `plainto_tsquery('simple', $1)`;
 
 				// Rank by relevance, fall back to ILIKE for partial matches
-				const ilikeClauses = fields
-					.map((f, i) => `"${f}"::text ILIKE $${i + 2}`)
-					.join(' OR ');
+				const ilikeClauses = fields.map((f, i) => `"${f}"::text ILIKE $${i + 2}`).join(' OR ');
 				const escapedQuery = searchQuery.replace(/[%_\\]/g, '\\$&');
 				const ilikePattern = `%${escapedQuery}%`;
 				const ilikeParams = fields.map(() => ilikePattern);
@@ -451,12 +497,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 					LIMIT $${fields.length + 2} OFFSET $${fields.length + 3}
 				`;
 
-				const results = await h.query(sql, [
-					searchQuery,
-					...ilikeParams,
-					limitValue,
-					offset,
-				]);
+				const results = await h.query(sql, [searchQuery, ...ilikeParams, limitValue, offset]);
 
 				// Remove internal ranking column
 				return results.map((row) => {
@@ -465,10 +506,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				});
 			},
 
-			async findById(
-				collection: string,
-				id: string,
-			): Promise<Record<string, unknown> | null> {
+			async findById(collection: string, id: string): Promise<Record<string, unknown> | null> {
 				validateCollectionSlug(collection);
 				return h.queryOne(`SELECT * FROM "${collection}" WHERE id = $1`, [id]);
 			},
@@ -535,11 +573,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 					// Handle undefined
 					if (value === undefined) {
 						values.push(null);
-					} else if (
-						typeof value === 'object' &&
-						value !== null &&
-						!(value instanceof Date)
-					) {
+					} else if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
 						values.push(JSON.stringify(value));
 					} else {
 						values.push(value);
@@ -565,10 +599,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 
 			async delete(collection: string, id: string): Promise<boolean> {
 				validateCollectionSlug(collection);
-				const rowCount = await h.execute(
-					`DELETE FROM "${collection}" WHERE id = $1`,
-					[id],
-				);
+				const rowCount = await h.execute(`DELETE FROM "${collection}" WHERE id = $1`, [id]);
 				return rowCount > 0;
 			},
 
@@ -723,11 +754,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 					paramIndex++;
 					if (value === undefined) {
 						values.push(null);
-					} else if (
-						typeof value === 'object' &&
-						value !== null &&
-						!(value instanceof Date)
-					) {
+					} else if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
 						values.push(JSON.stringify(value));
 					} else {
 						values.push(value);
@@ -745,14 +772,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				await h.execute(
 					`INSERT INTO "${tableName}" ("id", "parent", "version", "_status", "autosave", "createdAt", "updatedAt")
 					 VALUES ($1, $2, $3, $4, false, $5, $6)`,
-					[
-						newVersionId,
-						parentId,
-						String(version['version']),
-						originalStatus,
-						now,
-						now,
-					],
+					[newVersionId, parentId, String(version['version']), originalStatus, now, now],
 				);
 
 				// Return the updated document
@@ -826,11 +846,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				return Number(result?.['count'] ?? 0);
 			},
 
-			async updateStatus(
-				collection: string,
-				id: string,
-				status: DocumentStatus,
-			): Promise<void> {
+			async updateStatus(collection: string, id: string, status: DocumentStatus): Promise<void> {
 				validateCollectionSlug(collection);
 				const now = new Date().toISOString();
 				await h.execute(
@@ -900,6 +916,9 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 		...methods,
 
 		async initialize(collections: CollectionConfig[]): Promise<void> {
+			// Ensure database exists (auto-create if needed)
+			await ensureDatabaseExists(options.connectionString);
+
 			// Create Better Auth tables first
 			await pool.query(AUTH_TABLES_SQL);
 
@@ -938,9 +957,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 			}
 		},
 
-		async transaction<T>(
-			callback: (txAdapter: DatabaseAdapter) => Promise<T>,
-		): Promise<T> {
+		async transaction<T>(callback: (txAdapter: DatabaseAdapter) => Promise<T>): Promise<T> {
 			const client = await pool.connect();
 			try {
 				await client.query('BEGIN');

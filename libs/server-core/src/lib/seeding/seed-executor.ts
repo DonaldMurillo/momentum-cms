@@ -19,6 +19,7 @@ import type {
 	RolledBackSeed,
 } from '@momentum-cms/core';
 import { createSeedHelpers, SeedConflictError, SeedRollbackError } from '@momentum-cms/core';
+import type { MomentumAuthLike } from '../user-sync-hooks';
 import { createSeedTracker, type SeedTracker } from './seed-tracker';
 
 /**
@@ -49,6 +50,18 @@ export interface SeedingResult {
 	 * All seeded documents (for reference).
 	 */
 	seeds: SeededDocument[];
+}
+
+/**
+ * Options for running the seeding process.
+ */
+export interface SeedingRunOptions {
+	/**
+	 * Optional auth instance for auth-aware user seeding.
+	 * When provided, seeds with `syncAuth: true` will create Better Auth users
+	 * with hashed passwords before creating the Momentum collection document.
+	 */
+	auth?: MomentumAuthLike;
 }
 
 /**
@@ -85,6 +98,7 @@ async function processSeedEntity<T = Record<string, unknown>>(
 	tracker: SeedTracker,
 	adapter: DatabaseAdapter,
 	globalOptions: SeedingOptions,
+	auth?: MomentumAuthLike,
 ): Promise<SeededDocument<T>> {
 	const options: SeedEntityOptions = {
 		onConflict: globalOptions.onConflict,
@@ -154,7 +168,52 @@ async function processSeedEntity<T = Record<string, unknown>>(
 	}
 
 	// Create new document
-	const doc = await adapter.create(entity.collection, dataRecord);
+	let dataToInsert = { ...dataRecord };
+
+	// Handle auth sync for user seeds
+	if (options.syncAuth) {
+		if (auth) {
+			const password = dataToInsert['password'];
+			const email = dataToInsert['email'];
+			const name = dataToInsert['name'];
+
+			if (typeof password === 'string' && typeof email === 'string' && typeof name === 'string') {
+				if (password.length < 8) {
+					throw new Error(
+						`Auth sync failed for seed "${entity.seedId}": Password must be at least 8 characters`,
+					);
+				}
+
+				try {
+					const result = await auth.api.signUpEmail({
+						body: { name, email, password },
+					});
+
+					if (!result || !result.user) {
+						throw new Error('Better Auth signUpEmail returned no user');
+					}
+
+					// Strip password and add authId
+					const { password: _pw, ...rest } = dataToInsert;
+					dataToInsert = { ...rest, authId: result.user.id };
+				} catch (error) {
+					const message = error instanceof Error ? error.message : String(error);
+					if (message.toLowerCase().includes('email') && message.toLowerCase().includes('exist')) {
+						throw new Error(
+							`Auth sync failed for seed "${entity.seedId}": User with email '${email}' already exists in Better Auth`,
+						);
+					}
+					throw new Error(`Auth sync failed for seed "${entity.seedId}": ${message}`);
+				}
+			}
+		} else if (!globalOptions.quiet) {
+			console.warn(
+				`[Momentum Seeding] Warning: Seed "${entity.seedId}" has syncAuth: true but no auth instance was provided. Creating without auth sync.`,
+			);
+		}
+	}
+
+	const doc = await adapter.create(entity.collection, dataToInsert);
 	const docId = doc['id'];
 	if (typeof docId !== 'string') {
 		throw new Error(
@@ -193,6 +252,7 @@ function createSeedContext(
 	adapter: DatabaseAdapter,
 	globalOptions: SeedingOptions,
 	seededMap: Map<string, SeededDocument>,
+	auth?: MomentumAuthLike,
 ): SeedContext {
 	return {
 		async getSeeded<T = Record<string, unknown>>(
@@ -225,7 +285,7 @@ function createSeedContext(
 		},
 
 		async seed<T = Record<string, unknown>>(entity: SeedEntity<T>): Promise<SeededDocument<T>> {
-			const result = await processSeedEntity(entity, tracker, adapter, globalOptions);
+			const result = await processSeedEntity(entity, tracker, adapter, globalOptions, auth);
 			seededMap.set(entity.seedId, result as SeededDocument);
 			return result;
 		},
@@ -316,17 +376,19 @@ export function shouldRunSeeding(runOnStart: boolean | 'development' | 'always')
  *
  * @param config - The seeding configuration
  * @param adapter - The database adapter
+ * @param runOptions - Optional run options (e.g., auth instance for user sync)
  * @returns Seeding result summary
  *
  * @example
  * ```typescript
- * const result = await runSeeding(config.seeding, config.db.adapter);
+ * const result = await runSeeding(config.seeding, config.db.adapter, { auth });
  * console.log(`Seeded ${result.created} new documents`);
  * ```
  */
 export async function runSeeding(
 	config: SeedingConfig,
 	adapter: DatabaseAdapter,
+	runOptions?: SeedingRunOptions,
 ): Promise<SeedingResult> {
 	const options: SeedingOptions = {
 		onConflict: config.options?.onConflict ?? 'skip',
@@ -359,7 +421,7 @@ export async function runSeeding(
 			log(`Processing ${defaultEntities.length} default entities...`);
 
 			for (const entity of defaultEntities) {
-				const result = await processSeedEntity(entity, tracker, adapter, options);
+				const result = await processSeedEntity(entity, tracker, adapter, options, runOptions?.auth);
 				seededMap.set(entity.seedId, result);
 				results.push(result);
 
@@ -376,7 +438,7 @@ export async function runSeeding(
 		// Run custom seed function
 		if (config.seed) {
 			log('Running custom seed function...');
-			const ctx = createSeedContext(tracker, adapter, options, seededMap);
+			const ctx = createSeedContext(tracker, adapter, options, seededMap, runOptions?.auth);
 
 			// Wrap the custom seed function to track created seeds
 			const originalSeed = ctx.seed.bind(ctx);

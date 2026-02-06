@@ -56,10 +56,13 @@ const pool = dbAdapter.getPool();
  * Create Better Auth instance with PostgreSQL
  * Email is enabled automatically if SMTP_HOST env var is set
  */
+const authBaseURL =
+	process.env['BETTER_AUTH_URL'] || `http://localhost:${momentumConfig.server.port}`;
+
 const auth = createMomentumAuth({
 	db: { type: 'postgres', pool },
-	baseURL: `http://localhost:${momentumConfig.server.port}`,
-	trustedOrigins: ['http://localhost:4200', `http://localhost:${momentumConfig.server.port}`],
+	baseURL: authBaseURL,
+	trustedOrigins: ['http://localhost:4200', authBaseURL],
 	email: {
 		// Email is auto-enabled when SMTP_HOST is set
 		// Configure via environment variables:
@@ -154,6 +157,7 @@ app.delete('/api/test-webhook-receiver', (_req, res) => {
  * This is called AFTER hooks are configured so seeding benefits from them
  */
 const momentum = initializeMomentum(momentumConfig, {
+	auth,
 	// eslint-disable-next-line no-console -- Seeding logger for testing
 	logger: (msg) => console.log(`[Seeding Test App] ${msg}`),
 });
