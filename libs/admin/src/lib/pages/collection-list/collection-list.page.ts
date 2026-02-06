@@ -1,16 +1,20 @@
-import { Component, ChangeDetectionStrategy, inject, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, computed, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs/operators';
 import type { CollectionConfig } from '@momentum-cms/core';
 import { getCollectionsFromRouteData } from '../../utils/route-data';
 import { EntityListWidget } from '../../widgets/entity-list/entity-list.component';
-import type { Entity } from '../../widgets/widget.types';
+import type { Entity, EntityAction } from '../../widgets/widget.types';
+import type { EntityListBulkActionEvent } from '../../widgets/entity-list/entity-list.types';
+import { injectMomentumAPI } from '../../services/momentum-api.service';
+import { FeedbackService } from '../../widgets/feedback/feedback.service';
 
 /**
  * Collection List Page Component
  *
  * Displays a list of documents in a collection using the EntityListWidget.
+ * Supports bulk actions (e.g., bulk delete) via selection checkboxes.
  */
 @Component({
 	selector: 'mcms-collection-list',
@@ -20,9 +24,13 @@ import type { Entity } from '../../widgets/widget.types';
 	template: `
 		@if (collection(); as col) {
 			<mcms-entity-list
+				#entityList
 				[collection]="col"
 				[basePath]="basePath"
+				[selectable]="true"
+				[bulkActions]="bulkActions()"
 				(entityClick)="onEntityClick($event)"
+				(bulkAction)="onBulkAction($event)"
 			/>
 		} @else {
 			<div class="p-12 text-center text-muted-foreground">Collection not found</div>
@@ -32,6 +40,10 @@ import type { Entity } from '../../widgets/widget.types';
 export class CollectionListPage {
 	private readonly route = inject(ActivatedRoute);
 	private readonly router = inject(Router);
+	private readonly api = injectMomentumAPI();
+	private readonly feedback = inject(FeedbackService);
+
+	readonly entityList = viewChild<EntityListWidget>('entityList');
 
 	readonly basePath = '/admin/collections';
 
@@ -49,10 +61,38 @@ export class CollectionListPage {
 		return collections.find((c) => c.slug === currentSlug);
 	});
 
+	readonly bulkActions = computed((): EntityAction[] => [
+		{
+			id: 'delete',
+			label: 'Delete',
+			variant: 'destructive',
+			requiresConfirmation: true,
+		},
+	]);
+
 	onEntityClick(entity: Entity): void {
 		const col = this.collection();
 		if (col) {
 			this.router.navigate([this.basePath, col.slug, entity.id]);
+		}
+	}
+
+	async onBulkAction(event: EntityListBulkActionEvent): Promise<void> {
+		const col = this.collection();
+		if (!col) return;
+
+		if (event.action.id === 'delete') {
+			const ids = event.entities.map((e) => String(e.id));
+			try {
+				await this.api.collection(col.slug).batchDelete(ids);
+				this.feedback.entitiesDeleted(col.labels?.plural ?? col.slug, ids.length);
+				this.entityList()?.reload();
+			} catch (err) {
+				this.feedback.operationFailed(
+					'Failed to delete items',
+					err instanceof Error ? err : undefined,
+				);
+			}
 		}
 	}
 }

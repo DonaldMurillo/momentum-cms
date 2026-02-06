@@ -1,7 +1,17 @@
 import { defineMomentumConfig } from '@momentum-cms/core';
 import { postgresAdapter } from '@momentum-cms/db-drizzle';
 import { localStorageAdapter } from '@momentum-cms/storage';
-import { Categories, Articles, Products, Pages, Settings, Events, MediaCollection, Users } from './collections';
+import {
+	Categories,
+	Articles,
+	Products,
+	Pages,
+	Settings,
+	Events,
+	MediaCollection,
+	Users,
+	HookTestItems,
+} from './collections';
 import { join } from 'node:path';
 
 /**
@@ -77,7 +87,17 @@ export default defineMomentumConfig({
 				'postgresql://postgres:postgres@localhost:5434/momentum_seeding_test',
 		}),
 	},
-	collections: [Categories, Articles, Products, Pages, Settings, Events, MediaCollection, Users],
+	collections: [
+		Categories,
+		Articles,
+		Products,
+		Pages,
+		Settings,
+		Events,
+		MediaCollection,
+		Users,
+		HookTestItems,
+	],
 	storage: {
 		adapter: localStorageAdapter({
 			directory: join(process.cwd(), 'data', 'uploads'),
@@ -177,9 +197,7 @@ export default defineMomentumConfig({
 					metaTitle: 'Buy Test Phone',
 					metaDescription: 'The best test phone.',
 				},
-				features: [
-					{ label: 'Great Camera', description: '48MP sensor', highlighted: true },
-				],
+				features: [{ label: 'Great Camera', description: '48MP sensor', highlighted: true }],
 			}),
 			// Seed settings for layout field testing (tabs, collapsible, row)
 			collection<SettingsDoc>('settings').create('settings-main', {

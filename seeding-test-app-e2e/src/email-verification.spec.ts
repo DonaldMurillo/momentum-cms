@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 import {
-	checkMailpitHealth,
 	isMailpitAvailable,
 	clearMailpit,
 	waitForEmail,
@@ -49,7 +48,7 @@ test.describe('Email Verification Flow', () => {
 				password: VERIFY_USER_PASSWORD,
 			},
 		});
-		expect(signupResponse.ok() || signupResponse.status() === 200).toBe(true);
+		expect(signupResponse.ok(), 'Signup should succeed').toBe(true);
 
 		// Wait for verification email to arrive in Mailpit
 		const email = await waitForEmail(VERIFY_USER_EMAIL, 'verify', 15000);
@@ -94,7 +93,7 @@ test.describe('Email Verification Flow', () => {
 		expect(signupResponse.ok()).toBe(true);
 
 		// Get the session to check emailVerified = false
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const signupData = (await signupResponse.json()) as {
 			user?: { emailVerified: boolean };
 		};
@@ -127,7 +126,7 @@ test.describe('Email Verification Flow', () => {
 		expect(signInResponse.ok()).toBe(true);
 
 		// Check that emailVerified is now true in the sign-in response
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const signInData = (await signInResponse.json()) as {
 			user?: { emailVerified: boolean; email: string };
 		};
@@ -188,13 +187,10 @@ test.describe('Email Verification Flow', () => {
 		});
 
 		// Request resend verification email via Better Auth
-		const resendResponse = await request.post(
-			`${BASE_URL}/api/auth/send-verification-email`,
-			{
-				headers: { 'Content-Type': 'application/json' },
-				data: { email: resendEmail },
-			},
-		);
+		const resendResponse = await request.post(`${BASE_URL}/api/auth/send-verification-email`, {
+			headers: { 'Content-Type': 'application/json' },
+			data: { email: resendEmail },
+		});
 
 		// Better Auth should accept the resend request
 		// (may return 200 even if already verified as a security measure)

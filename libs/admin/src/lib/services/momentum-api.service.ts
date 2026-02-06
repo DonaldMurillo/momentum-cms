@@ -169,6 +169,9 @@ export interface CollectionOperationsServer<T = Record<string, unknown>> {
 	update(id: string, data: Partial<T>): Promise<T>;
 	delete(id: string): Promise<DeleteResult>;
 	count(where?: Record<string, unknown>): Promise<number>;
+	batchCreate(items: Partial<T>[]): Promise<T[]>;
+	batchUpdate(items: { id: string; data: Partial<T> }[]): Promise<T[]>;
+	batchDelete(ids: string[]): Promise<DeleteResult[]>;
 }
 
 /**
@@ -193,12 +196,22 @@ export interface MomentumCollectionAPI<T = Record<string, unknown>> {
 	update$(id: string, data: Partial<T>): Observable<T>;
 	delete$(id: string): Observable<DeleteResult>;
 
+	// Batch Observable methods
+	batchCreate$(items: Partial<T>[]): Observable<T[]>;
+	batchUpdate$(items: { id: string; data: Partial<T> }[]): Observable<T[]>;
+	batchDelete$(ids: string[]): Observable<DeleteResult[]>;
+
 	// Promise methods (async/await)
 	find(options?: FindOptions): Promise<FindResult<T>>;
 	findById(id: string, options?: FindByIdOptions): Promise<T | null>;
 	create(data: Partial<T>): Promise<T>;
 	update(id: string, data: Partial<T>): Promise<T>;
 	delete(id: string): Promise<DeleteResult>;
+
+	// Batch Promise methods
+	batchCreate(items: Partial<T>[]): Promise<T[]>;
+	batchUpdate(items: { id: string; data: Partial<T> }[]): Promise<T[]>;
+	batchDelete(ids: string[]): Promise<DeleteResult[]>;
 
 	// Signal methods (read-only operations)
 	findSignal(options?: FindOptions): Signal<FindResult<T> | undefined>;
@@ -544,6 +557,42 @@ class ServerCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		});
 	}
 
+	batchCreate$(items: Partial<T>[]): Observable<T[]> {
+		return new Observable((subscriber) => {
+			this.ops
+				.batchCreate(items)
+				.then((result) => {
+					subscriber.next(result);
+					subscriber.complete();
+				})
+				.catch((err: unknown) => subscriber.error(err));
+		});
+	}
+
+	batchUpdate$(items: { id: string; data: Partial<T> }[]): Observable<T[]> {
+		return new Observable((subscriber) => {
+			this.ops
+				.batchUpdate(items)
+				.then((result) => {
+					subscriber.next(result);
+					subscriber.complete();
+				})
+				.catch((err: unknown) => subscriber.error(err));
+		});
+	}
+
+	batchDelete$(ids: string[]): Observable<DeleteResult[]> {
+		return new Observable((subscriber) => {
+			this.ops
+				.batchDelete(ids)
+				.then((result) => {
+					subscriber.next(result);
+					subscriber.complete();
+				})
+				.catch((err: unknown) => subscriber.error(err));
+		});
+	}
+
 	// Promise methods with TransferState support (enabled by default)
 	async find(options?: FindOptions): Promise<FindResult<T>> {
 		const result = await this.ops.find(options);
@@ -581,6 +630,18 @@ class ServerCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		return this.ops.delete(id);
 	}
 
+	batchCreate(items: Partial<T>[]): Promise<T[]> {
+		return this.ops.batchCreate(items);
+	}
+
+	batchUpdate(items: { id: string; data: Partial<T> }[]): Promise<T[]> {
+		return this.ops.batchUpdate(items);
+	}
+
+	batchDelete(ids: string[]): Promise<DeleteResult[]> {
+		return this.ops.batchDelete(ids);
+	}
+
 	// Signal methods (read-only operations)
 	findSignal(options?: FindOptions): Signal<FindResult<T> | undefined> {
 		const result = signal<FindResult<T> | undefined>(undefined);
@@ -610,6 +671,16 @@ interface ApiResponse<T> {
 	id?: string;
 	error?: string;
 	errors?: Array<{ field: string; message: string }>;
+}
+
+/**
+ * Batch operation response from the REST API.
+ */
+interface ApiBatchResponse {
+	docs?: Record<string, unknown>[];
+	results?: Array<{ id: string; deleted: boolean }>;
+	message?: string;
+	error?: string;
 }
 
 class BrowserMomentumAPI implements MomentumClientAPI {
@@ -727,6 +798,32 @@ class BrowserCollectionAPI<T> implements MomentumCollectionAPI<T> {
 			.pipe(map((response) => ({ id: response.id ?? id, deleted: response.deleted ?? false })));
 	}
 
+	batchCreate$(items: Partial<T>[]): Observable<T[]> {
+		return (
+			this.http
+				.post<ApiBatchResponse>(`${this.endpoint}/batch`, { operation: 'create', items })
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Batch response docs are T[]
+				.pipe(map((response) => (response.docs ?? []) as T[]))
+		);
+	}
+
+	batchUpdate$(items: { id: string; data: Partial<T> }[]): Observable<T[]> {
+		return (
+			this.http
+				.post<ApiBatchResponse>(`${this.endpoint}/batch`, { operation: 'update', items })
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Batch response docs are T[]
+				.pipe(map((response) => (response.docs ?? []) as T[]))
+		);
+	}
+
+	batchDelete$(ids: string[]): Observable<DeleteResult[]> {
+		return this.http
+			.post<ApiBatchResponse>(`${this.endpoint}/batch`, { operation: 'delete', ids })
+			.pipe(
+				map((response) => response.results?.map((r) => ({ id: r.id, deleted: r.deleted })) ?? []),
+			);
+	}
+
 	// Promise wrappers
 	find(options?: FindOptions): Promise<FindResult<T>> {
 		return firstValueFrom(this.find$(options));
@@ -746,6 +843,18 @@ class BrowserCollectionAPI<T> implements MomentumCollectionAPI<T> {
 
 	delete(id: string): Promise<DeleteResult> {
 		return firstValueFrom(this.delete$(id));
+	}
+
+	batchCreate(items: Partial<T>[]): Promise<T[]> {
+		return firstValueFrom(this.batchCreate$(items));
+	}
+
+	batchUpdate(items: { id: string; data: Partial<T> }[]): Promise<T[]> {
+		return firstValueFrom(this.batchUpdate$(items));
+	}
+
+	batchDelete(ids: string[]): Promise<DeleteResult[]> {
+		return firstValueFrom(this.batchDelete$(ids));
 	}
 
 	// Signal methods (read-only operations)

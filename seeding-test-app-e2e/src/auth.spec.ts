@@ -58,7 +58,6 @@ test.describe('Authentication Flow', () => {
 					const appRoot = document.querySelector('app-root');
 					return appRoot && appRoot.hasAttribute('ng-version');
 				});
-				await page.waitForTimeout(500);
 
 				const submitButton = page.getByRole('button', { name: /create|submit|sign up/i });
 
@@ -83,9 +82,6 @@ test.describe('Authentication Flow', () => {
 				await page
 					.getByRole('textbox', { name: /confirm password/i })
 					.pressSequentially('ValidPassword123!', { delay: 20 });
-
-				// Wait for Angular to process
-				await page.waitForTimeout(500);
 
 				// Submit button should now be enabled
 				await expect(submitButton).toBeEnabled({ timeout: 5000 });
@@ -154,7 +150,6 @@ test.describe('Authentication Flow', () => {
 					const appRoot = document.querySelector('app-root');
 					return appRoot && appRoot.hasAttribute('ng-version');
 				});
-				await page.waitForTimeout(500);
 
 				const submitButton = page.getByRole('button', { name: /sign in|login/i });
 
@@ -164,20 +159,17 @@ test.describe('Authentication Flow', () => {
 				// Fill email only using keyboard typing - button should still be disabled
 				await page.getByLabel(/email/i).click();
 				await page.getByLabel(/email/i).pressSequentially('test@example.com', { delay: 20 });
-				await page.waitForTimeout(200);
 				await expect(submitButton).toBeDisabled();
 
 				// Fill password - button should be enabled
 				await page.getByLabel(/password/i).click();
 				await page.getByLabel(/password/i).pressSequentially('somepassword', { delay: 20 });
-				await page.waitForTimeout(200);
 				await expect(submitButton).toBeEnabled({ timeout: 5000 });
 
 				// Clear email using keyboard - button should be disabled again
 				await page.getByLabel(/email/i).click();
 				await page.getByLabel(/email/i).selectText();
 				await page.keyboard.press('Backspace');
-				await page.waitForTimeout(200);
 				await expect(submitButton).toBeDisabled();
 			}
 		});
@@ -193,7 +185,6 @@ test.describe('Authentication Flow', () => {
 					const appRoot = document.querySelector('app-root');
 					return appRoot && appRoot.hasAttribute('ng-version');
 				});
-				await page.waitForTimeout(500);
 
 				// Fill with invalid credentials using keyboard typing
 				await page.getByLabel(/email/i).click();

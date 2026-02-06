@@ -20,7 +20,6 @@ test.describe('Database transactions', () => {
 		// Clean up test data from previous runs
 		const listResponse = await request.get('/api/categories?limit=1000');
 		if (listResponse.ok()) {
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 			const listData = (await listResponse.json()) as {
 				docs: Array<{ id: string; slug?: string }>;
 			};
@@ -37,7 +36,6 @@ test.describe('Database transactions', () => {
 		const rollbackResponse = await request.post('/api/categories/test-transaction-rollback');
 		expect(rollbackResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const body = (await rollbackResponse.json()) as { rolledBack: boolean; error?: string };
 		expect(body.rolledBack).toBe(true);
 		expect(body.error).toBe('Intentional rollback');
@@ -46,7 +44,6 @@ test.describe('Database transactions', () => {
 		const slugsResponse = await request.get('/api/categories/slugs');
 		expect(slugsResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const slugsData = (await slugsResponse.json()) as { slugs: string[] };
 		expect(slugsData.slugs).not.toContain('tx-rollback-test');
 	});
@@ -56,7 +53,6 @@ test.describe('Database transactions', () => {
 		const successResponse = await request.post('/api/categories/test-transaction-success');
 		expect(successResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const body = (await successResponse.json()) as { ids: string[] };
 		expect(body.ids).toHaveLength(2);
 
@@ -64,7 +60,6 @@ test.describe('Database transactions', () => {
 		const slugsResponse = await request.get('/api/categories/slugs');
 		expect(slugsResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const slugsData = (await slugsResponse.json()) as { slugs: string[] };
 		expect(slugsData.slugs).toContain('tx-success-a');
 		expect(slugsData.slugs).toContain('tx-success-b');
@@ -80,7 +75,7 @@ test.describe('Database transactions', () => {
 		// Get count before rollback test
 		const beforeResponse = await request.get('/api/categories/count');
 		expect(beforeResponse.ok()).toBe(true);
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const beforeData = (await beforeResponse.json()) as { count: number };
 		const countBefore = beforeData.count;
 
@@ -91,7 +86,7 @@ test.describe('Database transactions', () => {
 		// Get count after - should be unchanged
 		const afterResponse = await request.get('/api/categories/count');
 		expect(afterResponse.ok()).toBe(true);
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const afterData = (await afterResponse.json()) as { count: number };
 
 		expect(afterData.count).toBe(countBefore);
@@ -103,9 +98,8 @@ test.describe('Database transactions', () => {
 			headers: { 'Content-Type': 'application/json' },
 			data: { name: 'TX CRUD Test', slug: 'tx-crud-test' },
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Category create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as { doc: { id: string } };
 		const docId = created.doc.id;
 

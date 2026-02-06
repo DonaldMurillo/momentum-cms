@@ -313,6 +313,27 @@ export default defineConfig({
 			},
 			dependencies: ['seeding-tracking'],
 		},
+		// Lifecycle hooks tests - tests hook invocations, transforms, errors
+		{
+			name: 'lifecycle-hooks',
+			testMatch: /lifecycle-hooks\.spec\.ts$/,
+			use: { ...devices['Desktop Chrome'] },
+			dependencies: ['seeding-tracking'],
+		},
+		// Expanded custom endpoints tests - POST/PUT/DELETE custom endpoints
+		{
+			name: 'custom-endpoints-expanded',
+			testMatch: /custom-endpoints-expanded\.spec\.ts$/,
+			use: { ...devices['Desktop Chrome'] },
+			dependencies: ['seeding-tracking'],
+		},
+		// Bulk actions UI tests - tests bulk selection and delete
+		{
+			name: 'bulk-actions-ui',
+			testMatch: /bulk-actions-ui\.spec\.ts$/,
+			use: { ...devices['Desktop Chrome'] },
+			dependencies: ['authenticated-tests'],
+		},
 		// Password reset tests - require Mailpit running
 		// Run LAST because the full flow test changes the admin password
 		{

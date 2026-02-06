@@ -34,25 +34,25 @@ export async function waitForAuthState(page: Page, timeout = 30000): Promise<Aut
 		if (url.includes('/setup')) {
 			// Verify the setup form is visible to confirm we're really on setup
 			const nameField = page.getByLabel(/full name/i);
-			if (await nameField.isVisible().catch(() => false)) {
+			if (await nameField.isVisible()) {
 				return 'setup';
 			}
 		} else if (url.includes('/login')) {
 			// Verify the login form is visible to confirm we're really on login
 			const emailField = page.getByLabel(/email/i);
-			if (await emailField.isVisible().catch(() => false)) {
+			if (await emailField.isVisible()) {
 				return 'login';
 			}
 		} else if (url.includes('/admin')) {
 			// Verify we're on the dashboard (not redirecting)
 			const dashboardHeading = page.getByRole('heading', { name: 'Dashboard' });
-			if (await dashboardHeading.isVisible().catch(() => false)) {
+			if (await dashboardHeading.isVisible()) {
 				return 'authenticated';
 			}
 		}
 
-		// Wait a bit before checking again
-		await page.waitForTimeout(500);
+		// Brief polling interval before checking again
+		await new Promise((resolve) => setTimeout(resolve, 500));
 	}
 
 	throw new Error(`Timed out waiting for auth state. Current URL: ${page.url()}`);

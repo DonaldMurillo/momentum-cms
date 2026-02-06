@@ -19,7 +19,6 @@ test.describe('Scheduled publishing', () => {
 		// Clean up leftover scheduled publishing test articles
 		const listResponse = await request.get('/api/articles?limit=1000');
 		if (listResponse.ok()) {
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 			const listData = (await listResponse.json()) as {
 				docs: Array<{ id: string; title?: string }>;
 			};
@@ -40,9 +39,8 @@ test.describe('Scheduled publishing', () => {
 				content: '<p>To be scheduled</p>',
 			},
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Article create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string };
 		};
@@ -58,7 +56,6 @@ test.describe('Scheduled publishing', () => {
 		);
 		expect(scheduleResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const scheduleData = (await scheduleResponse.json()) as {
 			id: string;
 			scheduledPublishAt: string;
@@ -69,7 +66,7 @@ test.describe('Scheduled publishing', () => {
 		// Verify the document still has draft status (not published yet)
 		const statusResponse = await request.get(`/api/articles/${created.doc.id}/status`);
 		expect(statusResponse.ok()).toBe(true);
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const statusData = (await statusResponse.json()) as { status: string };
 		expect(statusData.status).toBe('draft');
 	});
@@ -80,9 +77,8 @@ test.describe('Scheduled publishing', () => {
 			headers: { 'Content-Type': 'application/json' },
 			data: { title: 'SP-Cancel Test' },
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Article create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string };
 		};
@@ -104,7 +100,6 @@ test.describe('Scheduled publishing', () => {
 		);
 		expect(cancelResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const cancelData = (await cancelResponse.json()) as { message: string };
 		expect(cancelData.message).toBe('Scheduled publish cancelled');
 	});
@@ -114,9 +109,8 @@ test.describe('Scheduled publishing', () => {
 			headers: { 'Content-Type': 'application/json' },
 			data: { title: 'SP-Missing Date' },
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Article create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string };
 		};
@@ -140,9 +134,8 @@ test.describe('Scheduled publishing', () => {
 				content: '<p>Should be auto-published</p>',
 			},
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Article create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string };
 		};
@@ -166,7 +159,6 @@ test.describe('Scheduled publishing', () => {
 
 			const statusResponse = await request.get(`/api/articles/${created.doc.id}/status`);
 			if (statusResponse.ok()) {
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 				const statusData = (await statusResponse.json()) as { status: string };
 				if (statusData.status === 'published') {
 					published = true;
@@ -178,11 +170,9 @@ test.describe('Scheduled publishing', () => {
 		expect(published, 'Document should be auto-published by scheduler').toBe(true);
 
 		// Verify it also created a version
-		const versionsResponse = await request.get(
-			`/api/articles/${created.doc.id}/versions?limit=10`,
-		);
+		const versionsResponse = await request.get(`/api/articles/${created.doc.id}/versions?limit=10`);
 		expect(versionsResponse.ok()).toBe(true);
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const versionsData = (await versionsResponse.json()) as {
 			docs: Array<{ id: string; _status: string }>;
 		};
@@ -194,13 +184,10 @@ test.describe('Scheduled publishing', () => {
 	});
 
 	test('schedule-publish returns 400 for non-versioned collection', async ({ request }) => {
-		const scheduleResponse = await request.post(
-			'/api/categories/some-id/schedule-publish',
-			{
-				headers: { 'Content-Type': 'application/json' },
-				data: { publishAt: new Date().toISOString() },
-			},
-		);
+		const scheduleResponse = await request.post('/api/categories/some-id/schedule-publish', {
+			headers: { 'Content-Type': 'application/json' },
+			data: { publishAt: new Date().toISOString() },
+		});
 		expect(scheduleResponse.status()).toBe(400);
 	});
 });

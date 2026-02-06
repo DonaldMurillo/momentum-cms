@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 import {
-	checkMailpitHealth,
 	isMailpitAvailable,
 	clearMailpit,
 	getEmails,
@@ -186,12 +185,7 @@ test.describe('Password Reset Flow', () => {
 			// Use the API directly to avoid UI complexity
 			// Wrap in try/catch so test doesn't fail if cleanup fails
 			try {
-				// Wait for session to stabilize before cleanup
-				await page.waitForTimeout(2000);
 				await clearMailpit();
-
-				// Wait a bit after clearing
-				await page.waitForTimeout(500);
 
 				const resetResponse = await context.request.post(
 					`${BASE_URL}/api/auth/request-password-reset`,
@@ -245,8 +239,8 @@ test.describe('Password Reset Flow', () => {
 			// Should still show success message (no indication email doesn't exist)
 			await expect(page.getByText(/check your email/i)).toBeVisible({ timeout: 10000 });
 
-			// Wait a bit for any email to arrive
-			await page.waitForTimeout(2000);
+			// Allow time for any email delivery (intentional wait for negative proof)
+			await new Promise((resolve) => setTimeout(resolve, 2000));
 
 			// Verify no email was actually sent
 			const emails = await getEmails();

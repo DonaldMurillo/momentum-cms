@@ -226,11 +226,7 @@ export interface CollectionConfig {
 // ============================================
 
 /** Events that trigger webhooks. */
-export type WebhookEvent =
-	| 'afterChange'
-	| 'afterDelete'
-	| 'afterCreate'
-	| 'afterUpdate';
+export type WebhookEvent = 'afterChange' | 'afterDelete' | 'afterCreate' | 'afterUpdate';
 
 /** Configuration for a single webhook subscription. */
 export interface WebhookConfig {
@@ -278,6 +274,8 @@ export interface EndpointArgs {
 	req: RequestContext;
 	/** This collection's config */
 	collection: CollectionConfig;
+	/** Request body (for POST/PUT/PATCH endpoints) */
+	body?: Record<string, unknown>;
 	/**
 	 * Async helper to query any collection.
 	 * Returns the raw API result (find returns { docs, totalDocs }, findById returns doc, etc.).
@@ -294,10 +292,7 @@ export interface EndpointQueryHelper {
 	) => Promise<{ docs: Record<string, unknown>[]; totalDocs: number }>;
 	findById: (slug: string, id: string) => Promise<Record<string, unknown> | null>;
 	count: (slug: string) => Promise<number>;
-	create: (
-		slug: string,
-		data: Record<string, unknown>,
-	) => Promise<Record<string, unknown>>;
+	create: (slug: string, data: Record<string, unknown>) => Promise<Record<string, unknown>>;
 	update: (
 		slug: string,
 		id: string,
@@ -309,9 +304,7 @@ export interface EndpointQueryHelper {
 	 * All operations succeed or all are rolled back.
 	 * Falls back to non-transactional execution if adapter doesn't support transactions.
 	 */
-	transaction: <T>(
-		callback: (query: EndpointQueryHelper) => Promise<T>,
-	) => Promise<T>;
+	transaction: <T>(callback: (query: EndpointQueryHelper) => Promise<T>) => Promise<T>;
 }
 
 export interface EndpointConfig {

@@ -45,9 +45,8 @@ test.describe('Live Preview', () => {
 				location: 'Preview City',
 			},
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Event create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string };
 		};
@@ -118,21 +117,21 @@ test.describe('Live Preview', () => {
 
 		// Switch to tablet
 		await page.locator('[data-testid="device-tablet"]').click();
-		await page.waitForTimeout(400);
-		const tabletWidth = await iframe.evaluate((el) => el.style.width);
-		expect(tabletWidth).toBe('768px');
+		await expect
+			.poll(() => iframe.evaluate((el) => el.style.width), { timeout: 5000 })
+			.toBe('768px');
 
 		// Switch to mobile
 		await page.locator('[data-testid="device-mobile"]').click();
-		await page.waitForTimeout(400);
-		const mobileWidth = await iframe.evaluate((el) => el.style.width);
-		expect(mobileWidth).toBe('375px');
+		await expect
+			.poll(() => iframe.evaluate((el) => el.style.width), { timeout: 5000 })
+			.toBe('375px');
 
 		// Switch back to desktop
 		await page.locator('[data-testid="device-desktop"]').click();
-		await page.waitForTimeout(400);
-		const backToDesktop = await iframe.evaluate((el) => el.style.width);
-		expect(backToDesktop).toBe('100%');
+		await expect
+			.poll(() => iframe.evaluate((el) => el.style.width), { timeout: 5000 })
+			.toBe('100%');
 	});
 
 	test('preview does NOT appear for collections without preview config', async ({ page }) => {
@@ -170,11 +169,9 @@ test.describe('Live Preview', () => {
 			(window as unknown as Record<string, unknown>)['_previewMessages'] = [];
 			window.addEventListener('message', (event: MessageEvent) => {
 				if (event.data?.type === 'momentum-preview-update') {
-					(
-						(window as unknown as Record<string, unknown>)[
-							'_previewMessages'
-						] as unknown[]
-					).push(event.data);
+					((window as unknown as Record<string, unknown>)['_previewMessages'] as unknown[]).push(
+						event.data,
+					);
 				}
 			});
 		});
@@ -184,14 +181,26 @@ test.describe('Live Preview', () => {
 		await expect(locationInput).toBeVisible({ timeout: 10000 });
 		await locationInput.fill('Updated Preview City');
 
-		// Wait for debounced postMessage (300ms debounce + buffer)
-		await page.waitForTimeout(800);
+		// Wait for debounced postMessage to arrive in iframe
+		await expect
+			.poll(
+				() =>
+					frame!.evaluate(() => {
+						const msgs = (window as unknown as Record<string, unknown>)[
+							'_previewMessages'
+						] as Array<unknown>;
+						return msgs?.length ?? 0;
+					}),
+				{ timeout: 5000 },
+			)
+			.toBeGreaterThan(0);
 
 		// Verify the iframe received the message with correct data
 		const lastMessage = await frame!.evaluate(() => {
-			const messages = (window as unknown as Record<string, unknown>)[
-				'_previewMessages'
-			] as Array<{ type: string; data: Record<string, unknown> }>;
+			const messages = (window as unknown as Record<string, unknown>)['_previewMessages'] as Array<{
+				type: string;
+				data: Record<string, unknown>;
+			}>;
 			return messages.length > 0 ? messages[messages.length - 1] : null;
 		});
 
@@ -221,11 +230,8 @@ test.describe('Live Preview', () => {
 		await expect(refreshButton).toBeVisible();
 		await refreshButton.click();
 
-		// Wait for iframe to reload
-		await page.waitForTimeout(1000);
-
-		// The iframe should still be present and load data
-		await expect(iframe).toBeVisible();
+		// Wait for iframe to still be visible after refresh
+		await expect(iframe).toBeVisible({ timeout: 5000 });
 		const newSrc = await iframe.getAttribute('src');
 		expect(newSrc).toBeTruthy();
 		expect(newSrc).toContain(eventId);

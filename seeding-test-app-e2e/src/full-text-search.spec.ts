@@ -45,8 +45,8 @@ test.describe('Full-text search', () => {
 				headers: { 'Content-Type': 'application/json' },
 				data: article,
 			});
-			expect(response.ok() || response.status() === 201).toBe(true);
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+			expect(response.status(), 'Article create should return 201').toBe(201);
+
 			const data = (await response.json()) as { doc: { id: string } };
 			createdIds.push(data.doc.id);
 		}
@@ -72,7 +72,6 @@ test.describe('Full-text search', () => {
 		const response = await request.get('/api/articles/search?q=quantum');
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			docs: Array<{ id: string; title: string }>;
 			totalDocs: number;
@@ -90,7 +89,6 @@ test.describe('Full-text search', () => {
 		const response = await request.get('/api/articles/search?q=xyznonexistent12345');
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			docs: Array<Record<string, unknown>>;
 			totalDocs: number;
@@ -102,12 +100,9 @@ test.describe('Full-text search', () => {
 
 	test('search with specific fields restricts search scope', async ({ request }) => {
 		// Search only in title field for "breakthrough"
-		const titleOnlyResponse = await request.get(
-			'/api/articles/search?q=breakthrough&fields=title',
-		);
+		const titleOnlyResponse = await request.get('/api/articles/search?q=breakthrough&fields=title');
 		expect(titleOnlyResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const titleData = (await titleOnlyResponse.json()) as {
 			docs: Array<{ title: string }>;
 			totalDocs: number;
@@ -124,7 +119,6 @@ test.describe('Full-text search', () => {
 		const response = await request.get('/api/articles/search?q=SRCH&limit=2');
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			docs: Array<Record<string, unknown>>;
 			totalDocs: number;
@@ -140,7 +134,6 @@ test.describe('Full-text search', () => {
 		const response = await request.get('/api/articles/search?q=');
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			docs: Array<Record<string, unknown>>;
 			totalDocs: number;
@@ -154,7 +147,6 @@ test.describe('Full-text search', () => {
 		const response = await request.get('/api/articles/search?q=sustainability');
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			docs: Array<{ title: string; content: string }>;
 			totalDocs: number;

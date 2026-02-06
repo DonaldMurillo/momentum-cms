@@ -91,5 +91,91 @@ export const Categories = defineCollection({
 				return { status: 200, body: result };
 			},
 		},
+		/* eslint-disable @typescript-eslint/consistent-type-assertions -- Test endpoint body/query access */
+		{
+			path: 'custom-create',
+			method: 'post',
+			handler: async ({ body, query }) => {
+				if (!body || !body['name'] || !body['slug']) {
+					return { status: 400, body: { error: 'name and slug are required' } };
+				}
+				const doc = await query.create('categories', {
+					name: body['name'] as string,
+					slug: body['slug'] as string,
+				});
+				return { status: 201, body: { doc } };
+			},
+		},
+		{
+			path: 'custom-update',
+			method: 'put',
+			handler: async ({ body, query }) => {
+				if (!body || !body['id'] || !body['name']) {
+					return { status: 400, body: { error: 'id and name are required' } };
+				}
+				const doc = await query.update('categories', body['id'] as string, {
+					name: body['name'] as string,
+				});
+				return { status: 200, body: { doc } };
+			},
+		},
+		{
+			path: 'delete-by-slug',
+			method: 'post',
+			handler: async ({ body, query }) => {
+				if (!body || !body['slug']) {
+					return { status: 400, body: { error: 'slug is required' } };
+				}
+				const result = await query.find('categories', { limit: 1000 });
+				const doc = result.docs.find((d) => d['slug'] === body['slug']);
+				if (!doc) {
+					return { status: 404, body: { error: 'Category not found' } };
+				}
+				await query.delete('categories', doc['id'] as string);
+				return { status: 200, body: { deleted: true, slug: body['slug'] } };
+			},
+		},
+		{
+			path: 'articles-by-slug',
+			method: 'get',
+			handler: async ({ query }) => {
+				const catResult = await query.find('categories', { limit: 1000 });
+				const artResult = await query.find('articles', { limit: 1000 });
+				const articlesByCategory: Record<string, string[]> = {};
+				for (const cat of catResult.docs) {
+					const catId = cat['id'] as string;
+					const catSlug = cat['slug'] as string;
+					const titles = artResult.docs
+						.filter((a) => a['category'] === catId)
+						.map((a) => a['title'] as string);
+					if (titles.length > 0) {
+						articlesByCategory[catSlug] = titles;
+					}
+				}
+				return { status: 200, body: { articlesByCategory } };
+			},
+		},
+		{
+			path: 'error-test',
+			method: 'get',
+			handler: async () => {
+				throw new Error('Intentional endpoint error');
+			},
+		},
+		{
+			path: 'sequential-ops',
+			method: 'post',
+			handler: async ({ body, query }) => {
+				const name = (body?.['name'] as string) ?? 'Sequential Test';
+				const slug = (body?.['slug'] as string) ?? 'sequential-test';
+				const created = await query.create('categories', { name, slug });
+				const updated = await query.update('categories', created['id'] as string, {
+					name: `${created['name'] as string} (Updated)`,
+				});
+				const readBack = await query.findById('categories', updated['id'] as string);
+				return { status: 200, body: { created, updated, readBack } };
+			},
+		},
+		/* eslint-enable @typescript-eslint/consistent-type-assertions */
 	],
 });

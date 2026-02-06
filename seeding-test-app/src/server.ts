@@ -24,7 +24,13 @@ import {
 	createApiKeyRoutes,
 	createOpenAPIMiddleware,
 } from '@momentum-cms/server-express';
-import { getMomentumAPI, createUserSyncHook, registerWebhookHooks, startPublishScheduler, createPostgresApiKeyStore } from '@momentum-cms/server-core';
+import {
+	getMomentumAPI,
+	createUserSyncHook,
+	registerWebhookHooks,
+	startPublishScheduler,
+	createPostgresApiKeyStore,
+} from '@momentum-cms/server-core';
 import { createMomentumAuth } from '@momentum-cms/auth';
 import { provideMomentumAPI } from '@momentum-cms/admin';
 import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
@@ -81,18 +87,52 @@ if (usersCollection) {
 registerWebhookHooks(momentumConfig.collections);
 
 /**
+ * In-memory hook test infrastructure for E2E testing.
+ * Allows tests to observe hook invocations and configure hook behavior.
+ */
+import {
+	getHookLog,
+	clearHookLog,
+	getHookBehavior,
+	setHookBehavior,
+} from './collections/hook-test-items.collection';
+import type { HookBehaviorConfig } from './collections/hook-test-items.collection';
+
+app.get('/api/test-hook-log', (_req, res) => {
+	const invocations = getHookLog();
+	res.json({ invocations, count: invocations.length });
+});
+
+app.delete('/api/test-hook-log', (_req, res) => {
+	clearHookLog();
+	res.json({ cleared: true });
+});
+
+app.get('/api/test-hook-config', (_req, res) => {
+	res.json(getHookBehavior());
+});
+
+app.post('/api/test-hook-config', (req, res) => {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Test infrastructure, body is HookBehaviorConfig
+	setHookBehavior(req.body as HookBehaviorConfig);
+	res.json({ configured: true });
+});
+
+/**
  * In-memory webhook receiver for E2E testing.
  * Stores received webhook payloads so tests can verify delivery.
  */
-const receivedWebhooks: Array<{ headers: Record<string, string>; body: unknown; timestamp: number }> = [];
+const receivedWebhooks: Array<{
+	headers: Record<string, string>;
+	body: unknown;
+	timestamp: number;
+}> = [];
 
 app.post('/api/test-webhook-receiver', (req, res) => {
 	receivedWebhooks.push({
-		headers: Object.fromEntries(
-			Object.entries(req.headers).filter(
-				([, v]) => typeof v === 'string',
-			),
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Headers are string values
+		headers: Object.fromEntries(
+			Object.entries(req.headers).filter(([, v]) => typeof v === 'string'),
 		) as Record<string, string>,
 		body: req.body,
 		timestamp: Date.now(),
@@ -170,12 +210,18 @@ app.use(
  * Create API key store and wire up resolver + management routes
  */
 const apiKeyStore = createPostgresApiKeyStore({
-	query: async <T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> => {
+	query: async <T extends Record<string, unknown>>(
+		sql: string,
+		params?: unknown[],
+	): Promise<T[]> => {
 		const result = await pool.query(sql, params);
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- pg result rows
 		return result.rows as T[];
 	},
-	queryOne: async <T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T | null> => {
+	queryOne: async <T extends Record<string, unknown>>(
+		sql: string,
+		params?: unknown[],
+	): Promise<T | null> => {
 		const result = await pool.query(sql, params);
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- pg result rows
 		return (result.rows[0] as T) ?? null;

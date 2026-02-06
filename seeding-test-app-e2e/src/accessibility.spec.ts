@@ -28,9 +28,7 @@ async function signIn(
 }
 
 test.describe('Accessibility: Login page', () => {
-	test('form fields have unique IDs and labels reference inputs correctly', async ({
-		page,
-	}) => {
+	test('form fields have unique IDs and labels reference inputs correctly', async ({ page }) => {
 		await page.goto('/admin/login');
 		await page.waitForLoadState('networkidle');
 
@@ -128,7 +126,7 @@ test.describe('Accessibility: Dashboard', () => {
 
 		// Decorative SVGs should have aria-hidden="true"
 		const decorativeSvgs = page.locator('svg[aria-hidden="true"]');
-		const count = await decorativeSvgs.count();
+		const _count = await decorativeSvgs.count();
 		// At minimum, there should be no decorative SVGs without aria-hidden
 		// Check all SVGs that look decorative (in empty states)
 		const allSvgs = page.locator('svg:not([aria-hidden])');
@@ -136,7 +134,7 @@ test.describe('Accessibility: Dashboard', () => {
 		// SVGs without aria-hidden should have an aria-label or role
 		for (let i = 0; i < visibleUnlabeledSvgs; i++) {
 			const svg = allSvgs.nth(i);
-			if (await svg.isVisible().catch(() => false)) {
+			if (await svg.isVisible()) {
 				const ariaLabel = await svg.getAttribute('aria-label');
 				const role = await svg.getAttribute('role');
 				// Either has aria-label, or has role="img" with title, or is inside a labeled button
@@ -149,9 +147,7 @@ test.describe('Accessibility: Dashboard', () => {
 					const parentTag = await parent.evaluate((el) => el.tagName.toLowerCase());
 					if (parentTag !== 'button' && parentTag !== 'a') {
 						// This SVG needs aria-hidden="true"
-						expect(
-							await svg.getAttribute('aria-hidden'),
-						).toBe('true');
+						expect(await svg.getAttribute('aria-hidden')).toBe('true');
 					}
 				}
 			}
@@ -169,7 +165,7 @@ test.describe('Accessibility: Entity form', () => {
 
 		// The error alert should have proper ARIA attributes when visible
 		// Check the mcms-alert element in the DOM for the correct attributes
-		const alertElement = page.locator('mcms-alert[role="alert"][aria-live="assertive"]');
+		const _alertElement = page.locator('mcms-alert[role="alert"][aria-live="assertive"]');
 
 		// The alert may not be visible until there's an error, but if present
 		// it should have the correct attributes
@@ -205,9 +201,8 @@ test.describe('Accessibility: Rich text editor', () => {
 				content: '<p>Test content for <strong>accessibility</strong> checks.</p>',
 			},
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Article create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string };
 		};
@@ -316,9 +311,8 @@ test.describe('Accessibility: Live preview', () => {
 				location: 'Test City',
 			},
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Event create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string };
 		};
@@ -376,7 +370,6 @@ test.describe('Accessibility: Live preview', () => {
 
 		// Click tablet - should update pressed state
 		await tabletBtn.click();
-		await page.waitForTimeout(200);
 
 		await expect(desktopBtn).toHaveAttribute('aria-pressed', 'false');
 		await expect(tabletBtn).toHaveAttribute('aria-pressed', 'true');
@@ -412,75 +405,90 @@ test.describe('Accessibility: Media library', () => {
 		await page.goto('/admin/media');
 		await page.waitForLoadState('networkidle');
 
-		// Verify the progress bar template has correct attributes
-		// Since we can't easily trigger an upload in E2E, check the DOM template
-		// by looking at the component's rendered output when uploads exist
+		// Hold the upload POST request so the progress bar stays visible long enough to verify.
+		// Store the route to continue it later — don't use a Promise inside the handler.
+		let pendingRoute: import('@playwright/test').Route | null = null;
+		await page.route('**/api/media/upload**', async (route) => {
+			pendingRoute = route;
+		});
 
-		// Create a small test file and trigger upload to verify progress bar attributes
-		const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 5000 }).catch(() => null);
-
-		// Click the upload button
 		const uploadLabel = page.locator('label:has(input[type="file"])');
-		if (await uploadLabel.isVisible().catch(() => false)) {
-			await uploadLabel.click();
-			const fileChooser = await fileChooserPromise;
-			if (fileChooser) {
-				// Create a minimal test file
-				await fileChooser.setFiles({
-					name: 'a11y-test.txt',
-					mimeType: 'text/plain',
-					buffer: Buffer.from('accessibility test file'),
-				});
+		await expect(uploadLabel).toBeVisible({ timeout: 10000 });
 
-				// If upload shows progress, verify the progressbar role
-				const progressBar = page.locator('[role="progressbar"]');
-				const progressCount = await progressBar.count();
-				for (let i = 0; i < progressCount; i++) {
-					const bar = progressBar.nth(i);
-					if (await bar.isVisible().catch(() => false)) {
-						const ariaValueNow = await bar.getAttribute('aria-valuenow');
-						expect(ariaValueNow).toBeTruthy();
-						const ariaValueMin = await bar.getAttribute('aria-valuemin');
-						expect(ariaValueMin).toBe('0');
-						const ariaValueMax = await bar.getAttribute('aria-valuemax');
-						expect(ariaValueMax).toBe('100');
-					}
-				}
-			}
+		const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 5000 });
+		await uploadLabel.click();
+		const fileChooser = await fileChooserPromise;
+
+		await fileChooser.setFiles({
+			name: 'a11y-test.txt',
+			mimeType: 'text/plain',
+			buffer: Buffer.from('accessibility test file'),
+		});
+
+		// With upload held, progress bar should appear in DOM with correct ARIA attributes.
+		// The progress bar track is 8px tall (h-2), so use toBeAttached() instead of toBeVisible().
+		const progressBar = page.locator('[role="progressbar"]').first();
+		await expect(progressBar).toBeAttached({ timeout: 5000 });
+		await expect(progressBar).toHaveAttribute('aria-valuemin', '0');
+		await expect(progressBar).toHaveAttribute('aria-valuemax', '100');
+		const ariaValueNow = await progressBar.getAttribute('aria-valuenow');
+		expect(ariaValueNow, 'aria-valuenow should be set').not.toBeNull();
+
+		// Release the upload and clean up
+		if (pendingRoute) {
+			await pendingRoute.continue();
 		}
+		await page.unroute('**/api/media/upload**');
 	});
 
-	test('media grid items have accessible labels', async ({ page, request }) => {
-		// First ensure there's at least one media item
+	test('media grid items have accessible labels', async ({ page }) => {
 		await signIn(page, TEST_CREDENTIALS);
+
+		// Upload a minimal valid PNG so the media grid has items.
+		// Smallest valid PNG: 1x1 transparent pixel
+		const pngBuffer = Buffer.from(
+			'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAB' +
+				'Nl7BcQAAAABJRU5ErkJggg==',
+			'base64',
+		);
+		const uploadResponse = await page.request.post('/api/media/upload', {
+			multipart: {
+				file: {
+					name: 'a11y-grid-test.png',
+					mimeType: 'image/png',
+					buffer: pngBuffer,
+				},
+			},
+		});
+		expect(
+			uploadResponse.ok(),
+			`Media upload failed: ${uploadResponse.status()} ${await uploadResponse.text()}`,
+		).toBe(true);
+
 		await page.goto('/admin/media');
 		await page.waitForLoadState('networkidle');
 
-		// Wait for media grid to load
-		await page.waitForTimeout(2000);
+		// Wait for media grid to load with at least one item
+		const mediaCard = page.locator('input[type="checkbox"][aria-label]').first();
+		await expect(mediaCard).toBeVisible({ timeout: 15000 });
 
-		// Check for media items with selection checkboxes
-		const checkboxes = page.locator('input[type="checkbox"][aria-label]');
-		const checkboxCount = await checkboxes.count();
+		// Each checkbox should have an aria-label containing "Select" + filename
+		const firstLabel = await mediaCard.getAttribute('aria-label');
+		expect(firstLabel).toBeTruthy();
+		expect(firstLabel).toContain('Select');
 
-		if (checkboxCount > 0) {
-			// Each checkbox should have an aria-label containing "Select" + filename
-			const firstLabel = await checkboxes.first().getAttribute('aria-label');
-			expect(firstLabel).toBeTruthy();
-			expect(firstLabel).toContain('Select');
-		}
-
-		// Check view buttons have aria-labels
+		// Action buttons should have aria-labels
 		const viewButtons = page.locator('button[aria-label="View file"]');
 		const downloadLinks = page.locator('a[aria-label="Download file"]');
 		const deleteButtons = page.locator('button[aria-label="Delete file"]');
 
-		// If media items exist, these should be present
-		if (checkboxCount > 0) {
-			expect(await viewButtons.count()).toBeGreaterThan(0);
-			expect(await downloadLinks.count()).toBeGreaterThan(0);
-			expect(await deleteButtons.count()).toBeGreaterThan(0);
-		}
+		// Hover over the first media card to reveal action buttons
+		const firstCard = page.locator('.group.relative').first();
+		await firstCard.hover();
+
+		expect(await viewButtons.count()).toBeGreaterThan(0);
+		expect(await downloadLinks.count()).toBeGreaterThan(0);
+		expect(await deleteButtons.count()).toBeGreaterThan(0);
 	});
 
 	test('decorative icons have aria-hidden', async ({ page }) => {
@@ -489,12 +497,12 @@ test.describe('Accessibility: Media library', () => {
 		await page.waitForLoadState('networkidle');
 
 		// All ng-icon elements inside icon-only buttons should have aria-hidden
-		const iconButtons = page.locator('button[aria-label] ng-icon[aria-hidden="true"]');
+		const _iconButtons = page.locator('button[aria-label] ng-icon[aria-hidden="true"]');
 		// If there are media items, hover buttons should have aria-hidden on icons
 		// Also check the empty state icon
 		const emptyStateIcon = page.locator('ng-icon[aria-hidden="true"]');
 		// At least the upload icon in empty state or the header should be present
-		const count = await emptyStateIcon.count();
+		const _count = await emptyStateIcon.count();
 		// Just verify no ng-icons are missing aria-hidden when they should have it
 		// (non-zero means we applied the fix correctly)
 	});
@@ -516,7 +524,7 @@ test.describe('Accessibility: Upload field', () => {
 
 		for (let i = 0; i < count; i++) {
 			const zone = dropZones.nth(i);
-			if (await zone.isVisible().catch(() => false)) {
+			if (await zone.isVisible()) {
 				const ariaLabel = await zone.getAttribute('aria-label');
 				expect(ariaLabel).toContain('Upload');
 				expect(ariaLabel).toContain('Drag and drop');

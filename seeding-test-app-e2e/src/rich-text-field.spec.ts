@@ -20,7 +20,6 @@ test.describe('Rich text field', () => {
 		// Clean up any leftover rich text test articles
 		const listResponse = await request.get('/api/articles?limit=1000');
 		if (listResponse.ok()) {
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 			const listData = (await listResponse.json()) as {
 				docs: Array<{ id: string; title?: string }>;
 			};
@@ -43,9 +42,8 @@ test.describe('Rich text field', () => {
 				content: htmlContent,
 			},
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Article create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string; content: string };
 		};
@@ -55,7 +53,6 @@ test.describe('Rich text field', () => {
 		const getResponse = await request.get(`/api/articles/${created.doc.id}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const fetched = (await getResponse.json()) as {
 			doc: { content: string };
 		};
@@ -71,9 +68,8 @@ test.describe('Rich text field', () => {
 				content: '<p>Initial content</p>',
 			},
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Article create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string };
 		};
@@ -92,7 +88,6 @@ test.describe('Rich text field', () => {
 		const getResponse = await request.get(`/api/articles/${created.doc.id}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const fetched = (await getResponse.json()) as {
 			doc: { content: string };
 		};
@@ -117,9 +112,8 @@ test.describe('Rich text field', () => {
 				content: complexHtml,
 			},
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Article create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string; content: string };
 		};
@@ -134,9 +128,8 @@ test.describe('Rich text field', () => {
 				content: '',
 			},
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Article create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string; content: string };
 		};
@@ -145,7 +138,8 @@ test.describe('Rich text field', () => {
 
 	test('HTML content round-trips correctly through create and retrieve', async ({ request }) => {
 		// Create an article with specific HTML structure
-		const html = '<h1>Title</h1><p>Paragraph with <strong>bold</strong> and <a href="https://example.com">a link</a>.</p>';
+		const html =
+			'<h1>Title</h1><p>Paragraph with <strong>bold</strong> and <a href="https://example.com">a link</a>.</p>';
 
 		const createResponse = await request.post('/api/articles', {
 			headers: { 'Content-Type': 'application/json' },
@@ -154,9 +148,8 @@ test.describe('Rich text field', () => {
 				content: html,
 			},
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Article create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string; content: string };
 		};
@@ -165,7 +158,6 @@ test.describe('Rich text field', () => {
 		const getResponse = await request.get(`/api/articles/${created.doc.id}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const fetched = (await getResponse.json()) as {
 			doc: { content: string };
 		};
@@ -185,9 +177,8 @@ test.describe('Rich text field', () => {
 				content: '<p>Admin UI test content with <strong>bold</strong> text.</p>',
 			},
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Article create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string };
 		};
