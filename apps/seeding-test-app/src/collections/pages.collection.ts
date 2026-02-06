@@ -1,10 +1,4 @@
-import {
-	defineCollection,
-	text,
-	textarea,
-	blocks,
-	allowAll,
-} from '@momentum-cms/core';
+import { defineCollection, text, textarea, blocks, allowAll } from '@momentum-cms/core';
 
 /**
  * Pages collection for testing blocks field renderer.
