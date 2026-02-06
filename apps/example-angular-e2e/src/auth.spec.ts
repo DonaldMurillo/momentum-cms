@@ -1,188 +1,95 @@
-import { test, expect } from './fixtures';
+import { test, expect, TEST_CREDENTIALS } from './fixtures';
 
 /**
  * Authentication E2E Tests
  *
  * Tests the complete authentication flow including:
- * - First user setup (when no users exist)
- * - Login with valid/invalid credentials
- * - Logout functionality
+ * - Login page display
  * - Protected route redirection
  * - Session persistence
+ * - Logout functionality
+ * - Authenticated user info display
  *
  * IMPORTANT: These tests run against a real server with a real database.
- * Each test describes the expected behavior for the auth flow.
+ * The worker fixture always creates users, so setup page tests are not
+ * possible in this infrastructure (they require an empty database).
+ *
+ * Tests use `authenticatedPage` (pre-logged-in admin) or `page`
+ * (unauthenticated) fixtures — no conditional gates.
  */
 
-test.describe('Authentication Flow', () => {
-	test.describe('Setup Page', () => {
-		test('should show setup page when no users exist', async ({ page }) => {
-			// Navigate to admin - should redirect to setup if no users
-			await page.goto('/admin');
+test.describe('Login Page', { tag: ['@auth'] }, () => {
+	test('should display login form for unauthenticated users', async ({ page }) => {
+		await page.goto('/admin/login');
 
-			// Wait for redirect to complete
-			await page.waitForURL(/\/(admin\/setup|admin\/login|admin)$/);
-
-			// If redirected to setup, we're in first-time setup mode
-			const url = page.url();
-			if (url.includes('/setup')) {
-				await expect(
-					page.getByRole('heading', { name: /welcome.*momentum|create.*admin|setup/i }),
-				).toBeVisible();
-				await expect(page.getByLabel(/full name/i)).toBeVisible();
-				await expect(page.getByLabel(/email address/i)).toBeVisible();
-				await expect(page.getByRole('textbox', { name: /^password$/i })).toBeVisible();
-			}
-		});
-
-		test('setup form should keep submit disabled for empty form', async ({ page }) => {
-			await page.goto('/admin/setup');
-			await page.waitForLoadState('networkidle');
-
-			if (page.url().includes('/setup')) {
-				// Submit button should be disabled with empty form
-				const submitButton = page.getByRole('button', { name: /create|submit|sign up/i });
-				await expect(submitButton).toBeDisabled();
-			}
-		});
-
-		test('setup form should keep submit disabled for short password', async ({ page }) => {
-			await page.goto('/admin/setup');
-			await page.waitForLoadState('networkidle');
-
-			if (page.url().includes('/setup')) {
-				// Fill form with weak password (less than 8 chars)
-				await page.getByLabel(/full name/i).fill('Test User');
-				await page.getByLabel(/email address/i).fill('test@example.com');
-				await page.getByRole('textbox', { name: /^password$/i }).fill('short');
-				await page.getByRole('textbox', { name: /confirm password/i }).fill('short');
-
-				// Submit button should still be disabled (password too short)
-				const submitButton = page.getByRole('button', { name: /create|submit|sign up/i });
-				await expect(submitButton).toBeDisabled();
-			}
-		});
-
-		test('setup form should keep submit disabled for mismatched passwords', async ({ page }) => {
-			await page.goto('/admin/setup');
-			await page.waitForLoadState('networkidle');
-
-			if (page.url().includes('/setup')) {
-				// Fill form with mismatched passwords
-				await page.getByLabel(/full name/i).fill('Test User');
-				await page.getByLabel(/email address/i).fill('test@example.com');
-				await page.getByRole('textbox', { name: /^password$/i }).fill('ValidPassword123!');
-				await page
-					.getByRole('textbox', { name: /confirm password/i })
-					.fill('DifferentPassword123!');
-
-				// Submit button should be disabled (passwords don't match)
-				const submitButton = page.getByRole('button', { name: /create|submit|sign up/i });
-				await expect(submitButton).toBeDisabled();
-			}
-		});
-	});
-
-	test.describe('Login Page', () => {
-		test('should display login form', async ({ page }) => {
-			await page.goto('/admin/login');
-			await page.waitForLoadState('networkidle');
-
-			// Check if we're on login page (only accessible when users exist)
-			if (page.url().includes('/login')) {
-				await expect(page.getByRole('heading', { name: /sign in|login/i })).toBeVisible();
-				await expect(page.getByLabel(/email/i)).toBeVisible();
-				await expect(page.getByLabel(/password/i)).toBeVisible();
-				await expect(page.getByRole('button', { name: /sign in|login/i })).toBeVisible();
-			}
-		});
-	});
-
-	test.describe('Protected Routes', () => {
-		test('should redirect authenticated login page to dashboard', async ({ page }) => {
-			// If user is already authenticated and tries to access login page
-			// This test depends on having an authenticated session
-			await page.goto('/admin/login');
-			await page.waitForLoadState('networkidle');
-
-			// The behavior depends on authentication state:
-			// - If authenticated: redirect to /admin
-			// - If not authenticated: stay on /login
-			// - If no users: redirect to /setup
-			const url = page.url();
-			expect(
-				url.includes('/admin') || url.includes('/login') || url.includes('/setup'),
-			).toBeTruthy();
-		});
-	});
-
-	test.describe('Session Management', () => {
-		test('session should persist across page reloads', async ({ page }) => {
-			// This test requires an authenticated session
-			// First check if we have a session
-			await page.goto('/admin');
-			await page.waitForLoadState('networkidle');
-
-			const initialUrl = page.url();
-
-			if (!initialUrl.includes('/login') && !initialUrl.includes('/setup')) {
-				// We have an authenticated session
-				// Reload the page
-				await page.reload();
-				await page.waitForLoadState('networkidle');
-
-				// Should still be on admin page, not redirected to login
-				expect(page.url()).not.toContain('/login');
-			}
-		});
-
-		test('logout should clear session and redirect', async ({ page }) => {
-			await page.goto('/admin');
-			await page.waitForLoadState('networkidle');
-
-			const url = page.url();
-
-			// Only test logout if we're authenticated (on dashboard, not login/setup)
-			if (!url.includes('/login') && !url.includes('/setup')) {
-				// Look for logout/sign out button
-				const signOutButton = page.getByRole('button', { name: /sign out|logout/i });
-
-				if (await signOutButton.isVisible()) {
-					await signOutButton.click();
-
-					// Should redirect to login page
-					await page.waitForURL(/\/admin\/login$/);
-					expect(page.url()).toContain('/login');
-				}
-			}
-		});
+		// Unauthenticated page should stay on login (users exist in worker DB)
+		await expect(page).toHaveURL(/\/admin\/login/);
+		await expect(page.getByRole('heading', { name: /sign in|login/i })).toBeVisible();
+		await expect(page.getByLabel(/email/i)).toBeVisible();
+		await expect(page.getByLabel(/password/i)).toBeVisible();
+		await expect(page.getByRole('button', { name: /sign in|login/i })).toBeVisible();
 	});
 });
 
-test.describe('Authentication State Transitions', () => {
-	test('authenticated user should see user info in sidebar', async ({ page }) => {
+test.describe('Protected Routes', { tag: ['@auth', '@access'] }, () => {
+	test('should redirect authenticated user from login to dashboard', async ({
+		authenticatedPage,
+	}) => {
+		// Authenticated user navigating to login should be redirected to admin dashboard
+		await authenticatedPage.goto('/admin/login');
+		await expect(authenticatedPage).toHaveURL(/\/admin(?!\/login|\/setup)/, { timeout: 10000 });
+	});
+
+	test('should redirect unauthenticated user to login', async ({ page }) => {
+		// Unauthenticated page accessing admin should redirect to login
 		await page.goto('/admin');
-		await page.waitForLoadState('networkidle');
+		await expect(page).toHaveURL(/\/admin\/login/, { timeout: 10000 });
+	});
+});
 
-		const url = page.url();
+test.describe('Session Management', { tag: ['@auth', '@security'] }, () => {
+	test('session should persist across page reloads', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin');
+		await expect(authenticatedPage).toHaveURL(/\/admin(?!\/login|\/setup)/);
 
-		// Only check if we're authenticated
-		if (!url.includes('/login') && !url.includes('/setup')) {
-			// Should see user email or name somewhere in the UI
-			const userInfo = page.locator('[data-testid="user-info"]');
-			const userEmail = page.getByText(/@.*\..*$/);
-			const userName = page.getByText(/admin|user/i);
+		// Reload the page — session cookies should persist
+		await authenticatedPage.reload();
 
-			// At least one of these should be visible
-			const hasUserInfo =
-				(await userInfo.isVisible()) ||
-				(await userEmail.first().isVisible()) ||
-				(await userName.first().isVisible());
+		// Should still be on admin dashboard, not redirected to login or setup
+		await expect(authenticatedPage).toHaveURL(/\/admin(?!\/login|\/setup)/, { timeout: 10000 });
+	});
 
-			// This is a soft assertion - UI may vary
-			if (hasUserInfo) {
-				expect(hasUserInfo).toBeTruthy();
-			}
-		}
+	test('logout should clear session and redirect to login', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin');
+		await expect(authenticatedPage).toHaveURL(/\/admin/);
+
+		// Open user menu
+		const userMenuButton = authenticatedPage.locator('button[aria-label*="User menu"]');
+		await expect(userMenuButton).toBeVisible();
+		await userMenuButton.click();
+
+		// Click the sign out button in the dropdown
+		const signOutButton = authenticatedPage.getByRole('menuitem', { name: /sign out/i });
+		await expect(signOutButton).toBeVisible();
+		await signOutButton.click();
+
+		// Should redirect to login page
+		await expect(authenticatedPage).toHaveURL(/\/admin\/login/, { timeout: 10000 });
+	});
+});
+
+test.describe('Authenticated User Info', { tag: ['@auth'] }, () => {
+	test('should display user name in sidebar', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin');
+		await expect(authenticatedPage).toHaveURL(/\/admin/);
+
+		// The user menu button has aria-label "User menu for <name>"
+		const userMenuButton = authenticatedPage.locator(
+			`button[aria-label*="User menu for ${TEST_CREDENTIALS.name}"]`,
+		);
+		await expect(userMenuButton).toBeVisible();
+
+		// User email should be visible in the sidebar footer
+		await expect(authenticatedPage.getByText(TEST_CREDENTIALS.email)).toBeVisible();
 	});
 });
