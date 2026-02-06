@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { Client } from 'pg';
 import { ensureMailpit } from '@momentum-cms/e2e-fixtures';
 
-const WORKSPACE_ROOT = path.resolve(__dirname, '..', '..');
+const WORKSPACE_ROOT = path.resolve(__dirname, '..', '..', '..');
 const SERVER_BINARY = path.join(WORKSPACE_ROOT, 'dist/seeding-test-app/server/server.mjs');
 
 const PG_CONNECTION =

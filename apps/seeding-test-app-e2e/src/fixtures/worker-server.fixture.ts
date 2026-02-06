@@ -56,7 +56,7 @@ export const ADDITIONAL_TEST_USERS: TestUserCredentials[] = [
 ];
 
 const PROJECT_DIR = path.resolve(__dirname, '..', '..');
-const WORKSPACE_ROOT = path.resolve(PROJECT_DIR, '..');
+const WORKSPACE_ROOT = path.resolve(PROJECT_DIR, '..', '..');
 
 /**
  * Worker-scoped fixture for the seeding test app.

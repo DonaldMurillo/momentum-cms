@@ -243,7 +243,7 @@ async function waitForServer(port: number): Promise<void> {
  * Run Playwright tests
  */
 async function runPlaywright(port: number, config: TestConfig): Promise<number> {
-	const args = ['playwright', 'test', '--config=seeding-test-app-e2e/playwright.config.ts'];
+	const args = ['playwright', 'test', '--config=apps/seeding-test-app-e2e/playwright.config.ts'];
 
 	if (config.project) {
 		args.push(`--project=${config.project}`);

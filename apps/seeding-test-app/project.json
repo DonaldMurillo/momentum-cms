@@ -1,9 +1,9 @@
 {
 	"name": "seeding-test-app",
-	"$schema": "../node_modules/nx/schemas/project-schema.json",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
 	"projectType": "application",
 	"prefix": "app",
-	"sourceRoot": "seeding-test-app/src",
+	"sourceRoot": "apps/seeding-test-app/src",
 	"tags": [],
 	"targets": {
 		"build": {
@@ -11,18 +11,18 @@
 			"outputs": ["{options.outputPath}"],
 			"options": {
 				"outputPath": "dist/seeding-test-app",
-				"browser": "seeding-test-app/src/main.ts",
-				"tsConfig": "seeding-test-app/tsconfig.app.json",
+				"browser": "apps/seeding-test-app/src/main.ts",
+				"tsConfig": "apps/seeding-test-app/tsconfig.app.json",
 				"assets": [
 					{
 						"glob": "**/*",
-						"input": "seeding-test-app/public"
+						"input": "apps/seeding-test-app/public"
 					}
 				],
-				"styles": ["seeding-test-app/src/styles.css"],
-				"server": "seeding-test-app/src/main.server.ts",
+				"styles": ["apps/seeding-test-app/src/styles.css"],
+				"server": "apps/seeding-test-app/src/main.server.ts",
 				"ssr": {
-					"entry": "seeding-test-app/src/server.ts"
+					"entry": "apps/seeding-test-app/src/server.ts"
 				},
 				"outputMode": "server"
 			},
