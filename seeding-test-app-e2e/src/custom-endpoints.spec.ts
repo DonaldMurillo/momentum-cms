@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { TEST_CREDENTIALS } from './fixtures/e2e-utils';
+import { test, expect, TEST_CREDENTIALS } from './fixtures';
 
 /**
  * Custom endpoints E2E tests.
@@ -22,7 +21,6 @@ test.describe('Custom collection endpoints', () => {
 		const response = await request.get('/api/categories/count');
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as { count: number };
 		// Seeded categories exist, count should be at least 1
 		expect(data.count).toBeGreaterThanOrEqual(1);
@@ -33,7 +31,6 @@ test.describe('Custom collection endpoints', () => {
 		const response = await request.get('/api/categories/slugs');
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as { slugs: string[] };
 		expect(Array.isArray(data.slugs)).toBe(true);
 		expect(data.slugs.length).toBeGreaterThanOrEqual(1);
@@ -47,7 +44,6 @@ test.describe('Custom collection endpoints', () => {
 		const listResponse = await request.get('/api/categories?limit=5');
 		expect(listResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const listData = (await listResponse.json()) as { docs: Array<{ id: string }> };
 		expect(listData.docs.length).toBeGreaterThanOrEqual(1);
 
@@ -56,7 +52,6 @@ test.describe('Custom collection endpoints', () => {
 		const getResponse = await request.get(`/api/categories/${firstId}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const getBody = (await getResponse.json()) as { doc: { id: string } };
 		expect(getBody.doc.id).toBe(firstId);
 	});
@@ -66,14 +61,12 @@ test.describe('Custom collection endpoints', () => {
 		const countResponse = await request.get('/api/categories/count');
 		expect(countResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const countData = (await countResponse.json()) as { count: number };
 
 		// Get slugs from slugs endpoint
 		const slugsResponse = await request.get('/api/categories/slugs');
 		expect(slugsResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const slugsData = (await slugsResponse.json()) as { slugs: string[] };
 
 		// Both custom endpoints should agree on the number of categories

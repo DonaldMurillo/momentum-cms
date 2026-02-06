@@ -1,9 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import {
-	checkMailpitHealth,
 	isMailpitAvailable,
-	clearMailpit,
 	waitForEmail,
+	getEmails,
 	getEmailById,
 	extractVerificationUrl,
 } from './fixtures/mailpit-helpers';
@@ -19,9 +18,6 @@ import {
  * - SMTP_HOST=localhost set in server environment
  */
 
-// Base URL for API calls
-const BASE_URL = process.env['BASE_URL'] || 'http://localhost:4001';
-
 // Unique email to avoid conflicts with other test users
 const VERIFY_USER_EMAIL = `verify-test-${Date.now()}@test.com`;
 const VERIFY_USER_PASSWORD = 'VerifyTest123!';
@@ -36,12 +32,14 @@ test.describe('Email Verification Flow', () => {
 
 	test.beforeEach(async () => {
 		test.skip(!mailpitRunning, 'Mailpit is not running - skipping email verification tests');
-		await clearMailpit();
+		// No clearMailpit() — each test uses unique Date.now() emails,
+		// so waitForEmail filtering works without clearing.
+		// Clearing would cause parallel interference across workers.
 	});
 
 	test('signup triggers verification email', async ({ request }) => {
 		// Sign up a new user
-		const signupResponse = await request.post(`${BASE_URL}/api/auth/sign-up/email`, {
+		const signupResponse = await request.post(`/api/auth/sign-up/email`, {
 			headers: { 'Content-Type': 'application/json' },
 			data: {
 				name: VERIFY_USER_NAME,
@@ -49,7 +47,7 @@ test.describe('Email Verification Flow', () => {
 				password: VERIFY_USER_PASSWORD,
 			},
 		});
-		expect(signupResponse.ok() || signupResponse.status() === 200).toBe(true);
+		expect(signupResponse.ok(), 'Signup should succeed').toBe(true);
 
 		// Wait for verification email to arrive in Mailpit
 		const email = await waitForEmail(VERIFY_USER_EMAIL, 'verify', 15000);
@@ -61,7 +59,7 @@ test.describe('Email Verification Flow', () => {
 	test('verification email contains valid verify link', async ({ request }) => {
 		// Sign up
 		const signupEmail = `verify-link-${Date.now()}@test.com`;
-		await request.post(`${BASE_URL}/api/auth/sign-up/email`, {
+		await request.post(`/api/auth/sign-up/email`, {
 			headers: { 'Content-Type': 'application/json' },
 			data: {
 				name: 'Link Test User',
@@ -80,10 +78,10 @@ test.describe('Email Verification Flow', () => {
 		expect(verifyUrl).toContain('verify-email');
 	});
 
-	test('clicking verification link verifies email', async ({ request }) => {
+	test('clicking verification link verifies email', async ({ request, baseURL }) => {
 		// Sign up a fresh user
 		const freshEmail = `verify-click-${Date.now()}@test.com`;
-		const signupResponse = await request.post(`${BASE_URL}/api/auth/sign-up/email`, {
+		const signupResponse = await request.post(`/api/auth/sign-up/email`, {
 			headers: { 'Content-Type': 'application/json' },
 			data: {
 				name: 'Click Verify User',
@@ -94,7 +92,7 @@ test.describe('Email Verification Flow', () => {
 		expect(signupResponse.ok()).toBe(true);
 
 		// Get the session to check emailVerified = false
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const signupData = (await signupResponse.json()) as {
 			user?: { emailVerified: boolean };
 		};
@@ -117,8 +115,8 @@ test.describe('Email Verification Flow', () => {
 
 		// Sign in with the verified user to confirm email is now verified
 		// Origin header required by Better Auth CSRF protection
-		const signInResponse = await request.post(`${BASE_URL}/api/auth/sign-in/email`, {
-			headers: { 'Content-Type': 'application/json', Origin: BASE_URL },
+		const signInResponse = await request.post(`/api/auth/sign-in/email`, {
+			headers: { 'Content-Type': 'application/json', Origin: baseURL ?? '' },
 			data: {
 				email: freshEmail,
 				password: VERIFY_USER_PASSWORD,
@@ -127,7 +125,7 @@ test.describe('Email Verification Flow', () => {
 		expect(signInResponse.ok()).toBe(true);
 
 		// Check that emailVerified is now true in the sign-in response
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const signInData = (await signInResponse.json()) as {
 			user?: { emailVerified: boolean; email: string };
 		};
@@ -139,7 +137,7 @@ test.describe('Email Verification Flow', () => {
 
 	test('verification email has correct sender and template', async ({ request }) => {
 		const templateEmail = `verify-template-${Date.now()}@test.com`;
-		await request.post(`${BASE_URL}/api/auth/sign-up/email`, {
+		await request.post(`/api/auth/sign-up/email`, {
 			headers: { 'Content-Type': 'application/json' },
 			data: {
 				name: 'Template Test',
@@ -160,10 +158,10 @@ test.describe('Email Verification Flow', () => {
 		expect(detail.HTML).toContain('Seeding Test App');
 	});
 
-	test('resend verification email works', async ({ request }) => {
+	test('resend verification email works', async ({ request, baseURL }) => {
 		// Sign up
 		const resendEmail = `verify-resend-${Date.now()}@test.com`;
-		await request.post(`${BASE_URL}/api/auth/sign-up/email`, {
+		await request.post(`/api/auth/sign-up/email`, {
 			headers: { 'Content-Type': 'application/json' },
 			data: {
 				name: 'Resend Test',
@@ -172,15 +170,13 @@ test.describe('Email Verification Flow', () => {
 			},
 		});
 
-		// Wait for initial verification email
-		await waitForEmail(resendEmail, 'verify', 15000);
-
-		// Clear mailpit to isolate the resend
-		await clearMailpit();
+		// Wait for initial verification email and save its ID
+		const initialEmail = await waitForEmail(resendEmail, 'verify', 15000);
 
 		// Sign in first (needed for the resend endpoint)
-		await request.post(`${BASE_URL}/api/auth/sign-in/email`, {
-			headers: { 'Content-Type': 'application/json' },
+		// Origin header required by Better Auth CSRF protection
+		await request.post(`/api/auth/sign-in/email`, {
+			headers: { 'Content-Type': 'application/json', Origin: baseURL ?? '' },
 			data: {
 				email: resendEmail,
 				password: VERIFY_USER_PASSWORD,
@@ -188,22 +184,35 @@ test.describe('Email Verification Flow', () => {
 		});
 
 		// Request resend verification email via Better Auth
-		const resendResponse = await request.post(
-			`${BASE_URL}/api/auth/send-verification-email`,
-			{
-				headers: { 'Content-Type': 'application/json' },
-				data: { email: resendEmail },
-			},
-		);
+		const resendResponse = await request.post(`/api/auth/send-verification-email`, {
+			headers: { 'Content-Type': 'application/json', Origin: baseURL ?? '' },
+			data: { email: resendEmail },
+		});
 
 		// Better Auth should accept the resend request
 		// (may return 200 even if already verified as a security measure)
 		expect(resendResponse.status()).toBeLessThan(500);
 
-		// If resend was accepted, check for the second email
+		// If resend was accepted, wait for a NEW email (different ID from initial)
 		if (resendResponse.ok()) {
-			const resendMail = await waitForEmail(resendEmail, 'verify', 15000);
-			expect(resendMail).toBeDefined();
+			const startTime = Date.now();
+			const timeout = 15000;
+			let found = false;
+			while (Date.now() - startTime < timeout) {
+				const emails = await getEmails();
+				const newEmail = emails.find(
+					(e) =>
+						e.ID !== initialEmail.ID &&
+						e.To.some((t) => t.Address === resendEmail) &&
+						e.Subject.toLowerCase().includes('verify'),
+				);
+				if (newEmail) {
+					found = true;
+					break;
+				}
+				await new Promise((resolve) => setTimeout(resolve, 500));
+			}
+			expect(found, 'Resend verification email should arrive').toBe(true);
 		}
 	});
 });

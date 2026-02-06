@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures/auth.fixture';
+import { test, expect } from './fixtures';
 
 /**
  * Collection List E2E Tests
@@ -16,40 +16,56 @@ test.describe('Collection List Page - Posts', () => {
 		await expect(heading).toBeVisible();
 	});
 
-	test('should display management subtitle', async ({ authenticatedPage }) => {
+	test('should display collection heading as page title', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/posts');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		const subtitle = authenticatedPage.getByText(/Manage your posts/i);
-		await expect(subtitle).toBeVisible();
+		// The entity list page has an H1 heading with the collection label
+		const heading = authenticatedPage.locator('main').getByRole('heading', { name: 'Posts' });
+		await expect(heading).toBeVisible();
 	});
 
-	test('should have Create New button', async ({ authenticatedPage }) => {
+	test('should have Create Post button', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/posts');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		const createButton = authenticatedPage.getByRole('link', { name: /Create New/i });
+		const createButton = authenticatedPage.getByRole('button', { name: /Create Post/i });
 		await expect(createButton).toBeVisible();
 	});
 
-	test('should navigate to create form when clicking Create New', async ({ authenticatedPage }) => {
+	test('should navigate to create form when clicking Create Post', async ({
+		authenticatedPage,
+	}) => {
 		await authenticatedPage.goto('/admin/collections/posts');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		const createButton = authenticatedPage.getByRole('link', { name: /Create New/i });
+		const createButton = authenticatedPage.getByRole('button', { name: /Create Post/i });
 		await createButton.click();
 
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/posts\/create/);
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/posts\/new/);
 	});
 
-	test('should display table with column headers', async ({ authenticatedPage }) => {
+	test('should display data table with column headers', async ({ authenticatedPage }) => {
+		// Create a post so the table renders with headers (empty state shows "No items found")
+		const timestamp = Date.now();
+		const createResponse = await authenticatedPage.request.post('/api/posts', {
+			data: {
+				title: `Table Header Test ${timestamp}`,
+				slug: `table-header-test-${timestamp}`,
+			},
+		});
+		expect(createResponse.ok()).toBe(true);
+
 		await authenticatedPage.goto('/admin/collections/posts');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		// Check for table headers
-		await expect(authenticatedPage.getByRole('columnheader', { name: 'ID' })).toBeVisible();
-		await expect(authenticatedPage.getByRole('columnheader', { name: 'Title' })).toBeVisible();
-		await expect(authenticatedPage.getByRole('columnheader', { name: 'Actions' })).toBeVisible();
+		// Table header cells are sortable (role="button") in mcms-data-table
+		const tableHeader = authenticatedPage.locator('mcms-table-header');
+		await expect(tableHeader).toBeVisible();
+
+		// Check for column header text within the table header row
+		await expect(tableHeader.getByText('Title')).toBeVisible();
+		await expect(tableHeader.getByText('URL Slug')).toBeVisible();
 	});
 });
 
@@ -62,30 +78,32 @@ test.describe('Collection List Page - Users', () => {
 		await expect(heading).toBeVisible();
 	});
 
-	test('should display management subtitle', async ({ authenticatedPage }) => {
+	test('should display collection heading as page title', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/users');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		const subtitle = authenticatedPage.getByText(/Manage your users/i);
-		await expect(subtitle).toBeVisible();
+		const heading = authenticatedPage.locator('main').getByRole('heading', { name: 'Users' });
+		await expect(heading).toBeVisible();
 	});
 
-	test('should have Create New button', async ({ authenticatedPage }) => {
+	test('should have Create User button', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/users');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		const createButton = authenticatedPage.getByRole('link', { name: /Create New/i });
+		const createButton = authenticatedPage.getByRole('button', { name: /Create User/i });
 		await expect(createButton).toBeVisible();
 	});
 
-	test('should navigate to create form when clicking Create New', async ({ authenticatedPage }) => {
+	test('should navigate to create form when clicking Create User', async ({
+		authenticatedPage,
+	}) => {
 		await authenticatedPage.goto('/admin/collections/users');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		const createButton = authenticatedPage.getByRole('link', { name: /Create New/i });
+		const createButton = authenticatedPage.getByRole('button', { name: /Create User/i });
 		await createButton.click();
 
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users\/create/);
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users\/new/);
 	});
 });
 
@@ -94,8 +112,11 @@ test.describe('Collection List Page - Navigation', () => {
 		await authenticatedPage.goto('/admin/collections/posts');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		// Sidebar should show branding
-		const brandingTitle = authenticatedPage.getByText('Momentum CMS');
+		// Sidebar should show branding as an h1 heading
+		const brandingTitle = authenticatedPage.getByRole('heading', {
+			name: 'Momentum CMS',
+			level: 1,
+		});
 		await expect(brandingTitle).toBeVisible();
 	});
 

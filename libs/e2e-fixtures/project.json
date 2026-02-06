@@ -1,0 +1,8 @@
+{
+	"name": "e2e-fixtures",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/e2e-fixtures/src",
+	"projectType": "library",
+	"tags": ["scope:e2e"],
+	"targets": {}
+}

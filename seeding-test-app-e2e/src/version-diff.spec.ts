@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { TEST_AUTHOR2_CREDENTIALS } from './fixtures/e2e-utils';
+import { test, expect, TEST_AUTHOR2_CREDENTIALS } from './fixtures';
 
 /**
  * Version diff E2E tests.
@@ -21,7 +20,6 @@ test.describe('Version diff', () => {
 		// Clean up leftover diff test articles
 		const listResponse = await request.get('/api/articles?limit=1000');
 		if (listResponse.ok()) {
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 			const listData = (await listResponse.json()) as {
 				docs: Array<{ id: string; title?: string }>;
 			};
@@ -42,9 +40,8 @@ test.describe('Version diff', () => {
 				content: '<p>Original content</p>',
 			},
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Article create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string };
 		};
@@ -68,12 +65,9 @@ test.describe('Version diff', () => {
 		expect(publish2.ok(), 'Second publish must succeed').toBe(true);
 
 		// Get versions
-		const versionsResponse = await request.get(
-			`/api/articles/${created.doc.id}/versions?limit=10`,
-		);
+		const versionsResponse = await request.get(`/api/articles/${created.doc.id}/versions?limit=10`);
 		expect(versionsResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const versionsData = (await versionsResponse.json()) as {
 			docs: Array<{ id: string }>;
 		};
@@ -84,19 +78,15 @@ test.describe('Version diff', () => {
 		const olderVersionId = versionsData.docs[1].id;
 
 		// Compare versions
-		const compareResponse = await request.post(
-			`/api/articles/${created.doc.id}/versions/compare`,
-			{
-				headers: { 'Content-Type': 'application/json' },
-				data: {
-					versionId1: olderVersionId,
-					versionId2: newestVersionId,
-				},
+		const compareResponse = await request.post(`/api/articles/${created.doc.id}/versions/compare`, {
+			headers: { 'Content-Type': 'application/json' },
+			data: {
+				versionId1: olderVersionId,
+				versionId2: newestVersionId,
 			},
-		);
+		});
 		expect(compareResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const compareData = (await compareResponse.json()) as {
 			differences: Array<{ field: string; oldValue: unknown; newValue: unknown }>;
 		};
@@ -121,9 +111,8 @@ test.describe('Version diff', () => {
 				content: '<p>Same content</p>',
 			},
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Article create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string };
 		};
@@ -133,12 +122,9 @@ test.describe('Version diff', () => {
 		expect(publishResponse.ok(), 'Publish must succeed').toBe(true);
 
 		// Get versions
-		const versionsResponse = await request.get(
-			`/api/articles/${created.doc.id}/versions?limit=10`,
-		);
+		const versionsResponse = await request.get(`/api/articles/${created.doc.id}/versions?limit=10`);
 		expect(versionsResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const versionsData = (await versionsResponse.json()) as {
 			docs: Array<{ id: string }>;
 		};
@@ -147,19 +133,15 @@ test.describe('Version diff', () => {
 		const versionId = versionsData.docs[0].id;
 
 		// Compare a version with itself
-		const compareResponse = await request.post(
-			`/api/articles/${created.doc.id}/versions/compare`,
-			{
-				headers: { 'Content-Type': 'application/json' },
-				data: {
-					versionId1: versionId,
-					versionId2: versionId,
-				},
+		const compareResponse = await request.post(`/api/articles/${created.doc.id}/versions/compare`, {
+			headers: { 'Content-Type': 'application/json' },
+			data: {
+				versionId1: versionId,
+				versionId2: versionId,
 			},
-		);
+		});
 		expect(compareResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const compareData = (await compareResponse.json()) as {
 			differences: Array<{ field: string }>;
 		};
@@ -171,32 +153,25 @@ test.describe('Version diff', () => {
 			headers: { 'Content-Type': 'application/json' },
 			data: { title: 'VD-Missing IDs' },
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Article create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string };
 		};
 
-		const compareResponse = await request.post(
-			`/api/articles/${created.doc.id}/versions/compare`,
-			{
-				headers: { 'Content-Type': 'application/json' },
-				data: { versionId1: 'some-id' },
-			},
-		);
+		const compareResponse = await request.post(`/api/articles/${created.doc.id}/versions/compare`, {
+			headers: { 'Content-Type': 'application/json' },
+			data: { versionId1: 'some-id' },
+		});
 		expect(compareResponse.status()).toBe(400);
 	});
 
 	test('compare API returns 400 for non-versioned collection', async ({ request }) => {
 		// Categories don't have versioning enabled
-		const compareResponse = await request.post(
-			'/api/categories/some-id/versions/compare',
-			{
-				headers: { 'Content-Type': 'application/json' },
-				data: { versionId1: 'a', versionId2: 'b' },
-			},
-		);
+		const compareResponse = await request.post('/api/categories/some-id/versions/compare', {
+			headers: { 'Content-Type': 'application/json' },
+			data: { versionId1: 'a', versionId2: 'b' },
+		});
 		expect(compareResponse.status()).toBe(400);
 	});
 
@@ -209,9 +184,8 @@ test.describe('Version diff', () => {
 				content: '<p>Original content for UI test</p>',
 			},
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Article create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as {
 			doc: { id: string };
 		};

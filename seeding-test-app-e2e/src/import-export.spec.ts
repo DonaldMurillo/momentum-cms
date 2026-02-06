@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { TEST_AUTHOR1_CREDENTIALS } from './fixtures/e2e-utils';
+import { test, expect, TEST_AUTHOR1_CREDENTIALS } from './fixtures';
 
 /**
  * Import/Export E2E Tests.
@@ -25,9 +24,7 @@ test.describe('Import/Export', () => {
 	test.afterEach(async ({ request }) => {
 		// Clean up imported docs
 		for (const id of importedIds) {
-			await request.delete(`/api/categories/${id}`).catch(() => {
-				// Ignore cleanup errors
-			});
+			await request.delete(`/api/categories/${id}`);
 		}
 		importedIds.length = 0;
 	});
@@ -40,7 +37,6 @@ test.describe('Import/Export', () => {
 		const response = await request.get('/api/categories/export?format=json');
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const body = (await response.json()) as {
 			collection: string;
 			format: string;
@@ -60,7 +56,6 @@ test.describe('Import/Export', () => {
 		const response = await request.get('/api/categories/export');
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const body = (await response.json()) as {
 			format: string;
 			docs: unknown[];
@@ -106,7 +101,7 @@ test.describe('Import/Export', () => {
 	test('export CSV: data rows match JSON export document count', async ({ request }) => {
 		// Get expected count from JSON export
 		const jsonResponse = await request.get('/api/categories/export?format=json');
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const jsonData = (await jsonResponse.json()) as { totalDocs: number };
 
 		// Get CSV export
@@ -136,7 +131,6 @@ test.describe('Import/Export', () => {
 
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const body = (await response.json()) as {
 			imported: number;
 			total: number;
@@ -174,7 +168,6 @@ test.describe('Import/Export', () => {
 			},
 		});
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const body = (await response.json()) as {
 			imported: number;
 			total: number;
@@ -193,9 +186,9 @@ test.describe('Import/Export', () => {
 		}
 	});
 
-	test('import JSON: requires authentication', async ({ request }) => {
+	test('import JSON: requires authentication', async ({ request: _request, baseURL }) => {
 		// Use a fresh request context without auth cookies
-		const fetchResponse = await fetch('http://localhost:4001/api/categories/import', {
+		const fetchResponse = await fetch(`${baseURL}/api/categories/import`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -236,7 +229,6 @@ test.describe('Import/Export', () => {
 
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const body = (await response.json()) as {
 			imported: number;
 			total: number;
@@ -281,7 +273,6 @@ test.describe('Import/Export', () => {
 		const exportResponse = await request.get('/api/categories/export?format=json');
 		expect(exportResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const exportData = (await exportResponse.json()) as {
 			docs: Array<{ id: string; name: string; slug: string; createdAt: string; updatedAt: string }>;
 		};
@@ -302,7 +293,6 @@ test.describe('Import/Export', () => {
 		});
 		expect(importResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const importResult = (await importResponse.json()) as {
 			imported: number;
 			docs: Array<{ id: string; name: string; slug: string }>;

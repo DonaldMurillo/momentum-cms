@@ -1,7 +1,17 @@
 import { defineMomentumConfig } from '@momentum-cms/core';
 import { postgresAdapter } from '@momentum-cms/db-drizzle';
 import { localStorageAdapter } from '@momentum-cms/storage';
-import { Categories, Articles, Products, Pages, Settings, Events, MediaCollection, Users } from './collections';
+import {
+	Categories,
+	Articles,
+	Products,
+	Pages,
+	Settings,
+	Events,
+	MediaCollection,
+	Users,
+	HookTestItems,
+} from './collections';
 import { join } from 'node:path';
 
 /**
@@ -65,19 +75,28 @@ interface SettingsDoc {
  * - Password reset flow
  * - Admin UI functionality
  *
- * Note: Admin users are created via the setup page flow (not seeded)
- * because Better Auth handles password hashing internally.
- * Collection data is seeded for consistent test state.
+ * Note: Admin user is seeded as the first user for consistent test state.
+ * User password hashing is handled by Better Auth hooks in server.ts.
  */
 export default defineMomentumConfig({
 	db: {
 		adapter: postgresAdapter({
 			connectionString:
 				process.env['DATABASE_URL'] ??
-				'postgresql://postgres:postgres@localhost:5434/momentum_seeding_test',
+				'postgresql://postgres:postgres@localhost:5432/momentum_seeding_test',
 		}),
 	},
-	collections: [Categories, Articles, Products, Pages, Settings, Events, MediaCollection, Users],
+	collections: [
+		Categories,
+		Articles,
+		Products,
+		Pages,
+		Settings,
+		Events,
+		MediaCollection,
+		Users,
+		HookTestItems,
+	],
 	storage: {
 		adapter: localStorageAdapter({
 			directory: join(process.cwd(), 'data', 'uploads'),
@@ -92,13 +111,22 @@ export default defineMomentumConfig({
 	server: {
 		port: 4001,
 		cors: {
+			// WARNING: Use specific origins in production (e.g. process.env['CORS_ORIGIN'])
 			origin: '*',
 			methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
 			headers: ['Content-Type', 'Authorization'],
 		},
 	},
 	seeding: {
-		defaults: ({ collection }) => [
+		defaults: ({ authUser, collection }) => [
+			// Seed admin user first for E2E tests (synced with Better Auth)
+			authUser('user-admin', {
+				name: 'Test Admin',
+				email: 'admin@test.com',
+				password: 'TestPassword123!',
+				role: 'admin',
+				active: true,
+			}),
 			// Seed categories for testing
 			collection<CategoryDoc>('categories').create('cat-tech', {
 				name: 'Technology',
@@ -177,9 +205,7 @@ export default defineMomentumConfig({
 					metaTitle: 'Buy Test Phone',
 					metaDescription: 'The best test phone.',
 				},
-				features: [
-					{ label: 'Great Camera', description: '48MP sensor', highlighted: true },
-				],
+				features: [{ label: 'Great Camera', description: '48MP sensor', highlighted: true }],
 			}),
 			// Seed settings for layout field testing (tabs, collapsible, row)
 			collection<SettingsDoc>('settings').create('settings-main', {

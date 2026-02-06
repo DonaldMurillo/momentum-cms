@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { TEST_CREDENTIALS } from './fixtures/e2e-utils';
+import { test, expect, TEST_CREDENTIALS } from './fixtures';
 
 /**
  * Blocks field renderer E2E tests.
@@ -22,7 +21,6 @@ test.describe('Blocks field renderer', () => {
 		const response = await request.get('/api/pages?limit=10');
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			docs: Array<{
 				id: string;
@@ -65,7 +63,6 @@ test.describe('Blocks field renderer', () => {
 		const response = await request.get('/api/pages?limit=10');
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as {
 			docs: Array<{
 				id: string;
@@ -106,7 +103,6 @@ test.describe('Blocks field renderer', () => {
 
 		expect(createResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const createBody = (await createResponse.json()) as {
 			doc: {
 				id: string;
@@ -126,7 +122,6 @@ test.describe('Blocks field renderer', () => {
 		const getResponse = await request.get(`/api/pages/${created.id}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const getBody = (await getResponse.json()) as {
 			doc: {
 				content?: Array<{ blockType: string; [key: string]: unknown }>;
@@ -154,14 +149,11 @@ test.describe('Blocks field renderer', () => {
 			data: {
 				title: uniqueTitle,
 				slug: `update-blocks-${Date.now()}`,
-				content: [
-					{ blockType: 'textBlock', body: 'Original content.' },
-				],
+				content: [{ blockType: 'textBlock', body: 'Original content.' }],
 			},
 		});
 		expect(createResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const createBody = (await createResponse.json()) as { doc: { id: string } };
 
 		// Update: replace blocks
@@ -180,7 +172,6 @@ test.describe('Blocks field renderer', () => {
 		const getResponse = await request.get(`/api/pages/${createBody.doc.id}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const getBody = (await getResponse.json()) as {
 			doc: {
 				content?: Array<{ blockType: string; [key: string]: unknown }>;
@@ -223,7 +214,6 @@ test.describe('Blocks field renderer', () => {
 		});
 		expect(createResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const createBody = (await createResponse.json()) as {
 			doc: {
 				id: string;
@@ -241,7 +231,6 @@ test.describe('Blocks field renderer', () => {
 		const getResponse = await request.get(`/api/pages/${created.id}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const getBody = (await getResponse.json()) as {
 			doc: {
 				content?: Array<{ blockType: string }>;

@@ -11,6 +11,7 @@ import type {
 	SeedEntityOptions,
 	UserSeedData,
 	AdminSeedData,
+	AuthUserSeedData,
 	CollectionSeedBuilder,
 } from './seeding.types';
 
@@ -61,6 +62,26 @@ export function createSeedHelpers(): DefaultEntityHelpers {
 					...data,
 				},
 				options,
+			};
+		},
+
+		authUser(
+			seedId: string,
+			data: AuthUserSeedData,
+			options?: SeedEntityOptions,
+		): SeedEntity<AuthUserSeedData> {
+			return {
+				seedId,
+				collection: 'users', // Momentum users collection
+				data: {
+					role: 'user',
+					active: true,
+					...data,
+				},
+				options: {
+					...options,
+					syncAuth: true,
+				},
 			};
 		},
 

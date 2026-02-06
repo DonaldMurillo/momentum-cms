@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { TEST_AUTHOR1_CREDENTIALS } from './fixtures/e2e-utils';
+import { test, expect, TEST_AUTHOR1_CREDENTIALS } from './fixtures';
 
 /**
  * Webhook E2E tests.
@@ -29,7 +28,7 @@ test.describe('Webhooks', () => {
 			headers: { 'Content-Type': 'application/json' },
 			data: { name: 'Webhook Create Test', slug: 'webhook-create-test' },
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Category create should return 201').toBe(201);
 
 		// Wait briefly for async webhook delivery
 		await new Promise((resolve) => setTimeout(resolve, 500));
@@ -38,7 +37,6 @@ test.describe('Webhooks', () => {
 		const receiverResponse = await request.get('/api/test-webhook-receiver');
 		expect(receiverResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await receiverResponse.json()) as {
 			webhooks: Array<{
 				headers: Record<string, string>;
@@ -56,9 +54,7 @@ test.describe('Webhooks', () => {
 		// Should have at least one webhook for the create event
 		expect(data.count).toBeGreaterThanOrEqual(1);
 
-		const createWebhook = data.webhooks.find(
-			(w) => w.body.event === 'afterCreate',
-		);
+		const createWebhook = data.webhooks.find((w) => w.body.event === 'afterCreate');
 		expect(createWebhook).toBeDefined();
 		expect(createWebhook!.body.collection).toBe('categories');
 		expect(createWebhook!.body.operation).toBe('create');
@@ -72,7 +68,7 @@ test.describe('Webhooks', () => {
 		expect(createWebhook!.headers['x-momentum-delivery']).toBeDefined();
 
 		// Clean up
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const created = (await createResponse.json()) as { doc: { id: string } };
 		await request.delete(`/api/categories/${created.doc.id}`);
 	});
@@ -83,9 +79,8 @@ test.describe('Webhooks', () => {
 			headers: { 'Content-Type': 'application/json' },
 			data: { name: 'Webhook Update Test', slug: 'webhook-update-test' },
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Category create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as { doc: { id: string } };
 
 		// Clear webhooks from the create
@@ -105,7 +100,6 @@ test.describe('Webhooks', () => {
 		const receiverResponse = await request.get('/api/test-webhook-receiver');
 		expect(receiverResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await receiverResponse.json()) as {
 			webhooks: Array<{
 				body: { event: string; operation: string };
@@ -113,9 +107,7 @@ test.describe('Webhooks', () => {
 			count: number;
 		};
 
-		const updateWebhook = data.webhooks.find(
-			(w) => w.body.event === 'afterUpdate',
-		);
+		const updateWebhook = data.webhooks.find((w) => w.body.event === 'afterUpdate');
 		expect(updateWebhook).toBeDefined();
 		expect(updateWebhook!.body.operation).toBe('update');
 
@@ -129,9 +121,8 @@ test.describe('Webhooks', () => {
 			headers: { 'Content-Type': 'application/json' },
 			data: { name: 'Webhook Delete Test', slug: 'webhook-delete-test' },
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Category create should return 201').toBe(201);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const created = (await createResponse.json()) as { doc: { id: string } };
 
 		// Clear webhooks from the create
@@ -148,7 +139,6 @@ test.describe('Webhooks', () => {
 		const receiverResponse = await request.get('/api/test-webhook-receiver');
 		expect(receiverResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await receiverResponse.json()) as {
 			webhooks: Array<{
 				body: { event: string; operation: string };
@@ -156,9 +146,7 @@ test.describe('Webhooks', () => {
 			count: number;
 		};
 
-		const deleteWebhook = data.webhooks.find(
-			(w) => w.body.event === 'afterDelete',
-		);
+		const deleteWebhook = data.webhooks.find((w) => w.body.event === 'afterDelete');
 		expect(deleteWebhook).toBeDefined();
 		expect(deleteWebhook!.body.operation).toBe('delete');
 	});
@@ -171,14 +159,14 @@ test.describe('Webhooks', () => {
 			headers: { 'Content-Type': 'application/json' },
 			data: { name: 'Webhook Sig Test', slug: 'webhook-sig-test' },
 		});
-		expect(createResponse.ok() || createResponse.status() === 201).toBe(true);
+		expect(createResponse.status(), 'Category create should return 201').toBe(201);
 
 		// Wait for webhook delivery
 		await new Promise((resolve) => setTimeout(resolve, 500));
 
 		// Get the webhook data
 		const receiverResponse = await request.get('/api/test-webhook-receiver');
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const data = (await receiverResponse.json()) as {
 			webhooks: Array<{
 				headers: Record<string, string>;
@@ -186,13 +174,10 @@ test.describe('Webhooks', () => {
 			}>;
 		};
 
-		const webhook = data.webhooks.find(
-			(w) => {
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-				const body = w.body as { event?: string };
-				return body.event === 'afterCreate';
-			},
-		);
+		const webhook = data.webhooks.find((w) => {
+			const body = w.body as { event?: string };
+			return body.event === 'afterCreate';
+		});
 		expect(webhook).toBeDefined();
 
 		const signature = webhook!.headers['x-momentum-signature'];
@@ -200,13 +185,11 @@ test.describe('Webhooks', () => {
 
 		// Verify the signature matches HMAC-SHA256 of the body with the test secret
 		const bodyStr = JSON.stringify(webhook!.body);
-		const expectedSig = createHmac('sha256', 'test-webhook-secret')
-			.update(bodyStr)
-			.digest('hex');
+		const expectedSig = createHmac('sha256', 'test-webhook-secret').update(bodyStr).digest('hex');
 		expect(signature).toBe(expectedSig);
 
 		// Clean up
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		const created = (await createResponse.json()) as { doc: { id: string } };
 		await request.delete(`/api/categories/${created.doc.id}`);
 	});

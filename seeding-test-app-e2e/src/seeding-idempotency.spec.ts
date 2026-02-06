@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 /**
  * Seeding Idempotency Tests
@@ -35,8 +35,8 @@ test.describe('Seeding Idempotency Tests', () => {
 		expect(techArticles.length).toBe(1);
 	});
 
-	test('seeded data has stable IDs across runs', async ({ request }) => {
-		// Get categories twice - IDs should be stable
+	test('seeded data returns consistent IDs on repeated reads', async ({ request }) => {
+		// Get categories twice - IDs should be consistent
 		const response1 = await request.get('/api/categories');
 		const response2 = await request.get('/api/categories');
 
@@ -60,8 +60,8 @@ test.describe('Seeding Idempotency Tests', () => {
 			seeds: { completed: number; expected: number; ready: boolean };
 		};
 
-		// Total should match expected (13 seeds: 3 categories + 4 articles + 2 products + 2 pages + 2 settings from defaults, plus custom seed)
+		// Completed count should match expected count (seeds are defined in momentum.config.ts)
 		expect(data.seeds.completed).toBe(data.seeds.expected);
-		expect(data.seeds.completed).toBe(13);
+		expect(data.seeds.ready).toBe(true);
 	});
 });

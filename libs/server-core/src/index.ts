@@ -52,6 +52,8 @@ export {
 	createUserSyncHook,
 	createUserDeleteSyncHook,
 	type UserSyncConfig,
+	type MomentumAuthLike,
+	type BetterAuthAPI,
 } from './lib/user-sync-hooks';
 
 // Seeding
@@ -61,6 +63,7 @@ export {
 	calculateChecksum,
 	createSeedTracker,
 	type SeedingResult,
+	type SeedingRunOptions,
 	type SeedTracker,
 	type CreateSeedTrackingData,
 } from './lib/seeding';
@@ -77,11 +80,7 @@ export {
 
 // GraphQL
 export { buildGraphQLSchema, type GraphQLContext } from './lib/graphql-schema';
-export {
-	executeGraphQL,
-	type GraphQLRequestBody,
-	type GraphQLResult,
-} from './lib/graphql-handler';
+export { executeGraphQL, type GraphQLRequestBody, type GraphQLResult } from './lib/graphql-handler';
 export { GraphQLJSON } from './lib/graphql-scalars';
 
 // API Keys
@@ -119,10 +118,7 @@ export {
 } from './lib/openapi-generator';
 
 // Preview Renderer
-export {
-	renderPreviewHTML,
-	type PreviewRenderOptions,
-} from './lib/preview-renderer';
+export { renderPreviewHTML, type PreviewRenderOptions } from './lib/preview-renderer';
 
 // Import/Export
 export {

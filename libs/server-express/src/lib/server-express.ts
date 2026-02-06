@@ -165,13 +165,13 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		const rawBody = getBody(req);
 		const body: GraphQLRequestBody = {
 			query: typeof rawBody['query'] === 'string' ? rawBody['query'] : '',
-			variables: typeof rawBody['variables'] === 'object' && rawBody['variables'] !== null
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-				? rawBody['variables'] as Record<string, unknown>
-				: undefined,
-			operationName: typeof rawBody['operationName'] === 'string'
-				? rawBody['operationName']
-				: undefined,
+			variables:
+				typeof rawBody['variables'] === 'object' && rawBody['variables'] !== null
+					? // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+						(rawBody['variables'] as Record<string, unknown>)
+					: undefined,
+			operationName:
+				typeof rawBody['operationName'] === 'string' ? rawBody['operationName'] : undefined,
 		};
 
 		const result = await executeGraphQL(graphqlSchema, body, {
@@ -190,11 +190,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			return;
 		}
 
-		const result = await executeGraphQL(
-			graphqlSchema,
-			{ query: queryParam },
-			{ user },
-		);
+		const result = await executeGraphQL(graphqlSchema, { query: queryParam }, { user });
 
 		res.status(result.status).json(result.body);
 	});
@@ -473,6 +469,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				return;
 			}
 
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Request body typing
 			const { versionId1, versionId2 } = req.body as {
 				versionId1: string;
 				versionId2: string;
@@ -730,9 +727,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 					const api = getMomentumAPI();
 					const contextApi = user ? api.setContext({ user }) : api;
 
-					const buildQueryHelper = (
-						ctxApi: typeof contextApi,
-					): EndpointQueryHelper => ({
+					const buildQueryHelper = (ctxApi: typeof contextApi): EndpointQueryHelper => ({
 						find: async (slug, options) => {
 							const r = await ctxApi.collection(slug).find(options);
 							// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
@@ -740,10 +735,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 						},
 						findById: async (slug, id) => {
 							// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-							return (await ctxApi.collection(slug).findById(id)) as Record<
-								string,
-								unknown
-							> | null;
+							return (await ctxApi.collection(slug).findById(id)) as Record<string, unknown> | null;
 						},
 						count: (slug) => ctxApi.collection(slug).count(),
 						create: async (slug, data) => {
@@ -752,10 +744,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 						},
 						update: async (slug, id, data) => {
 							// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-							return (await ctxApi.collection(slug).update(id, data)) as Record<
-								string,
-								unknown
-							>;
+							return (await ctxApi.collection(slug).update(id, data)) as Record<string, unknown>;
 						},
 						delete: (slug, id) => ctxApi.collection(slug).delete(id),
 						transaction: async <T>(
@@ -775,6 +764,8 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 					const result = await endpoint.handler({
 						req: { user },
 						collection,
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Express body is parsed JSON
+						body: req.body as Record<string, unknown> | undefined,
 						query: buildQueryHelper(contextApi),
 					});
 					res.status(result.status).json(result.body);
@@ -894,7 +885,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				return;
 			}
 
-			const format = (typeof req.query['format'] === 'string' ? req.query['format'] : 'json') as ExportFormat;
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Validated below
+			const format = (
+				typeof req.query['format'] === 'string' ? req.query['format'] : 'json'
+			) as ExportFormat;
 			if (format !== 'json' && format !== 'csv') {
 				res.status(400).json({ error: 'Invalid format. Use "json" or "csv"' });
 				return;
@@ -917,7 +911,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				res.send(exportResult.data);
 			} else {
 				const exportResult = exportToJson(docs, collectionConfig);
-				res.setHeader('Content-Disposition', `attachment; filename="${collectionSlug}-export.json"`);
+				res.setHeader(
+					'Content-Disposition',
+					`attachment; filename="${collectionSlug}-export.json"`,
+				);
 				res.json({
 					collection: collectionSlug,
 					format: 'json',
@@ -951,6 +948,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			}
 
 			const body = getBody(req);
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Validated below
 			const format = (typeof body['format'] === 'string' ? body['format'] : 'json') as ExportFormat;
 
 			let docsToImport: Record<string, unknown>[];

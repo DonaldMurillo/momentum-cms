@@ -1,160 +1,57 @@
 /* eslint-disable no-console */
-import { chromium, type FullConfig, type Page } from '@playwright/test';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { Client } from 'pg';
+import { ensureMailpit } from '@momentum-cms/e2e-fixtures';
 
-// Auth file path - matches the path used in playwright.config.ts
-const AUTH_FILE = path.join(__dirname, '..', 'playwright/.auth/user.json');
+const WORKSPACE_ROOT = path.resolve(__dirname, '..', '..', '..');
+const SERVER_BINARY = path.join(WORKSPACE_ROOT, 'dist/apps/example-angular/server/server.mjs');
 
-/**
- * Wait for the page to settle on a final auth state.
- * With SSR, the server may return one page but client-side redirects to another.
- */
-async function waitForAuthState(
-	page: Page,
-	timeout = 30000,
-): Promise<'setup' | 'login' | 'authenticated'> {
-	const startTime = Date.now();
-
-	while (Date.now() - startTime < timeout) {
-		// Wait for any pending navigations
-		await page.waitForLoadState('networkidle');
-
-		const url = page.url();
-
-		// Check if we're on a stable auth-related page
-		if (url.includes('/setup')) {
-			// Verify the setup form is visible to confirm we're really on setup
-			const nameField = page.getByLabel(/full name/i);
-			if (await nameField.isVisible().catch(() => false)) {
-				return 'setup';
-			}
-		} else if (url.includes('/login')) {
-			// Verify the login form is visible to confirm we're really on login
-			const emailField = page.getByLabel(/email/i);
-			if (await emailField.isVisible().catch(() => false)) {
-				return 'login';
-			}
-		} else if (url.includes('/admin')) {
-			// Verify we're on the dashboard (not redirecting)
-			const dashboardHeading = page.getByRole('heading', { name: 'Dashboard' });
-			if (await dashboardHeading.isVisible().catch(() => false)) {
-				return 'authenticated';
-			}
-		}
-
-		// Wait a bit before checking again
-		await page.waitForTimeout(500);
-	}
-
-	throw new Error(`Timed out waiting for auth state. Current URL: ${page.url()}`);
-}
+const PG_CONNECTION =
+	process.env['PG_CONNECTION'] ?? 'postgresql://postgres:postgres@localhost:5432/postgres';
 
 /**
- * Global setup for E2E tests.
+ * Simplified global setup — precondition checks only.
  *
- * Creates a test admin user if one doesn't exist, and saves the
- * authentication state for other tests to reuse.
+ * The per-worker fixture (worker-server.fixture.ts) handles:
+ * - Database creation per worker
+ * - Server process spawn on random port
+ * - Health check
+ * - User creation and role sync
+ *
+ * This global setup just fails fast if prerequisites are missing.
  */
-async function globalSetup(config: FullConfig): Promise<void> {
-	const baseURL = config.projects[0].use.baseURL || 'http://localhost:4200';
+async function globalSetup(): Promise<void> {
+	console.log('[Global Setup] Running precondition checks...');
 
-	const browser = await chromium.launch();
-	const context = await browser.newContext();
-	const page = await context.newPage();
-
-	try {
-		// Navigate to admin - with SSR, the server may return admin page but client redirects
-		console.log('Navigating to /admin...');
-		await page.goto(`${baseURL}/admin`);
-
-		// Wait for the auth state to stabilize after client-side hydration
-		let authState = await waitForAuthState(page);
-		console.log(`Auth state: ${authState}`);
-
-		// IMPORTANT: SSR renders dashboard without auth (guards allow during SSR)
-		// We need to verify cookies actually exist, not just trust the UI
-		if (authState === 'authenticated') {
-			const cookies = await context.cookies();
-			console.log(`Cookies found: ${cookies.length}`);
-			if (cookies.length === 0) {
-				// SSR rendered dashboard but no actual auth
-				// Navigate to login page directly to force proper auth flow
-				console.log('No cookies found - navigating to login page...');
-				await page.goto(`${baseURL}/admin/login`);
-				authState = await waitForAuthState(page);
-				console.log(`Auth state after navigating to login: ${authState}`);
-			}
-		}
-
-		if (authState === 'setup') {
-			// No users exist - create the first admin user
-			console.log('Creating test admin user...');
-
-			await page.getByLabel(/full name/i).fill('Test Admin');
-			await page.getByLabel(/email address/i).fill('admin@test.com');
-			await page.getByRole('textbox', { name: /^password$/i }).fill('TestPassword123!');
-			await page.getByRole('textbox', { name: /confirm password/i }).fill('TestPassword123!');
-
-			// Wait for button to be enabled
-			const submitButton = page.getByRole('button', { name: /create|submit|sign up/i });
-			await submitButton.click();
-
-			// Wait for redirect to admin dashboard
-			await page.waitForURL(/\/admin(?!\/setup|\/login)/, { timeout: 30000 });
-			console.log('Admin user created and logged in');
-		} else if (authState === 'login') {
-			// Users exist but not logged in - login with test credentials via API
-			console.log('Logging in with test admin via API...');
-
-			// Use Better Auth's sign-in API directly - more reliable than UI
-			const signInResponse = await context.request.post(`${baseURL}/api/auth/sign-in/email`, {
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				data: {
-					email: 'admin@test.com',
-					password: 'TestPassword123!',
-				},
-			});
-
-			console.log(`Sign-in API response status: ${signInResponse.status()}`);
-
-			if (!signInResponse.ok()) {
-				const errorBody = await signInResponse.text();
-				console.error('Sign-in API error:', errorBody);
-				throw new Error(`Failed to sign in via API: ${signInResponse.status()} - ${errorBody}`);
-			}
-
-			// The API sets cookies automatically via Set-Cookie headers
-			// Refresh the page to load with the new session
-			await page.goto(`${baseURL}/admin`);
-			await page.waitForLoadState('networkidle');
-
-			// Verify we're now on the dashboard
-			const dashboardHeading = page.getByRole('heading', { name: 'Dashboard' });
-			await dashboardHeading.waitFor({ state: 'visible', timeout: 10000 });
-			console.log('Logged in successfully via API');
-		} else {
-			// Already authenticated with valid cookies
-			console.log('Already authenticated');
-		}
-
-		// Verify cookies exist before saving
-		const finalCookies = await context.cookies();
-		console.log(`Final cookies count: ${finalCookies.length}`);
-		if (finalCookies.length === 0) {
-			throw new Error('Authentication failed - no cookies to save');
-		}
-
-		// Save the authentication state to the same path used by playwright.config.ts
-		await context.storageState({ path: AUTH_FILE });
-		console.log(`Authentication state saved to ${AUTH_FILE}`);
-	} catch (error) {
-		console.error('Global setup failed:', error);
-		throw error;
-	} finally {
-		await browser.close();
+	// 1. Check build artifact exists
+	if (!fs.existsSync(SERVER_BINARY)) {
+		throw new Error(
+			`[Global Setup] Server binary not found at ${SERVER_BINARY}.\n` +
+				'Run: nx build example-angular',
+		);
 	}
+	console.log('[Global Setup] Build artifact found.');
+
+	// 2. Check PostgreSQL is reachable
+	const client = new Client({ connectionString: PG_CONNECTION });
+	try {
+		await client.connect();
+		await client.query('SELECT 1');
+		console.log('[Global Setup] PostgreSQL is reachable.');
+	} catch (error) {
+		throw new Error(
+			`[Global Setup] Cannot connect to PostgreSQL at ${PG_CONNECTION}.\n` +
+				`Ensure PostgreSQL is running. Error: ${error instanceof Error ? error.message : error}`,
+		);
+	} finally {
+		await client.end();
+	}
+
+	// 3. Ensure Mailpit is running (starts via Docker if not)
+	await ensureMailpit();
+
+	console.log('[Global Setup] All preconditions met.');
 }
 
 export default globalSetup;

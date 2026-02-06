@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { TEST_CREDENTIALS } from './fixtures/e2e-utils';
+import { test, expect, TEST_CREDENTIALS } from './fixtures';
 
 /**
  * Layout fields E2E tests.
@@ -36,7 +35,6 @@ test.describe('Layout fields (tabs, collapsible, row)', () => {
 		const response = await request.get('/api/settings?limit=10');
 		expect(response.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const data = (await response.json()) as { docs: SettingsDoc[] };
 
 		expect(data.docs.length).toBeGreaterThanOrEqual(2);
@@ -86,7 +84,6 @@ test.describe('Layout fields (tabs, collapsible, row)', () => {
 		});
 		expect(createResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const body = (await createResponse.json()) as { doc: SettingsDoc };
 		const created = body.doc;
 
@@ -103,7 +100,6 @@ test.describe('Layout fields (tabs, collapsible, row)', () => {
 		const getResponse = await request.get(`/api/settings/${created.id}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const getBody = (await getResponse.json()) as { doc: SettingsDoc };
 		const fetched = getBody.doc;
 		expect(fetched.siteName).toBe(uniqueName);
@@ -135,7 +131,6 @@ test.describe('Layout fields (tabs, collapsible, row)', () => {
 		});
 		expect(createResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const createBody = (await createResponse.json()) as { doc: SettingsDoc };
 		const created = createBody.doc;
 
@@ -157,7 +152,6 @@ test.describe('Layout fields (tabs, collapsible, row)', () => {
 		const getResponse = await request.get(`/api/settings/${created.id}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const getBody = (await getResponse.json()) as { doc: SettingsDoc };
 		const updated = getBody.doc;
 
@@ -192,7 +186,6 @@ test.describe('Layout fields (tabs, collapsible, row)', () => {
 		});
 		expect(createResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const createBody = (await createResponse.json()) as { doc: Record<string, unknown> };
 		const created = createBody.doc;
 
@@ -208,7 +201,6 @@ test.describe('Layout fields (tabs, collapsible, row)', () => {
 		const getResponse = await request.get(`/api/settings/${created['id']}`);
 		expect(getResponse.ok()).toBe(true);
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		const getBody = (await getResponse.json()) as { doc: Record<string, unknown> };
 		const fetched = getBody.doc;
 		expect(fetched['settingsTabs']).toBeUndefined();
@@ -221,9 +213,16 @@ test.describe('Layout fields (tabs, collapsible, row)', () => {
 
 		// Verify the response only contains expected column names (no layout field names)
 		const expectedKeys = new Set([
-			'id', 'createdAt', 'updatedAt',
-			'siteName', 'siteDescription', 'twitterHandle', 'facebookUrl',
-			'linkedinUrl', 'analyticsId', 'maintenanceMode',
+			'id',
+			'createdAt',
+			'updatedAt',
+			'siteName',
+			'siteDescription',
+			'twitterHandle',
+			'facebookUrl',
+			'linkedinUrl',
+			'analyticsId',
+			'maintenanceMode',
 		]);
 		for (const key of Object.keys(fetched)) {
 			expect(expectedKeys.has(key), `Unexpected key "${key}" in response`).toBe(true);

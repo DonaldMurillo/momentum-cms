@@ -25,6 +25,7 @@ export default defineMomentumConfig({
 	server: {
 		port: 4000,
 		cors: {
+			// WARNING: Use specific origins in production (e.g. process.env['CORS_ORIGIN'])
 			origin: '*',
 			methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
 			headers: ['Content-Type', 'Authorization'],

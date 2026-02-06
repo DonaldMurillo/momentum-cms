@@ -12,16 +12,13 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
 	momentumApiMiddleware,
+	initializeMomentum,
 	createAuthMiddleware,
 	createSetupMiddleware,
 	createSessionResolverMiddleware,
 } from '@momentum-cms/server-express';
 import { createMomentumAuth } from '@momentum-cms/auth';
-import {
-	initializeMomentumAPI,
-	getMomentumAPI,
-	createUserSyncHook,
-} from '@momentum-cms/server-core';
+import { getMomentumAPI, createUserSyncHook } from '@momentum-cms/server-core';
 import { provideMomentumAPI } from '@momentum-cms/admin';
 import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
 import momentumConfig from './momentum.config';
@@ -35,11 +32,6 @@ const angularApp = new AngularNodeAppEngine();
 // Parse JSON request bodies (required for auth endpoints)
 app.use(express.json());
 
-// Initialize database schema if the adapter supports it
-if (momentumConfig.db.adapter.initialize) {
-	momentumConfig.db.adapter.initialize(momentumConfig.collections).catch(console.error);
-}
-
 // Get the pg pool from the adapter for Better Auth
 // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- PostgresAdapter implements PostgresAdapterWithRaw
 const dbAdapter = momentumConfig.db.adapter as PostgresAdapterWithRaw;
@@ -48,10 +40,13 @@ const pool = dbAdapter.getPool();
 // Create Better Auth instance with PostgreSQL
 // Email is enabled automatically if SMTP_HOST env var is set
 // Defaults to Mailpit settings (localhost:1025) for local development
+const authBaseURL =
+	process.env['BETTER_AUTH_URL'] || `http://localhost:${momentumConfig.server.port}`;
+
 const auth = createMomentumAuth({
 	db: { type: 'postgres', pool },
-	baseURL: `http://localhost:${momentumConfig.server.port}`,
-	trustedOrigins: ['http://localhost:4200', `http://localhost:${momentumConfig.server.port}`],
+	baseURL: authBaseURL,
+	trustedOrigins: ['http://localhost:4200', authBaseURL],
 	email: {
 		// Email is auto-enabled when SMTP_HOST is set
 		// Configure via environment variables:
@@ -70,8 +65,14 @@ if (usersCollection) {
 	usersCollection.hooks.beforeChange = [createUserSyncHook({ auth }), ...existingHooks];
 }
 
-// Initialize Momentum API singleton (after hooks are configured)
-initializeMomentumAPI(momentumConfig);
+// Initialize Momentum CMS (database schema, API, seeding — after hooks are configured)
+const momentum = initializeMomentum(momentumConfig);
+
+// Handle initialization errors
+momentum.ready.catch((error) => {
+	console.error('[Example Angular] Initialization failed:', error);
+	process.exit(1);
+});
 
 /**
  * Auth endpoints (Better Auth)
@@ -104,15 +105,12 @@ app.use(
 				const systemApi = api.setContext({
 					user: { id: 'system', email: 'system@localhost', role: 'admin' },
 				});
-				// Note: where clause filtering has issues with the current API, so fetch all and filter client-side
-				// Use high limit to get all users (default limit is 10)
+				// Filter by email server-side to avoid fetching all users
 				const result = await systemApi
 					.collection<{ email: string; role?: string }>('users')
-					.find({ limit: 1000 });
-				const user = result.docs.find((u) => u.email === email);
-				return user?.role;
-			} catch (error) {
-				console.error(`[SessionResolver] Role lookup error for ${email}:`, error);
+					.find({ where: { email: { equals: email } }, limit: 1 });
+				return result.docs[0]?.role;
+			} catch {
 				return undefined;
 			}
 		},

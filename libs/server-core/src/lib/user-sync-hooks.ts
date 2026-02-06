@@ -24,13 +24,13 @@
  * ```
  */
 
-import type { HookArgs, HookFunction } from '@momentum-cms/core';
+import { MIN_PASSWORD_LENGTH, type HookArgs, type HookFunction } from '@momentum-cms/core';
 
 /**
  * Better Auth API interface for user creation.
  * This matches the api property from createMomentumAuth().
  */
-interface BetterAuthAPI {
+export interface BetterAuthAPI {
 	signUpEmail: (options: {
 		body: { name: string; email: string; password: string };
 	}) => Promise<{ user?: { id: string } | null } | null>;
@@ -40,7 +40,7 @@ interface BetterAuthAPI {
  * Momentum Auth instance type.
  * We use a minimal interface to avoid circular dependencies.
  */
-interface MomentumAuthLike {
+export interface MomentumAuthLike {
 	api: BetterAuthAPI;
 }
 
@@ -121,8 +121,8 @@ export function createUserSyncHook(config: UserSyncConfig): HookFunction {
 		}
 
 		// Validate password length (Better Auth requires min 8 chars)
-		if (password.length < 8) {
-			throw new Error('Password must be at least 8 characters');
+		if (password.length < MIN_PASSWORD_LENGTH) {
+			throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
 		}
 
 		try {
