@@ -188,6 +188,26 @@ export interface UploadField extends BaseField {
 	hasMany?: boolean;
 }
 
+/** Behavior when a referenced document is deleted. Maps to SQL FK constraint. */
+export type OnDeleteAction = 'set-null' | 'restrict' | 'cascade';
+
+/**
+ * Error thrown when a delete or update violates a foreign key constraint.
+ * Lives in core because it represents a domain-level referential integrity violation,
+ * not an HTTP concern. Mapped to HTTP 409 by server-core's handleError.
+ */
+export class ReferentialIntegrityError extends Error {
+	readonly constraint: string;
+	readonly table: string;
+
+	constructor(table: string, constraint: string) {
+		super(`Cannot delete from "${table}": referenced by foreign key constraint "${constraint}"`);
+		this.name = 'ReferentialIntegrityError';
+		this.table = table;
+		this.constraint = constraint;
+	}
+}
+
 // Relationship field - uses lazy reference to avoid circular imports
 export interface RelationshipField extends BaseField {
 	type: 'relationship';
@@ -196,10 +216,15 @@ export interface RelationshipField extends BaseField {
 	/** Multiple target collections for polymorphic relationships */
 	relationTo?: Array<() => unknown>;
 	hasMany?: boolean;
+	/**
+	 * Behavior when the referenced document is deleted.
+	 * Maps to SQL FK constraint: 'set-null' → ON DELETE SET NULL, etc.
+	 * Only applies to single-value relationships (not hasMany or polymorphic).
+	 * @default 'set-null'
+	 */
+	onDelete?: OnDeleteAction;
 	/** Filter which related documents can be selected */
-	filterOptions?: (args: {
-		data: Record<string, unknown>;
-	}) => Record<string, unknown>;
+	filterOptions?: (args: { data: Record<string, unknown> }) => Record<string, unknown>;
 }
 
 /** Value shape for polymorphic relationships (when relationTo is set) */

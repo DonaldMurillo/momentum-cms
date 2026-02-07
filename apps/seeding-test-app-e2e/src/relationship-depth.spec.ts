@@ -37,10 +37,9 @@ test.describe('Relationship depth population', () => {
 			expect(techArticle?.category, 'category should be set').toBeDefined();
 
 			// By default (no depth), category should be a raw ID string
-			expect(
-				typeof techArticle?.category,
-				'Without depth, category should be a string ID',
-			).toBe('string');
+			expect(typeof techArticle?.category, 'Without depth, category should be a string ID').toBe(
+				'string',
+			);
 		});
 
 		test('depth=0 explicit also returns raw IDs', async ({ request }) => {
@@ -53,10 +52,9 @@ test.describe('Relationship depth population', () => {
 
 			const techArticle = body.docs.find((d) => d.title === 'First Tech Article');
 			expect(techArticle?.category, 'category should be set').toBeDefined();
-			expect(
-				typeof techArticle?.category,
-				'With depth=0, category should be a string ID',
-			).toBe('string');
+			expect(typeof techArticle?.category, 'With depth=0, category should be a string ID').toBe(
+				'string',
+			);
 		});
 	});
 
@@ -77,10 +75,9 @@ test.describe('Relationship depth population', () => {
 			expect(techArticle?.category, 'category should be populated').toBeDefined();
 
 			// With depth=1, category should be an object with full document data
-			expect(
-				typeof techArticle?.category,
-				'With depth=1, category should be an object',
-			).toBe('object');
+			expect(typeof techArticle?.category, 'With depth=1, category should be an object').toBe(
+				'object',
+			);
 
 			const category = techArticle?.category as { id: string; name: string; slug: string };
 			expect(category.name).toBe('Technology');
@@ -109,9 +106,7 @@ test.describe('Relationship depth population', () => {
 				};
 			};
 
-			expect(typeof body.doc.category, 'category should be populated as object').toBe(
-				'object',
-			);
+			expect(typeof body.doc.category, 'category should be populated as object').toBe('object');
 
 			const category = body.doc.category as { id: string; name: string };
 			expect(category.name).toBe('Technology');
@@ -140,10 +135,44 @@ test.describe('Relationship depth population', () => {
 		});
 	});
 
-	test.describe('Multiple articles with different categories', () => {
-		test('depth=1 correctly populates different categories per article', async ({
+	test.describe('Nullified relationships with depth', () => {
+		test('depth=1 returns null for nullified relationship (not stale object)', async ({
 			request,
 		}) => {
+			// Create a category and article referencing it
+			const catResponse = await request.post('/api/categories', {
+				headers: { 'Content-Type': 'application/json' },
+				data: { name: 'Depth Null Cat', slug: 'depth-null' },
+			});
+			expect(catResponse.status()).toBe(201);
+			const catId = ((await catResponse.json()) as { doc: { id: string } }).doc.id;
+
+			const artResponse = await request.post('/api/articles', {
+				headers: { 'Content-Type': 'application/json' },
+				data: { title: 'Depth Null Article', content: 'Test', category: catId },
+			});
+			expect(artResponse.status()).toBe(201);
+			const artId = ((await artResponse.json()) as { doc: { id: string } }).doc.id;
+
+			// Delete the category — FK ON DELETE SET NULL nullifies the reference
+			const deleteResponse = await request.delete(`/api/categories/${catId}`);
+			expect(deleteResponse.ok()).toBe(true);
+
+			// With depth=1, category should be null (not a stale populated object)
+			const getResponse = await request.get(`/api/articles/${artId}?depth=1`);
+			expect(getResponse.ok()).toBe(true);
+			const getBody = (await getResponse.json()) as {
+				doc: { category: string | Record<string, unknown> | null };
+			};
+			expect(getBody.doc.category).toBeNull();
+
+			// Clean up
+			await request.delete(`/api/articles/${artId}`);
+		});
+	});
+
+	test.describe('Multiple articles with different categories', () => {
+		test('depth=1 correctly populates different categories per article', async ({ request }) => {
 			const response = await request.get('/api/articles?limit=20&depth=1');
 			expect(response.ok()).toBe(true);
 

@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import type { CollectionConfig, Field } from '@momentum-cms/core';
+import { humanizeFieldName } from '@momentum-cms/core';
 import {
 	DataTable,
 	Button,
@@ -201,13 +202,13 @@ export class EntityListWidget<T extends Entity = Entity> {
 	/** Computed collection label */
 	readonly collectionLabel = computed(() => {
 		const col = this.collection();
-		return col.labels?.plural || col.slug;
+		return humanizeFieldName(col.labels?.plural || col.slug);
 	});
 
 	/** Computed collection label singular */
 	readonly collectionLabelSingular = computed(() => {
 		const col = this.collection();
-		return col.labels?.singular || col.slug;
+		return humanizeFieldName(col.labels?.singular || col.slug);
 	});
 
 	/** Dashboard path (remove /collections from base path) */
@@ -343,6 +344,7 @@ export class EntityListWidget<T extends Entity = Entity> {
 			const options: Record<string, unknown> = {
 				page,
 				limit: this.pageSize(),
+				depth: 1,
 			};
 
 			if (sortState) {

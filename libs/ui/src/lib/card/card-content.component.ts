@@ -7,7 +7,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 	styles: `
 		:host {
 			display: block;
-			padding: 0 1.5rem 1.5rem 1.5rem;
+			padding: 1.5rem;
 		}
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,

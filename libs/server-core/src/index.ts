@@ -21,6 +21,7 @@ export {
 	CollectionNotFoundError,
 	DocumentNotFoundError,
 	AccessDeniedError,
+	ReferentialIntegrityError,
 	ValidationError as MomentumValidationError,
 	type MomentumAPI,
 	type MomentumAPIContext,

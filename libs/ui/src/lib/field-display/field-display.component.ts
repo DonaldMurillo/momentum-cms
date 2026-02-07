@@ -20,7 +20,7 @@ import { Badge } from '../badge/badge.component';
 	},
 	template: `
 		@if (label()) {
-			<div class="text-sm font-medium text-muted-foreground mb-1">{{ label() }}</div>
+			<div class="text-sm font-medium text-muted-foreground mb-1.5">{{ label() }}</div>
 		}
 		<div class="text-sm">
 			@switch (type()) {
@@ -127,6 +127,16 @@ import { Badge } from '../badge/badge.component';
 						<pre class="text-xs bg-muted p-2 rounded-md overflow-auto max-h-40">{{
 							formattedJson()
 						}}</pre>
+					}
+				}
+				@case ('html') {
+					@if (isEmpty()) {
+						<span class="text-muted-foreground">{{ emptyText() }}</span>
+					} @else {
+						<div
+							class="prose prose-sm dark:prose-invert max-w-none"
+							[innerHTML]="stringValue()"
+						></div>
 					}
 				}
 				@default {

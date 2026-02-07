@@ -11,7 +11,8 @@ export type FieldDisplayType =
 	| 'link'
 	| 'email'
 	| 'list'
-	| 'json';
+	| 'json'
+	| 'html';
 
 /**
  * Badge variant mapping for field values.

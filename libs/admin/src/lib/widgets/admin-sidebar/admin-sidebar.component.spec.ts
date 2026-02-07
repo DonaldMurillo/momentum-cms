@@ -160,6 +160,6 @@ describe('AdminSidebarWidget', () => {
 
 		const collectionNoLabel: CollectionConfig = { slug: 'items', fields: [] };
 		const labelFromSlug = component.getCollectionLabel(collectionNoLabel);
-		expect(labelFromSlug).toBe('items');
+		expect(labelFromSlug).toBe('Items');
 	});
 });

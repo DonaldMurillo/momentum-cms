@@ -12,6 +12,7 @@ import {
 	Users,
 	HookTestItems,
 	FieldTestItems,
+	Tags,
 } from './collections';
 import { join } from 'node:path';
 
@@ -98,6 +99,7 @@ export default defineMomentumConfig({
 		Users,
 		HookTestItems,
 		FieldTestItems,
+		Tags,
 	],
 	storage: {
 		adapter: localStorageAdapter({

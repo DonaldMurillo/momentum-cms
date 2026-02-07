@@ -4,13 +4,15 @@ import type {
 	DatabaseAdapter,
 	CollectionConfig,
 	Field,
+	RelationshipField,
+	OnDeleteAction,
 	DocumentVersion,
 	DocumentStatus,
 	CreateVersionOptions,
 	VersionQueryOptions,
 	VersionCountOptions,
 } from '@momentum-cms/core';
-import { flattenDataFields } from '@momentum-cms/core';
+import { flattenDataFields, ReferentialIntegrityError } from '@momentum-cms/core';
 
 /**
  * PostgreSQL adapter options.
@@ -70,6 +72,54 @@ function getColumnType(field: Field): string {
 }
 
 /**
+ * Resolves the target collection slug from a relationship field's lazy reference.
+ */
+function resolveRelationshipSlug(field: RelationshipField): string | undefined {
+	try {
+		const config = field.collection();
+		if (config && typeof config === 'object' && 'slug' in config) {
+			const { slug } = config;
+			if (typeof slug === 'string') return slug;
+		}
+	} catch {
+		return undefined;
+	}
+	return undefined;
+}
+
+/**
+ * Maps onDelete option to SQL FK constraint clause.
+ * When the column is NOT NULL (required), 'set-null' is impossible —
+ * PostgreSQL would error trying to nullify a NOT NULL column.
+ * In that case, we override to RESTRICT (block the delete).
+ */
+function mapOnDelete(onDelete: OnDeleteAction | undefined, required: boolean): string {
+	const effective = required && (!onDelete || onDelete === 'set-null') ? 'restrict' : onDelete;
+	switch (effective) {
+		case 'restrict':
+			return 'ON DELETE RESTRICT';
+		case 'cascade':
+			return 'ON DELETE CASCADE';
+		default:
+			return 'ON DELETE SET NULL';
+	}
+}
+
+/**
+ * Checks if an error is a PostgreSQL FK violation (code 23503) and throws
+ * a ReferentialIntegrityError if so. This provides a clean HTTP 409 response.
+ */
+function rethrowIfFkViolation(error: unknown, table: string): void {
+	if (error instanceof Error && 'code' in error && 'constraint' in error) {
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- pg library error properties
+		const { code, constraint } = error as Error & { code: string; constraint: string };
+		if (code === '23503') {
+			throw new ReferentialIntegrityError(table, constraint);
+		}
+	}
+}
+
+/**
  * Creates the SQL for a collection's table.
  * Note: All column names are quoted to preserve case in PostgreSQL.
  */
@@ -94,6 +144,7 @@ function createTableSql(collection: CollectionConfig): string {
 		columns.push(`"${field.name}" ${colType}${notNull}`);
 	}
 
+	// FK constraints are added in a separate pass in initialize() after all tables exist
 	return `CREATE TABLE IF NOT EXISTS "${collection.slug}" (${columns.join(', ')})`;
 }
 
@@ -617,8 +668,13 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 
 			async delete(collection: string, id: string): Promise<boolean> {
 				validateCollectionSlug(collection);
-				const rowCount = await h.execute(`DELETE FROM "${collection}" WHERE id = $1`, [id]);
-				return rowCount > 0;
+				try {
+					const rowCount = await h.execute(`DELETE FROM "${collection}" WHERE id = $1`, [id]);
+					return rowCount > 0;
+				} catch (error: unknown) {
+					rethrowIfFkViolation(error, collection);
+					throw error;
+				}
 			},
 
 			// ==========================================
@@ -971,6 +1027,50 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				const versionTableSql = createVersionTableSql(collection);
 				if (versionTableSql) {
 					await pool.query(versionTableSql);
+				}
+			}
+
+			// Second pass: Add FK constraints for relationship fields
+			// Done after all tables are created so target tables exist
+			for (const collection of collections) {
+				validateCollectionSlug(collection.slug);
+				const dataFields = flattenDataFields(collection.fields);
+				for (const field of dataFields) {
+					if (field.type === 'relationship' && !field.hasMany && !field.relationTo) {
+						const targetSlug = resolveRelationshipSlug(field);
+						if (targetSlug) {
+							validateCollectionSlug(targetSlug);
+							validateCollectionSlug(field.name);
+							const constraintName = `fk_${collection.slug}_${field.name}`;
+							const isRequired = !!field.required;
+							const onDeleteSql = mapOnDelete(field.onDelete, isRequired);
+
+							// Clean up stale references before adding FK constraint.
+							// Required (NOT NULL) columns can't be set to NULL, so delete the rows instead.
+							if (isRequired) {
+								await pool.query(
+									`DELETE FROM "${collection.slug}" WHERE "${field.name}" IS NOT NULL AND "${field.name}" NOT IN (SELECT "id" FROM "${targetSlug}")`,
+								);
+							} else {
+								await pool.query(
+									`UPDATE "${collection.slug}" SET "${field.name}" = NULL WHERE "${field.name}" IS NOT NULL AND "${field.name}" NOT IN (SELECT "id" FROM "${targetSlug}")`,
+								);
+							}
+
+							// Add FK constraint only if it doesn't exist
+							await pool.query(`
+								DO $$ BEGIN
+									IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = '${constraintName}') THEN
+										ALTER TABLE "${collection.slug}"
+											ADD CONSTRAINT "${constraintName}"
+											FOREIGN KEY ("${field.name}")
+											REFERENCES "${targetSlug}"("id")
+											${onDeleteSql};
+									END IF;
+								END $$;
+							`);
+						}
+					}
 				}
 			}
 		},

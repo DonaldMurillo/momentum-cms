@@ -48,7 +48,7 @@ export class TableCell {
 
 	readonly hostClasses = computed(() => {
 		const base =
-			'p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]';
+			'p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>mcms-checkbox]:translate-y-[2px]';
 		const selectedClasses = this.selected() ? 'bg-primary/10' : '';
 
 		return `${base} ${selectedClasses} ${this.class()}`.trim();

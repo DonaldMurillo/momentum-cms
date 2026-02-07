@@ -155,6 +155,29 @@ class MomentumAPIImpl implements MomentumAPI {
 }
 
 // ============================================
+// Where Clause Helpers
+// ============================================
+
+/**
+ * Flattens a structured WhereClause into simple key-value pairs for the adapter.
+ * Converts { field: { equals: value } } to { field: value }.
+ * Direct values like { field: value } are passed through unchanged.
+ */
+function flattenWhereClause(where: WhereClause | undefined): Record<string, unknown> {
+	if (!where) return {};
+	const result: Record<string, unknown> = {};
+	for (const [field, condition] of Object.entries(where)) {
+		if (typeof condition === 'object' && condition !== null && 'equals' in condition) {
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Where clause operator object
+			result[field] = (condition as Record<string, unknown>)['equals'];
+		} else {
+			result[field] = condition;
+		}
+	}
+	return result;
+}
+
+// ============================================
 // Collection Operations Implementation
 // ============================================
 
@@ -174,7 +197,6 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		private readonly allCollections: CollectionConfig[] = [],
 	) {}
 
-
 	async find(options: FindOptions = {}): Promise<FindResult<T>> {
 		// Check read access
 		await this.checkAccess('read');
@@ -182,12 +204,14 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Run beforeRead hooks
 		await this.runBeforeReadHooks();
 
-		// Prepare query options (strip depth — it's used for population, not DB queries)
+		// Prepare query options (strip depth and where — they need special handling)
 		const limit = options.limit ?? 10;
 		const page = options.page ?? 1;
-		const { depth: _depth, ...queryOptions } = options;
+		const { depth: _depth, where, ...queryOptions } = options;
+		const whereParams = flattenWhereClause(where);
 		const query: Record<string, unknown> = {
 			...queryOptions,
+			...whereParams,
 			limit,
 			page,
 		};
@@ -205,11 +229,16 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		if (depth > 0) {
 			afterHookDocs = await Promise.all(
 				afterHookDocs.map(async (doc) => {
-					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
 					const populated = await populateRelationships(
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
 						doc as Record<string, unknown>,
 						this.collectionConfig.fields,
-						{ depth, collections: this.allCollections, adapter: this.adapter, req: this.buildRequestContext() },
+						{
+							depth,
+							collections: this.allCollections,
+							adapter: this.adapter,
+							req: this.buildRequestContext(),
+						},
 					);
 					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Record<string, unknown> is compatible with T
 					return populated as T;
@@ -219,7 +248,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 
 		// Get total count for pagination metadata
 		// Use a separate count query without limit/offset/depth to get the true total
-		const countQuery: Record<string, unknown> = { ...queryOptions };
+		const countQuery: Record<string, unknown> = { ...queryOptions, ...whereParams };
 		delete countQuery['limit'];
 		delete countQuery['page'];
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
@@ -265,11 +294,16 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		const MAX_RELATIONSHIP_DEPTH = 10;
 		const depth = Math.min(options?.depth ?? 0, MAX_RELATIONSHIP_DEPTH);
 		if (depth > 0) {
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
 			const populated = await populateRelationships(
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
 				processed as Record<string, unknown>,
 				this.collectionConfig.fields,
-				{ depth, collections: this.allCollections, adapter: this.adapter, req: this.buildRequestContext() },
+				{
+					depth,
+					collections: this.allCollections,
+					adapter: this.adapter,
+					req: this.buildRequestContext(),
+				},
 			);
 			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Record<string, unknown> is compatible with T
 			return populated as T;
@@ -469,13 +503,19 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		if (!searchFields || searchFields.length === 0) {
 			const dataFields = flattenDataFields(this.collectionConfig.fields);
 			const searchableTypes = new Set(['text', 'textarea', 'email', 'richText']);
-			searchFields = dataFields
-				.filter((f) => searchableTypes.has(f.type))
-				.map((f) => f.name);
+			searchFields = dataFields.filter((f) => searchableTypes.has(f.type)).map((f) => f.name);
 		}
 
 		if (searchFields.length === 0 || !query.trim()) {
-			return { docs: [], totalDocs: 0, totalPages: 0, page, limit, hasNextPage: false, hasPrevPage: false };
+			return {
+				docs: [],
+				totalDocs: 0,
+				totalPages: 0,
+				page,
+				limit,
+				hasNextPage: false,
+				hasPrevPage: false,
+			};
 		}
 
 		// Use the adapter's search method if available, otherwise fall back to find
@@ -512,7 +552,8 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 
 		// Use find with where clause and count results
 		// Pass limit: 0 to signal we want all matching docs for counting
-		const query: Record<string, unknown> = where ? { ...where, limit: 0 } : { limit: 0 };
+		const whereParams = flattenWhereClause(where);
+		const query: Record<string, unknown> = { ...whereParams, limit: 0 };
 		const docs = await this.adapter.find(this.slug, query);
 		return docs.length;
 	}
@@ -719,6 +760,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			if (field.type === 'group' && value && typeof value === 'object' && !Array.isArray(value)) {
 				const groupErrors = await this.validateFields(
 					field.fields,
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowed by typeof check above
 					value as Record<string, unknown>,
 					isUpdate,
 				);
@@ -731,6 +773,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 					if (row && typeof row === 'object' && !Array.isArray(row)) {
 						const rowErrors = await this.validateFields(
 							field.fields,
+							// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowed by typeof check above
 							row as Record<string, unknown>,
 							isUpdate,
 						);
@@ -743,7 +786,9 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			if (field.type === 'blocks' && Array.isArray(value)) {
 				for (const row of value) {
 					if (row && typeof row === 'object' && !Array.isArray(row)) {
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowed by typeof check above
 						const blockRow = row as Record<string, unknown>;
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- blockType is string | undefined from Record
 						const blockType = blockRow['blockType'] as string | undefined;
 						if (blockType) {
 							const blockConfig = field.blocks.find((b) => b.slug === blockType);
@@ -908,3 +953,5 @@ export {
 	AccessDeniedError,
 	ValidationError,
 } from './momentum-api.types';
+
+export { ReferentialIntegrityError } from '@momentum-cms/core';

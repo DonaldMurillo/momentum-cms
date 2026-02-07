@@ -25,6 +25,7 @@ import {
 	heroChevronUpDown,
 } from '@ng-icons/heroicons/outline';
 import type { AdminBranding, AdminUser } from '../widget.types';
+import { humanizeFieldName } from '@momentum-cms/core';
 import { McmsThemeService } from '../../ui/theme/theme.service';
 
 /**
@@ -82,7 +83,11 @@ import { McmsThemeService } from '../../ui/theme/theme.service';
 			<div mcmsSidebarHeader>
 				<div class="flex items-center gap-3">
 					@if (branding()?.logo) {
-						<img [src]="branding()!.logo" [alt]="(branding()?.title || 'Momentum CMS') + ' logo'" class="h-8 w-8" />
+						<img
+							[src]="branding()!.logo"
+							[alt]="(branding()?.title || 'Momentum CMS') + ' logo'"
+							class="h-8 w-8"
+						/>
 					} @else {
 						<!-- Default logo icon -->
 						<div
@@ -215,7 +220,7 @@ export class AdminSidebarWidget {
 	 * Get display label for a collection.
 	 */
 	getCollectionLabel(collection: CollectionConfig): string {
-		return collection.labels?.plural || collection.slug;
+		return humanizeFieldName(collection.labels?.plural || collection.slug);
 	}
 
 	/**
