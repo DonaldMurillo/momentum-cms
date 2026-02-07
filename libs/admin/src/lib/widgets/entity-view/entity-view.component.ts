@@ -23,7 +23,12 @@ import {
 	BreadcrumbItem,
 	BreadcrumbSeparator,
 } from '@momentum-cms/ui';
-import type { FieldDisplayType } from '@momentum-cms/ui';
+import type {
+	FieldDisplayType,
+	FieldDisplayFieldMeta,
+	FieldDisplayNumberFormat,
+	FieldDisplayDateFormat,
+} from '@momentum-cms/ui';
 import { injectMomentumAPI } from '../../services/momentum-api.service';
 import { CollectionAccessService } from '../../services/collection-access.service';
 import { FeedbackService } from '../feedback/feedback.service';
@@ -140,6 +145,9 @@ import { PublishControlsWidget } from '../publish-controls/publish-controls.comp
 									[value]="getFieldValue(field.name)"
 									[type]="getFieldDisplayType(field)"
 									[label]="field.label || field.name"
+									[fieldMeta]="getFieldMeta(field)"
+									[numberFormat]="getNumberFormat(field)"
+									[dateFormat]="getDateFormat(field)"
 								/>
 							}
 
@@ -397,13 +405,59 @@ export class EntityViewWidget<T extends Entity = Entity> {
 			case 'relationship':
 				return 'text';
 			case 'array':
-				return 'list';
+				return 'array-table';
 			case 'group':
+				return 'group';
 			case 'json':
 				return 'json';
 			default:
 				return 'text';
 		}
+	}
+
+	/**
+	 * Get sub-field metadata for group and array field types.
+	 */
+	getFieldMeta(field: Field): FieldDisplayFieldMeta[] {
+		if (field.type === 'group') {
+			return field.fields
+				.filter((f) => !f.admin?.hidden)
+				.map((f) => ({
+					name: f.name,
+					label: f.label ?? humanizeFieldName(f.name),
+					type: f.type,
+				}));
+		}
+		if (field.type === 'array') {
+			return field.fields
+				.filter((f) => !f.admin?.hidden)
+				.map((f) => ({
+					name: f.name,
+					label: f.label ?? humanizeFieldName(f.name),
+					type: f.type,
+				}));
+		}
+		return [];
+	}
+
+	/**
+	 * Get number format config from field definition.
+	 */
+	getNumberFormat(field: Field): FieldDisplayNumberFormat | undefined {
+		if (field.type === 'number' && field.displayFormat) {
+			return field.displayFormat;
+		}
+		return undefined;
+	}
+
+	/**
+	 * Get date format config from field definition.
+	 */
+	getDateFormat(field: Field): FieldDisplayDateFormat | undefined {
+		if (field.type === 'date' && field.displayFormat) {
+			return field.displayFormat;
+		}
+		return undefined;
 	}
 
 	/**

@@ -8,6 +8,8 @@ import {
 	model,
 	output,
 	signal,
+	type TemplateRef,
+	viewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import type { CollectionConfig, Field } from '@momentum-cms/core';
@@ -19,10 +21,15 @@ import {
 	Breadcrumbs,
 	BreadcrumbItem,
 	BreadcrumbSeparator,
+	DialogService,
 	type DataTableSort,
 	type DataTableRowAction,
 	type DataTableRowActionEvent,
+	type DataTableCellContext,
 } from '@momentum-cms/ui';
+import type { FieldDisplayFieldMeta } from '@momentum-cms/ui';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { heroEye } from '@ng-icons/heroicons/outline';
 import { injectMomentumAPI, type FindResult } from '../../services/momentum-api.service';
 import { CollectionAccessService } from '../../services/collection-access.service';
 import { FeedbackService } from '../feedback/feedback.service';
@@ -34,6 +41,10 @@ import {
 	FIELD_TYPE_TO_COLUMN_TYPE,
 	mapEntityActionsToRowActions,
 } from './entity-list.types';
+import {
+	DataPreviewDialog,
+	type DataPreviewDialogData,
+} from '../data-preview/data-preview-dialog.component';
 
 /**
  * Entity List Widget
@@ -52,7 +63,8 @@ import {
  */
 @Component({
 	selector: 'mcms-entity-list',
-	imports: [DataTable, Button, Badge, Breadcrumbs, BreadcrumbItem, BreadcrumbSeparator],
+	imports: [DataTable, Button, Badge, Breadcrumbs, BreadcrumbItem, BreadcrumbSeparator, NgIcon],
+	providers: [provideIcons({ heroEye })],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `
@@ -126,14 +138,38 @@ import {
 				</div>
 			}
 		</mcms-data-table>
+
+		<!-- Template for complex field cells (group, array, json) -->
+		<ng-template #complexCell let-value let-column="column">
+			<div class="flex items-center gap-1.5">
+				<span class="text-muted-foreground">{{ getComplexSummary(value, column.type) }}</span>
+				@if (value !== null && value !== undefined) {
+					<button
+						mcms-button
+						variant="ghost"
+						size="icon"
+						class="h-6 w-6 shrink-0"
+						(click)="$event.stopPropagation(); openDataPreview(value, column.field)"
+						aria-label="View details"
+					>
+						<ng-icon name="heroEye" class="h-3 w-3" aria-hidden="true" />
+					</button>
+				}
+			</div>
+		</ng-template>
 	`,
 })
 export class EntityListWidget<T extends Entity = Entity> {
 	private readonly api = injectMomentumAPI();
 	private readonly collectionAccess = inject(CollectionAccessService);
 	private readonly feedback = inject(FeedbackService);
+	private readonly dialog = inject(DialogService);
 	private readonly router = inject(Router);
 	private readonly route = inject(ActivatedRoute);
+
+	/** Template ref for complex cell rendering (group, array, json). */
+	private readonly complexCellTemplate =
+		viewChild<TemplateRef<DataTableCellContext<T>>>('complexCell');
 
 	/** The collection configuration */
 	readonly collection = input.required<CollectionConfig>();
@@ -219,6 +255,9 @@ export class EntityListWidget<T extends Entity = Entity> {
 
 	/** Auto-derive columns from collection fields if not provided */
 	readonly tableColumns = computed(() => {
+		// Read template signal at top level so the computed re-runs when viewChild resolves
+		const complexTemplate = this.complexCellTemplate();
+
 		const customColumns = this.columns();
 		if (customColumns.length > 0) {
 			return customColumns;
@@ -231,7 +270,7 @@ export class EntityListWidget<T extends Entity = Entity> {
 		// Add first text/title-like field as primary column
 		for (const field of col.fields) {
 			if (this.shouldShowFieldInList(field)) {
-				columns.push(this.fieldToColumn(field));
+				columns.push(this.fieldToColumn(field, complexTemplate));
 			}
 			// Limit to 5 auto-derived columns
 			if (columns.length >= 5) break;
@@ -403,12 +442,10 @@ export class EntityListWidget<T extends Entity = Entity> {
 		// Skip hidden fields
 		if (field.admin?.hidden) return false;
 
-		// Skip complex fields
-		if (field.type === 'group' || field.type === 'blocks' || field.type === 'json') {
-			return false;
-		}
+		// Skip blocks (too complex for table cells)
+		if (field.type === 'blocks') return false;
 
-		// Skip richText (too long)
+		// Skip richText (too long for table cells)
 		if (field.type === 'richText') return false;
 
 		return true;
@@ -417,13 +454,20 @@ export class EntityListWidget<T extends Entity = Entity> {
 	/**
 	 * Convert a collection field to a table column.
 	 */
-	private fieldToColumn(field: Field): EntityListColumn<T> {
+	private fieldToColumn(
+		field: Field,
+		complexTemplate?: TemplateRef<DataTableCellContext<T>>,
+	): EntityListColumn<T> {
 		const column: EntityListColumn<T> = {
 			// Field name is a valid key on the entity type
 			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 			field: field.name as keyof T & string,
 			header: field.label || field.name,
-			sortable: field.type !== 'array' && field.type !== 'relationship',
+			sortable:
+				field.type !== 'array' &&
+				field.type !== 'relationship' &&
+				field.type !== 'group' &&
+				field.type !== 'json',
 			type: FIELD_TYPE_TO_COLUMN_TYPE[field.type] || 'text',
 		};
 
@@ -436,10 +480,48 @@ export class EntityListWidget<T extends Entity = Entity> {
 		} else if (field.type === 'number') {
 			column.width = '100px';
 			column.align = 'right';
+		} else if (field.type === 'group' || field.type === 'array' || field.type === 'json') {
+			column.width = '150px';
 		}
 
-		// Add render function for formatting
-		column.render = (value: unknown) => this.formatValue(value, column.type);
+		// Use complex cell template for group, array, and json fields
+		if (
+			complexTemplate &&
+			(field.type === 'group' || field.type === 'array' || field.type === 'json')
+		) {
+			column.template = complexTemplate;
+		} else if (field.type === 'number' && field.displayFormat) {
+			// Use Intl.NumberFormat for formatted numbers
+			const fmt = field.displayFormat;
+			column.render = (value: unknown) => {
+				if (value === null || value === undefined) return '-';
+				const num = Number(value);
+				if (isNaN(num)) return String(value);
+				const options: Intl.NumberFormatOptions = {};
+				if (fmt.style) options.style = fmt.style;
+				if (fmt.currency) options.currency = fmt.currency;
+				if (fmt.minimumFractionDigits !== undefined)
+					options.minimumFractionDigits = fmt.minimumFractionDigits;
+				if (fmt.maximumFractionDigits !== undefined)
+					options.maximumFractionDigits = fmt.maximumFractionDigits;
+				return new Intl.NumberFormat(fmt.locale, options).format(num);
+			};
+		} else if (field.type === 'date' && field.displayFormat) {
+			// Use Intl.DateTimeFormat for formatted dates
+			const fmt = field.displayFormat;
+			column.render = (value: unknown) => {
+				if (value === null || value === undefined) return '-';
+				const date = new Date(String(value));
+				if (isNaN(date.getTime())) return String(value);
+				const options: Intl.DateTimeFormatOptions = {};
+				if (fmt.preset) options.dateStyle = fmt.preset;
+				if (fmt.includeTime && fmt.timePreset) options.timeStyle = fmt.timePreset;
+				return new Intl.DateTimeFormat(fmt.locale, options).format(date);
+			};
+		} else {
+			// Default render function
+			column.render = (value: unknown) => this.formatValue(value, column.type);
+		}
 
 		return column;
 	}
@@ -462,7 +544,21 @@ export class EntityListWidget<T extends Entity = Entity> {
 			case 'boolean':
 				return value ? 'Yes' : 'No';
 			case 'array':
-				return Array.isArray(value) ? `${value.length} items` : '-';
+				return Array.isArray(value) ? `${value.length} item${value.length !== 1 ? 's' : ''}` : '-';
+			case 'group': {
+				if (typeof value === 'object' && value !== null) {
+					const keys = Object.keys(value);
+					return `${keys.length} field${keys.length !== 1 ? 's' : ''}`;
+				}
+				return '-';
+			}
+			case 'json': {
+				if (typeof value === 'object' && value !== null) {
+					const keys = Object.keys(value);
+					return `${keys.length} key${keys.length !== 1 ? 's' : ''}`;
+				}
+				return String(value);
+			}
 			case 'relationship': {
 				if (typeof value === 'object' && value !== null && 'id' in value) {
 					// Access object properties directly after type narrowing
@@ -479,6 +575,62 @@ export class EntityListWidget<T extends Entity = Entity> {
 				return str.length > 100 ? `${str.slice(0, 100)}...` : str;
 			}
 		}
+	}
+
+	/**
+	 * Generate a brief summary string for complex field values (group, array, json).
+	 */
+	getComplexSummary(value: unknown, type?: string): string {
+		if (value === null || value === undefined) return '-';
+		if (Array.isArray(value)) {
+			return `${value.length} item${value.length !== 1 ? 's' : ''}`;
+		}
+		if (typeof value === 'object') {
+			const keys = Object.keys(value);
+			if (type === 'group') {
+				return `${keys.length} field${keys.length !== 1 ? 's' : ''}`;
+			}
+			return `${keys.length} key${keys.length !== 1 ? 's' : ''}`;
+		}
+		return String(value);
+	}
+
+	/**
+	 * Open a dialog to preview the full data for a complex field.
+	 */
+	openDataPreview(value: unknown, fieldName: string | number | symbol): void {
+		const col = this.collection();
+		const name = String(fieldName);
+		const field = col.fields.find((f) => f.name === name);
+		const title = field?.label ?? humanizeFieldName(name);
+
+		let displayType: DataPreviewDialogData['type'] = 'json';
+		let fieldMeta: FieldDisplayFieldMeta[] = [];
+
+		if (field?.type === 'group') {
+			displayType = 'group';
+			fieldMeta = field.fields
+				.filter((f) => !f.admin?.hidden)
+				.map((f) => ({
+					name: f.name,
+					label: f.label ?? humanizeFieldName(f.name),
+					type: f.type,
+				}));
+		} else if (field?.type === 'array') {
+			displayType = 'array-table';
+			fieldMeta = field.fields
+				.filter((f) => !f.admin?.hidden)
+				.map((f) => ({
+					name: f.name,
+					label: f.label ?? humanizeFieldName(f.name),
+					type: f.type,
+				}));
+		}
+
+		this.dialog.open<DataPreviewDialog, DataPreviewDialogData>(DataPreviewDialog, {
+			data: { title, value, type: displayType, fieldMeta },
+			width: '40rem',
+		});
 	}
 
 	/**

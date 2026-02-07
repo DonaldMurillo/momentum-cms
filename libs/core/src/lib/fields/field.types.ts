@@ -61,6 +61,39 @@ export type ValidateFunction = (
 ) => string | true | Promise<string | true>;
 
 // ============================================
+// Display Format Types
+// ============================================
+
+/** Display format configuration for number fields. Maps to Intl.NumberFormat options. */
+export interface NumberDisplayFormat {
+	/** Formatting style: 'currency' for prices, 'percent' for percentages, 'decimal' for plain numbers */
+	style?: 'decimal' | 'currency' | 'percent';
+	/** ISO 4217 currency code (e.g. 'USD', 'EUR'). Required when style is 'currency'. */
+	currency?: string;
+	/** BCP 47 locale tag (e.g. 'en-US'). Defaults to browser locale. */
+	locale?: string;
+	/** Minimum number of fraction digits to display */
+	minimumFractionDigits?: number;
+	/** Maximum number of fraction digits to display */
+	maximumFractionDigits?: number;
+}
+
+/** Preset date/time format styles, mapping to Intl.DateTimeFormat dateStyle/timeStyle */
+export type DateDisplayPreset = 'short' | 'medium' | 'long' | 'full';
+
+/** Display format configuration for date fields. Maps to Intl.DateTimeFormat options. */
+export interface DateDisplayFormat {
+	/** Preset format style (maps to Intl.DateTimeFormat dateStyle) */
+	preset?: DateDisplayPreset;
+	/** BCP 47 locale tag. Defaults to browser locale. */
+	locale?: string;
+	/** Whether to include time in the display. Defaults to false. */
+	includeTime?: boolean;
+	/** Time style when includeTime is true (maps to Intl.DateTimeFormat timeStyle) */
+	timePreset?: DateDisplayPreset;
+}
+
+// ============================================
 // Field Type Definitions
 // ============================================
 
@@ -132,12 +165,15 @@ export interface NumberField extends BaseField {
 	min?: number;
 	max?: number;
 	step?: number;
+	/** Display format for read-only views (e.g. currency, percent) */
+	displayFormat?: NumberDisplayFormat;
 }
 
 // Date field
 export interface DateField extends BaseField {
 	type: 'date';
-	// Date picker options
+	/** Display format for read-only views (e.g. preset style, locale) */
+	displayFormat?: DateDisplayFormat;
 }
 
 // Checkbox field
@@ -239,6 +275,8 @@ export interface ArrayField extends BaseField {
 	fields: Field[];
 	minRows?: number;
 	maxRows?: number;
+	/** Name of the sub-field to use as summary label in read-only views. Falls back to first text sub-field. */
+	displayField?: string;
 }
 
 // Group field
