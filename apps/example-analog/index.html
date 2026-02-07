@@ -9,6 +9,16 @@
 		<link rel="stylesheet" href="/src/styles.css" />
 	</head>
 	<body>
+		<script>
+			try {
+				var t = localStorage.getItem('mcms-theme');
+				if (
+					t === 'dark' ||
+					((!t || t === 'system') && matchMedia('(prefers-color-scheme:dark)').matches)
+				)
+					document.documentElement.classList.add('dark');
+			} catch (e) {}
+		</script>
 		<app-root></app-root>
 		<script type="module" src="/apps/example-analog/src/main.ts"></script>
 	</body>

@@ -13,7 +13,6 @@ import type { CollectionConfig, Field, DocumentStatus } from '@momentum-cms/core
 import { humanizeFieldName } from '@momentum-cms/core';
 import {
 	Card,
-	CardHeader,
 	CardContent,
 	CardFooter,
 	Button,
@@ -52,7 +51,6 @@ import { PublishControlsWidget } from '../publish-controls/publish-controls.comp
 	selector: 'mcms-entity-view',
 	imports: [
 		Card,
-		CardHeader,
 		CardContent,
 		CardFooter,
 		Button,
@@ -121,7 +119,7 @@ import { PublishControlsWidget } from '../publish-controls/publish-controls.comp
 			</div>
 
 			<mcms-card>
-				<mcms-card-content class="pt-6">
+				<mcms-card-content>
 					@if (isLoading()) {
 						<div class="grid gap-6 md:grid-cols-2">
 							@for (_ of [1, 2, 3, 4]; track $index) {
@@ -218,17 +216,18 @@ export class EntityViewWidget<T extends Entity = Entity> {
 	readonly entity = signal<T | null>(null);
 	readonly isLoading = signal(false);
 	readonly loadError = signal<string | null>(null);
+	readonly resolvedRelationships = signal<Map<string, string>>(new Map());
 
 	/** Computed collection label */
 	readonly collectionLabel = computed(() => {
 		const col = this.collection();
-		return col.labels?.plural || humanizeFieldName(col.slug);
+		return humanizeFieldName(col.labels?.plural || col.slug);
 	});
 
 	/** Computed collection label singular */
 	readonly collectionLabelSingular = computed(() => {
 		const col = this.collection();
-		return col.labels?.singular || humanizeFieldName(col.slug);
+		return humanizeFieldName(col.labels?.singular || col.slug);
 	});
 
 	/** Entity title (uses title field or ID) */
@@ -330,9 +329,10 @@ export class EntityViewWidget<T extends Entity = Entity> {
 		this.loadError.set(null);
 
 		try {
-			const entity = await this.api.collection<T>(slug).findById(id);
+			const entity = await this.api.collection<T>(slug).findById(id, { depth: 1 });
 			if (entity) {
 				this.entity.set(entity);
+				this.resolveRelationships(entity);
 			} else {
 				this.loadError.set(`${this.collectionLabelSingular()} not found`);
 				this.feedback.entityNotFound(this.collectionLabelSingular());
@@ -346,12 +346,25 @@ export class EntityViewWidget<T extends Entity = Entity> {
 	}
 
 	/**
-	 * Get field value from entity.
+	 * Get field value from entity, resolving relationship labels.
 	 */
 	getFieldValue(fieldName: string): unknown {
 		const e = this.entity();
 		if (!e) return undefined;
-		return e[fieldName];
+
+		const resolved = this.resolvedRelationships().get(fieldName);
+		if (resolved !== undefined) return resolved;
+
+		const value = e[fieldName];
+
+		// Handle populated relationship objects (from depth: 1)
+		if (isRecord(value) && 'id' in value) {
+			const title = value['title'] ?? value['name'] ?? value['label'];
+			if (typeof title === 'string') return title;
+			return String(value['id']);
+		}
+
+		return value;
 	}
 
 	/**
@@ -367,8 +380,9 @@ export class EntityViewWidget<T extends Entity = Entity> {
 		switch (field.type) {
 			case 'text':
 			case 'textarea':
-			case 'richText':
 				return 'text';
+			case 'richText':
+				return 'html';
 			case 'email':
 				return 'email';
 			case 'number':
@@ -464,4 +478,83 @@ export class EntityViewWidget<T extends Entity = Entity> {
 		// Reload the entity to get the restored data
 		this.loadEntity(this.collection().slug, this.entityId());
 	}
+
+	/**
+	 * Resolve relationship field values from IDs to display labels.
+	 */
+	private resolveRelationships(entity: T): void {
+		const fields = this.collection().fields;
+		const resolved = new Map<string, string>();
+
+		const promises: Promise<void>[] = [];
+
+		for (const field of fields) {
+			if (field.type !== 'relationship') continue;
+
+			const rawValue = entity[field.name];
+			if (!rawValue || typeof rawValue !== 'string') continue;
+
+			const config = field.collection();
+			if (!isRecord(config) || typeof config['slug'] !== 'string') continue;
+
+			const relSlug = config['slug'];
+			const titleField = this.getTitleField(config);
+
+			promises.push(
+				this.api
+					.collection<Record<string, unknown>>(relSlug)
+					.findById(rawValue)
+					.then((doc) => {
+						if (doc) {
+							if (titleField !== 'id') {
+								const titleValue = doc[titleField];
+								if (typeof titleValue === 'string') {
+									resolved.set(field.name, titleValue);
+									return;
+								}
+							}
+							resolved.set(field.name, String(doc['id'] ?? rawValue));
+						} else {
+							resolved.set(field.name, 'Unknown');
+						}
+					})
+					.catch(() => {
+						resolved.set(field.name, 'Unknown');
+					}),
+			);
+		}
+
+		if (promises.length > 0) {
+			Promise.all(promises).then(() => {
+				this.resolvedRelationships.set(resolved);
+			});
+		}
+	}
+
+	/**
+	 * Get title field from related collection config.
+	 */
+	private getTitleField(config: Record<string, unknown>): string {
+		const admin = config['admin'];
+		if (isRecord(admin) && typeof admin['useAsTitle'] === 'string') {
+			return admin['useAsTitle'];
+		}
+
+		const fields = config['fields'];
+		if (Array.isArray(fields)) {
+			for (const field of fields) {
+				if (isRecord(field) && typeof field['name'] === 'string') {
+					if (field['name'] === 'title' || field['name'] === 'name') {
+						return field['name'];
+					}
+				}
+			}
+		}
+
+		return 'id';
+	}
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

@@ -87,6 +87,7 @@ export class McmsThemeService {
 
 		if (this.isBrowser) {
 			localStorage.setItem(THEME_STORAGE_KEY, theme);
+			document.cookie = `${THEME_STORAGE_KEY}=${theme}; path=/; max-age=31536000; SameSite=Lax`;
 		}
 	}
 

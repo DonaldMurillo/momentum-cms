@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { CollectionConfig } from '@momentum-cms/core';
+import { humanizeFieldName } from '@momentum-cms/core';
 import {
 	Card,
 	CardHeader,
@@ -104,7 +105,7 @@ export class CollectionCardWidget {
 	/** Display label for the collection */
 	readonly collectionLabel = computed(() => {
 		const col = this.collection();
-		return col.labels?.plural || col.slug;
+		return humanizeFieldName(col.labels?.plural || col.slug);
 	});
 
 	/** Lowercase label for descriptions */

@@ -188,7 +188,7 @@ describe('CollectionCardWidget', () => {
 		await fixture.whenStable();
 		flushPendingRequests();
 
-		expect(component.collectionLabel()).toBe('items');
+		expect(component.collectionLabel()).toBe('Items');
 	});
 
 	it('should show default description when none provided', async () => {

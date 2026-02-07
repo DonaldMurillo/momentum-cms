@@ -409,8 +409,8 @@ describe('EntityListWidget', () => {
 		const req = httpMock.expectOne((r) => r.url.includes('/api/items'));
 		req.flush({ docs: [], totalDocs: 0 });
 
-		expect(component.collectionLabel()).toBe('items');
-		expect(component.collectionLabelSingular()).toBe('items');
+		expect(component.collectionLabel()).toBe('Items');
+		expect(component.collectionLabelSingular()).toBe('Items');
 	});
 
 	it('should emit dataLoaded when data is fetched', async () => {

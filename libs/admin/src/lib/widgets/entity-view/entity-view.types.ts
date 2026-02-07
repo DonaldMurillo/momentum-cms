@@ -19,7 +19,8 @@ export interface EntityViewFieldConfig {
 		| 'link'
 		| 'email'
 		| 'list'
-		| 'json';
+		| 'json'
+		| 'html';
 	/** Custom formatter function */
 	formatter?: (value: unknown, entity: Entity) => string;
 	/** Whether to hide this field */

@@ -8,6 +8,7 @@ import { MediaCollection } from '@momentum-cms/core';
 import { Users } from './users.collection';
 import { HookTestItems } from './hook-test-items.collection';
 import { FieldTestItems } from './field-test-items.collection';
+import { Tags } from './tags.collection';
 import type { CollectionConfig } from '@momentum-cms/core';
 
 export const collections: CollectionConfig[] = [
@@ -21,6 +22,7 @@ export const collections: CollectionConfig[] = [
 	Users,
 	HookTestItems,
 	FieldTestItems,
+	Tags,
 ];
 
 export {
@@ -34,4 +36,5 @@ export {
 	Users,
 	HookTestItems,
 	FieldTestItems,
+	Tags,
 };

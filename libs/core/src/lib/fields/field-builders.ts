@@ -37,6 +37,7 @@ import type {
 	TabConfig,
 	Field,
 	BaseFieldOptions,
+	OnDeleteAction,
 } from './field.types';
 
 // ============================================
@@ -219,6 +220,11 @@ export interface RelationshipFieldOptions extends BaseFieldOptions {
 	/** Multiple target collections for polymorphic relationships */
 	relationTo?: Array<() => unknown>;
 	hasMany?: boolean;
+	/**
+	 * Behavior when the referenced document is deleted.
+	 * @default 'set-null'
+	 */
+	onDelete?: OnDeleteAction;
 	/** Filter which related documents can be selected */
 	filterOptions?: (args: { data: Record<string, unknown> }) => Record<string, unknown>;
 }

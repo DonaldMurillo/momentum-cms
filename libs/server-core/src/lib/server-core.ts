@@ -6,6 +6,7 @@ import {
 	CollectionNotFoundError,
 	DocumentNotFoundError,
 	AccessDeniedError,
+	ReferentialIntegrityError,
 	ValidationError as MomentumValidationError,
 } from './momentum-api';
 import type { MomentumAPI, MomentumAPIContext } from './momentum-api.types';
@@ -252,6 +253,9 @@ function handleError(error: unknown): MomentumResponse {
 	}
 	if (error instanceof AccessDeniedError) {
 		return { error: error.message, status: 403 };
+	}
+	if (error instanceof ReferentialIntegrityError) {
+		return { error: error.message, status: 409 };
 	}
 	if (error instanceof MomentumValidationError) {
 		return {

@@ -17,7 +17,6 @@ import type { CollectionConfig, Field } from '@momentum-cms/core';
 import { humanizeFieldName } from '@momentum-cms/core';
 import {
 	Card,
-	CardHeader,
 	CardContent,
 	CardFooter,
 	Button,
@@ -57,7 +56,6 @@ import { VersionHistoryWidget } from '../version-history/version-history.compone
 	selector: 'mcms-entity-form',
 	imports: [
 		Card,
-		CardHeader,
 		CardContent,
 		CardFooter,
 		Button,
@@ -112,7 +110,7 @@ import { VersionHistoryWidget } from '../version-history/version-history.compone
 			</div>
 
 			<mcms-card>
-				<mcms-card-content class="pt-6">
+				<mcms-card-content>
 					@if (isLoading()) {
 						<div class="flex items-center justify-center py-12">
 							<mcms-spinner size="lg" />
@@ -254,13 +252,13 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	/** Computed collection label */
 	readonly collectionLabel = computed(() => {
 		const col = this.collection();
-		return col.labels?.plural || humanizeFieldName(col.slug);
+		return humanizeFieldName(col.labels?.plural || col.slug);
 	});
 
 	/** Computed collection label singular */
 	readonly collectionLabelSingular = computed(() => {
 		const col = this.collection();
-		return col.labels?.singular || humanizeFieldName(col.slug);
+		return humanizeFieldName(col.labels?.singular || col.slug);
 	});
 
 	/** Dashboard path (remove /collections from base path) */
@@ -340,6 +338,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 							form(this.formModel, (tree) => {
 								applyCollectionSchema(
 									col.fields,
+									// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- FieldTree generic not exported
 									tree as unknown as Record<string, unknown>,
 									() => formModelRef(),
 								);
@@ -366,6 +365,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	getFormNode(fieldName: string): unknown {
 		const ef = this.entityForm();
 		if (!ef) return null;
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- FieldTree generic not exported
 		return (ef as unknown as Record<string, unknown>)[fieldName] ?? null;
 	}
 
@@ -437,10 +437,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 			} catch (err) {
 				const errorMessage = err instanceof Error ? err.message : 'Save failed';
 				this.formError.set(errorMessage);
-				this.feedback.operationFailed(
-					'Save failed',
-					err instanceof Error ? err : undefined,
-				);
+				this.feedback.operationFailed('Save failed', err instanceof Error ? err : undefined);
 				this.saveError.emit(err instanceof Error ? err : new Error(errorMessage));
 			} finally {
 				this.isSubmitting.set(false);
@@ -499,10 +496,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : 'Failed to save draft';
 			this.formError.set(errorMessage);
-			this.feedback.operationFailed(
-				'Draft save failed',
-				err instanceof Error ? err : undefined,
-			);
+			this.feedback.operationFailed('Draft save failed', err instanceof Error ? err : undefined);
 		} finally {
 			this.isSavingDraft.set(false);
 		}
