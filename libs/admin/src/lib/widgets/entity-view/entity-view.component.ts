@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import type { CollectionConfig, Field, DocumentStatus } from '@momentum-cms/core';
+import { humanizeFieldName } from '@momentum-cms/core';
 import {
 	Card,
 	CardHeader,
@@ -221,13 +222,13 @@ export class EntityViewWidget<T extends Entity = Entity> {
 	/** Computed collection label */
 	readonly collectionLabel = computed(() => {
 		const col = this.collection();
-		return col.labels?.plural || col.slug;
+		return col.labels?.plural || humanizeFieldName(col.slug);
 	});
 
 	/** Computed collection label singular */
 	readonly collectionLabelSingular = computed(() => {
 		const col = this.collection();
-		return col.labels?.singular || col.slug;
+		return col.labels?.singular || humanizeFieldName(col.slug);
 	});
 
 	/** Entity title (uses title field or ID) */

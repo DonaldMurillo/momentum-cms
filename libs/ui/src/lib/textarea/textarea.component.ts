@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, model } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, model, output } from '@angular/core';
 import type { ValidationError } from '../input/input.types';
 
 /**
@@ -30,6 +30,7 @@ import type { ValidationError } from '../input/input.types';
 			[attr.aria-invalid]="hasError() || null"
 			[attr.aria-describedby]="ariaDescribedBy()"
 			(input)="value.set(textareaEl.value)"
+			(blur)="blurred.emit()"
 			class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm
 			       text-foreground placeholder:text-muted-foreground
 			       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
@@ -45,6 +46,10 @@ export class Textarea {
 	readonly value = model('');
 	readonly disabled = input(false);
 	readonly errors = input<readonly ValidationError[]>([]);
+	readonly touched = input(false);
+	readonly invalid = input(false);
+	readonly readonly = input(false);
+	readonly required = input(false);
 
 	// === Component-specific configuration ===
 	readonly id = input('');
@@ -52,6 +57,9 @@ export class Textarea {
 	readonly placeholder = input('');
 	readonly rows = input(3);
 	readonly describedBy = input<string | undefined>(undefined);
+
+	/** Emitted when the textarea loses focus */
+	readonly blurred = output<void>();
 
 	// === Computed state ===
 	readonly hasError = computed(() => this.errors().length > 0);

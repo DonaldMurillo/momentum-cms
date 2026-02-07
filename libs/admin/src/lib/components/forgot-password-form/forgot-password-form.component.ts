@@ -6,7 +6,7 @@ import {
 	computed,
 	output,
 } from '@angular/core';
-import { Input, Button, FormField } from '@momentum-cms/ui';
+import { Input, Button, McmsFormField } from '@momentum-cms/ui';
 import { MomentumAuthService } from '../../services/auth.service';
 
 /**
@@ -25,7 +25,7 @@ import { MomentumAuthService } from '../../services/auth.service';
  */
 @Component({
 	selector: 'mcms-forgot-password-form',
-	imports: [Input, Button, FormField],
+	imports: [Input, Button, McmsFormField],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `
 		<form (submit)="onSubmit($event)" class="space-y-4">

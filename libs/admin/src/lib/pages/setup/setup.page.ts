@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import {
 	Input,
 	Button,
-	FormField,
+	McmsFormField,
 	Card,
 	CardHeader,
 	CardTitle,
@@ -24,7 +24,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 	imports: [
 		Input,
 		Button,
-		FormField,
+		McmsFormField,
 		Card,
 		CardHeader,
 		CardTitle,

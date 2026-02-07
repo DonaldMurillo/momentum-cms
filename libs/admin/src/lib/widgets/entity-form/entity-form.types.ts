@@ -4,9 +4,9 @@
  * Types for the entity form widget that handles create/edit operations.
  */
 
+import type { Signal, WritableSignal } from '@angular/core';
 import type { Field, CollectionConfig } from '@momentum-cms/core';
 import { flattenDataFields } from '@momentum-cms/core';
-import type { Entity } from '../widget.types';
 
 /**
  * Form mode - create, edit, or view.
@@ -14,79 +14,36 @@ import type { Entity } from '../widget.types';
 export type EntityFormMode = 'create' | 'edit' | 'view';
 
 /**
- * Field error state.
+ * Minimal interface for accessing a FieldState from a signal forms FieldTree node.
+ * FieldTree nodes are callable — calling one returns its FieldState.
  */
-export interface FieldError {
-	/** Field name */
-	field: string;
-	/** Error message */
-	message: string;
+export interface FieldNodeState {
+	readonly value: WritableSignal<unknown>;
+	readonly errors: Signal<ReadonlyArray<{ kind: string; message?: string }>>;
+	readonly touched: Signal<boolean>;
+	readonly dirty: Signal<boolean>;
+	readonly invalid: Signal<boolean>;
+	markAsTouched(): void;
+	reset(value?: unknown): void;
 }
 
 /**
- * Form state.
+ * Safely extract FieldState from an unknown FieldTree node.
+ * FieldTree nodes are callable functions — invoking returns the FieldState.
  */
-export interface EntityFormState<T = Entity> {
-	/** Current form data */
-	data: Partial<T>;
-	/** Original data (for edit mode) */
-	originalData: T | null;
-	/** Whether the form has unsaved changes */
-	isDirty: boolean;
-	/** Whether the form is being submitted */
-	isSubmitting: boolean;
-	/** Whether the form is loading data (edit mode) */
-	isLoading: boolean;
-	/** Field-level errors */
-	errors: FieldError[];
-	/** General form error */
-	formError: string | null;
+export function getFieldNodeState(formNode: unknown): FieldNodeState | null {
+	if (formNode == null || typeof formNode !== 'function') return null;
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+	return (formNode as () => FieldNodeState)();
 }
 
 /**
- * Field renderer context.
+ * Get a sub-node from a FieldTree node by key (field name or array index).
  */
-export interface FieldRendererContext<T = Entity> {
-	/** Field definition */
-	field: Field;
-	/** Current field value */
-	value: unknown;
-	/** Form mode */
-	mode: EntityFormMode;
-	/** Collection configuration */
-	collection: CollectionConfig;
-	/** Full form data */
-	formData: Partial<T>;
-	/** Field path (for nested fields) */
-	path: string;
-	/** Whether the field is disabled */
-	disabled: boolean;
-	/** Field error (if any) */
-	error?: string;
-}
-
-/**
- * Field change event.
- */
-export interface FieldChangeEvent {
-	/** Field path */
-	path: string;
-	/** New value */
-	value: unknown;
-}
-
-/**
- * Form save result.
- */
-export interface EntityFormSaveResult<T = Entity> {
-	/** Whether the save was successful */
-	success: boolean;
-	/** Saved entity (if successful) */
-	entity?: T;
-	/** Errors (if failed) */
-	errors?: FieldError[];
-	/** General error message */
-	message?: string;
+export function getSubNode(parentNode: unknown, key: string | number): unknown {
+	if (parentNode == null) return null;
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+	return (parentNode as Record<string, unknown>)[String(key)] ?? null;
 }
 
 /**
@@ -165,40 +122,4 @@ export function getValueAtPath(obj: Record<string, unknown>, path: string): unkn
 	}
 
 	return current;
-}
-
-/**
- * Set value at a path in an object (immutably).
- */
-export function setValueAtPath(
-	obj: Record<string, unknown>,
-	path: string,
-	value: unknown,
-): Record<string, unknown> {
-	const parts = path.split('.');
-	const result = { ...obj };
-
-	if (parts.length === 1) {
-		result[parts[0]] = value;
-		return result;
-	}
-
-	let current: Record<string, unknown> = result;
-	for (let i = 0; i < parts.length - 1; i++) {
-		const part = parts[i];
-		const next = current[part];
-
-		if (isRecord(next)) {
-			current[part] = { ...next };
-		} else {
-			current[part] = {};
-		}
-		const nextCurrent = current[part];
-		if (isRecord(nextCurrent)) {
-			current = nextCurrent;
-		}
-	}
-
-	current[parts[parts.length - 1]] = value;
-	return result;
 }

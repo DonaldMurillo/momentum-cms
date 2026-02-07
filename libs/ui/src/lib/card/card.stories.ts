@@ -7,7 +7,7 @@ import { CardDescription } from './card-description.component';
 import { CardContent } from './card-content.component';
 import { CardFooter } from './card-footer.component';
 import { Button } from '../button/button.component';
-import { FormField } from '../form-field/form-field.component';
+import { McmsFormField } from '../form-field/form-field.component';
 import { Label } from '../label/label.component';
 import { Input } from '../input/input.component';
 
@@ -25,7 +25,7 @@ const meta: Meta<Card> = {
 				CardContent,
 				CardFooter,
 				Button,
-				FormField,
+				McmsFormField,
 				Label,
 				Input,
 			],

@@ -125,6 +125,10 @@ export class Checkbox {
 	readonly value = model(false);
 	readonly disabled = input(false);
 	readonly errors = input<readonly ValidationError[]>([]);
+	readonly touched = input(false);
+	readonly invalid = input(false);
+	readonly readonly = input(false);
+	readonly required = input(false);
 
 	// === Component-specific configuration ===
 	readonly id = input('');

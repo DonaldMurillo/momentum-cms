@@ -37,6 +37,20 @@ export {
 // Version Operations
 export { VersionOperationsImpl } from './lib/version-operations';
 
+// Field-Level Access Control
+export {
+	hasFieldAccessControl,
+	filterReadableFields,
+	filterCreatableFields,
+	filterUpdatableFields,
+} from './lib/field-access';
+
+// Field-Level Hooks
+export { hasFieldHooks, runFieldHooks } from './lib/field-hooks';
+
+// Relationship Population
+export { populateRelationships, type PopulateOptions } from './lib/relationship-populator';
+
 // Collection Access
 export {
 	checkCollectionAdminAccess,

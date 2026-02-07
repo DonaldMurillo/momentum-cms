@@ -1,12 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, effect, forwardRef, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, forwardRef, input, signal } from '@angular/core';
 import {
 	Accordion,
 	AccordionItem,
 	AccordionTrigger,
 	AccordionContent,
 } from '@momentum-cms/ui';
+import { humanizeFieldName } from '@momentum-cms/core';
 import type { Field } from '@momentum-cms/core';
-import type { EntityFormMode, FieldChangeEvent } from '../entity-form.types';
+import type { EntityFormMode } from '../entity-form.types';
+import { getSubNode } from '../entity-form.types';
 import { FieldRenderer } from './field-renderer.component';
 
 /**
@@ -14,7 +16,8 @@ import { FieldRenderer } from './field-renderer.component';
  *
  * Wraps child fields in an expandable/collapsible accordion section.
  * This is a layout-only field; it does not store data itself.
- * Child field values use flat paths (e.g., "apiKey", not "advanced.apiKey").
+ * Child field FieldTree nodes are looked up from the root formTree
+ * using flat field names.
  */
 @Component({
 	selector: 'mcms-collapsible-field-renderer',
@@ -35,12 +38,11 @@ import { FieldRenderer } from './field-renderer.component';
 						@for (subField of subFields(); track subField.name) {
 							<mcms-field-renderer
 								[field]="subField"
-								[value]="getFieldValue(subField.name)"
+								[formNode]="getChildFormNode(subField.name)"
+								[formTree]="formTree()"
+								[formModel]="formModel()"
 								[mode]="mode()"
-								[formData]="formData()"
 								[path]="subField.name"
-								[error]="undefined"
-								(fieldChange)="fieldChange.emit($event)"
 							/>
 						}
 					</div>
@@ -53,20 +55,17 @@ export class CollapsibleFieldRenderer {
 	/** Field definition (must be a CollapsibleField) */
 	readonly field = input.required<Field>();
 
-	/** Full form data for extracting child field values */
-	readonly formData = input<Record<string, unknown>>({});
+	/** Root signal forms FieldTree (for looking up child field nodes) */
+	readonly formTree = input<unknown>(null);
+
+	/** Form model data (for condition evaluation and relationship filterOptions) */
+	readonly formModel = input<Record<string, unknown>>({});
 
 	/** Form mode */
 	readonly mode = input<EntityFormMode>('create');
 
 	/** Field path (unused for layout fields, kept for interface consistency) */
 	readonly path = input.required<string>();
-
-	/** Field error (unused for layout fields) */
-	readonly error = input<string | undefined>(undefined);
-
-	/** Field change event - forwarded from sub-field renderers */
-	readonly fieldChange = output<FieldChangeEvent>();
 
 	/** Whether the accordion is expanded */
 	readonly isExpanded = signal(false);
@@ -75,7 +74,7 @@ export class CollapsibleFieldRenderer {
 	readonly panelId = computed(() => `collapsible-${this.path().replace(/\./g, '-')}`);
 
 	/** Computed label */
-	readonly label = computed(() => this.field().label || this.field().name);
+	readonly label = computed(() => this.field().label || humanizeFieldName(this.field().name));
 
 	/** Computed description */
 	readonly description = computed(() => this.field().description || '');
@@ -99,8 +98,8 @@ export class CollapsibleFieldRenderer {
 		});
 	}
 
-	/** Get a field value from formData (flat path) */
-	getFieldValue(fieldName: string): unknown {
-		return this.formData()[fieldName] ?? null;
+	/** Get a FieldTree sub-node for a child field (flat path from root tree) */
+	getChildFormNode(fieldName: string): unknown {
+		return getSubNode(this.formTree(), fieldName);
 	}
 }

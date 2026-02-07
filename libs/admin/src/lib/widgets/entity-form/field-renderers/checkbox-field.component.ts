@@ -1,23 +1,28 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { FormField, Checkbox } from '@momentum-cms/ui';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { McmsFormField, Checkbox } from '@momentum-cms/ui';
 import type { ValidationError } from '@momentum-cms/ui';
+import { humanizeFieldName } from '@momentum-cms/core';
 import type { Field } from '@momentum-cms/core';
-import type { EntityFormMode, FieldChangeEvent } from '../entity-form.types';
+import type { EntityFormMode } from '../entity-form.types';
+import { getFieldNodeState } from '../entity-form.types';
 
 /**
  * Checkbox field renderer.
+ *
+ * Uses Angular Signal Forms bridge pattern: reads/writes value via
+ * a FieldTree node's FieldState rather than event-based I/O.
  */
 @Component({
 	selector: 'mcms-checkbox-field-renderer',
-	imports: [FormField, Checkbox],
+	imports: [McmsFormField, Checkbox],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `
-		<mcms-form-field [id]="fieldId()" [hasLabel]="false" [errors]="fieldErrors()">
+		<mcms-form-field [id]="fieldId()" [hasLabel]="false" [errors]="touchedErrors()">
 			<mcms-checkbox
 				[id]="fieldId()"
 				[value]="boolValue()"
 				[disabled]="isDisabled()"
-				[errors]="fieldErrors()"
+				[errors]="touchedErrors()"
 				(valueChange)="onValueChange($event)"
 			>
 				{{ label() }}
@@ -35,8 +40,8 @@ export class CheckboxFieldRenderer {
 	/** Field definition */
 	readonly field = input.required<Field>();
 
-	/** Current value */
-	readonly value = input<unknown>(null);
+	/** Signal forms FieldTree node for this field */
+	readonly formNode = input<unknown>(null);
 
 	/** Form mode */
 	readonly mode = input<EntityFormMode>('create');
@@ -44,17 +49,14 @@ export class CheckboxFieldRenderer {
 	/** Field path */
 	readonly path = input.required<string>();
 
-	/** Field error */
-	readonly error = input<string | undefined>(undefined);
-
-	/** Field change event */
-	readonly fieldChange = output<FieldChangeEvent>();
+	/** Bridge: extract FieldState from formNode */
+	private readonly nodeState = computed(() => getFieldNodeState(this.formNode()));
 
 	/** Unique field ID */
 	readonly fieldId = computed(() => `field-${this.path().replace(/\./g, '-')}`);
 
 	/** Computed label */
-	readonly label = computed(() => this.field().label || this.field().name);
+	readonly label = computed(() => this.field().label || humanizeFieldName(this.field().name));
 
 	/** Whether the field is required */
 	readonly required = computed(() => this.field().required ?? false);
@@ -67,26 +69,29 @@ export class CheckboxFieldRenderer {
 		return this.mode() === 'view' || (this.field().admin?.readOnly ?? false);
 	});
 
-	/** Boolean value for checkbox */
+	/** Boolean value from FieldState */
 	readonly boolValue = computed(() => {
-		const val = this.value();
+		const state = this.nodeState();
+		if (!state) return false;
+		const val = state.value();
 		return val === true || val === 'true';
 	});
 
-	/** Convert error string to ValidationError array */
-	readonly fieldErrors = computed((): readonly ValidationError[] => {
-		const err = this.error();
-		if (!err) return [];
-		return [{ kind: 'custom', message: err }];
+	/** Validation errors shown only when field is touched */
+	readonly touchedErrors = computed((): readonly ValidationError[] => {
+		const state = this.nodeState();
+		if (!state || !state.touched()) return [];
+		return state.errors().map((e) => ({ kind: e.kind, message: e.message }));
 	});
 
 	/**
 	 * Handle value change from checkbox.
+	 * Marks touched immediately since checkboxes don't have a native blur flow.
 	 */
 	onValueChange(value: boolean): void {
-		this.fieldChange.emit({
-			path: this.path(),
-			value,
-		});
+		const state = this.nodeState();
+		if (!state) return;
+		state.value.set(value);
+		state.markAsTouched();
 	}
 }

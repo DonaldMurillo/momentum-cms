@@ -100,11 +100,14 @@ export function createMomentumHandlers(config: MomentumConfig): MomentumHandlers
 	async function handleFind(request: MomentumRequest): Promise<MomentumResponse> {
 		try {
 			const api = getContextualAPI(request);
+			const depth =
+				typeof request.query?.['depth'] === 'number' ? request.query['depth'] : undefined;
 			const result = await api.collection<Record<string, unknown>>(request.collectionSlug).find({
 				limit: request.query?.limit,
 				page: request.query?.page,
 				sort: request.query?.sort,
 				where: request.query?.where,
+				depth,
 			});
 
 			return {
@@ -123,9 +126,11 @@ export function createMomentumHandlers(config: MomentumConfig): MomentumHandlers
 
 		try {
 			const api = getContextualAPI(request);
+			const depth =
+				typeof request.query?.['depth'] === 'number' ? request.query['depth'] : undefined;
 			const doc = await api
 				.collection<Record<string, unknown>>(request.collectionSlug)
-				.findById(request.id);
+				.findById(request.id, depth !== undefined ? { depth } : undefined);
 
 			if (!doc) {
 				return { error: 'Document not found', status: 404 };

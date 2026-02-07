@@ -25,6 +25,7 @@ import { authGuard } from '../guards/auth.guard';
 import { guestGuard } from '../guards/guest.guard';
 import { setupGuard } from '../guards/setup.guard';
 import { collectionAccessGuard } from '../guards/collection-access.guard';
+import { unsavedChangesGuard } from '../guards/unsaved-changes.guard';
 
 export interface MomentumAdminBranding {
 	/** Logo URL */
@@ -135,6 +136,7 @@ export function momentumAdminRoutes(options: MomentumAdminOptions): Routes {
 				loadComponent: (): Promise<Type<unknown>> =>
 					import('../pages/collection-edit/collection-edit.page').then((m) => m.CollectionEditPage),
 				canActivate: [collectionAccessGuard],
+				canDeactivate: [unsavedChangesGuard],
 			},
 			// View existing document
 			{
@@ -149,6 +151,7 @@ export function momentumAdminRoutes(options: MomentumAdminOptions): Routes {
 				loadComponent: (): Promise<Type<unknown>> =>
 					import('../pages/collection-edit/collection-edit.page').then((m) => m.CollectionEditPage),
 				canActivate: [collectionAccessGuard],
+				canDeactivate: [unsavedChangesGuard],
 			},
 		],
 	};

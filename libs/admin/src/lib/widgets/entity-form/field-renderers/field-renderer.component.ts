@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import type { Field, CollectionConfig } from '@momentum-cms/core';
-import type { EntityFormMode, FieldChangeEvent } from '../entity-form.types';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import type { Field } from '@momentum-cms/core';
+import type { EntityFormMode } from '../entity-form.types';
 import { TextFieldRenderer } from './text-field.component';
 import { NumberFieldRenderer } from './number-field.component';
 import { SelectFieldRenderer } from './select-field.component';
@@ -19,17 +19,8 @@ import { RowFieldRenderer } from './row-field.component';
 /**
  * Dynamic field renderer that switches based on field type.
  *
- * @example
- * ```html
- * <mcms-field-renderer
- *   [field]="field"
- *   [value]="value"
- *   [mode]="mode"
- *   [path]="field.name"
- *   [error]="error"
- *   (fieldChange)="onFieldChange($event)"
- * />
- * ```
+ * Uses Angular Signal Forms bridge pattern: each renderer receives
+ * its formNode (FieldTree) and reads/writes values via FieldState.
  */
 @Component({
 	selector: 'mcms-field-renderer',
@@ -54,185 +45,103 @@ import { RowFieldRenderer } from './row-field.component';
 	template: `
 		@switch (fieldType()) {
 			@case ('text') {
-				<mcms-text-field-renderer
-					[field]="field()"
-					[value]="value()"
-					[mode]="mode()"
-					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
-				/>
+				<mcms-text-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
 			}
 			@case ('textarea') {
-				<mcms-text-field-renderer
-					[field]="field()"
-					[value]="value()"
-					[mode]="mode()"
-					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
-				/>
+				<mcms-text-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
 			}
 			@case ('richText') {
-				<mcms-rich-text-field-renderer
-					[field]="field()"
-					[value]="value()"
-					[mode]="mode()"
-					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
-				/>
+				<mcms-rich-text-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
 			}
 			@case ('email') {
-				<mcms-text-field-renderer
-					[field]="field()"
-					[value]="value()"
-					[mode]="mode()"
-					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
-				/>
+				<mcms-text-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
 			}
 			@case ('slug') {
-				<mcms-text-field-renderer
-					[field]="field()"
-					[value]="value()"
-					[mode]="mode()"
-					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
-				/>
+				<mcms-text-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
 			}
 			@case ('number') {
-				<mcms-number-field-renderer
-					[field]="field()"
-					[value]="value()"
-					[mode]="mode()"
-					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
-				/>
+				<mcms-number-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
 			}
 			@case ('select') {
-				<mcms-select-field-renderer
-					[field]="field()"
-					[value]="value()"
-					[mode]="mode()"
-					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
-				/>
+				<mcms-select-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
 			}
 			@case ('checkbox') {
-				<mcms-checkbox-field-renderer
-					[field]="field()"
-					[value]="value()"
-					[mode]="mode()"
-					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
-				/>
+				<mcms-checkbox-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
 			}
 			@case ('date') {
-				<mcms-date-field-renderer
-					[field]="field()"
-					[value]="value()"
-					[mode]="mode()"
-					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
-				/>
+				<mcms-date-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
 			}
 			@case ('upload') {
-				<mcms-upload-field-renderer
-					[field]="field()"
-					[value]="value()"
-					[mode]="mode()"
-					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
-				/>
+				<mcms-upload-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
 			}
 			@case ('group') {
 				<mcms-group-field-renderer
 					[field]="field()"
-					[value]="value()"
+					[formNode]="formNode()"
+					[formTree]="formTree()"
+					[formModel]="formModel()"
 					[mode]="mode()"
 					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
 				/>
 			}
 			@case ('array') {
 				<mcms-array-field-renderer
 					[field]="field()"
-					[value]="value()"
+					[formNode]="formNode()"
+					[formTree]="formTree()"
+					[formModel]="formModel()"
 					[mode]="mode()"
 					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
 				/>
 			}
 			@case ('blocks') {
 				<mcms-blocks-field-renderer
 					[field]="field()"
-					[value]="value()"
+					[formNode]="formNode()"
+					[formTree]="formTree()"
+					[formModel]="formModel()"
 					[mode]="mode()"
 					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
 				/>
 			}
 			@case ('relationship') {
 				<mcms-relationship-field-renderer
 					[field]="field()"
-					[value]="value()"
+					[formNode]="formNode()"
+					[formModel]="formModel()"
 					[mode]="mode()"
 					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
 				/>
 			}
 			@case ('tabs') {
 				<mcms-tabs-field-renderer
 					[field]="field()"
-					[formData]="formData()"
+					[formTree]="formTree()"
+					[formModel]="formModel()"
 					[mode]="mode()"
 					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
 				/>
 			}
 			@case ('collapsible') {
 				<mcms-collapsible-field-renderer
 					[field]="field()"
-					[formData]="formData()"
+					[formTree]="formTree()"
+					[formModel]="formModel()"
 					[mode]="mode()"
 					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
 				/>
 			}
 			@case ('row') {
 				<mcms-row-field-renderer
 					[field]="field()"
-					[formData]="formData()"
+					[formTree]="formTree()"
+					[formModel]="formModel()"
 					[mode]="mode()"
 					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
 				/>
 			}
 			@default {
-				<!-- Unsupported field type, render as text for now -->
-				<mcms-text-field-renderer
-					[field]="field()"
-					[value]="value()"
-					[mode]="mode()"
-					[path]="path()"
-					[error]="error()"
-					(fieldChange)="fieldChange.emit($event)"
-				/>
+				<mcms-text-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
 			}
 		}
 	`,
@@ -241,26 +150,20 @@ export class FieldRenderer {
 	/** Field definition */
 	readonly field = input.required<Field>();
 
-	/** Current value */
-	readonly value = input<unknown>(null);
+	/** Signal forms FieldTree node for this field */
+	readonly formNode = input<unknown>(null);
+
+	/** Root signal forms FieldTree (for layout fields that look up child nodes) */
+	readonly formTree = input<unknown>(null);
+
+	/** Form model data (for condition evaluation and relationship filterOptions) */
+	readonly formModel = input<Record<string, unknown>>({});
 
 	/** Form mode */
 	readonly mode = input<EntityFormMode>('create');
 
-	/** Collection configuration (for relationship fields) */
-	readonly collection = input<CollectionConfig | undefined>(undefined);
-
-	/** Full form data (for conditional fields) */
-	readonly formData = input<Record<string, unknown>>({});
-
 	/** Field path (for nested fields) */
 	readonly path = input.required<string>();
-
-	/** Field error */
-	readonly error = input<string | undefined>(undefined);
-
-	/** Field change event */
-	readonly fieldChange = output<FieldChangeEvent>();
 
 	/** Field type for template switching */
 	readonly fieldType = computed(() => this.field().type);

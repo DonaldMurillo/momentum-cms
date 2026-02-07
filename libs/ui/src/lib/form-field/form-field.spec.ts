@@ -1,16 +1,16 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { FormField } from './form-field.component';
+import { McmsFormField } from './form-field.component';
 
-describe('FormField', () => {
-	let component: FormField;
-	let fixture: ComponentFixture<FormField>;
+describe('McmsFormField', () => {
+	let component: McmsFormField;
+	let fixture: ComponentFixture<McmsFormField>;
 
 	beforeEach(async () => {
 		await TestBed.configureTestingModule({
-			imports: [FormField],
+			imports: [McmsFormField],
 		}).compileComponents();
 
-		fixture = TestBed.createComponent(FormField);
+		fixture = TestBed.createComponent(McmsFormField);
 		component = fixture.componentInstance;
 		fixture.componentRef.setInput('id', 'test-field');
 		await fixture.whenStable();

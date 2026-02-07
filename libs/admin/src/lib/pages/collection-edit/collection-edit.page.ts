@@ -5,6 +5,7 @@ import { getCollectionsFromRouteData } from '../../utils/route-data';
 import { EntityFormWidget } from '../../widgets/entity-form/entity-form.component';
 import type { EntityFormMode } from '../../widgets/entity-form/entity-form.types';
 import { LivePreviewComponent } from '../../widgets/live-preview/live-preview.component';
+import type { HasUnsavedChanges } from '../../guards/unsaved-changes.guard';
 
 /**
  * Collection Edit Page Component
@@ -55,7 +56,7 @@ import { LivePreviewComponent } from '../../widgets/live-preview/live-preview.co
 		}
 	`,
 })
-export class CollectionEditPage {
+export class CollectionEditPage implements HasUnsavedChanges {
 	private readonly route = inject(ActivatedRoute);
 
 	readonly basePath = '/admin/collections';
@@ -95,4 +96,9 @@ export class CollectionEditPage {
 		const form = this.entityFormRef();
 		return form?.formData() ?? {};
 	});
+
+	/** HasUnsavedChanges implementation for the route guard */
+	hasUnsavedChanges(): boolean {
+		return this.entityFormRef()?.isDirty() ?? false;
+	}
 }

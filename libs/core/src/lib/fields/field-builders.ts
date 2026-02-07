@@ -216,7 +216,11 @@ export function upload(name: string, options: UploadFieldOptions = {}): UploadFi
 
 export interface RelationshipFieldOptions extends BaseFieldOptions {
 	collection: () => unknown; // Lazy reference to avoid circular imports
+	/** Multiple target collections for polymorphic relationships */
+	relationTo?: Array<() => unknown>;
 	hasMany?: boolean;
+	/** Filter which related documents can be selected */
+	filterOptions?: (args: { data: Record<string, unknown> }) => Record<string, unknown>;
 }
 
 export function relationship(name: string, options: RelationshipFieldOptions): RelationshipField {

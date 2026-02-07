@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, model } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, model, output } from '@angular/core';
 import type { ValidationError } from '../input/input.types';
 import type { SelectOption } from './select.types';
 
@@ -28,6 +28,7 @@ import type { SelectOption } from './select.types';
 			[attr.aria-invalid]="hasError() || null"
 			[attr.aria-describedby]="ariaDescribedBy()"
 			(change)="value.set(selectEl.value)"
+			(blur)="blurred.emit()"
 			class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm
 			       text-foreground placeholder:text-muted-foreground
 			       focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
@@ -56,6 +57,13 @@ export class Select {
 	readonly value = model('');
 	readonly disabled = input(false);
 	readonly errors = input<readonly ValidationError[]>([]);
+	readonly touched = input(false);
+	readonly invalid = input(false);
+	readonly readonly = input(false);
+	readonly required = input(false);
+
+	/** Emitted when the select loses focus */
+	readonly blurred = output<void>();
 
 	// === Component-specific configuration ===
 	readonly id = input('');

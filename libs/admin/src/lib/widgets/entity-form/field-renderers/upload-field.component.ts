@@ -4,13 +4,14 @@ import {
 	computed,
 	inject,
 	input,
-	output,
 	signal,
 } from '@angular/core';
-import { FormField, Button, Progress, DialogService } from '@momentum-cms/ui';
+import { McmsFormField, Button, Progress, DialogService } from '@momentum-cms/ui';
 import type { ValidationError } from '@momentum-cms/ui';
+import { humanizeFieldName } from '@momentum-cms/core';
 import type { Field, UploadField } from '@momentum-cms/core';
-import type { EntityFormMode, FieldChangeEvent } from '../entity-form.types';
+import type { EntityFormMode } from '../entity-form.types';
+import { getFieldNodeState } from '../entity-form.types';
 import { UploadService, type UploadProgress } from '../../../services/upload.service';
 import {
 	MediaPreviewComponent,
@@ -53,10 +54,13 @@ function getInputFromEvent(event: Event): HTMLInputElement | null {
 /**
  * Upload field renderer for file upload fields.
  * Supports drag & drop, file selection, and media library picking.
+ *
+ * Uses Angular Signal Forms bridge pattern: reads/writes value via
+ * a FieldTree node's FieldState rather than event-based I/O.
  */
 @Component({
 	selector: 'mcms-upload-field-renderer',
-	imports: [FormField, Button, Progress, NgIcon, MediaPreviewComponent],
+	imports: [McmsFormField, Button, Progress, NgIcon, MediaPreviewComponent],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `
@@ -64,7 +68,7 @@ function getInputFromEvent(event: Event): HTMLInputElement | null {
 			[id]="fieldId()"
 			[required]="required()"
 			[disabled]="isDisabled()"
-			[errors]="fieldErrors()"
+			[errors]="touchedErrors()"
 		>
 			<span mcmsLabel>{{ label() }}</span>
 
@@ -197,8 +201,8 @@ export class UploadFieldRenderer {
 	/** Field definition */
 	readonly field = input.required<Field>();
 
-	/** Current value (media document ID or full document) */
-	readonly value = input<unknown>(null);
+	/** Signal forms FieldTree node for this field */
+	readonly formNode = input<unknown>(null);
 
 	/** Form mode */
 	readonly mode = input<EntityFormMode>('create');
@@ -206,11 +210,8 @@ export class UploadFieldRenderer {
 	/** Field path */
 	readonly path = input.required<string>();
 
-	/** Field error */
-	readonly error = input<string | undefined>(undefined);
-
-	/** Field change event */
-	readonly fieldChange = output<FieldChangeEvent>();
+	/** Bridge: extract FieldState from formNode */
+	private readonly nodeState = computed(() => getFieldNodeState(this.formNode()));
 
 	/** Icon references */
 	readonly uploadIcon = heroCloudArrowUp;
@@ -229,7 +230,7 @@ export class UploadFieldRenderer {
 	readonly fieldId = computed(() => `field-${this.path().replace(/\./g, '-')}`);
 
 	/** Computed label */
-	readonly label = computed(() => this.field().label || this.field().name);
+	readonly label = computed(() => this.field().label || humanizeFieldName(this.field().name));
 
 	/** Whether the field is required */
 	readonly required = computed(() => this.field().required ?? false);
@@ -249,15 +250,21 @@ export class UploadFieldRenderer {
 		return { ...field, type: 'upload', relationTo: 'media' };
 	});
 
+	/** Current value from FieldState */
+	private readonly currentValue = computed(() => {
+		const state = this.nodeState();
+		return state ? state.value() : null;
+	});
+
 	/** Whether we have a value */
 	readonly hasValue = computed(() => {
-		const val = this.value();
+		const val = this.currentValue();
 		return val !== null && val !== undefined && val !== '';
 	});
 
 	/** Media preview data from value */
 	readonly mediaPreviewData = computed((): MediaPreviewData | null => {
-		const val = this.value();
+		const val = this.currentValue();
 		if (!val) return null;
 
 		// If value is a full document object
@@ -280,7 +287,7 @@ export class UploadFieldRenderer {
 
 	/** Media filename from value */
 	readonly mediaFilename = computed(() => {
-		const val = this.value();
+		const val = this.currentValue();
 		if (typeof val === 'object' && val !== null) {
 			return getStringProp(val, 'filename') ?? 'Selected media';
 		}
@@ -339,11 +346,11 @@ export class UploadFieldRenderer {
 		return mimeTypes.join(',');
 	});
 
-	/** Convert error string to ValidationError array */
-	readonly fieldErrors = computed((): readonly ValidationError[] => {
-		const err = this.error();
-		if (!err) return [];
-		return [{ kind: 'custom', message: err }];
+	/** Validation errors shown only when field is touched */
+	readonly touchedErrors = computed((): readonly ValidationError[] => {
+		const state = this.nodeState();
+		if (!state || !state.touched()) return [];
+		return state.errors().map((e) => ({ kind: e.kind, message: e.message }));
 	});
 
 	/**
@@ -449,11 +456,12 @@ export class UploadFieldRenderer {
 				if (progress.status === 'complete' && progress.result) {
 					this.isUploading.set(false);
 					this.uploadingFile.set(null);
-					// Emit the full document so we have all the data for preview
-					this.fieldChange.emit({
-						path: this.path(),
-						value: progress.result,
-					});
+					// Write the full document to FieldState so we have all the data for preview
+					const state = this.nodeState();
+					if (state) {
+						state.value.set(progress.result);
+						state.markAsTouched();
+					}
 				} else if (progress.status === 'error') {
 					this.isUploading.set(false);
 					this.uploadingFile.set(null);
@@ -486,10 +494,11 @@ export class UploadFieldRenderer {
 
 		dialogRef.afterClosed.subscribe((result) => {
 			if (result?.media) {
-				this.fieldChange.emit({
-					path: this.path(),
-					value: result.media,
-				});
+				const state = this.nodeState();
+				if (state) {
+					state.value.set(result.media);
+					state.markAsTouched();
+				}
 			}
 		});
 	}
@@ -498,9 +507,9 @@ export class UploadFieldRenderer {
 	 * Remove the current media value.
 	 */
 	removeMedia(): void {
-		this.fieldChange.emit({
-			path: this.path(),
-			value: null,
-		});
+		const state = this.nodeState();
+		if (state) {
+			state.value.set(null);
+		}
 	}
 }

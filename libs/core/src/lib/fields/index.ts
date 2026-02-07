@@ -49,3 +49,10 @@ export type {
 	CollapsibleFieldOptions,
 	RowFieldOptions,
 } from './field-builders';
+
+// Field validators
+export { validateFieldConstraints } from './field-validators';
+export type { FieldConstraintError } from './field-validators';
+
+// Field name utilities
+export { humanizeFieldName } from './humanize-field-name';

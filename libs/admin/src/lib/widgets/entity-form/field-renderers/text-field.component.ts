@@ -1,22 +1,27 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { FormField, Input, Textarea } from '@momentum-cms/ui';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { McmsFormField, Input, Textarea } from '@momentum-cms/ui';
 import type { ValidationError } from '@momentum-cms/ui';
-import type { Field } from '@momentum-cms/core';
-import type { EntityFormMode, FieldChangeEvent } from '../entity-form.types';
+import { humanizeFieldName } from '@momentum-cms/core';
+import type { Field, TextField, TextareaField } from '@momentum-cms/core';
+import type { EntityFormMode } from '../entity-form.types';
+import { getFieldNodeState } from '../entity-form.types';
 
 /**
  * Text field renderer for text and textarea field types.
+ *
+ * Uses Angular Signal Forms bridge pattern: reads/writes value via
+ * a FieldTree node's FieldState rather than event-based I/O.
  */
 @Component({
 	selector: 'mcms-text-field-renderer',
-	imports: [FormField, Input, Textarea],
+	imports: [McmsFormField, Input, Textarea],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `
 		<mcms-form-field
 			[id]="fieldId()"
 			[required]="required()"
 			[disabled]="isDisabled()"
-			[errors]="fieldErrors()"
+			[errors]="touchedErrors()"
 		>
 			<span mcmsLabel>{{ label() }}</span>
 			@if (isTextarea()) {
@@ -26,8 +31,9 @@ import type { EntityFormMode, FieldChangeEvent } from '../entity-form.types';
 					[placeholder]="placeholder()"
 					[disabled]="isDisabled()"
 					[rows]="rows()"
-					[errors]="fieldErrors()"
+					[errors]="touchedErrors()"
 					(valueChange)="onValueChange($event)"
+					(blurred)="onBlur()"
 				/>
 			} @else {
 				<mcms-input
@@ -36,9 +42,18 @@ import type { EntityFormMode, FieldChangeEvent } from '../entity-form.types';
 					[value]="stringValue()"
 					[placeholder]="placeholder()"
 					[disabled]="isDisabled()"
-					[errors]="fieldErrors()"
+					[errors]="touchedErrors()"
 					(valueChange)="onValueChange($event)"
+					(blurred)="onBlur()"
 				/>
+			}
+			@if (description()) {
+				<p class="mt-1 text-xs text-muted-foreground">{{ description() }}</p>
+			}
+			@if (showCharCount()) {
+				<p class="mt-1 text-xs text-muted-foreground text-right" [class.text-destructive]="charCountExceeded()">
+					{{ charCount() }}@if (maxLength()) { / {{ maxLength() }}}
+				</p>
 			}
 		</mcms-form-field>
 	`,
@@ -47,8 +62,8 @@ export class TextFieldRenderer {
 	/** Field definition */
 	readonly field = input.required<Field>();
 
-	/** Current value */
-	readonly value = input<unknown>(null);
+	/** Signal forms FieldTree node for this field */
+	readonly formNode = input<unknown>(null);
 
 	/** Form mode */
 	readonly mode = input<EntityFormMode>('create');
@@ -56,17 +71,14 @@ export class TextFieldRenderer {
 	/** Field path */
 	readonly path = input.required<string>();
 
-	/** Field error */
-	readonly error = input<string | undefined>(undefined);
-
-	/** Field change event */
-	readonly fieldChange = output<FieldChangeEvent>();
+	/** Bridge: extract FieldState from formNode */
+	private readonly nodeState = computed(() => getFieldNodeState(this.formNode()));
 
 	/** Unique field ID */
 	readonly fieldId = computed(() => `field-${this.path().replace(/\./g, '-')}`);
 
 	/** Computed label */
-	readonly label = computed(() => this.field().label || this.field().name);
+	readonly label = computed(() => this.field().label || humanizeFieldName(this.field().name));
 
 	/** Whether the field is required */
 	readonly required = computed(() => this.field().required ?? false);
@@ -94,26 +106,58 @@ export class TextFieldRenderer {
 		return 4;
 	});
 
-	/** String value for input */
+	/** String value from FieldState */
 	readonly stringValue = computed(() => {
-		const val = this.value();
+		const state = this.nodeState();
+		if (!state) return '';
+		const val = state.value();
 		return val === null || val === undefined ? '' : String(val);
 	});
 
-	/** Convert error string to ValidationError array */
-	readonly fieldErrors = computed((): readonly ValidationError[] => {
-		const err = this.error();
-		if (!err) return [];
-		return [{ kind: 'custom', message: err }];
+	/** Field description */
+	readonly description = computed(() => this.field().description ?? '');
+
+	/** Max length from field constraints */
+	readonly maxLength = computed((): number | undefined => {
+		const f = this.field();
+		if (f.type === 'text' || f.type === 'textarea') {
+			return (f as TextField | TextareaField).maxLength;
+		}
+		return undefined;
+	});
+
+	/** Current character count */
+	readonly charCount = computed(() => this.stringValue().length);
+
+	/** Whether to show character counter */
+	readonly showCharCount = computed(() => this.maxLength() !== undefined);
+
+	/** Whether character count exceeds max */
+	readonly charCountExceeded = computed(() => {
+		const max = this.maxLength();
+		return max !== undefined && this.charCount() > max;
+	});
+
+	/** Validation errors shown only when field is touched */
+	readonly touchedErrors = computed((): readonly ValidationError[] => {
+		const state = this.nodeState();
+		if (!state || !state.touched()) return [];
+		return state.errors().map((e) => ({ kind: e.kind, message: e.message }));
 	});
 
 	/**
 	 * Handle value change from input/textarea.
 	 */
 	onValueChange(value: string): void {
-		this.fieldChange.emit({
-			path: this.path(),
-			value: value,
-		});
+		const state = this.nodeState();
+		if (state) state.value.set(value);
+	}
+
+	/**
+	 * Handle blur from input/textarea.
+	 */
+	onBlur(): void {
+		const state = this.nodeState();
+		if (state) state.markAsTouched();
 	}
 }

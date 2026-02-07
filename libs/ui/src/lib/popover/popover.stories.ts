@@ -3,7 +3,7 @@ import { moduleMetadata } from '@storybook/angular';
 import { CdkMenuModule } from '@angular/cdk/menu';
 import { PopoverContent } from './popover-content.component';
 import { Button } from '../button/button.component';
-import { FormField } from '../form-field/form-field.component';
+import { McmsFormField } from '../form-field/form-field.component';
 import { Label } from '../label/label.component';
 import { Input } from '../input/input.component';
 import { Avatar } from '../avatar/avatar.component';
@@ -19,7 +19,7 @@ const meta: Meta<PopoverContent> = {
 				CdkMenuModule,
 				PopoverContent,
 				Button,
-				FormField,
+				McmsFormField,
 				Label,
 				Input,
 				Avatar,

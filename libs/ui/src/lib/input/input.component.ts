@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, model } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, model, output } from '@angular/core';
 import type { InputType, ValidationError } from './input.types';
 
 /**
@@ -31,7 +31,11 @@ import type { InputType, ValidationError } from './input.types';
 			[attr.aria-invalid]="hasError() || null"
 			[attr.aria-describedby]="ariaDescribedBy()"
 			[attr.autocomplete]="autocomplete()"
+			[attr.min]="min()"
+			[attr.max]="max()"
+			[attr.step]="step()"
 			(input)="value.set(inputEl.value)"
+			(blur)="blurred.emit()"
 		/>
 	`,
 	styles: `
@@ -74,6 +78,18 @@ export class Input {
 	/** Validation errors - Signal Forms passes this from field.errors() */
 	readonly errors = input<readonly ValidationError[]>([]);
 
+	/** Whether the field has been interacted with (set by [formField] directive) */
+	readonly touched = input(false);
+
+	/** Whether the field is invalid (set by [formField] directive) */
+	readonly invalid = input(false);
+
+	/** Whether the field is readonly (set by [formField] directive) */
+	readonly readonly = input(false);
+
+	/** Whether the field is required (set by [formField] directive) */
+	readonly required = input(false);
+
 	// === Component-specific configuration ===
 
 	readonly type = input<InputType>('text');
@@ -82,6 +98,12 @@ export class Input {
 	readonly placeholder = input('');
 	readonly autocomplete = input<string | undefined>(undefined);
 	readonly describedBy = input<string | undefined>(undefined);
+	readonly min = input<number | undefined>(undefined);
+	readonly max = input<number | undefined>(undefined);
+	readonly step = input<number | undefined>(undefined);
+
+	/** Emitted when the input loses focus */
+	readonly blurred = output<void>();
 
 	// === Computed state ===
 
