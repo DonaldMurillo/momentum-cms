@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, forwardRef, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, forwardRef, input, signal } from '@angular/core';
 import {
 	Tabs,
 	TabsList,
@@ -6,15 +6,16 @@ import {
 	TabsContent,
 } from '@momentum-cms/ui';
 import type { Field, TabConfig } from '@momentum-cms/core';
-import type { EntityFormMode, FieldChangeEvent } from '../entity-form.types';
+import type { EntityFormMode } from '../entity-form.types';
+import { getSubNode } from '../entity-form.types';
 import { FieldRenderer } from './field-renderer.component';
 
 /**
  * Tabs layout field renderer.
  *
  * Organizes child fields into tabbed sections. This is a layout-only field;
- * it does not store data itself. Child field values are read from and
- * written to formData using flat paths (e.g., "metaTitle", not "tabs.metaTitle").
+ * it does not store data itself. Child field FieldTree nodes are looked up
+ * from the root formTree using flat field names.
  */
 @Component({
 	selector: 'mcms-tabs-field-renderer',
@@ -43,12 +44,11 @@ import { FieldRenderer } from './field-renderer.component';
 						@for (subField of getTabFields(tab); track subField.name) {
 							<mcms-field-renderer
 								[field]="subField"
-								[value]="getFieldValue(subField.name)"
+								[formNode]="getChildFormNode(subField.name)"
+								[formTree]="formTree()"
+								[formModel]="formModel()"
 								[mode]="mode()"
-								[formData]="formData()"
 								[path]="subField.name"
-								[error]="undefined"
-								(fieldChange)="fieldChange.emit($event)"
 							/>
 						}
 					</div>
@@ -61,20 +61,17 @@ export class TabsFieldRenderer {
 	/** Field definition (must be a TabsField) */
 	readonly field = input.required<Field>();
 
-	/** Full form data for extracting child field values */
-	readonly formData = input<Record<string, unknown>>({});
+	/** Root signal forms FieldTree (for looking up child field nodes) */
+	readonly formTree = input<unknown>(null);
+
+	/** Form model data (for condition evaluation and relationship filterOptions) */
+	readonly formModel = input<Record<string, unknown>>({});
 
 	/** Form mode */
 	readonly mode = input<EntityFormMode>('create');
 
 	/** Field path (unused for layout fields, kept for interface consistency) */
 	readonly path = input.required<string>();
-
-	/** Field error (unused for layout fields) */
-	readonly error = input<string | undefined>(undefined);
-
-	/** Field change event - forwarded from sub-field renderers */
-	readonly fieldChange = output<FieldChangeEvent>();
 
 	/** Currently selected tab */
 	readonly selectedTab = signal('');
@@ -99,8 +96,8 @@ export class TabsFieldRenderer {
 		return tab.fields.filter((f) => !f.admin?.hidden);
 	}
 
-	/** Get a field value from formData (flat path) */
-	getFieldValue(fieldName: string): unknown {
-		return this.formData()[fieldName] ?? null;
+	/** Get a FieldTree sub-node for a child field (flat path from root tree) */
+	getChildFormNode(fieldName: string): unknown {
+		return getSubNode(this.formTree(), fieldName);
 	}
 }

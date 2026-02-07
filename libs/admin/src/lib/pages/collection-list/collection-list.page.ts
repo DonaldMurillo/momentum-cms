@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs/operators';
 import type { CollectionConfig } from '@momentum-cms/core';
+import { humanizeFieldName } from '@momentum-cms/core';
 import { getCollectionsFromRouteData } from '../../utils/route-data';
 import { EntityListWidget } from '../../widgets/entity-list/entity-list.component';
 import type { Entity, EntityAction } from '../../widgets/widget.types';
@@ -85,7 +86,7 @@ export class CollectionListPage {
 			const ids = event.entities.map((e) => String(e.id));
 			try {
 				await this.api.collection(col.slug).batchDelete(ids);
-				this.feedback.entitiesDeleted(col.labels?.plural ?? col.slug, ids.length);
+				this.feedback.entitiesDeleted(col.labels?.plural ?? humanizeFieldName(col.slug), ids.length);
 				this.entityList()?.reload();
 			} catch (err) {
 				this.feedback.operationFailed(

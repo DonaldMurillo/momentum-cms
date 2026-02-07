@@ -139,12 +139,10 @@ export type {
 
 export type {
 	EntityFormMode,
-	FieldError,
-	EntityFormState,
-	FieldRendererContext,
-	FieldChangeEvent,
-	EntityFormSaveResult,
+	FieldNodeState,
 } from './lib/widgets/entity-form/entity-form.types';
+
+export { getFieldNodeState, getSubNode } from './lib/widgets/entity-form/entity-form.types';
 
 export type {
 	EntityViewFieldConfig,

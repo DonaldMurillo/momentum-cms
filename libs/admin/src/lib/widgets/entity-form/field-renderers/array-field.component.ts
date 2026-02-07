@@ -1,11 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, forwardRef, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, forwardRef, input } from '@angular/core';
 import { CdkDropList, CdkDrag, CdkDragHandle, type CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { heroPlus, heroTrash, heroBars2 } from '@ng-icons/heroicons/outline';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, Button } from '@momentum-cms/ui';
+import { humanizeFieldName } from '@momentum-cms/core';
 import type { Field } from '@momentum-cms/core';
-import type { EntityFormMode, FieldChangeEvent } from '../entity-form.types';
-import { isRecord, getFieldDefaultValue, setValueAtPath } from '../entity-form.types';
+import type { EntityFormMode } from '../entity-form.types';
+import { getFieldNodeState, getSubNode, isRecord, getFieldDefaultValue } from '../entity-form.types';
 import { FieldRenderer } from './field-renderer.component';
 
 /**
@@ -15,8 +16,9 @@ import { FieldRenderer } from './field-renderer.component';
  * Supports add/remove rows and drag-drop reordering via CDK DragDrop.
  * Respects minRows/maxRows constraints.
  *
- * Array changes emit the entire updated array at the array field's path,
- * since setValueAtPath does not handle numeric array indices.
+ * Data container pattern: passes row sub-field FieldTree nodes via
+ * getSubNode(getSubNode(formNode, rowIndex), subFieldName).
+ * Array mutations use nodeState.value.set(newArray).
  */
 @Component({
 	selector: 'mcms-array-field-renderer',
@@ -78,11 +80,11 @@ import { FieldRenderer } from './field-renderer.component';
 									@for (subField of subFields(); track subField.name) {
 										<mcms-field-renderer
 											[field]="subField"
-											[value]="getSubFieldValue(row, subField.name)"
+											[formNode]="getRowSubNode(i, subField.name)"
+											[formTree]="formTree()"
+											[formModel]="formModel()"
 											[mode]="mode()"
-											[path]="subField.name"
-											[error]="undefined"
-											(fieldChange)="onSubFieldChange(i, $event)"
+											[path]="getRowSubFieldPath(i, subField.name)"
 										/>
 									}
 								</div>
@@ -118,8 +120,14 @@ export class ArrayFieldRenderer {
 	/** Field definition (must be an ArrayField) */
 	readonly field = input.required<Field>();
 
-	/** Current value (should be an array of objects) */
-	readonly value = input<unknown>(null);
+	/** Signal forms FieldTree node for this array */
+	readonly formNode = input<unknown>(null);
+
+	/** Root signal forms FieldTree (for layout fields that look up child nodes) */
+	readonly formTree = input<unknown>(null);
+
+	/** Form model data (for condition evaluation and relationship filterOptions) */
+	readonly formModel = input<Record<string, unknown>>({});
 
 	/** Form mode */
 	readonly mode = input<EntityFormMode>('create');
@@ -127,14 +135,11 @@ export class ArrayFieldRenderer {
 	/** Field path (e.g., "features") */
 	readonly path = input.required<string>();
 
-	/** Field error */
-	readonly error = input<string | undefined>(undefined);
-
-	/** Field change event */
-	readonly fieldChange = output<FieldChangeEvent>();
+	/** Bridge: extract FieldState from formNode */
+	private readonly nodeState = computed(() => getFieldNodeState(this.formNode()));
 
 	/** Computed label */
-	readonly label = computed(() => this.field().label || this.field().name);
+	readonly label = computed(() => this.field().label || humanizeFieldName(this.field().name));
 
 	/** Computed description */
 	readonly description = computed(() => this.field().description || '');
@@ -160,9 +165,11 @@ export class ArrayFieldRenderer {
 		return f.type === 'array' ? f.maxRows : undefined;
 	});
 
-	/** Current rows as array of objects */
+	/** Current rows as array of objects (read from FieldState) */
 	readonly rows = computed((): Record<string, unknown>[] => {
-		const val = this.value();
+		const state = this.nodeState();
+		if (!state) return [];
+		const val = state.value();
 		if (Array.isArray(val)) {
 			return val.map((item) => (isRecord(item) ? item : {}));
 		}
@@ -185,43 +192,44 @@ export class ArrayFieldRenderer {
 		return this.rows().length > this.minRows();
 	});
 
-	/** Get value for a sub-field in a row */
-	getSubFieldValue(row: Record<string, unknown>, subFieldName: string): unknown {
-		return row[subFieldName] ?? null;
+	/** Get a FieldTree sub-node for a row's sub-field */
+	getRowSubNode(rowIndex: number, subFieldName: string): unknown {
+		const rowNode = getSubNode(this.formNode(), rowIndex);
+		return getSubNode(rowNode, subFieldName);
 	}
 
-	/** Handle sub-field change within a row */
-	onSubFieldChange(rowIndex: number, event: FieldChangeEvent): void {
-		const currentRows = this.rows();
-		const row = currentRows[rowIndex];
-		if (!row) return;
-
-		const updatedRow = setValueAtPath(row, event.path, event.value);
-		const updatedRows = currentRows.map((r, i) => (i === rowIndex ? updatedRow : r));
-		this.fieldChange.emit({ path: this.path(), value: updatedRows });
+	/** Get the full path for a row's sub-field */
+	getRowSubFieldPath(rowIndex: number, subFieldName: string): string {
+		return `${this.path()}.${rowIndex}.${subFieldName}`;
 	}
 
 	/** Handle drag-drop reorder */
 	onDrop(event: CdkDragDrop<unknown>): void {
+		const state = this.nodeState();
+		if (!state) return;
 		const rows = [...this.rows()];
 		moveItemInArray(rows, event.previousIndex, event.currentIndex);
-		this.fieldChange.emit({ path: this.path(), value: rows });
+		state.value.set(rows);
 	}
 
 	/** Add a new empty row */
 	addRow(): void {
+		const state = this.nodeState();
+		if (!state) return;
 		const rows = [...this.rows()];
 		const newRow: Record<string, unknown> = {};
 		for (const field of this.subFields()) {
 			newRow[field.name] = getFieldDefaultValue(field);
 		}
 		rows.push(newRow);
-		this.fieldChange.emit({ path: this.path(), value: rows });
+		state.value.set(rows);
 	}
 
 	/** Remove a row at the given index */
 	removeRow(index: number): void {
+		const state = this.nodeState();
+		if (!state) return;
 		const rows = this.rows().filter((_, i) => i !== index);
-		this.fieldChange.emit({ path: this.path(), value: rows });
+		state.value.set(rows);
 	}
 }

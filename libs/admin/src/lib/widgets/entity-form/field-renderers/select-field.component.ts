@@ -1,22 +1,27 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { FormField, Select } from '@momentum-cms/ui';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { McmsFormField, Select } from '@momentum-cms/ui';
 import type { ValidationError, SelectOption } from '@momentum-cms/ui';
+import { humanizeFieldName } from '@momentum-cms/core';
 import type { Field, SelectField as SelectFieldType } from '@momentum-cms/core';
-import type { EntityFormMode, FieldChangeEvent } from '../entity-form.types';
+import type { EntityFormMode } from '../entity-form.types';
+import { getFieldNodeState } from '../entity-form.types';
 
 /**
  * Select field renderer.
+ *
+ * Uses Angular Signal Forms bridge pattern: reads/writes value via
+ * a FieldTree node's FieldState rather than event-based I/O.
  */
 @Component({
 	selector: 'mcms-select-field-renderer',
-	imports: [FormField, Select],
+	imports: [McmsFormField, Select],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `
 		<mcms-form-field
 			[id]="fieldId()"
 			[required]="required()"
 			[disabled]="isDisabled()"
-			[errors]="fieldErrors()"
+			[errors]="touchedErrors()"
 		>
 			<span mcmsLabel>{{ label() }}</span>
 			<mcms-select
@@ -25,7 +30,7 @@ import type { EntityFormMode, FieldChangeEvent } from '../entity-form.types';
 				[options]="selectOptions()"
 				[placeholder]="placeholder()"
 				[disabled]="isDisabled()"
-				[errors]="fieldErrors()"
+				[errors]="touchedErrors()"
 				(valueChange)="onValueChange($event)"
 			/>
 		</mcms-form-field>
@@ -35,8 +40,8 @@ export class SelectFieldRenderer {
 	/** Field definition */
 	readonly field = input.required<Field>();
 
-	/** Current value */
-	readonly value = input<unknown>(null);
+	/** Signal forms FieldTree node for this field */
+	readonly formNode = input<unknown>(null);
 
 	/** Form mode */
 	readonly mode = input<EntityFormMode>('create');
@@ -44,17 +49,14 @@ export class SelectFieldRenderer {
 	/** Field path */
 	readonly path = input.required<string>();
 
-	/** Field error */
-	readonly error = input<string | undefined>(undefined);
-
-	/** Field change event */
-	readonly fieldChange = output<FieldChangeEvent>();
+	/** Bridge: extract FieldState from formNode */
+	private readonly nodeState = computed(() => getFieldNodeState(this.formNode()));
 
 	/** Unique field ID */
 	readonly fieldId = computed(() => `field-${this.path().replace(/\./g, '-')}`);
 
 	/** Computed label */
-	readonly label = computed(() => this.field().label || this.field().name);
+	readonly label = computed(() => this.field().label || humanizeFieldName(this.field().name));
 
 	/** Whether the field is required */
 	readonly required = computed(() => this.field().required ?? false);
@@ -79,26 +81,29 @@ export class SelectFieldRenderer {
 		}));
 	});
 
-	/** String value for select */
+	/** String value from FieldState */
 	readonly stringValue = computed(() => {
-		const val = this.value();
+		const state = this.nodeState();
+		if (!state) return '';
+		const val = state.value();
 		return val === null || val === undefined ? '' : String(val);
 	});
 
-	/** Convert error string to ValidationError array */
-	readonly fieldErrors = computed((): readonly ValidationError[] => {
-		const err = this.error();
-		if (!err) return [];
-		return [{ kind: 'custom', message: err }];
+	/** Validation errors shown only when field is touched */
+	readonly touchedErrors = computed((): readonly ValidationError[] => {
+		const state = this.nodeState();
+		if (!state || !state.touched()) return [];
+		return state.errors().map((e) => ({ kind: e.kind, message: e.message }));
 	});
 
 	/**
 	 * Handle value change from select.
+	 * Marks touched immediately since select has no native blur flow.
 	 */
 	onValueChange(value: string): void {
-		this.fieldChange.emit({
-			path: this.path(),
-			value: value || null,
-		});
+		const state = this.nodeState();
+		if (!state) return;
+		state.value.set(value || null);
+		state.markAsTouched();
 	}
 }

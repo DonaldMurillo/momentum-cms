@@ -11,6 +11,7 @@ import {
 	MediaCollection,
 	Users,
 	HookTestItems,
+	FieldTestItems,
 } from './collections';
 import { join } from 'node:path';
 
@@ -96,6 +97,7 @@ export default defineMomentumConfig({
 		MediaCollection,
 		Users,
 		HookTestItems,
+		FieldTestItems,
 	],
 	storage: {
 		adapter: localStorageAdapter({

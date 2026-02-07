@@ -1,22 +1,27 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { FormField, Input } from '@momentum-cms/ui';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { McmsFormField, Input } from '@momentum-cms/ui';
 import type { ValidationError } from '@momentum-cms/ui';
+import { humanizeFieldName } from '@momentum-cms/core';
 import type { Field } from '@momentum-cms/core';
-import type { EntityFormMode, FieldChangeEvent } from '../entity-form.types';
+import type { EntityFormMode } from '../entity-form.types';
+import { getFieldNodeState } from '../entity-form.types';
 
 /**
  * Date field renderer.
+ *
+ * Uses Angular Signal Forms bridge pattern: reads/writes value via
+ * a FieldTree node's FieldState rather than event-based I/O.
  */
 @Component({
 	selector: 'mcms-date-field-renderer',
-	imports: [FormField, Input],
+	imports: [McmsFormField, Input],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `
 		<mcms-form-field
 			[id]="fieldId()"
 			[required]="required()"
 			[disabled]="isDisabled()"
-			[errors]="fieldErrors()"
+			[errors]="touchedErrors()"
 		>
 			<span mcmsLabel>{{ label() }}</span>
 			<mcms-input
@@ -25,8 +30,9 @@ import type { EntityFormMode, FieldChangeEvent } from '../entity-form.types';
 				[value]="dateValue()"
 				[placeholder]="placeholder()"
 				[disabled]="isDisabled()"
-				[errors]="fieldErrors()"
+				[errors]="touchedErrors()"
 				(valueChange)="onValueChange($event)"
+				(blurred)="onBlur()"
 			/>
 		</mcms-form-field>
 	`,
@@ -35,8 +41,8 @@ export class DateFieldRenderer {
 	/** Field definition */
 	readonly field = input.required<Field>();
 
-	/** Current value */
-	readonly value = input<unknown>(null);
+	/** Signal forms FieldTree node for this field */
+	readonly formNode = input<unknown>(null);
 
 	/** Form mode */
 	readonly mode = input<EntityFormMode>('create');
@@ -44,17 +50,14 @@ export class DateFieldRenderer {
 	/** Field path */
 	readonly path = input.required<string>();
 
-	/** Field error */
-	readonly error = input<string | undefined>(undefined);
-
-	/** Field change event */
-	readonly fieldChange = output<FieldChangeEvent>();
+	/** Bridge: extract FieldState from formNode */
+	private readonly nodeState = computed(() => getFieldNodeState(this.formNode()));
 
 	/** Unique field ID */
 	readonly fieldId = computed(() => `field-${this.path().replace(/\./g, '-')}`);
 
 	/** Computed label */
-	readonly label = computed(() => this.field().label || this.field().name);
+	readonly label = computed(() => this.field().label || humanizeFieldName(this.field().name));
 
 	/** Whether the field is required */
 	readonly required = computed(() => this.field().required ?? false);
@@ -74,9 +77,11 @@ export class DateFieldRenderer {
 		return 'text';
 	});
 
-	/** Formatted date value for input */
+	/** Formatted date value from FieldState */
 	readonly dateValue = computed(() => {
-		const val = this.value();
+		const state = this.nodeState();
+		if (!state) return '';
+		const val = state.value();
 		if (val === null || val === undefined || val === '') {
 			return '';
 		}
@@ -95,37 +100,39 @@ export class DateFieldRenderer {
 		}
 	});
 
-	/** Convert error string to ValidationError array */
-	readonly fieldErrors = computed((): readonly ValidationError[] => {
-		const err = this.error();
-		if (!err) return [];
-		return [{ kind: 'custom', message: err }];
+	/** Validation errors shown only when field is touched */
+	readonly touchedErrors = computed((): readonly ValidationError[] => {
+		const state = this.nodeState();
+		if (!state || !state.touched()) return [];
+		return state.errors().map((e) => ({ kind: e.kind, message: e.message }));
 	});
 
 	/**
 	 * Handle value change from input.
 	 */
 	onValueChange(value: string): void {
+		const state = this.nodeState();
+		if (!state) return;
+
 		if (!value) {
-			this.fieldChange.emit({
-				path: this.path(),
-				value: null,
-			});
+			state.value.set(null);
 			return;
 		}
 
 		// Convert to ISO string
 		try {
 			const date = new Date(value);
-			this.fieldChange.emit({
-				path: this.path(),
-				value: date.toISOString(),
-			});
+			state.value.set(date.toISOString());
 		} catch {
-			this.fieldChange.emit({
-				path: this.path(),
-				value: null,
-			});
+			state.value.set(null);
 		}
+	}
+
+	/**
+	 * Handle blur from input.
+	 */
+	onBlur(): void {
+		const state = this.nodeState();
+		if (state) state.markAsTouched();
 	}
 }

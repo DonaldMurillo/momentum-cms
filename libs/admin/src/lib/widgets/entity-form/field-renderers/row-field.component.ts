@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, forwardRef, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, forwardRef, input } from '@angular/core';
 import type { Field } from '@momentum-cms/core';
-import type { EntityFormMode, FieldChangeEvent } from '../entity-form.types';
+import type { EntityFormMode } from '../entity-form.types';
+import { getSubNode } from '../entity-form.types';
 import { FieldRenderer } from './field-renderer.component';
 
 /**
@@ -8,7 +9,8 @@ import { FieldRenderer } from './field-renderer.component';
  *
  * Displays child fields side-by-side in a horizontal row.
  * This is a layout-only field; it does not store data itself.
- * Child field values use flat paths (e.g., "firstName", not "nameRow.firstName").
+ * Child field FieldTree nodes are looked up from the root formTree
+ * using flat field names.
  */
 @Component({
 	selector: 'mcms-row-field-renderer',
@@ -26,12 +28,11 @@ import { FieldRenderer } from './field-renderer.component';
 			@for (subField of subFields(); track subField.name) {
 				<mcms-field-renderer
 					[field]="subField"
-					[value]="getFieldValue(subField.name)"
+					[formNode]="getChildFormNode(subField.name)"
+					[formTree]="formTree()"
+					[formModel]="formModel()"
 					[mode]="mode()"
-					[formData]="formData()"
 					[path]="subField.name"
-					[error]="undefined"
-					(fieldChange)="fieldChange.emit($event)"
 				/>
 			}
 		</div>
@@ -41,20 +42,17 @@ export class RowFieldRenderer {
 	/** Field definition (must be a RowField) */
 	readonly field = input.required<Field>();
 
-	/** Full form data for extracting child field values */
-	readonly formData = input<Record<string, unknown>>({});
+	/** Root signal forms FieldTree (for looking up child field nodes) */
+	readonly formTree = input<unknown>(null);
+
+	/** Form model data (for condition evaluation and relationship filterOptions) */
+	readonly formModel = input<Record<string, unknown>>({});
 
 	/** Form mode */
 	readonly mode = input<EntityFormMode>('create');
 
 	/** Field path (unused for layout fields, kept for interface consistency) */
 	readonly path = input.required<string>();
-
-	/** Field error (unused for layout fields) */
-	readonly error = input<string | undefined>(undefined);
-
-	/** Field change event - forwarded from sub-field renderers */
-	readonly fieldChange = output<FieldChangeEvent>();
 
 	/** Computed label */
 	readonly label = computed(() => this.field().label || '');
@@ -77,8 +75,8 @@ export class RowFieldRenderer {
 		return `repeat(${count}, 1fr)`;
 	});
 
-	/** Get a field value from formData (flat path) */
-	getFieldValue(fieldName: string): unknown {
-		return this.formData()[fieldName] ?? null;
+	/** Get a FieldTree sub-node for a child field (flat path from root tree) */
+	getChildFormNode(fieldName: string): unknown {
+		return getSubNode(this.formTree(), fieldName);
 	}
 }

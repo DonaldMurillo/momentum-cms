@@ -5,18 +5,18 @@ import {
 	effect,
 	inject,
 	input,
-	output,
 	signal,
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import type { Subscription } from 'rxjs';
-import { FormField, Badge } from '@momentum-cms/ui';
+import { McmsFormField, Badge } from '@momentum-cms/ui';
 import type { ValidationError } from '@momentum-cms/ui';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { heroXMark } from '@ng-icons/heroicons/outline';
+import { humanizeFieldName } from '@momentum-cms/core';
 import type { Field } from '@momentum-cms/core';
-import type { EntityFormMode, FieldChangeEvent } from '../entity-form.types';
-import { isRecord } from '../entity-form.types';
+import type { EntityFormMode } from '../entity-form.types';
+import { getFieldNodeState, isRecord } from '../entity-form.types';
 
 /** Option for the relationship dropdown */
 interface RelationshipOption {
@@ -30,10 +30,13 @@ interface RelationshipOption {
  * Fetches related collection documents and renders a dropdown selector.
  * Supports single select (default) and multi-select (hasMany: true).
  * Multi-select shows selected items as badges with remove buttons.
+ *
+ * Uses Angular Signal Forms bridge pattern: reads/writes value via
+ * a FieldTree node's FieldState rather than event-based I/O.
  */
 @Component({
 	selector: 'mcms-relationship-field-renderer',
-	imports: [FormField, Badge, NgIcon],
+	imports: [McmsFormField, Badge, NgIcon],
 	providers: [provideIcons({ heroXMark })],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
@@ -42,7 +45,7 @@ interface RelationshipOption {
 			[id]="fieldId()"
 			[required]="required()"
 			[disabled]="isDisabled()"
-			[errors]="fieldErrors()"
+			[errors]="touchedErrors()"
 		>
 			<span mcmsLabel>{{ label() }}</span>
 
@@ -73,6 +76,7 @@ interface RelationshipOption {
 						[id]="fieldId()"
 						class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
 						(change)="onMultiSelect($event)"
+						(blur)="onBlur()"
 					>
 						<option value="">Add {{ relatedLabel() }}...</option>
 						@for (opt of availableOptions(); track opt.value) {
@@ -86,6 +90,7 @@ interface RelationshipOption {
 					[disabled]="isDisabled()"
 					class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 					(change)="onSingleSelect($event)"
+					(blur)="onBlur()"
 				>
 					<option value="">Select {{ relatedLabel() }}...</option>
 					@for (opt of allOptions(); track opt.value) {
@@ -104,8 +109,8 @@ export class RelationshipFieldRenderer {
 	/** Field definition (must be a RelationshipField) */
 	readonly field = input.required<Field>();
 
-	/** Current value (string ID for single, string[] for hasMany) */
-	readonly value = input<unknown>(null);
+	/** Signal forms FieldTree node for this field */
+	readonly formNode = input<unknown>(null);
 
 	/** Form mode */
 	readonly mode = input<EntityFormMode>('create');
@@ -113,11 +118,11 @@ export class RelationshipFieldRenderer {
 	/** Field path */
 	readonly path = input.required<string>();
 
-	/** Field error */
-	readonly error = input<string | undefined>(undefined);
+	/** Full form model data (used for filterOptions) */
+	readonly formModel = input<Record<string, unknown>>({});
 
-	/** Field change event */
-	readonly fieldChange = output<FieldChangeEvent>();
+	/** Bridge: extract FieldState from formNode */
+	private readonly nodeState = computed(() => getFieldNodeState(this.formNode()));
 
 	/** Loaded options from related collection */
 	readonly allOptions = signal<RelationshipOption[]>([]);
@@ -129,7 +134,7 @@ export class RelationshipFieldRenderer {
 	readonly fieldId = computed(() => `field-${this.path().replace(/\./g, '-')}`);
 
 	/** Computed label */
-	readonly label = computed(() => this.field().label || this.field().name);
+	readonly label = computed(() => this.field().label || humanizeFieldName(this.field().name));
 
 	/** Whether the field is required */
 	readonly required = computed(() => this.field().required ?? false);
@@ -206,7 +211,9 @@ export class RelationshipFieldRenderer {
 
 	/** Current value for single-select mode */
 	readonly singleValue = computed((): string => {
-		const val = this.value();
+		const state = this.nodeState();
+		if (!state) return '';
+		const val = state.value();
 		if (typeof val === 'string') return val;
 		// Handle populated objects with an id
 		if (isRecord(val) && typeof val['id'] === 'string') return val['id'];
@@ -215,7 +222,9 @@ export class RelationshipFieldRenderer {
 
 	/** Current values for multi-select mode */
 	readonly multiValues = computed((): string[] => {
-		const val = this.value();
+		const state = this.nodeState();
+		if (!state) return [];
+		const val = state.value();
 		if (!Array.isArray(val)) return [];
 		return val
 			.map((item: unknown) => {
@@ -241,11 +250,11 @@ export class RelationshipFieldRenderer {
 		return this.allOptions().filter((opt) => !selected.has(opt.value));
 	});
 
-	/** Convert error string to ValidationError array */
-	readonly fieldErrors = computed((): readonly ValidationError[] => {
-		const err = this.error();
-		if (!err) return [];
-		return [{ kind: 'custom', message: err }];
+	/** Validation errors shown only when field is touched */
+	readonly touchedErrors = computed((): readonly ValidationError[] => {
+		const state = this.nodeState();
+		if (!state || !state.touched()) return [];
+		return state.errors().map((e) => ({ kind: e.kind, message: e.message }));
 	});
 
 	constructor() {
@@ -264,8 +273,10 @@ export class RelationshipFieldRenderer {
 	onSingleSelect(event: Event): void {
 		const target = event.target;
 		if (target instanceof HTMLSelectElement) {
-			const selectedValue = target.value || null;
-			this.fieldChange.emit({ path: this.path(), value: selectedValue });
+			const state = this.nodeState();
+			if (state) {
+				state.value.set(target.value || null);
+			}
 		}
 	}
 
@@ -277,12 +288,12 @@ export class RelationshipFieldRenderer {
 		const selectedValue = target.value;
 		if (!selectedValue) return;
 
+		const state = this.nodeState();
+		if (!state) return;
+
 		const currentValues = this.multiValues();
 		if (!currentValues.includes(selectedValue)) {
-			this.fieldChange.emit({
-				path: this.path(),
-				value: [...currentValues, selectedValue],
-			});
+			state.value.set([...currentValues, selectedValue]);
 		}
 		// Reset dropdown to placeholder
 		target.value = '';
@@ -290,11 +301,18 @@ export class RelationshipFieldRenderer {
 
 	/** Remove a value from multi-select */
 	removeSelection(valueToRemove: string): void {
+		const state = this.nodeState();
+		if (!state) return;
 		const currentValues = this.multiValues();
-		this.fieldChange.emit({
-			path: this.path(),
-			value: currentValues.filter((v) => v !== valueToRemove),
-		});
+		state.value.set(currentValues.filter((v) => v !== valueToRemove));
+	}
+
+	/**
+	 * Handle blur from select elements.
+	 */
+	onBlur(): void {
+		const state = this.nodeState();
+		if (state) state.markAsTouched();
 	}
 
 	/** Fetch options from the related collection API, returns subscription for cleanup */
@@ -302,9 +320,21 @@ export class RelationshipFieldRenderer {
 		this.isLoading.set(true);
 		const titleField = this.titleField();
 
+		// Build query params, including filterOptions if defined
+		const params: Record<string, string> = { limit: '100' };
+		const f = this.field();
+		if (f.type === 'relationship' && f.filterOptions) {
+			const whereClause = f.filterOptions({ data: this.formModel() });
+			for (const [key, val] of Object.entries(whereClause)) {
+				if (val !== undefined && val !== null) {
+					params[`where[${key}]`] = String(val);
+				}
+			}
+		}
+
 		return this.http
 			.get<{ docs?: Array<Record<string, unknown>> }>(`/api/${slug}`, {
-				params: { limit: '100' },
+				params,
 			})
 			.subscribe({
 				next: (response) => {

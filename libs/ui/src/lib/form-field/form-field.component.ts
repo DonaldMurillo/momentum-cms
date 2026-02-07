@@ -29,20 +29,25 @@ import type { ValidationError } from '../input/input.types';
 
 		<ng-content />
 
-		@if (showError()) {
-			<p [id]="errorId()" class="text-sm text-destructive" role="alert" aria-live="polite">
+		<p
+			[id]="errorId()"
+			class="text-sm min-h-5"
+			[class.text-destructive]="showError()"
+			[class.text-muted-foreground]="!showError() && !!hint()"
+			[attr.role]="showError() ? 'alert' : null"
+			[attr.aria-live]="showError() ? 'polite' : null"
+		>
+			@if (showError()) {
 				{{ errorMessage() }}
-			</p>
-		}
-
-		@if (hint() && !showError()) {
-			<p class="text-sm text-muted-foreground">{{ hint() }}</p>
-		}
+			} @else if (hint()) {
+				{{ hint() }}
+			}
+		</p>
 	`,
 	styles: ``,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class FormField {
+export class McmsFormField {
 	readonly id = input.required<string>();
 	readonly required = input(false);
 	readonly disabled = input(false);

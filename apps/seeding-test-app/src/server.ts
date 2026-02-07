@@ -100,6 +100,10 @@ import {
 	setHookBehavior,
 } from './collections/hook-test-items.collection';
 import type { HookBehaviorConfig } from './collections/hook-test-items.collection';
+import {
+	getFieldHookLog,
+	clearFieldHookLog,
+} from './collections/field-test-items.collection';
 
 app.get('/api/test-hook-log', (_req, res) => {
 	const invocations = getHookLog();
@@ -123,6 +127,20 @@ app.post('/api/test-hook-config', (req, res) => {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Test infrastructure, validated above
 	setHookBehavior(req.body as HookBehaviorConfig);
 	res.json({ configured: true });
+});
+
+/**
+ * Field-level hook test infrastructure for E2E testing.
+ * Tracks field-level hook invocations (separate from collection-level hooks above).
+ */
+app.get('/api/test-field-hook-log', (_req, res) => {
+	const invocations = getFieldHookLog();
+	res.json({ invocations, count: invocations.length });
+});
+
+app.delete('/api/test-field-hook-log', (_req, res) => {
+	clearFieldHookLog();
+	res.json({ cleared: true });
 });
 
 /**

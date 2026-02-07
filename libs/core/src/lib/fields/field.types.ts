@@ -191,8 +191,21 @@ export interface UploadField extends BaseField {
 // Relationship field - uses lazy reference to avoid circular imports
 export interface RelationshipField extends BaseField {
 	type: 'relationship';
+	/** Single target collection (lazy reference to avoid circular imports) */
 	collection: () => unknown; // Lazy reference to CollectionConfig
+	/** Multiple target collections for polymorphic relationships */
+	relationTo?: Array<() => unknown>;
 	hasMany?: boolean;
+	/** Filter which related documents can be selected */
+	filterOptions?: (args: {
+		data: Record<string, unknown>;
+	}) => Record<string, unknown>;
+}
+
+/** Value shape for polymorphic relationships (when relationTo is set) */
+export interface PolymorphicRelationshipValue {
+	relationTo: string;
+	value: string;
 }
 
 // Array field

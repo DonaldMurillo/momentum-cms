@@ -9,11 +9,20 @@ import type {
 	MomentumConfig,
 	DatabaseAdapter,
 	CollectionConfig,
+	Field,
 	AccessArgs,
 	HookArgs,
 	RequestContext,
 } from '@momentum-cms/core';
-import { flattenDataFields } from '@momentum-cms/core';
+import { flattenDataFields, validateFieldConstraints } from '@momentum-cms/core';
+import {
+	hasFieldAccessControl,
+	filterCreatableFields,
+	filterUpdatableFields,
+	filterReadableFields,
+} from './field-access';
+import { hasFieldHooks, runFieldHooks } from './field-hooks';
+import { populateRelationships } from './relationship-populator';
 import type {
 	MomentumAPI,
 	MomentumAPIContext,
@@ -127,6 +136,7 @@ class MomentumAPIImpl implements MomentumAPI {
 			collectionConfig,
 			this.adapter,
 			this.context,
+			this.config.collections,
 		);
 	}
 
@@ -161,6 +171,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		private readonly collectionConfig: CollectionConfig,
 		private readonly adapter: DatabaseAdapter,
 		private readonly context: MomentumAPIContext,
+		private readonly allCollections: CollectionConfig[] = [],
 	) {}
 
 
@@ -171,11 +182,12 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Run beforeRead hooks
 		await this.runBeforeReadHooks();
 
-		// Prepare query options
+		// Prepare query options (strip depth — it's used for population, not DB queries)
 		const limit = options.limit ?? 10;
 		const page = options.page ?? 1;
+		const { depth: _depth, ...queryOptions } = options;
 		const query: Record<string, unknown> = {
-			...options,
+			...queryOptions,
 			limit,
 			page,
 		};
@@ -185,11 +197,29 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		const docs = (await this.adapter.find(this.slug, query)) as T[];
 
 		// Run afterRead hooks on each document
-		const afterHookDocs = await this.processAfterReadHooks(docs);
+		let afterHookDocs = await this.processAfterReadHooks(docs);
+
+		// Populate relationships if depth > 0 (clamped to prevent resource exhaustion)
+		const MAX_RELATIONSHIP_DEPTH = 10;
+		const depth = Math.min(options.depth ?? 0, MAX_RELATIONSHIP_DEPTH);
+		if (depth > 0) {
+			afterHookDocs = await Promise.all(
+				afterHookDocs.map(async (doc) => {
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
+					const populated = await populateRelationships(
+						doc as Record<string, unknown>,
+						this.collectionConfig.fields,
+						{ depth, collections: this.allCollections, adapter: this.adapter, req: this.buildRequestContext() },
+					);
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Record<string, unknown> is compatible with T
+					return populated as T;
+				}),
+			);
+		}
 
 		// Get total count for pagination metadata
-		// Use a separate count query without limit/offset to get the true total
-		const countQuery: Record<string, unknown> = { ...options };
+		// Use a separate count query without limit/offset/depth to get the true total
+		const countQuery: Record<string, unknown> = { ...queryOptions };
 		delete countQuery['limit'];
 		delete countQuery['page'];
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
@@ -213,7 +243,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		};
 	}
 
-	async findById(id: string, _options?: { depth?: number }): Promise<T | null> {
+	async findById(id: string, options?: { depth?: number }): Promise<T | null> {
 		// Check read access
 		await this.checkAccess('read', id);
 
@@ -231,6 +261,20 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Run afterRead hooks
 		const [processed] = await this.processAfterReadHooks([doc]);
 
+		// Populate relationships if depth > 0 (clamped to prevent resource exhaustion)
+		const MAX_RELATIONSHIP_DEPTH = 10;
+		const depth = Math.min(options?.depth ?? 0, MAX_RELATIONSHIP_DEPTH);
+		if (depth > 0) {
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
+			const populated = await populateRelationships(
+				processed as Record<string, unknown>,
+				this.collectionConfig.fields,
+				{ depth, collections: this.allCollections, adapter: this.adapter, req: this.buildRequestContext() },
+			);
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Record<string, unknown> is compatible with T
+			return populated as T;
+		}
+
 		return processed;
 	}
 
@@ -242,7 +286,27 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Partial<T> is compatible with Record<string, unknown>
 		let processedData = data as Record<string, unknown>;
 
-		// Run beforeValidate hooks
+		// Filter fields the user cannot create (field-level access)
+		if (hasFieldAccessControl(this.collectionConfig.fields)) {
+			processedData = await filterCreatableFields(
+				this.collectionConfig.fields,
+				processedData,
+				this.buildRequestContext(),
+			);
+		}
+
+		// Run field-level beforeValidate hooks
+		if (hasFieldHooks(this.collectionConfig.fields)) {
+			processedData = await runFieldHooks(
+				'beforeValidate',
+				this.collectionConfig.fields,
+				processedData,
+				this.buildRequestContext(),
+				'create',
+			);
+		}
+
+		// Run collection-level beforeValidate hooks
 		processedData = await this.runHooks('beforeValidate', processedData, 'create');
 
 		// Validate required fields
@@ -251,16 +315,39 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			throw new ValidationError(errors);
 		}
 
-		// Run beforeChange hooks
+		// Run field-level beforeChange hooks
+		if (hasFieldHooks(this.collectionConfig.fields)) {
+			processedData = await runFieldHooks(
+				'beforeChange',
+				this.collectionConfig.fields,
+				processedData,
+				this.buildRequestContext(),
+				'create',
+			);
+		}
+
+		// Run collection-level beforeChange hooks
 		processedData = await this.runHooks('beforeChange', processedData, 'create');
 
 		// Execute create
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>, safe cast to T
 		const doc = (await this.adapter.create(this.slug, processedData)) as T;
 
-		// Run afterChange hooks
+		// Run collection-level afterChange hooks
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
 		await this.runHooks('afterChange', doc as Record<string, unknown>, 'create');
+
+		// Run field-level afterChange hooks
+		if (hasFieldHooks(this.collectionConfig.fields)) {
+			await runFieldHooks(
+				'afterChange',
+				this.collectionConfig.fields,
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
+				doc as Record<string, unknown>,
+				this.buildRequestContext(),
+				'create',
+			);
+		}
 
 		return doc;
 	}
@@ -279,7 +366,27 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Partial<T> is compatible with Record<string, unknown>
 		let processedData = data as Record<string, unknown>;
 
-		// Run beforeValidate hooks
+		// Filter fields the user cannot update (field-level access)
+		if (hasFieldAccessControl(this.collectionConfig.fields)) {
+			processedData = await filterUpdatableFields(
+				this.collectionConfig.fields,
+				processedData,
+				this.buildRequestContext(),
+			);
+		}
+
+		// Run field-level beforeValidate hooks
+		if (hasFieldHooks(this.collectionConfig.fields)) {
+			processedData = await runFieldHooks(
+				'beforeValidate',
+				this.collectionConfig.fields,
+				processedData,
+				this.buildRequestContext(),
+				'update',
+			);
+		}
+
+		// Run collection-level beforeValidate hooks
 		processedData = await this.runHooks('beforeValidate', processedData, 'update', originalDoc);
 
 		// Validate fields (partial validation for updates)
@@ -288,16 +395,39 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			throw new ValidationError(errors);
 		}
 
-		// Run beforeChange hooks
+		// Run field-level beforeChange hooks
+		if (hasFieldHooks(this.collectionConfig.fields)) {
+			processedData = await runFieldHooks(
+				'beforeChange',
+				this.collectionConfig.fields,
+				processedData,
+				this.buildRequestContext(),
+				'update',
+			);
+		}
+
+		// Run collection-level beforeChange hooks
 		processedData = await this.runHooks('beforeChange', processedData, 'update', originalDoc);
 
 		// Execute update
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>, safe cast to T
 		const doc = (await this.adapter.update(this.slug, id, processedData)) as T;
 
-		// Run afterChange hooks
+		// Run collection-level afterChange hooks
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
 		await this.runHooks('afterChange', doc as Record<string, unknown>, 'update', originalDoc);
+
+		// Run field-level afterChange hooks
+		if (hasFieldHooks(this.collectionConfig.fields)) {
+			await runFieldHooks(
+				'afterChange',
+				this.collectionConfig.fields,
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
+				doc as Record<string, unknown>,
+				this.buildRequestContext(),
+				'update',
+			);
+		}
 
 		return doc;
 	}
@@ -536,11 +666,22 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		data: Record<string, unknown>,
 		isUpdate: boolean,
 	): Promise<FieldValidationError[]> {
+		return this.validateFields(this.collectionConfig.fields, data, isUpdate);
+	}
+
+	/**
+	 * Recursively validate fields, including nested groups, arrays, and blocks.
+	 */
+	private async validateFields(
+		fields: Field[],
+		data: Record<string, unknown>,
+		isUpdate: boolean,
+	): Promise<FieldValidationError[]> {
 		const errors: FieldValidationError[] = [];
 		// Flatten through layout fields (tabs, collapsible, row) to validate all data fields
-		const fields = flattenDataFields(this.collectionConfig.fields);
+		const dataFields = flattenDataFields(fields);
 
-		for (const field of fields) {
+		for (const field of dataFields) {
 			const value = data[field.name];
 			const fieldLabel = field.label ?? field.name;
 
@@ -554,6 +695,14 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 				}
 			}
 
+			// Run built-in constraint validators (minLength, maxLength, min, max, etc.)
+			if (value !== undefined && value !== null) {
+				const constraintErrors = validateFieldConstraints(field, value);
+				for (const err of constraintErrors) {
+					errors.push({ field: err.field, message: err.message });
+				}
+			}
+
 			// Run custom validator if present (supports both sync and async validators)
 			if (field.validate && value !== undefined) {
 				const result = await Promise.resolve(field.validate(value, { data, req: {} }));
@@ -563,6 +712,51 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 						field: field.name,
 						message: result,
 					});
+				}
+			}
+
+			// Recurse into group sub-fields
+			if (field.type === 'group' && value && typeof value === 'object' && !Array.isArray(value)) {
+				const groupErrors = await this.validateFields(
+					field.fields,
+					value as Record<string, unknown>,
+					isUpdate,
+				);
+				errors.push(...groupErrors);
+			}
+
+			// Recurse into array row sub-fields
+			if (field.type === 'array' && Array.isArray(value)) {
+				for (const row of value) {
+					if (row && typeof row === 'object' && !Array.isArray(row)) {
+						const rowErrors = await this.validateFields(
+							field.fields,
+							row as Record<string, unknown>,
+							isUpdate,
+						);
+						errors.push(...rowErrors);
+					}
+				}
+			}
+
+			// Recurse into blocks row sub-fields
+			if (field.type === 'blocks' && Array.isArray(value)) {
+				for (const row of value) {
+					if (row && typeof row === 'object' && !Array.isArray(row)) {
+						const blockRow = row as Record<string, unknown>;
+						const blockType = blockRow['blockType'] as string | undefined;
+						if (blockType) {
+							const blockConfig = field.blocks.find((b) => b.slug === blockType);
+							if (blockConfig) {
+								const blockErrors = await this.validateFields(
+									blockConfig.fields,
+									blockRow,
+									isUpdate,
+								);
+								errors.push(...blockErrors);
+							}
+						}
+					}
 				}
 			}
 		}
@@ -617,7 +811,11 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 
 	private async processAfterReadHooks(docs: T[]): Promise<T[]> {
 		const hooks = this.collectionConfig.hooks?.afterRead;
-		if (!hooks || hooks.length === 0) {
+		const hasCollectionHooks = hooks && hooks.length > 0;
+		const hasFieldHooksConfig = hasFieldHooks(this.collectionConfig.fields);
+		const hasFieldAccess = hasFieldAccessControl(this.collectionConfig.fields);
+
+		if (!hasCollectionHooks && !hasFieldHooksConfig && !hasFieldAccess) {
 			return docs;
 		}
 
@@ -627,17 +825,40 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
 			let processedDoc = doc as Record<string, unknown>;
 
-			for (const hook of hooks) {
-				const hookArgs: HookArgs = {
-					req: this.buildRequestContext(),
-					doc: processedDoc,
-				};
+			// Run collection-level afterRead hooks
+			if (hasCollectionHooks) {
+				for (const hook of hooks) {
+					const hookArgs: HookArgs = {
+						req: this.buildRequestContext(),
+						doc: processedDoc,
+					};
 
-				const result = await Promise.resolve(hook(hookArgs));
-				if (result && typeof result === 'object') {
-					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Hook returns object, safe cast
-					processedDoc = result as Record<string, unknown>;
+					const result = await Promise.resolve(hook(hookArgs));
+					if (result && typeof result === 'object') {
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Hook returns object, safe cast
+						processedDoc = result as Record<string, unknown>;
+					}
 				}
+			}
+
+			// Run field-level afterRead hooks
+			if (hasFieldHooksConfig) {
+				processedDoc = await runFieldHooks(
+					'afterRead',
+					this.collectionConfig.fields,
+					processedDoc,
+					this.buildRequestContext(),
+					'read',
+				);
+			}
+
+			// Filter fields the user cannot read (field-level access)
+			if (hasFieldAccess) {
+				processedDoc = await filterReadableFields(
+					this.collectionConfig.fields,
+					processedDoc,
+					this.buildRequestContext(),
+				);
 			}
 
 			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Record<string, unknown> is compatible with T

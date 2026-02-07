@@ -7,7 +7,7 @@ import { DialogDescription } from './dialog-description.component';
 import { DialogContent } from './dialog-content.component';
 import { DialogFooter } from './dialog-footer.component';
 import { Button } from '../button/button.component';
-import { FormField } from '../form-field/form-field.component';
+import { McmsFormField } from '../form-field/form-field.component';
 import { Input } from '../input/input.component';
 import { Separator } from '../separator/separator.component';
 import { Avatar } from '../avatar/avatar.component';
@@ -30,7 +30,7 @@ const meta: Meta<Dialog> = {
 				DialogContent,
 				DialogFooter,
 				Button,
-				FormField,
+				McmsFormField,
 				Input,
 				Separator,
 				Avatar,

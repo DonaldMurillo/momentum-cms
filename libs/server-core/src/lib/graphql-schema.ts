@@ -45,7 +45,8 @@ export function buildGraphQLSchema(collections: CollectionConfig[]): GraphQLSche
 
 	function pascalCase(slug: string): string {
 		return slug
-			.split(/[-_]/)
+			.split(/[-_\s]+/)
+			.filter(Boolean)
 			.map((s) => s.charAt(0).toUpperCase() + s.slice(1))
 			.join('');
 	}

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, forwardRef, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, forwardRef, input } from '@angular/core';
 import {
 	CdkDropList,
 	CdkDrag,
@@ -9,9 +9,10 @@ import {
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { heroPlus, heroTrash, heroBars2 } from '@ng-icons/heroicons/outline';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, Button, Badge } from '@momentum-cms/ui';
+import { humanizeFieldName } from '@momentum-cms/core';
 import type { Field, BlockConfig } from '@momentum-cms/core';
-import type { EntityFormMode, FieldChangeEvent } from '../entity-form.types';
-import { isRecord, getFieldDefaultValue, setValueAtPath } from '../entity-form.types';
+import type { EntityFormMode } from '../entity-form.types';
+import { getFieldNodeState, getSubNode, isRecord, getFieldDefaultValue } from '../entity-form.types';
 import { FieldRenderer } from './field-renderer.component';
 
 /** Shape of a block item in the stored data */
@@ -26,6 +27,10 @@ interface BlockItem {
  * Renders a list of typed blocks. Each block has a `blockType` discriminator
  * and type-specific fields. Users can add, remove, and reorder blocks.
  * A dropdown allows selecting which block type to add.
+ *
+ * Data container pattern: passes block sub-field FieldTree nodes via
+ * getSubNode(getSubNode(formNode, blockIndex), subFieldName).
+ * Block mutations use nodeState.value.set(newArray).
  */
 @Component({
 	selector: 'mcms-blocks-field-renderer',
@@ -104,11 +109,11 @@ interface BlockItem {
 									@for (subField of getBlockFields(block.blockType); track subField.name) {
 										<mcms-field-renderer
 											[field]="subField"
-											[value]="getBlockFieldValue(block, subField.name)"
+											[formNode]="getBlockSubNode(i, subField.name)"
+											[formTree]="formTree()"
+											[formModel]="formModel()"
 											[mode]="mode()"
-											[path]="subField.name"
-											[error]="undefined"
-											(fieldChange)="onBlockFieldChange(i, $event)"
+											[path]="getBlockSubFieldPath(i, subField.name)"
 										/>
 									}
 								</div>
@@ -140,8 +145,14 @@ export class BlocksFieldRenderer {
 	/** Field definition (must be a BlocksField) */
 	readonly field = input.required<Field>();
 
-	/** Current value (should be an array of block objects) */
-	readonly value = input<unknown>(null);
+	/** Signal forms FieldTree node for this blocks array */
+	readonly formNode = input<unknown>(null);
+
+	/** Root signal forms FieldTree (for layout fields that look up child nodes) */
+	readonly formTree = input<unknown>(null);
+
+	/** Form model data (for condition evaluation and relationship filterOptions) */
+	readonly formModel = input<Record<string, unknown>>({});
 
 	/** Form mode */
 	readonly mode = input<EntityFormMode>('create');
@@ -149,14 +160,11 @@ export class BlocksFieldRenderer {
 	/** Field path (e.g., "content") */
 	readonly path = input.required<string>();
 
-	/** Field error */
-	readonly error = input<string | undefined>(undefined);
-
-	/** Field change event */
-	readonly fieldChange = output<FieldChangeEvent>();
+	/** Bridge: extract FieldState from formNode */
+	private readonly nodeState = computed(() => getFieldNodeState(this.formNode()));
 
 	/** Computed label */
-	readonly label = computed(() => this.field().label || this.field().name);
+	readonly label = computed(() => this.field().label || humanizeFieldName(this.field().name));
 
 	/** Computed description */
 	readonly description = computed(() => this.field().description || '');
@@ -182,9 +190,11 @@ export class BlocksFieldRenderer {
 		return f.type === 'blocks' ? f.maxRows : undefined;
 	});
 
-	/** Current blocks as typed items */
+	/** Current blocks as typed items (read from FieldState) */
 	readonly blocks = computed((): BlockItem[] => {
-		const val = this.value();
+		const state = this.nodeState();
+		if (!state) return [];
+		const val = state.value();
 		if (Array.isArray(val)) {
 			return val
 				.filter((item): item is BlockItem => isRecord(item) && typeof item['blockType'] === 'string');
@@ -209,7 +219,7 @@ export class BlocksFieldRenderer {
 	});
 
 	/** Block definition lookup cache */
-	private blockDefMap = computed((): Map<string, BlockConfig> => {
+	private readonly blockDefMap = computed((): Map<string, BlockConfig> => {
 		const map = new Map<string, BlockConfig>();
 		for (const def of this.blockDefinitions()) {
 			map.set(def.slug, def);
@@ -229,39 +239,32 @@ export class BlocksFieldRenderer {
 		return def?.fields.filter((f) => !f.admin?.hidden) ?? [];
 	}
 
-	/** Get a field value from a block */
-	getBlockFieldValue(block: BlockItem, fieldName: string): unknown {
-		return block[fieldName] ?? null;
+	/** Get a FieldTree sub-node for a block's sub-field */
+	getBlockSubNode(blockIndex: number, subFieldName: string): unknown {
+		const blockNode = getSubNode(this.formNode(), blockIndex);
+		return getSubNode(blockNode, subFieldName);
 	}
 
-	/** Handle field change within a block */
-	onBlockFieldChange(blockIndex: number, event: FieldChangeEvent): void {
-		const currentBlocks = this.blocks();
-		const block = currentBlocks[blockIndex];
-		if (!block) return;
-
-		const updatedBlock = setValueAtPath(
-			block,
-			event.path,
-			event.value,
-		);
-		const updatedBlocks = currentBlocks.map((b, i) =>
-			i === blockIndex ? { ...updatedBlock, blockType: block.blockType } : b,
-		);
-		this.fieldChange.emit({ path: this.path(), value: updatedBlocks });
+	/** Get the full path for a block's sub-field */
+	getBlockSubFieldPath(blockIndex: number, subFieldName: string): string {
+		return `${this.path()}.${blockIndex}.${subFieldName}`;
 	}
 
 	/** Handle drag-drop reorder */
 	onDrop(event: CdkDragDrop<unknown>): void {
+		const state = this.nodeState();
+		if (!state) return;
 		const blocks = [...this.blocks()];
 		moveItemInArray(blocks, event.previousIndex, event.currentIndex);
-		this.fieldChange.emit({ path: this.path(), value: blocks });
+		state.value.set(blocks);
 	}
 
 	/** Add a new block of the given type */
 	addBlock(blockType: string): void {
 		const def = this.blockDefMap().get(blockType);
 		if (!def) return;
+		const state = this.nodeState();
+		if (!state) return;
 
 		const newBlock: BlockItem = { blockType };
 		for (const field of def.fields) {
@@ -269,12 +272,14 @@ export class BlocksFieldRenderer {
 		}
 
 		const blocks = [...this.blocks(), newBlock];
-		this.fieldChange.emit({ path: this.path(), value: blocks });
+		state.value.set(blocks);
 	}
 
 	/** Remove a block at the given index */
 	removeBlock(index: number): void {
+		const state = this.nodeState();
+		if (!state) return;
 		const blocks = this.blocks().filter((_, i) => i !== index);
-		this.fieldChange.emit({ path: this.path(), value: blocks });
+		state.value.set(blocks);
 	}
 }

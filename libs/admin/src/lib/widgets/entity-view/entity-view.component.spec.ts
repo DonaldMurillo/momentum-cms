@@ -527,8 +527,8 @@ describe('EntityViewWidget', () => {
 
 			await fixture.whenStable();
 
-			expect(component.collectionLabel()).toBe('items');
-			expect(component.collectionLabelSingular()).toBe('items');
+			expect(component.collectionLabel()).toBe('Items');
+			expect(component.collectionLabelSingular()).toBe('Items');
 		});
 	});
 });

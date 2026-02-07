@@ -4,13 +4,17 @@ import {
 	computed,
 	effect,
 	inject,
+	Injector,
 	input,
 	output,
+	runInInjectionContext,
 	signal,
+	untracked,
 } from '@angular/core';
 import { Router } from '@angular/router';
+import { form, submit } from '@angular/forms/signals';
 import type { CollectionConfig, Field } from '@momentum-cms/core';
-import { flattenDataFields } from '@momentum-cms/core';
+import { humanizeFieldName } from '@momentum-cms/core';
 import {
 	Card,
 	CardHeader,
@@ -28,21 +32,15 @@ import { VersionService } from '../../services/version.service';
 import { CollectionAccessService } from '../../services/collection-access.service';
 import { FeedbackService } from '../feedback/feedback.service';
 import type { Entity } from '../widget.types';
-import {
-	type EntityFormMode,
-	type FieldError,
-	type FieldChangeEvent,
-	createInitialFormData,
-	setValueAtPath,
-	getValueAtPath,
-} from './entity-form.types';
+import { type EntityFormMode, createInitialFormData } from './entity-form.types';
+import { applyCollectionSchema } from './form-schema-builder';
 import { FieldRenderer } from './field-renderers/field-renderer.component';
 import { VersionHistoryWidget } from '../version-history/version-history.component';
 
 /**
  * Entity Form Widget
  *
- * Dynamic form for create/edit operations, connected to Momentum API.
+ * Dynamic form for create/edit operations using Angular Signal Forms.
  *
  * @example
  * ```html
@@ -130,13 +128,11 @@ import { VersionHistoryWidget } from '../version-history/version-history.compone
 							@for (field of visibleFields(); track field.name) {
 								<mcms-field-renderer
 									[field]="field"
-									[value]="getFieldValue(field.name)"
+									[formNode]="getFormNode(field.name)"
+									[formTree]="entityForm()"
+									[formModel]="formModel()"
 									[mode]="mode()"
-									[collection]="collection()"
-									[formData]="formData()"
 									[path]="field.name"
-									[error]="getFieldError(field.name)"
-									(fieldChange)="onFieldChange($event)"
 								/>
 							}
 						</div>
@@ -169,7 +165,7 @@ import { VersionHistoryWidget } from '../version-history/version-history.compone
 						<button
 							mcms-button
 							variant="primary"
-							[disabled]="isSubmitting() || isSavingDraft() || !canSubmit()"
+							[disabled]="isSubmitting() || isSavingDraft()"
 							(click)="onSubmit()"
 						>
 							@if (isSubmitting()) {
@@ -200,6 +196,7 @@ import { VersionHistoryWidget } from '../version-history/version-history.compone
 })
 export class EntityFormWidget<T extends Entity = Entity> {
 	private readonly api = injectMomentumAPI();
+	private readonly injector = inject(Injector);
 	private readonly versionService = inject(VersionService);
 	private readonly collectionAccess = inject(CollectionAccessService);
 	private readonly feedback = inject(FeedbackService);
@@ -227,25 +224,43 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	readonly modeChange = output<EntityFormMode>();
 	readonly draftSaved = output<void>();
 
-	/** Internal state */
-	readonly formData = signal<Record<string, unknown>>({});
+	/** Model signal — the single source of truth for form data */
+	readonly formModel = signal<Record<string, unknown>>({});
+
+	/** Alias for backward compatibility (CollectionEditPage reads formData) */
+	readonly formData = this.formModel;
+
+	/** Signal forms tree — created once when collection is available */
+	readonly entityForm = signal<ReturnType<typeof form<Record<string, unknown>>> | null>(null);
+
+	/** Original data for edit mode */
 	readonly originalData = signal<T | null>(null);
+
+	/** UI state */
 	readonly isLoading = signal(false);
 	readonly isSubmitting = signal(false);
 	readonly isSavingDraft = signal(false);
-	readonly errors = signal<FieldError[]>([]);
 	readonly formError = signal<string | null>(null);
+
+	/** Whether the form has been set up */
+	private formCreated = false;
+
+	/** Whether the form has unsaved changes (from signal forms dirty tracking) */
+	readonly isDirty = computed(() => {
+		const ef = this.entityForm();
+		return ef ? ef().dirty() : false;
+	});
 
 	/** Computed collection label */
 	readonly collectionLabel = computed(() => {
 		const col = this.collection();
-		return col.labels?.plural || col.slug;
+		return col.labels?.plural || humanizeFieldName(col.slug);
 	});
 
 	/** Computed collection label singular */
 	readonly collectionLabelSingular = computed(() => {
 		const col = this.collection();
-		return col.labels?.singular || col.slug;
+		return col.labels?.singular || humanizeFieldName(col.slug);
 	});
 
 	/** Dashboard path (remove /collections from base path) */
@@ -266,8 +281,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 			return `Create ${this.collectionLabelSingular()}`;
 		}
 
-		// For edit mode, try to show entity title
-		const data = this.formData();
+		const data = this.formModel();
 		const titleFields = ['title', 'name', 'label', 'subject'];
 		for (const field of titleFields) {
 			if (data[field] && typeof data[field] === 'string') {
@@ -278,34 +292,20 @@ export class EntityFormWidget<T extends Entity = Entity> {
 		return `Edit ${this.collectionLabelSingular()}`;
 	});
 
-	/** Visible fields (excluding hidden ones) */
+	/** Visible fields (excluding hidden ones and those failing admin.condition) */
 	readonly visibleFields = computed((): Field[] => {
 		const col = this.collection();
-		return col.fields.filter((field) => !field.admin?.hidden);
+		const data = this.formModel();
+		return col.fields.filter((field) => {
+			if (field.admin?.hidden) return false;
+			if (field.admin?.condition && !field.admin.condition(data)) return false;
+			return true;
+		});
 	});
 
 	/** Whether user can edit */
 	readonly canEdit = computed(() => {
 		return this.collectionAccess.canUpdate(this.collection().slug);
-	});
-
-	/** Whether form can be submitted */
-	readonly canSubmit = computed(() => {
-		// Check required fields have values (flatten through layout fields)
-		const data = this.formData();
-		const col = this.collection();
-		const dataFields = flattenDataFields(col.fields);
-
-		for (const field of dataFields) {
-			if (field.required) {
-				const value = getValueAtPath(data, field.name);
-				if (value === null || value === undefined || value === '') {
-					return false;
-				}
-			}
-		}
-
-		return true;
 	});
 
 	/** Whether collection has versioning with drafts enabled */
@@ -324,22 +324,49 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	});
 
 	constructor() {
-		// Initialize form data when collection changes
 		effect(() => {
 			const col = this.collection();
 			const id = this.entityId();
 			const currentMode = this.mode();
 
 			if (col) {
+				// Create the signal forms tree once per collection
+				if (!this.formCreated) {
+					this.formCreated = true;
+					this.formModel.set(createInitialFormData(col));
+					const formModelRef = this.formModel;
+					const f = untracked(() =>
+						runInInjectionContext(this.injector, () =>
+							form(this.formModel, (tree) => {
+								applyCollectionSchema(
+									col.fields,
+									tree as unknown as Record<string, unknown>,
+									() => formModelRef(),
+								);
+							}),
+						),
+					);
+					this.entityForm.set(f);
+				}
+
 				if (currentMode === 'create' || !id) {
-					// Create mode - use initial data
-					this.formData.set(createInitialFormData(col));
+					this.formModel.set(createInitialFormData(col));
+					const ef = this.entityForm();
+					if (ef) ef().reset();
 				} else {
-					// Edit/view mode - load entity
 					this.loadEntity(col.slug, id);
 				}
 			}
 		});
+	}
+
+	/**
+	 * Get a FieldTree node for a top-level field by name.
+	 */
+	getFormNode(fieldName: string): unknown {
+		const ef = this.entityForm();
+		if (!ef) return null;
+		return (ef as unknown as Record<string, unknown>)[fieldName] ?? null;
 	}
 
 	/**
@@ -353,7 +380,9 @@ export class EntityFormWidget<T extends Entity = Entity> {
 			const entity = await this.api.collection<T>(slug).findById(id);
 			if (entity) {
 				this.originalData.set(entity);
-				this.formData.set({ ...entity });
+				this.formModel.set({ ...entity });
+				const ef = this.entityForm();
+				if (ef) ef().reset();
 			} else {
 				this.formError.set(`${this.collectionLabelSingular()} not found`);
 				this.feedback.entityNotFound(this.collectionLabelSingular());
@@ -367,72 +396,60 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	}
 
 	/**
-	 * Get field value from form data.
-	 */
-	getFieldValue(fieldName: string): unknown {
-		return getValueAtPath(this.formData(), fieldName);
-	}
-
-	/**
-	 * Get field error if any.
-	 */
-	getFieldError(fieldName: string): string | undefined {
-		return this.errors().find((e) => e.field === fieldName)?.message;
-	}
-
-	/**
-	 * Handle field change.
-	 */
-	onFieldChange(event: FieldChangeEvent): void {
-		const currentData = this.formData();
-		const newData = setValueAtPath(currentData, event.path, event.value);
-		this.formData.set(newData);
-
-		// Clear field error on change
-		this.errors.update((errors) => errors.filter((e) => e.field !== event.path));
-	}
-
-	/**
-	 * Handle form submission.
+	 * Handle form submission using Angular Signal Forms submit().
+	 * submit() marks all fields as touched, then only calls the callback if valid.
 	 */
 	async onSubmit(): Promise<void> {
-		if (this.isSubmitting() || !this.canSubmit()) return;
+		const ef = this.entityForm();
+		if (!ef || this.isSubmitting()) return;
 
-		this.isSubmitting.set(true);
-		this.formError.set(null);
-		this.errors.set([]);
+		let submitted = false;
 
-		try {
-			const slug = this.collection().slug;
-			const data = this.formData();
-			let result: T;
+		await submit(ef, async () => {
+			submitted = true;
+			this.isSubmitting.set(true);
+			this.formError.set(null);
 
-			if (this.mode() === 'create') {
-				// Form data matches entity structure - assertion is safe
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-				result = await this.api.collection<T>(slug).create(data as Partial<T>);
-				this.feedback.entityCreated(this.collectionLabelSingular());
-			} else {
-				const id = this.entityId();
-				if (!id) throw new Error('Entity ID required for update');
-				// Form data matches entity structure - assertion is safe
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-				result = await this.api.collection<T>(slug).update(id, data as Partial<T>);
-				this.feedback.entityUpdated(this.collectionLabelSingular());
+			try {
+				const slug = this.collection().slug;
+				const data = this.formModel();
+				let result: T;
+
+				if (this.mode() === 'create') {
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+					result = await this.api.collection<T>(slug).create(data as Partial<T>);
+					this.feedback.entityCreated(this.collectionLabelSingular());
+				} else {
+					const id = this.entityId();
+					if (!id) throw new Error('Entity ID required for update');
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+					result = await this.api.collection<T>(slug).update(id, data as Partial<T>);
+					this.feedback.entityUpdated(this.collectionLabelSingular());
+				}
+
+				this.originalData.set(result);
+				this.formModel.set({ ...result });
+				ef().reset();
+				this.saved.emit(result);
+
+				const listPath = `${this.basePath()}/${slug}`;
+				this.router.navigate([listPath]);
+			} catch (err) {
+				const errorMessage = err instanceof Error ? err.message : 'Save failed';
+				this.formError.set(errorMessage);
+				this.feedback.operationFailed(
+					'Save failed',
+					err instanceof Error ? err : undefined,
+				);
+				this.saveError.emit(err instanceof Error ? err : new Error(errorMessage));
+			} finally {
+				this.isSubmitting.set(false);
 			}
+		});
 
-			this.saved.emit(result);
-
-			// Navigate back to list
-			const listPath = `${this.basePath()}/${slug}`;
-			this.router.navigate([listPath]);
-		} catch (err) {
-			const errorMessage = err instanceof Error ? err.message : 'Save failed';
-			this.formError.set(errorMessage);
-			this.feedback.operationFailed('Save failed', err instanceof Error ? err : undefined);
-			this.saveError.emit(err instanceof Error ? err : new Error(errorMessage));
-		} finally {
-			this.isSubmitting.set(false);
+		// submit() didn't call the callback — form is invalid
+		if (!submitted) {
+			this.formError.set('Please fix the errors above before submitting.');
 		}
 	}
 
@@ -441,8 +458,6 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	 */
 	onCancel(): void {
 		this.cancelled.emit();
-
-		// Navigate back to list
 		const listPath = `${this.basePath()}/${this.collection().slug}`;
 		this.router.navigate([listPath]);
 	}
@@ -455,7 +470,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	}
 
 	/**
-	 * Handle version restore - reload the entity data.
+	 * Handle version restore — reload the entity data.
 	 */
 	onVersionRestored(): void {
 		const id = this.entityId();
@@ -476,7 +491,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 
 		try {
 			const slug = this.collection().slug;
-			const data = this.formData();
+			const data = this.formModel();
 
 			await this.versionService.saveDraft(slug, id, data);
 			this.feedback.draftSaved();
@@ -484,7 +499,10 @@ export class EntityFormWidget<T extends Entity = Entity> {
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : 'Failed to save draft';
 			this.formError.set(errorMessage);
-			this.feedback.operationFailed('Draft save failed', err instanceof Error ? err : undefined);
+			this.feedback.operationFailed(
+				'Draft save failed',
+				err instanceof Error ? err : undefined,
+			);
 		} finally {
 			this.isSavingDraft.set(false);
 		}

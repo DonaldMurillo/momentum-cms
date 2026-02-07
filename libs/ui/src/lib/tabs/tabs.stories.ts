@@ -10,7 +10,7 @@ import { CardTitle } from '../card/card-title.component';
 import { CardDescription } from '../card/card-description.component';
 import { CardContent } from '../card/card-content.component';
 import { CardFooter } from '../card/card-footer.component';
-import { FormField } from '../form-field/form-field.component';
+import { McmsFormField } from '../form-field/form-field.component';
 import { Input } from '../input/input.component';
 import { Button } from '../button/button.component';
 import { Label } from '../label/label.component';
@@ -32,7 +32,7 @@ const meta: Meta<Tabs> = {
 				CardDescription,
 				CardContent,
 				CardFooter,
-				FormField,
+				McmsFormField,
 				Input,
 				Button,
 				Label,

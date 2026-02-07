@@ -7,6 +7,7 @@ import type { CollectionConfig } from '@momentum-cms/core';
 import { EntityFormWidget } from './entity-form.component';
 import { CollectionAccessService } from '../../services/collection-access.service';
 import { FeedbackService } from '../feedback/feedback.service';
+import { VersionService } from '../../services/version.service';
 
 describe('EntityFormWidget', () => {
 	let fixture: ComponentFixture<EntityFormWidget>;
@@ -15,6 +16,7 @@ describe('EntityFormWidget', () => {
 	let router: Router;
 	let mockAccessService: Partial<CollectionAccessService>;
 	let mockFeedbackService: Partial<FeedbackService>;
+	let mockVersionService: Partial<VersionService>;
 
 	const mockCollection: CollectionConfig = {
 		slug: 'posts',
@@ -59,6 +61,12 @@ describe('EntityFormWidget', () => {
 			entityUpdated: vi.fn(),
 			entityNotFound: vi.fn(),
 			operationFailed: vi.fn(),
+			draftSaved: vi.fn(),
+		};
+
+		mockVersionService = {
+			saveDraft: vi.fn().mockResolvedValue({ version: {}, message: 'saved' }),
+			findVersions: vi.fn().mockResolvedValue({ docs: [], totalDocs: 0 }),
 		};
 
 		await TestBed.configureTestingModule({
@@ -69,6 +77,7 @@ describe('EntityFormWidget', () => {
 				provideHttpClientTesting(),
 				{ provide: CollectionAccessService, useValue: mockAccessService },
 				{ provide: FeedbackService, useValue: mockFeedbackService },
+				{ provide: VersionService, useValue: mockVersionService },
 			],
 		}).compileComponents();
 
@@ -77,8 +86,7 @@ describe('EntityFormWidget', () => {
 	});
 
 	afterEach(() => {
-		// Discard any pending requests to avoid verify errors
-		httpMock.match(() => true);
+		httpMock.verify();
 	});
 
 	function createFixture(
@@ -101,6 +109,22 @@ describe('EntityFormWidget', () => {
 			fixture.componentRef.setInput('basePath', options.basePath);
 		}
 	}
+
+	describe('NG0602 regression - form() inside effect()', () => {
+		it('should create form without NG0602 (no nested effect error)', () => {
+			createFixture({ mode: 'create' });
+			// If NG0602 occurs, detectChanges() throws RuntimeError -602
+			expect(() => fixture.detectChanges()).not.toThrow();
+		});
+
+		it('should initialize signal form tree after first change detection', async () => {
+			createFixture({ mode: 'create' });
+			fixture.detectChanges();
+			await fixture.whenStable();
+
+			expect(component.entityForm()).not.toBeNull();
+		});
+	});
 
 	describe('Create mode', () => {
 		it('should create', async () => {
@@ -142,24 +166,6 @@ describe('EntityFormWidget', () => {
 			expect(header.textContent).toContain('Create Post');
 		});
 
-		it('should disable submit when required fields are empty', async () => {
-			createFixture({ mode: 'create' });
-			fixture.detectChanges();
-			await fixture.whenStable();
-
-			expect(component.canSubmit()).toBe(false);
-		});
-
-		it('should enable submit when required fields have values', async () => {
-			createFixture({ mode: 'create' });
-			fixture.detectChanges();
-			await fixture.whenStable();
-
-			component.onFieldChange({ path: 'title', value: 'New Title' });
-			fixture.detectChanges();
-			expect(component.canSubmit()).toBe(true);
-		});
-
 		it('should create entity on submit', async () => {
 			createFixture({ mode: 'create' });
 			fixture.detectChanges();
@@ -169,10 +175,10 @@ describe('EntityFormWidget', () => {
 			const savedSpy = vi.fn();
 			component.saved.subscribe(savedSpy);
 
-			component.onFieldChange({ path: 'title', value: 'New Post' });
+			// Set form data via the model signal
+			component.formModel.set({ title: 'New Post', content: '', status: null, featured: false });
 			fixture.detectChanges();
 
-			// Start submit and immediately flush the HTTP request
 			const submitPromise = component.onSubmit();
 
 			const req = httpMock.expectOne('/api/posts');
@@ -187,6 +193,22 @@ describe('EntityFormWidget', () => {
 			expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections/posts']);
 		});
 
+		it('should show form error when submitting with invalid data', async () => {
+			createFixture({ mode: 'create' });
+			fixture.detectChanges();
+			await fixture.whenStable();
+
+			// Leave title empty (required field) — form should be invalid
+			component.formModel.set({ title: '', content: '', status: null, featured: false });
+			fixture.detectChanges();
+
+			await component.onSubmit();
+
+			// submit() should not call the callback — no HTTP request made
+			httpMock.expectNone('/api/posts');
+			expect(component.formError()).toBe('Please fix the errors above before submitting.');
+		});
+
 		it('should handle submit error', async () => {
 			createFixture({ mode: 'create' });
 			fixture.detectChanges();
@@ -195,7 +217,7 @@ describe('EntityFormWidget', () => {
 			const errorSpy = vi.fn();
 			component.saveError.subscribe(errorSpy);
 
-			component.onFieldChange({ path: 'title', value: 'New Post' });
+			component.formModel.set({ title: 'New Post', content: '', status: null, featured: false });
 			fixture.detectChanges();
 
 			const submitPromise = component.onSubmit();
@@ -250,14 +272,16 @@ describe('EntityFormWidget', () => {
 
 			await fixture.whenStable();
 
-			component.onFieldChange({ path: 'title', value: 'Updated Title' });
+			component.formModel.set({ ...mockEntity, title: 'Updated Title' });
 			fixture.detectChanges();
 
 			const submitPromise = component.onSubmit();
 
 			const updateReq = httpMock.expectOne('/api/posts/123');
 			expect(updateReq.request.method).toBe('PATCH');
-			expect(updateReq.request.body).toEqual(expect.objectContaining({ title: 'Updated Title' }));
+			expect(updateReq.request.body).toEqual(
+				expect.objectContaining({ title: 'Updated Title' }),
+			);
 			updateReq.flush({ doc: { ...mockEntity, title: 'Updated Title' } });
 
 			await submitPromise;
@@ -363,39 +387,6 @@ describe('EntityFormWidget', () => {
 		});
 	});
 
-	describe('Field changes', () => {
-		it('should update form data on field change', async () => {
-			createFixture({ mode: 'create' });
-			fixture.detectChanges();
-			await fixture.whenStable();
-
-			component.onFieldChange({ path: 'title', value: 'New Title' });
-			expect(component.formData()['title']).toBe('New Title');
-		});
-
-		it('should clear field error on change', async () => {
-			createFixture({ mode: 'create' });
-			fixture.detectChanges();
-			await fixture.whenStable();
-
-			component['errors'].set([{ field: 'title', message: 'Required' }]);
-			expect(component.getFieldError('title')).toBe('Required');
-
-			component.onFieldChange({ path: 'title', value: 'New Title' });
-
-			expect(component.getFieldError('title')).toBeUndefined();
-		});
-
-		it('should get field value correctly', async () => {
-			createFixture({ mode: 'create' });
-			fixture.detectChanges();
-			await fixture.whenStable();
-
-			component.onFieldChange({ path: 'content', value: 'Some content' });
-			expect(component.getFieldValue('content')).toBe('Some content');
-		});
-	});
-
 	describe('Collection labels', () => {
 		it('should compute collection labels correctly', async () => {
 			createFixture({ mode: 'create' });
@@ -416,8 +407,8 @@ describe('EntityFormWidget', () => {
 			fixture.detectChanges();
 			await fixture.whenStable();
 
-			expect(component.collectionLabel()).toBe('items');
-			expect(component.collectionLabelSingular()).toBe('items');
+			expect(component.collectionLabel()).toBe('Items');
+			expect(component.collectionLabelSingular()).toBe('Items');
 		});
 	});
 });

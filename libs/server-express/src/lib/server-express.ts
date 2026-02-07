@@ -1023,6 +1023,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				limit: req.query['limit'] ? Number(req.query['limit']) : undefined,
 				page: req.query['page'] ? Number(req.query['page']) : undefined,
 				sort: typeof sortParam === 'string' ? sortParam : undefined,
+				depth: req.query['depth'] ? Number(req.query['depth']) : undefined,
 			},
 			user: extractUserFromRequest(req),
 		};
