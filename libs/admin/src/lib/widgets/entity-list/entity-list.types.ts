@@ -13,7 +13,17 @@ import type { Entity, EntityAction } from '../widget.types';
  */
 export interface EntityListColumn<T = Entity> extends DataTableColumn<T> {
 	/** Field type for automatic formatting */
-	type?: 'text' | 'number' | 'date' | 'datetime' | 'boolean' | 'badge' | 'relationship' | 'array';
+	type?:
+		| 'text'
+		| 'number'
+		| 'date'
+		| 'datetime'
+		| 'boolean'
+		| 'badge'
+		| 'relationship'
+		| 'array'
+		| 'group'
+		| 'json';
 	/** Badge variant for 'badge' type columns */
 	badgeVariant?: 'default' | 'secondary' | 'destructive' | 'outline';
 	/** Badge color mapping for 'badge' type columns */
@@ -71,6 +81,8 @@ export const FIELD_TYPE_TO_COLUMN_TYPE: Record<string, EntityListColumn['type']>
 	select: 'badge',
 	relationship: 'relationship',
 	array: 'array',
+	group: 'group',
+	json: 'json',
 };
 
 /**

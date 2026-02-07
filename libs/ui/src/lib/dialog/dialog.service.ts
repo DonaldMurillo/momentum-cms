@@ -1,4 +1,5 @@
 import { inject, Injectable, Injector, Type } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { Overlay, OverlayConfig } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import type { DialogConfig } from './dialog.types';
@@ -24,13 +25,16 @@ import { DialogRef } from './dialog-ref';
 export class DialogService {
 	private readonly overlay = inject(Overlay);
 	private readonly injector = inject(Injector);
+	private readonly document = inject(DOCUMENT);
 
 	private openDialogs: Array<{ close: () => void }> = [];
+	private overlayStylesInjected = false;
 
 	/**
 	 * Open a dialog with the specified component.
 	 */
 	open<T, D = unknown, R = unknown>(component: Type<T>, config?: DialogConfig<D>): DialogRef<R> {
+		this.ensureOverlayStyles();
 		const overlayConfig = this.getOverlayConfig(config);
 		const overlayRef = this.overlay.create(overlayConfig);
 
@@ -80,6 +84,64 @@ export class DialogService {
 	 */
 	closeAll(): void {
 		this.openDialogs.forEach((dialogRef) => dialogRef.close());
+	}
+
+	/**
+	 * Ensure CDK overlay positioning styles are present.
+	 * CDK may not inject its styles in all build configurations (e.g. SSR, esbuild).
+	 */
+	private ensureOverlayStyles(): void {
+		if (this.overlayStylesInjected) return;
+		this.overlayStylesInjected = true;
+
+		const styleId = 'mcms-cdk-overlay-styles';
+		if (this.document.getElementById(styleId)) return;
+
+		const style = this.document.createElement('style');
+		style.id = styleId;
+		style.textContent = `
+			.cdk-overlay-container, .cdk-global-overlay-wrapper {
+				pointer-events: none;
+				top: 0;
+				left: 0;
+				height: 100%;
+				width: 100%;
+			}
+			.cdk-overlay-container {
+				position: fixed;
+				z-index: 1000;
+			}
+			.cdk-global-overlay-wrapper {
+				display: flex;
+				position: absolute;
+				z-index: 1000;
+			}
+			.cdk-overlay-pane {
+				position: static;
+				pointer-events: auto;
+				box-sizing: border-box;
+				z-index: 1000;
+				display: flex;
+				max-width: 100%;
+				max-height: 100%;
+			}
+			.cdk-overlay-backdrop {
+				position: absolute;
+				top: 0;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				z-index: 1000;
+				pointer-events: auto;
+				-webkit-tap-highlight-color: transparent;
+				transition: opacity 400ms cubic-bezier(0.25, 0.8, 0.25, 1);
+				opacity: 0;
+			}
+			.cdk-overlay-backdrop.cdk-overlay-backdrop-showing {
+				opacity: 1;
+			}
+		`;
+		this.document.head.appendChild(style);
 	}
 
 	private getOverlayConfig(config?: DialogConfig): OverlayConfig {

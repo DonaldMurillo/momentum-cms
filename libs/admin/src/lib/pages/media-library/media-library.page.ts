@@ -7,18 +7,31 @@ import {
 	DestroyRef,
 } from '@angular/core';
 import { type Subscription } from 'rxjs';
-import { Button, Spinner, Pagination, SearchInput, Badge, ToastService } from '@momentum-cms/ui';
-import { NgIcon } from '@ng-icons/core';
+import {
+	Button,
+	Spinner,
+	Pagination,
+	SearchInput,
+	Badge,
+	ToastService,
+	DialogService,
+} from '@momentum-cms/ui';
+import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
 	heroCloudArrowUp,
 	heroTrash,
 	heroArrowDownTray,
 	heroEye,
+	heroPencilSquare,
 } from '@ng-icons/heroicons/outline';
 import { injectMomentumAPI } from '../../services/momentum-api.service';
 import { UploadService, type UploadProgress } from '../../services/upload.service';
 import { FeedbackService } from '../../widgets/feedback/feedback.service';
 import { MediaPreviewComponent } from '../../widgets/media-preview/media-preview.component';
+import {
+	MediaEditDialog,
+	type MediaEditResult,
+} from '../../widgets/media-edit/media-edit-dialog.component';
 
 /** Helper type to represent media document from API */
 interface MediaItem {
@@ -76,6 +89,9 @@ function getInputElement(event: Event): HTMLInputElement | null {
 @Component({
 	selector: 'mcms-media-library',
 	imports: [Button, Spinner, Pagination, SearchInput, Badge, NgIcon, MediaPreviewComponent],
+	providers: [
+		provideIcons({ heroCloudArrowUp, heroTrash, heroArrowDownTray, heroEye, heroPencilSquare }),
+	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `
@@ -100,7 +116,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 							mcms-button
 							class="inline-flex"
 						>
-							<ng-icon [name]="uploadIcon" class="h-4 w-4" />
+							<ng-icon name="heroCloudArrowUp" class="h-4 w-4" />
 							Upload Files
 						</span>
 					</label>
@@ -127,7 +143,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 							size="sm"
 							(click)="deleteSelected()"
 						>
-							<ng-icon [name]="trashIcon" class="h-4 w-4" />
+							<ng-icon name="heroTrash" class="h-4 w-4" />
 							Delete
 						</button>
 					</div>
@@ -170,7 +186,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 				</div>
 			} @else if (mediaItems().length === 0) {
 				<div class="flex h-64 flex-col items-center justify-center text-mcms-muted-foreground">
-					<ng-icon [name]="uploadIcon" class="mb-4 h-16 w-16 opacity-50" aria-hidden="true" />
+					<ng-icon name="heroCloudArrowUp" class="mb-4 h-16 w-16 opacity-50" aria-hidden="true" />
 					@if (searchQuery()) {
 						<p class="text-lg">No media found</p>
 						<p class="text-sm">Try a different search term</p>
@@ -232,10 +248,20 @@ function getInputElement(event: Event): HTMLInputElement | null {
 										variant="secondary"
 										size="sm"
 										type="button"
+										(click)="$event.stopPropagation(); editMedia(media)"
+										aria-label="Edit file details"
+									>
+										<ng-icon name="heroPencilSquare" class="h-3 w-3" aria-hidden="true" />
+									</button>
+									<button
+										mcms-button
+										variant="secondary"
+										size="sm"
+										type="button"
 										(click)="$event.stopPropagation(); viewMedia(media)"
 										aria-label="View file"
 									>
-										<ng-icon [name]="eyeIcon" class="h-3 w-3" aria-hidden="true" />
+										<ng-icon name="heroEye" class="h-3 w-3" aria-hidden="true" />
 									</button>
 									<a
 										mcms-button
@@ -247,7 +273,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 										(click)="$event.stopPropagation()"
 										aria-label="Download file"
 									>
-										<ng-icon [name]="downloadIcon" class="h-3 w-3" aria-hidden="true" />
+										<ng-icon name="heroArrowDownTray" class="h-3 w-3" aria-hidden="true" />
 									</a>
 									<button
 										mcms-button
@@ -257,7 +283,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 										(click)="$event.stopPropagation(); deleteMedia(media)"
 										aria-label="Delete file"
 									>
-										<ng-icon [name]="trashIcon" class="h-3 w-3" aria-hidden="true" />
+										<ng-icon name="heroTrash" class="h-3 w-3" aria-hidden="true" />
 									</button>
 								</div>
 							</div>
@@ -284,14 +310,9 @@ export class MediaLibraryPage {
 	private readonly uploadService = inject(UploadService);
 	private readonly feedback = inject(FeedbackService);
 	private readonly toast = inject(ToastService);
+	private readonly dialog = inject(DialogService);
 	private readonly destroyRef = inject(DestroyRef);
 	private readonly uploadSubscriptions: Subscription[] = [];
-
-	/** Icon references */
-	readonly uploadIcon = heroCloudArrowUp;
-	readonly trashIcon = heroTrash;
-	readonly downloadIcon = heroArrowDownTray;
-	readonly eyeIcon = heroEye;
 
 	/** Internal state */
 	readonly isLoading = signal(true);
@@ -448,12 +469,29 @@ export class MediaLibraryPage {
 	}
 
 	/**
-	 * View media details.
+	 * View media file in a new tab.
 	 */
 	viewMedia(media: MediaItem): void {
-		// Open in new tab for now
-		// In future, could show a modal with full details
 		window.open(this.getMediaUrl(media), '_blank');
+	}
+
+	/**
+	 * Open the edit dialog for a media item.
+	 */
+	editMedia(media: MediaItem): void {
+		const dialogRef = this.dialog.open<MediaEditDialog, { media: MediaItem }, MediaEditResult>(
+			MediaEditDialog,
+			{
+				data: { media },
+				width: '36rem',
+			},
+		);
+
+		dialogRef.afterClosed.subscribe((result) => {
+			if (result?.updated) {
+				this.loadMedia(this.searchQuery(), this.currentPage());
+			}
+		});
 	}
 
 	/**

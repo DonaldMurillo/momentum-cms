@@ -21,7 +21,11 @@ export const Products = defineCollection({
 	fields: [
 		text('name', { required: true, label: 'Product Name' }),
 		textarea('description', { label: 'Description' }),
-		number('price', { label: 'Price', min: 0 }),
+		number('price', {
+			label: 'Price',
+			min: 0,
+			displayFormat: { style: 'currency', currency: 'USD', minimumFractionDigits: 2 },
+		}),
 		group('seo', {
 			label: 'SEO Settings',
 			description: 'Search engine optimization settings for this product.',
