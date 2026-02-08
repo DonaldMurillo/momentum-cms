@@ -14,6 +14,7 @@ import type {
 	HookArgs,
 	RequestContext,
 } from '@momentum-cms/core';
+import { createLogger } from '@momentum-cms/logger';
 import { flattenDataFields, validateFieldConstraints } from '@momentum-cms/core';
 import {
 	hasFieldAccessControl,
@@ -66,7 +67,7 @@ let momentumApiInstance: MomentumAPIImpl | null = null;
  */
 export function initializeMomentumAPI(config: MomentumConfig): MomentumAPI {
 	if (momentumApiInstance) {
-		console.warn('MomentumAPI already initialized, returning existing instance');
+		createLogger('API').warn('Already initialized, returning existing instance');
 		return momentumApiInstance;
 	}
 	momentumApiInstance = new MomentumAPIImpl(config);

@@ -12,7 +12,7 @@ import { test, expect } from './fixtures';
 test.describe('Collection List Page - Articles', () => {
 	test('should display collection heading', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/articles');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const heading = authenticatedPage.getByRole('heading', { name: 'Articles' });
 		await expect(heading).toBeVisible();
@@ -21,7 +21,7 @@ test.describe('Collection List Page - Articles', () => {
 	test('should display count subtitle after data loads', async ({ authenticatedPage }) => {
 		// Use client-side navigation to avoid SSR hydration timing issues with signals.
 		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		await authenticatedPage
 			.getByLabel('Main navigation')
@@ -44,7 +44,7 @@ test.describe('Collection List Page - Articles', () => {
 
 	test('should have Create Article button', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/articles');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const createButton = authenticatedPage.getByRole('button', { name: /Create Article/i });
 		await expect(createButton).toBeVisible();
@@ -54,7 +54,7 @@ test.describe('Collection List Page - Articles', () => {
 		authenticatedPage,
 	}) => {
 		await authenticatedPage.goto('/admin/collections/articles');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const createButton = authenticatedPage.getByRole('button', { name: /Create Article/i });
 		await createButton.click();
@@ -64,7 +64,7 @@ test.describe('Collection List Page - Articles', () => {
 
 	test('should display seeded articles in table', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/articles');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// Wait for table to load
 		await expect(authenticatedPage.locator('mcms-table')).toBeVisible();
@@ -95,7 +95,7 @@ test.describe('Collection List Page - Articles', () => {
 test.describe('Collection List Page - Categories', () => {
 	test('should display collection heading', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/categories');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const heading = authenticatedPage.getByRole('heading', { name: 'Categories' });
 		await expect(heading).toBeVisible();
@@ -103,7 +103,7 @@ test.describe('Collection List Page - Categories', () => {
 
 	test('should display seeded categories in table', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/categories');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// Wait for table to load
 		await expect(authenticatedPage.locator('mcms-table')).toBeVisible();
@@ -131,7 +131,7 @@ test.describe('Collection List Page - Categories', () => {
 test.describe('Collection List Page - Users', () => {
 	test('should display collection heading', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/users');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const heading = authenticatedPage.getByRole('heading', { name: 'Users' });
 		await expect(heading).toBeVisible();
@@ -141,7 +141,7 @@ test.describe('Collection List Page - Users', () => {
 		// Use client-side navigation to avoid SSR hydration timing issues with signals.
 		// Navigate to dashboard first, then click Users in sidebar.
 		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		await authenticatedPage
 			.getByLabel('Main navigation')
@@ -164,7 +164,7 @@ test.describe('Collection List Page - Users', () => {
 
 	test('should have Create User button', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/users');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const createButton = authenticatedPage.getByRole('button', { name: /Create User/i });
 		await expect(createButton).toBeVisible();
@@ -174,7 +174,7 @@ test.describe('Collection List Page - Users', () => {
 		authenticatedPage,
 	}) => {
 		await authenticatedPage.goto('/admin/collections/users');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const createButton = authenticatedPage.getByRole('button', { name: /Create User/i });
 		await createButton.click();
@@ -186,7 +186,7 @@ test.describe('Collection List Page - Users', () => {
 test.describe('Collection List Page - Navigation', () => {
 	test('should maintain sidebar visibility on collection list', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/articles');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// Sidebar should show branding (use first() since there are multiple matching elements)
 		const brandingTitle = authenticatedPage.getByRole('heading', { name: 'Seeding Test App' });
@@ -197,7 +197,7 @@ test.describe('Collection List Page - Navigation', () => {
 		authenticatedPage,
 	}) => {
 		await authenticatedPage.goto('/admin/collections/articles');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const nav = authenticatedPage.getByRole('navigation');
 

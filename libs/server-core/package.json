@@ -6,6 +6,8 @@
 	"types": "./index.d.ts",
 	"peerDependencies": {
 		"@momentum-cms/core": "^0.0.1",
-		"@momentum-cms/storage": "^0.0.1"
+		"@momentum-cms/logger": "^0.0.1",
+		"@momentum-cms/storage": "^0.0.1",
+		"graphql": "^16.0.0"
 	}
 }

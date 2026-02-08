@@ -24,7 +24,11 @@
 			"@momentum-cms/auth": ["libs/auth/src/index.ts"],
 			"@momentum-cms/ui": ["libs/ui/src/index.ts"],
 			"@momentum-cms/storage": ["libs/storage/src/index.ts"],
-			"@momentum-cms/e2e-fixtures": ["libs/e2e-fixtures/src/index.ts"]
+			"@momentum-cms/e2e-fixtures": ["libs/e2e-fixtures/src/index.ts"],
+			"@momentum-cms/logger": ["libs/logger/src/index.ts"],
+			"@momentum-cms/plugins": ["libs/plugins/src/index.ts"],
+			"@momentum-cms/plugin-otel": ["libs/plugin-otel/src/index.ts"],
+			"@momentum-cms/analytics": ["libs/analytics/src/index.ts"]
 		}
 	},
 	"exclude": ["node_modules", "tmp"]

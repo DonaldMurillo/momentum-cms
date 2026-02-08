@@ -53,6 +53,7 @@ import {
 			role="combobox"
 			aria-autocomplete="list"
 			aria-expanded="true"
+			aria-controls=""
 		/>
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,

@@ -2,6 +2,27 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { runSeeding, shouldRunSeeding, calculateChecksum } from '../seed-executor';
 import type { DatabaseAdapter, SeedingConfig } from '@momentum-cms/core';
 
+// Mock the logger module so seed-executor's createLogger returns a spy
+const mockLoggerInfo = vi.fn();
+const mockLoggerWarn = vi.fn();
+vi.mock('@momentum-cms/logger', () => ({
+	createLogger: () => ({
+		debug: vi.fn(),
+		info: mockLoggerInfo,
+		warn: mockLoggerWarn,
+		error: vi.fn(),
+		fatal: vi.fn(),
+		child: vi.fn(() => ({
+			debug: vi.fn(),
+			info: vi.fn(),
+			warn: vi.fn(),
+			error: vi.fn(),
+			fatal: vi.fn(),
+		})),
+	}),
+	initializeMomentumLogger: vi.fn(),
+}));
+
 describe('calculateChecksum', () => {
 	it('should generate consistent checksums for same data', () => {
 		const data = { name: 'Test', email: 'test@example.com' };
@@ -102,8 +123,8 @@ describe('runSeeding', () => {
 			delete: vi.fn(async () => true),
 		};
 
-		// Suppress console output during tests
-		vi.spyOn(console, 'log').mockImplementation(() => undefined);
+		mockLoggerInfo.mockClear();
+		mockLoggerWarn.mockClear();
 	});
 
 	afterEach(() => {
@@ -342,7 +363,7 @@ describe('runSeeding', () => {
 	});
 
 	it('should log messages when not in quiet mode', async () => {
-		const consoleSpy = vi.spyOn(console, 'log');
+		mockLoggerInfo.mockClear();
 
 		const config: SeedingConfig = {
 			defaults: ({ user }) => [user('admin', { name: 'Admin', email: 'admin@example.com' })],
@@ -351,12 +372,14 @@ describe('runSeeding', () => {
 
 		await runSeeding(config, mockAdapter);
 
-		expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('[Momentum Seeding]'));
+		expect(mockLoggerInfo).toHaveBeenCalled();
+		expect(mockLoggerInfo.mock.calls.some((call: string[]) => call[0].includes('Seeding'))).toBe(
+			true,
+		);
 	});
 
 	it('should suppress logs in quiet mode', async () => {
-		const consoleSpy = vi.spyOn(console, 'log');
-		consoleSpy.mockClear();
+		mockLoggerInfo.mockClear();
 
 		const config: SeedingConfig = {
 			defaults: ({ user }) => [user('admin', { name: 'Admin', email: 'admin@example.com' })],
@@ -365,7 +388,7 @@ describe('runSeeding', () => {
 
 		await runSeeding(config, mockAdapter);
 
-		expect(consoleSpy).not.toHaveBeenCalled();
+		expect(mockLoggerInfo).not.toHaveBeenCalled();
 	});
 
 	describe('rollback on failure', () => {

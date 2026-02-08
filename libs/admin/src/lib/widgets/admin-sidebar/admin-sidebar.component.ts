@@ -23,10 +23,25 @@ import {
 	heroFolder,
 	heroBolt,
 	heroChevronUpDown,
+	heroChartBarSquare,
+	heroDocumentText,
+	heroCog6Tooth,
+	heroPuzzlePiece,
 } from '@ng-icons/heroicons/outline';
 import type { AdminBranding, AdminUser } from '../widget.types';
 import { humanizeFieldName } from '@momentum-cms/core';
 import { McmsThemeService } from '../../ui/theme/theme.service';
+import type { AdminPluginRoute } from '../../routes/momentum-admin-routes';
+
+interface CollectionGroup {
+	name: string;
+	collections: CollectionConfig[];
+}
+
+interface PluginRouteGroup {
+	name: string;
+	routes: AdminPluginRoute[];
+}
 
 /**
  * Admin Sidebar Widget
@@ -34,11 +49,16 @@ import { McmsThemeService } from '../../ui/theme/theme.service';
  * CMS-specific sidebar with collection navigation and user section.
  * Composes UI library Sidebar components with Momentum CMS logic.
  *
+ * Features:
+ * - Collection grouping via admin.group field
+ * - Plugin-registered route sections
+ *
  * @example
  * ```html
  * <mcms-admin-sidebar
  *   [branding]="{ title: 'My CMS', logo: '/logo.svg' }"
  *   [collections]="collections"
+ *   [pluginRoutes]="pluginRoutes"
  *   [user]="currentUser"
  *   basePath="/admin"
  *   (signOut)="onSignOut()"
@@ -71,6 +91,10 @@ import { McmsThemeService } from '../../ui/theme/theme.service';
 			heroFolder,
 			heroBolt,
 			heroChevronUpDown,
+			heroChartBarSquare,
+			heroDocumentText,
+			heroCog6Tooth,
+			heroPuzzlePiece,
 		}),
 	],
 	host: {
@@ -118,19 +142,36 @@ import { McmsThemeService } from '../../ui/theme/theme.service';
 						[exact]="true"
 					/>
 
-					<!-- Collections Section -->
-					<mcms-sidebar-section title="Collections">
-						@for (collection of collections(); track collection.slug) {
-							<mcms-sidebar-nav-item
-								[label]="getCollectionLabel(collection)"
-								[href]="getCollectionPath(collection)"
-								[icon]="getCollectionIcon(collection)"
-							/>
-						}
-						@if (collections().length === 0) {
+					<!-- Collection Sections (grouped by admin.group) -->
+					@for (group of collectionGroups(); track group.name) {
+						<mcms-sidebar-section [title]="group.name">
+							@for (collection of group.collections; track collection.slug) {
+								<mcms-sidebar-nav-item
+									[label]="getCollectionLabel(collection)"
+									[href]="getCollectionPath(collection)"
+									[icon]="getCollectionIcon(collection)"
+								/>
+							}
+						</mcms-sidebar-section>
+					}
+					@if (collections().length === 0) {
+						<mcms-sidebar-section title="Collections">
 							<p class="px-3 py-2 text-sm text-muted-foreground">No collections available</p>
-						}
-					</mcms-sidebar-section>
+						</mcms-sidebar-section>
+					}
+
+					<!-- Plugin Route Sections -->
+					@for (group of pluginRouteGroups(); track group.name) {
+						<mcms-sidebar-section [title]="group.name">
+							@for (route of group.routes; track route.path) {
+								<mcms-sidebar-nav-item
+									[label]="route.label"
+									[href]="basePath() + '/' + route.path"
+									[icon]="route.icon"
+								/>
+							}
+						</mcms-sidebar-section>
+					}
 				</mcms-sidebar-nav>
 			</div>
 
@@ -189,6 +230,9 @@ export class AdminSidebarWidget {
 	/** Collections to display in navigation */
 	readonly collections = input<CollectionConfig[]>([]);
 
+	/** Plugin-registered admin routes */
+	readonly pluginRoutes = input<AdminPluginRoute[]>([]);
+
 	/** Current authenticated user */
 	readonly user = input<AdminUser | null>(null);
 
@@ -206,6 +250,51 @@ export class AdminSidebarWidget {
 
 	/** Computed collections base path */
 	readonly collectionsBasePath = computed(() => `${this.basePath()}/collections`);
+
+	/** Collections grouped by admin.group field */
+	readonly collectionGroups = computed((): CollectionGroup[] => {
+		const collections = this.collections();
+		const DEFAULT_GROUP = 'Collections';
+		const groupMap = new Map<string, CollectionConfig[]>();
+
+		for (const c of collections) {
+			const name = c.admin?.group ?? DEFAULT_GROUP;
+			const list = groupMap.get(name) ?? [];
+			list.push(c);
+			groupMap.set(name, list);
+		}
+
+		// Named groups first (in order of first appearance), default last
+		const groups: CollectionGroup[] = [];
+		for (const [name, colls] of groupMap) {
+			if (name !== DEFAULT_GROUP) groups.push({ name, collections: colls });
+		}
+		const defaultGroup = groupMap.get(DEFAULT_GROUP);
+		if (defaultGroup) groups.push({ name: DEFAULT_GROUP, collections: defaultGroup });
+		return groups;
+	});
+
+	/** Plugin routes grouped by group field */
+	readonly pluginRouteGroups = computed((): PluginRouteGroup[] => {
+		const routes = this.pluginRoutes();
+		if (routes.length === 0) return [];
+
+		const DEFAULT_GROUP = 'Plugins';
+		const groupMap = new Map<string, AdminPluginRoute[]>();
+
+		for (const r of routes) {
+			const name = r.group ?? DEFAULT_GROUP;
+			const list = groupMap.get(name) ?? [];
+			list.push(r);
+			groupMap.set(name, list);
+		}
+
+		const groups: PluginRouteGroup[] = [];
+		for (const [name, routeList] of groupMap) {
+			groups.push({ name, routes: routeList });
+		}
+		return groups;
+	});
 
 	/** Collection icon names by slug */
 	private readonly collectionIcons: Record<string, string> = {

@@ -36,6 +36,26 @@ export interface MomentumAdminBranding {
 	primaryColor?: string;
 }
 
+/**
+ * Admin plugin route descriptor with Angular-typed loadComponent.
+ * Mirrors Angular Route concepts (path, loadComponent, data) with
+ * additional Momentum sidebar metadata (label, icon, group).
+ */
+export interface AdminPluginRoute {
+	/** Route path under admin (e.g., 'analytics') — same as Angular Route.path */
+	path: string;
+	/** Lazy component loader — same as Angular Route.loadComponent */
+	loadComponent: () => Promise<Type<unknown>>;
+	/** Optional route data — same as Angular Route.data */
+	data?: Record<string, unknown>;
+	/** Sidebar display label */
+	label: string;
+	/** Icon name from ng-icons (e.g., 'heroChartBarSquare') */
+	icon: string;
+	/** Sidebar section name. @default 'Plugins' */
+	group?: string;
+}
+
 export interface MomentumAdminOptions {
 	/** Base path for admin routes (e.g., '/admin') */
 	basePath: string;
@@ -45,11 +65,14 @@ export interface MomentumAdminOptions {
 	branding?: MomentumAdminBranding;
 	/** Whether to include auth routes (login, setup). Defaults to true */
 	includeAuthRoutes?: boolean;
+	/** Plugin-registered admin routes */
+	pluginRoutes?: AdminPluginRoute[];
 }
 
 export interface MomentumAdminRouteData {
 	collections: CollectionConfig[];
 	branding?: MomentumAdminBranding;
+	pluginRoutes?: AdminPluginRoute[];
 }
 
 /**
@@ -65,6 +88,7 @@ export function momentumAdminRoutes(options: MomentumAdminOptions): Routes {
 	const routeData: MomentumAdminRouteData = {
 		collections: options.collections,
 		branding: options.branding,
+		pluginRoutes: options.pluginRoutes,
 	};
 
 	const routes: Routes = [];
@@ -153,6 +177,12 @@ export function momentumAdminRoutes(options: MomentumAdminOptions): Routes {
 				canActivate: [collectionAccessGuard],
 				canDeactivate: [unsavedChangesGuard],
 			},
+			// Plugin-registered routes
+			...(options.pluginRoutes ?? []).map((pr) => ({
+				path: pr.path,
+				loadComponent: pr.loadComponent,
+				data: pr.data,
+			})),
 		],
 	};
 

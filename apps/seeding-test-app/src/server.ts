@@ -23,6 +23,7 @@ import {
 	createApiKeyResolverMiddleware,
 	createApiKeyRoutes,
 	createOpenAPIMiddleware,
+	getPluginProviders,
 } from '@momentum-cms/server-express';
 import {
 	getMomentumAPI,
@@ -33,8 +34,9 @@ import {
 } from '@momentum-cms/server-core';
 import { createMomentumAuth } from '@momentum-cms/auth';
 import { provideMomentumAPI } from '@momentum-cms/admin';
+import type { CollectionEvent } from '@momentum-cms/plugins';
 import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
-import momentumConfig from './momentum.config';
+import momentumConfig, { events, analytics, analyticsAdapter } from './momentum.config';
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
@@ -100,10 +102,7 @@ import {
 	setHookBehavior,
 } from './collections/hook-test-items.collection';
 import type { HookBehaviorConfig } from './collections/hook-test-items.collection';
-import {
-	getFieldHookLog,
-	clearFieldHookLog,
-} from './collections/field-test-items.collection';
+import { getFieldHookLog, clearFieldHookLog } from './collections/field-test-items.collection';
 
 app.get('/api/test-hook-log', (_req, res) => {
 	const invocations = getHookLog();
@@ -171,6 +170,38 @@ app.get('/api/test-webhook-receiver', (_req, res) => {
 
 app.delete('/api/test-webhook-receiver', (_req, res) => {
 	receivedWebhooks.length = 0;
+	res.json({ cleared: true });
+});
+
+/**
+ * Event bus test infrastructure for E2E testing.
+ * Captures all collection events so tests can verify event bus delivery.
+ */
+const eventBusLog: CollectionEvent[] = [];
+events.bus.on('*', (event) => eventBusLog.push(event));
+
+app.get('/api/test-event-bus-log', (_req, res) => {
+	res.json({ events: eventBusLog, count: eventBusLog.length });
+});
+
+app.delete('/api/test-event-bus-log', (_req, res) => {
+	eventBusLog.length = 0;
+	res.json({ cleared: true });
+});
+
+/**
+ * Analytics test infrastructure for E2E testing.
+ * Exposes analytics events so tests can verify tracking.
+ */
+app.get('/api/test-analytics-events', async (_req, res) => {
+	// Flush pending events first so tests see them immediately
+	await analytics.eventStore.flush();
+	const result = await analyticsAdapter.query({ limit: 500 });
+	res.json(result);
+});
+
+app.delete('/api/test-analytics-events', (_req, res) => {
+	analyticsAdapter.events.length = 0;
 	res.json({ cleared: true });
 });
 
@@ -301,7 +332,8 @@ app.use('/api/docs', createOpenAPIMiddleware({ config: momentumConfig }));
 
 /**
  * Momentum CMS API endpoints
- * Handles CRUD operations for all collections
+ * Handles CRUD operations for all collections.
+ * Plugin middleware (analytics ingest, API collector, etc.) is auto-mounted by the framework.
  */
 app.use('/api', momentumApiMiddleware(momentumConfig));
 
@@ -327,7 +359,10 @@ app.use('/**', (req, res, next) => {
 
 	angularApp
 		.handle(req, {
-			providers: provideMomentumAPI(getMomentumAPI(), { user }),
+			providers: [
+				...provideMomentumAPI(getMomentumAPI(), { user }),
+				...getPluginProviders().map((p) => ({ provide: p.token, useValue: p.value })),
+			],
 		})
 		.then((response) => (response ? writeResponseToNodeResponse(response, res) : next()))
 		.catch(next);

@@ -862,10 +862,12 @@ interface KitchenSinkUser {
 				</div>
 
 				@if (commandPaletteOpen()) {
+					<!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
 					<div
 						class="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-[20vh]"
 						(click)="closeCommandPalette()"
 					>
+						<!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
 						<div
 							class="w-full max-w-lg"
 							(click)="$event.stopPropagation()"

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions needed to narrow Field union to TextField/TextareaField after type guard */
+
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { McmsFormField, Input, Textarea } from '@momentum-cms/ui';
 import type { ValidationError } from '@momentum-cms/ui';
@@ -51,8 +53,14 @@ import { getFieldNodeState } from '../entity-form.types';
 				<p class="mt-1 text-xs text-muted-foreground">{{ description() }}</p>
 			}
 			@if (showCharCount()) {
-				<p class="mt-1 text-xs text-muted-foreground text-right" [class.text-destructive]="charCountExceeded()">
-					{{ charCount() }}@if (maxLength()) { / {{ maxLength() }}}
+				<p
+					class="mt-1 text-xs text-muted-foreground text-right"
+					[class.text-destructive]="charCountExceeded()"
+				>
+					{{ charCount() }}
+					@if (maxLength()) {
+						/ {{ maxLength() }}
+					}
 				</p>
 			}
 		</mcms-form-field>

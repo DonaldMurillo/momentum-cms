@@ -8,6 +8,8 @@
  * No external dependencies - uses built-in CSV serialization.
  */
 
+/* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions needed to narrow parsed JSON body to Record types */
+
 import type { CollectionConfig, Field } from '@momentum-cms/core';
 import { flattenDataFields } from '@momentum-cms/core';
 
@@ -246,9 +248,10 @@ export function exportToCsv(
  * Parse JSON import data into document records.
  * Accepts either an array of objects or `{ docs: [...] }`.
  */
-export function parseJsonImport(
-	body: unknown,
-): { docs: Record<string, unknown>[]; error?: string } {
+export function parseJsonImport(body: unknown): {
+	docs: Record<string, unknown>[];
+	error?: string;
+} {
 	if (Array.isArray(body)) {
 		return { docs: body };
 	}

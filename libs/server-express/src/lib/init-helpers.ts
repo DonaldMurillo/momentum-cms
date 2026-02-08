@@ -8,6 +8,13 @@ import {
 	type MomentumAuthLike,
 } from '@momentum-cms/server-core';
 import type { MomentumConfig, ResolvedMomentumConfig } from '@momentum-cms/core';
+import { initializeMomentumLogger, createLogger } from '@momentum-cms/logger';
+import { PluginRunner } from '@momentum-cms/plugins';
+import {
+	setPluginMiddleware,
+	setPluginProviders,
+	setPluginAdminRoutes,
+} from './plugin-middleware-registry';
 
 /**
  * Result of initializing Momentum CMS.
@@ -33,6 +40,12 @@ export interface MomentumInitResult {
 	 * Get current seeding status for health checks.
 	 */
 	getSeedingStatus: () => SeedingStatus;
+
+	/**
+	 * Gracefully shut down all plugins.
+	 * Call this when the server is stopping.
+	 */
+	shutdown: () => Promise<void>;
 }
 
 /**
@@ -97,41 +110,64 @@ export function initializeMomentum(
 	config: MomentumConfig | ResolvedMomentumConfig,
 	options: InitializeMomentumOptions = {},
 ): MomentumInitResult {
-	// eslint-disable-next-line no-console -- Default logger for server initialization, can be overridden via options
-	const { logging = true, logger = console.log, auth } = options;
+	const { auth } = options;
+
+	// Initialize logger from config (must be first)
+	const loggingConfig = 'logging' in config && config.logging ? config.logging : undefined;
+	initializeMomentumLogger(loggingConfig);
+	const log = createLogger('Init');
+
+	// Create plugin runner if plugins are configured
+	const plugins = config.plugins ?? [];
+	const pluginRunner = new PluginRunner({
+		config,
+		collections: config.collections,
+		plugins,
+	});
 
 	let isInitialized = false;
 	let seedingResult: SeedingResult | null = null;
 
-	const log = (message: string): void => {
-		if (logging) {
-			logger(`[Momentum] ${message}`);
-		}
-	};
-
 	const initialize = async (): Promise<void> => {
-		// 1. Initialize database schema if adapter supports it
+		// 1. Run plugin onInit (plugins inject hooks and register middleware/providers)
+		if (plugins.length > 0) {
+			log.info(`Initializing ${plugins.length} plugin(s)...`);
+			await pluginRunner.runInit();
+
+			// Store plugin middleware/providers/admin routes for auto-mounting
+			setPluginMiddleware(pluginRunner.getMiddleware());
+			setPluginProviders(pluginRunner.getProviders());
+			setPluginAdminRoutes(pluginRunner.getAdminRoutes());
+		}
+
+		// 2. Initialize database schema if adapter supports it
 		if (config.db.adapter.initialize) {
-			log('Initializing database schema...');
+			log.info('Initializing database schema...');
 			await config.db.adapter.initialize(config.collections);
 		}
 
-		// 2. Initialize Momentum API singleton
-		log('Initializing API...');
-		initializeMomentumAPI(config);
+		// 3. Initialize Momentum API singleton
+		log.info('Initializing API...');
+		const api = initializeMomentumAPI(config);
 
-		// 3. Run seeding if configured
+		// 4. Run seeding if configured
 		const runOnStart = config.seeding?.options?.runOnStart ?? 'development';
 		if (config.seeding && shouldRunSeeding(runOnStart)) {
-			log('Running seeding...');
+			log.info('Running seeding...');
 			seedingResult = await runSeeding(config.seeding, config.db.adapter, { auth });
-			log(
+			log.info(
 				`Seeding complete: ${seedingResult.created} created, ${seedingResult.updated} updated, ${seedingResult.skipped} skipped`,
 			);
 		}
 
+		// 5. Run plugin onReady (API is initialized, seeding complete)
+		if (plugins.length > 0) {
+			log.info('Notifying plugins: ready');
+			await pluginRunner.runReady(api);
+		}
+
 		isInitialized = true;
-		log('Initialization complete');
+		log.info('Initialization complete');
 	};
 
 	const ready = initialize();
@@ -147,6 +183,7 @@ export function initializeMomentum(
 			expected: seedingResult?.total ?? 0,
 			ready: isInitialized,
 		}),
+		shutdown: () => pluginRunner.runShutdown(),
 	};
 }
 

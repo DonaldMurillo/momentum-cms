@@ -4,6 +4,7 @@ import type { Pool } from 'pg';
 import type { Database } from 'better-sqlite3';
 import type { MomentumAuth } from '@momentum-cms/auth';
 import { MIN_PASSWORD_LENGTH, type DatabaseAdapter } from '@momentum-cms/core';
+import { createLogger } from '@momentum-cms/logger';
 
 /**
  * Response type for the setup status endpoint.
@@ -339,7 +340,9 @@ export function createSetupMiddleware(
 					});
 				} catch (syncError) {
 					// Log but don't fail - user was created in Better Auth
-					console.warn('Failed to sync user to Momentum collection:', syncError);
+					createLogger('Setup').warn(
+						`Failed to sync user to Momentum collection: ${syncError instanceof Error ? syncError.message : String(syncError)}`,
+					);
 				}
 			}
 

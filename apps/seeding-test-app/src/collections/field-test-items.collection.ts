@@ -1,12 +1,4 @@
-import {
-	defineCollection,
-	text,
-	email,
-	number,
-	select,
-	array,
-	allowAll,
-} from '@momentum-cms/core';
+import { defineCollection, text, email, number, select, array, allowAll } from '@momentum-cms/core';
 import type { FieldHookFunction } from '@momentum-cms/core';
 
 /**
@@ -73,6 +65,7 @@ const defaultToZero: FieldHookFunction = ({ value }) => {
  * Helper: check if user is admin from request context.
  */
 function isAdmin({ req }: { req: unknown }): boolean {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowing untyped request context
 	const r = req as { user?: { role?: string } } | undefined;
 	return r?.user?.role === 'admin';
 }

@@ -7,9 +7,13 @@
 	"peerDependencies": {
 		"@momentum-cms/auth": "^0.0.1",
 		"@momentum-cms/core": "^0.0.1",
+		"@momentum-cms/logger": "^0.0.1",
+		"@momentum-cms/plugins": "^0.0.1",
 		"@momentum-cms/server-core": "^0.0.1",
 		"better-auth": "^1.0.0",
 		"better-sqlite3": "^12.0.0",
-		"express": "^4.18.0 || ^5.0.0"
+		"express": "^4.18.0 || ^5.0.0",
+		"multer": "^2.0.0",
+		"pg": "^8.0.0"
 	}
 }

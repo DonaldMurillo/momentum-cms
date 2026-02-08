@@ -7,6 +7,9 @@
  * Since collections define fields at runtime (not compile time), all schema paths
  * are accessed via bracket notation on `Record<string, unknown>` models.
  */
+
+/* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions needed to cast dynamic fieldPath to typed SchemaPath */
+
 import {
 	required,
 	email,
@@ -52,75 +55,61 @@ export function applyCollectionSchema(
 			case 'text':
 			case 'textarea': {
 				if (field.minLength !== undefined) {
-					minLength(
-						fieldPath as SchemaPath<string>,
-						field.minLength,
-						{ message: `${label} must be at least ${field.minLength} characters` },
-					);
+					minLength(fieldPath as SchemaPath<string>, field.minLength, {
+						message: `${label} must be at least ${field.minLength} characters`,
+					});
 				}
 				if (field.maxLength !== undefined) {
-					maxLength(
-						fieldPath as SchemaPath<string>,
-						field.maxLength,
-						{ message: `${label} must be no more than ${field.maxLength} characters` },
-					);
+					maxLength(fieldPath as SchemaPath<string>, field.maxLength, {
+						message: `${label} must be no more than ${field.maxLength} characters`,
+					});
 				}
 				break;
 			}
 
 			case 'password': {
 				if (field.minLength !== undefined) {
-					minLength(
-						fieldPath as SchemaPath<string>,
-						field.minLength,
-						{ message: `${label} must be at least ${field.minLength} characters` },
-					);
+					minLength(fieldPath as SchemaPath<string>, field.minLength, {
+						message: `${label} must be at least ${field.minLength} characters`,
+					});
 				}
 				break;
 			}
 
 			case 'number': {
 				if (field.min !== undefined) {
-					min(
-						fieldPath as SchemaPath<number | null>,
-						field.min,
-						{ message: `${label} must be at least ${field.min}` },
-					);
+					min(fieldPath as SchemaPath<number | null>, field.min, {
+						message: `${label} must be at least ${field.min}`,
+					});
 				}
 				if (field.max !== undefined) {
-					max(
-						fieldPath as SchemaPath<number | null>,
-						field.max,
-						{ message: `${label} must be no more than ${field.max}` },
-					);
+					max(fieldPath as SchemaPath<number | null>, field.max, {
+						message: `${label} must be no more than ${field.max}`,
+					});
 				}
 				break;
 			}
 
 			case 'email': {
-				email(
-					fieldPath as SchemaPath<string>,
-					{ message: `${label} must be a valid email address` },
-				);
+				email(fieldPath as SchemaPath<string>, {
+					message: `${label} must be a valid email address`,
+				});
 				break;
 			}
 
 			case 'select': {
 				const validValues = new Set(field.options.map((opt) => opt.value));
-				validate(
-					fieldPath as SchemaPath<string>,
-					({ value }) => {
-						const v = value();
-						if (v === '' || v === null || v === undefined) return null;
-						if (!validValues.has(v as string)) {
-							return {
-								kind: 'invalidOption',
-								message: `${label} must be one of the available options`,
-							};
-						}
-						return null;
-					},
-				);
+				validate(fieldPath as SchemaPath<string>, ({ value }) => {
+					const v = value();
+					if (v === '' || v === null || v === undefined) return null;
+					if (!validValues.has(v as string)) {
+						return {
+							kind: 'invalidOption',
+							message: `${label} must be one of the available options`,
+						};
+					}
+					return null;
+				});
 				break;
 			}
 
@@ -138,37 +127,31 @@ export function applyCollectionSchema(
 				// Array-level row count validators
 				if (field.minRows !== undefined) {
 					const minRowCount = field.minRows;
-					validate(
-						fieldPath as SchemaPath<unknown[]>,
-						({ value }) => {
-							const arr = value();
-							if (!Array.isArray(arr)) return null;
-							if (arr.length < minRowCount) {
-								return {
-									kind: 'minRows',
-									message: `${label} must have at least ${minRowCount} row${minRowCount === 1 ? '' : 's'}`,
-								};
-							}
-							return null;
-						},
-					);
+					validate(fieldPath as SchemaPath<unknown[]>, ({ value }) => {
+						const arr = value();
+						if (!Array.isArray(arr)) return null;
+						if (arr.length < minRowCount) {
+							return {
+								kind: 'minRows',
+								message: `${label} must have at least ${minRowCount} row${minRowCount === 1 ? '' : 's'}`,
+							};
+						}
+						return null;
+					});
 				}
 				if (field.maxRows !== undefined) {
 					const maxRowCount = field.maxRows;
-					validate(
-						fieldPath as SchemaPath<unknown[]>,
-						({ value }) => {
-							const arr = value();
-							if (!Array.isArray(arr)) return null;
-							if (arr.length > maxRowCount) {
-								return {
-									kind: 'maxRows',
-									message: `${label} must have no more than ${maxRowCount} row${maxRowCount === 1 ? '' : 's'}`,
-								};
-							}
-							return null;
-						},
-					);
+					validate(fieldPath as SchemaPath<unknown[]>, ({ value }) => {
+						const arr = value();
+						if (!Array.isArray(arr)) return null;
+						if (arr.length > maxRowCount) {
+							return {
+								kind: 'maxRows',
+								message: `${label} must have no more than ${maxRowCount} row${maxRowCount === 1 ? '' : 's'}`,
+							};
+						}
+						return null;
+					});
 				}
 
 				// Apply sub-field validators to each array item
@@ -188,37 +171,31 @@ export function applyCollectionSchema(
 			case 'blocks': {
 				if (field.minRows !== undefined) {
 					const minRowCount = field.minRows;
-					validate(
-						fieldPath as SchemaPath<unknown[]>,
-						({ value }) => {
-							const arr = value();
-							if (!Array.isArray(arr)) return null;
-							if (arr.length < minRowCount) {
-								return {
-									kind: 'minRows',
-									message: `${label} must have at least ${minRowCount} block${minRowCount === 1 ? '' : 's'}`,
-								};
-							}
-							return null;
-						},
-					);
+					validate(fieldPath as SchemaPath<unknown[]>, ({ value }) => {
+						const arr = value();
+						if (!Array.isArray(arr)) return null;
+						if (arr.length < minRowCount) {
+							return {
+								kind: 'minRows',
+								message: `${label} must have at least ${minRowCount} block${minRowCount === 1 ? '' : 's'}`,
+							};
+						}
+						return null;
+					});
 				}
 				if (field.maxRows !== undefined) {
 					const maxRowCount = field.maxRows;
-					validate(
-						fieldPath as SchemaPath<unknown[]>,
-						({ value }) => {
-							const arr = value();
-							if (!Array.isArray(arr)) return null;
-							if (arr.length > maxRowCount) {
-								return {
-									kind: 'maxRows',
-									message: `${label} must have no more than ${maxRowCount} block${maxRowCount === 1 ? '' : 's'}`,
-								};
-							}
-							return null;
-						},
-					);
+					validate(fieldPath as SchemaPath<unknown[]>, ({ value }) => {
+						const arr = value();
+						if (!Array.isArray(arr)) return null;
+						if (arr.length > maxRowCount) {
+							return {
+								kind: 'maxRows',
+								message: `${label} must have no more than ${maxRowCount} block${maxRowCount === 1 ? '' : 's'}`,
+							};
+						}
+						return null;
+					});
 				}
 				break;
 			}
@@ -232,27 +209,24 @@ export function applyCollectionSchema(
 		// Custom validate function from field definition
 		if (field.validate) {
 			const customValidate = field.validate;
-			validate(
-				fieldPath as SchemaPath<unknown>,
-				({ value }) => {
-					const data = getFormData ? getFormData() : {};
-					const result = customValidate(value(), { data, req: {} });
-					// Signal forms validators are synchronous — async validators
-					// (returning Promise) cannot be awaited here. They are enforced
-					// server-side; warn developers so it's not a silent failure.
-					if (result && typeof result === 'object' && 'then' in result) {
-						console.warn(
-							`[Momentum] Custom validator on field "${field.name}" returned a Promise. ` +
+			validate(fieldPath as SchemaPath<unknown>, ({ value }) => {
+				const data = getFormData ? getFormData() : {};
+				const result = customValidate(value(), { data, req: {} });
+				// Signal forms validators are synchronous — async validators
+				// (returning Promise) cannot be awaited here. They are enforced
+				// server-side; warn developers so it's not a silent failure.
+				if (result && typeof result === 'object' && 'then' in result) {
+					console.warn(
+						`[Momentum] Custom validator on field "${field.name}" returned a Promise. ` +
 							`Async validators are not supported client-side and will be enforced server-side only.`,
-						);
-						return null;
-					}
-					if (typeof result === 'string') {
-						return { kind: 'custom', message: result };
-					}
+					);
 					return null;
-				},
-			);
+				}
+				if (typeof result === 'string') {
+					return { kind: 'custom', message: result };
+				}
+				return null;
+			});
 		}
 	}
 }

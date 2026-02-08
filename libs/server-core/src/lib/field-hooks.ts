@@ -5,6 +5,8 @@
  * for each field that has hooks defined.
  */
 
+/* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions needed to narrow processedData[field.name] from unknown to Record/array */
+
 import type { Field, FieldHookFunction, RequestContext } from '@momentum-cms/core';
 
 type FieldHookType = 'beforeValidate' | 'beforeChange' | 'afterChange' | 'afterRead';

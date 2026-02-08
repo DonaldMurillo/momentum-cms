@@ -1,6 +1,8 @@
 import { defineMomentumConfig } from '@momentum-cms/core';
 import { postgresAdapter } from '@momentum-cms/db-drizzle';
 import { localStorageAdapter } from '@momentum-cms/storage';
+import { eventBusPlugin } from '@momentum-cms/plugins';
+import { analyticsPlugin, MemoryAnalyticsAdapter } from '@momentum-cms/analytics';
 import {
 	Categories,
 	Articles,
@@ -15,6 +17,26 @@ import {
 	Tags,
 } from './collections';
 import { join } from 'node:path';
+
+/**
+ * Plugin instances exported at module scope so server.ts can access them
+ * for wiring middleware and test observation endpoints.
+ */
+export const analyticsAdapter = new MemoryAnalyticsAdapter();
+export const events = eventBusPlugin();
+export const analytics = analyticsPlugin({
+	adapter: analyticsAdapter,
+	trackCollections: true,
+	trackApi: true,
+	flushInterval: 1000, // 1s for fast E2E feedback
+	flushBatchSize: 10,
+	ingestRateLimit: 10, // Low limit for fast rate-limit E2E testing
+	excludeCollections: ['_seed_tracking'],
+	adminDashboard: {
+		loadComponent: () =>
+			import('./pages/analytics-dashboard.page').then((m) => m.AnalyticsDashboardPage),
+	},
+});
 
 /**
  * Document types for type-safe seeding
@@ -76,6 +98,7 @@ interface SettingsDoc {
  * - Authentication with Better Auth
  * - Password reset flow
  * - Admin UI functionality
+ * - Logger, event bus plugin, analytics plugin (server + client ingest)
  *
  * Note: Admin user is seeded as the first user for consistent test state.
  * User password hashing is handled by Better Auth hooks in server.ts.
@@ -121,6 +144,11 @@ export default defineMomentumConfig({
 			headers: ['Content-Type', 'Authorization'],
 		},
 	},
+	logging: {
+		level: 'debug',
+		format: 'pretty',
+	},
+	plugins: [events, analytics],
 	seeding: {
 		defaults: ({ authUser, collection }) => [
 			// Seed admin user first for E2E tests (synced with Better Auth)

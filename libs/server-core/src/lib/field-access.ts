@@ -5,6 +5,8 @@
  * fields from request data or response documents based on permissions.
  */
 
+/* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions needed to narrow filtered[field.name] from unknown to Record/array */
+
 import type { Field, FieldAccessConfig, RequestContext } from '@momentum-cms/core';
 import { flattenDataFields } from '@momentum-cms/core';
 
@@ -34,7 +36,10 @@ export function hasFieldAccessControl(fields: Field[]): boolean {
 				if (hasFieldAccessControl(tab.fields)) return true;
 			}
 		}
-		if ((field.type === 'collapsible' || field.type === 'row') && hasFieldAccessControl(field.fields)) {
+		if (
+			(field.type === 'collapsible' || field.type === 'row') &&
+			hasFieldAccessControl(field.fields)
+		) {
 			return true;
 		}
 	}
@@ -63,7 +68,11 @@ export async function filterReadableFields(
 		}
 
 		// Recurse into group fields
-		if (field.type === 'group' && filtered[field.name] && typeof filtered[field.name] === 'object') {
+		if (
+			field.type === 'group' &&
+			filtered[field.name] &&
+			typeof filtered[field.name] === 'object'
+		) {
 			filtered[field.name] = await filterReadableFields(
 				field.fields,
 				filtered[field.name] as Record<string, unknown>,
@@ -142,7 +151,11 @@ async function filterWritableFields(
 		}
 
 		// Recurse into group fields
-		if (field.type === 'group' && filtered[field.name] && typeof filtered[field.name] === 'object') {
+		if (
+			field.type === 'group' &&
+			filtered[field.name] &&
+			typeof filtered[field.name] === 'object'
+		) {
 			filtered[field.name] = await filterWritableFields(
 				field.fields,
 				filtered[field.name] as Record<string, unknown>,

@@ -10,6 +10,7 @@ export const Users = defineCollection({
 		singular: 'User',
 		plural: 'Users',
 	},
+	admin: { group: 'Admin' },
 	fields: [
 		text('name', { required: true, label: 'Name' }),
 		email('email', { required: true, label: 'Email' }),

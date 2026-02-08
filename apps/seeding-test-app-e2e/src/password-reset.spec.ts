@@ -40,7 +40,7 @@ test.describe('Password Reset Flow', () => {
 	test.describe('Forgot Password Page', () => {
 		test('should display forgot password form', async ({ page }) => {
 			await page.goto('/admin/forgot-password');
-			await page.waitForLoadState('networkidle');
+			await page.waitForLoadState('domcontentloaded');
 
 			// Should show the forgot password form
 			await expect(page.getByRole('heading', { name: /reset password/i })).toBeVisible();
@@ -51,7 +51,7 @@ test.describe('Password Reset Flow', () => {
 
 		test('should have back to login link that works', async ({ page }) => {
 			await page.goto('/admin/forgot-password');
-			await page.waitForLoadState('networkidle');
+			await page.waitForLoadState('domcontentloaded');
 
 			await page.getByText(/back to sign in/i).click();
 			await page.waitForURL(/\/admin\/login/);
@@ -61,7 +61,7 @@ test.describe('Password Reset Flow', () => {
 
 		test('should show success message after submitting email', async ({ page }) => {
 			await page.goto('/admin/forgot-password');
-			await page.waitForLoadState('networkidle');
+			await page.waitForLoadState('domcontentloaded');
 
 			// Fill and submit the form
 			await page.getByLabel(/email/i).fill(TEST_USER.email);
@@ -74,7 +74,7 @@ test.describe('Password Reset Flow', () => {
 
 		test('should send password reset email via Mailpit', async ({ page }) => {
 			await page.goto('/admin/forgot-password');
-			await page.waitForLoadState('networkidle');
+			await page.waitForLoadState('domcontentloaded');
 
 			// Submit the form
 			await page.getByLabel(/email/i).fill(TEST_USER.email);
@@ -98,7 +98,7 @@ test.describe('Password Reset Flow', () => {
 	test.describe('Reset Password Page', () => {
 		test('should show error for missing token', async ({ page }) => {
 			await page.goto('/admin/reset-password');
-			await page.waitForLoadState('networkidle');
+			await page.waitForLoadState('domcontentloaded');
 
 			// Should show invalid token message
 			await expect(page.getByText(/invalid|missing.*token/i)).toBeVisible();
@@ -108,7 +108,7 @@ test.describe('Password Reset Flow', () => {
 		test('should display reset form with valid token', async ({ page }) => {
 			// First, request a password reset
 			await page.goto('/admin/forgot-password');
-			await page.waitForLoadState('networkidle');
+			await page.waitForLoadState('domcontentloaded');
 			await page.getByLabel(/email/i).fill(TEST_USER.email);
 			await page.getByRole('button', { name: /send reset link/i }).click();
 			await expect(page.getByText(/check your email/i)).toBeVisible({ timeout: 10000 });
@@ -123,7 +123,7 @@ test.describe('Password Reset Flow', () => {
 
 			// Navigate to the reset URL
 			await page.goto(resetUrl);
-			await page.waitForLoadState('networkidle');
+			await page.waitForLoadState('domcontentloaded');
 
 			// Should show the reset form
 			await expect(page.getByRole('heading', { name: /set new password/i })).toBeVisible();
@@ -138,7 +138,7 @@ test.describe('Password Reset Flow', () => {
 		test('should complete full password reset flow', async ({ page, context }) => {
 			// 1. Request password reset
 			await page.goto('/admin/forgot-password');
-			await page.waitForLoadState('networkidle');
+			await page.waitForLoadState('domcontentloaded');
 			await page.getByLabel(/email/i).fill(TEST_USER.email);
 			await page.getByRole('button', { name: /send reset link/i }).click();
 			await expect(page.getByText(/check your email/i)).toBeVisible({ timeout: 10000 });
@@ -153,7 +153,7 @@ test.describe('Password Reset Flow', () => {
 
 			// 3. Navigate to reset page and submit new password
 			await page.goto(resetUrl);
-			await page.waitForLoadState('networkidle');
+			await page.waitForLoadState('domcontentloaded');
 
 			await page.getByLabel(/new password/i).fill(TEST_USER.newPassword);
 			await page.getByLabel(/confirm password/i).fill(TEST_USER.newPassword);
@@ -237,7 +237,7 @@ test.describe('Password Reset Flow', () => {
 	test.describe('Security', () => {
 		test('should return success for non-existent email (prevent enumeration)', async ({ page }) => {
 			await page.goto('/admin/forgot-password');
-			await page.waitForLoadState('networkidle');
+			await page.waitForLoadState('domcontentloaded');
 
 			// Request reset for non-existent email
 			await page.getByLabel(/email/i).fill('nonexistent@example.com');
@@ -261,7 +261,7 @@ test.describe('Password Reset Flow', () => {
 	test.describe('Login Page Integration', () => {
 		test('login page should have forgot password link', async ({ page }) => {
 			await page.goto('/admin/login');
-			await page.waitForLoadState('networkidle');
+			await page.waitForLoadState('domcontentloaded');
 
 			// Check for forgot password link
 			const forgotLink = page.getByRole('link', { name: /forgot.*password/i });

@@ -234,6 +234,62 @@ export interface StorageConfig {
 	allowedMimeTypes?: string[];
 }
 
+// ============================================
+// Logging Configuration (types only — runtime in @momentum-cms/logger)
+// ============================================
+
+/**
+ * Log level for Momentum CMS logging.
+ */
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal' | 'silent';
+
+/**
+ * Log output format.
+ */
+export type LogFormat = 'pretty' | 'json';
+
+/**
+ * Logging configuration for Momentum CMS.
+ * Runtime implementation is in @momentum-cms/logger.
+ */
+export interface LoggingConfig {
+	/** Minimum log level. @default 'info' */
+	level?: LogLevel;
+	/** Output format. @default 'pretty' */
+	format?: LogFormat;
+	/** Whether to include timestamps. @default true */
+	timestamps?: boolean;
+}
+
+/**
+ * Resolved logging config with defaults applied.
+ */
+export type ResolvedLoggingConfig = Required<LoggingConfig>;
+
+// ============================================
+// Plugin Configuration (types only — runtime in @momentum-cms/plugins)
+// ============================================
+
+/**
+ * Minimal plugin interface for configuration.
+ * Runtime implementation is in @momentum-cms/plugins.
+ *
+ * Plugins participate in the server lifecycle:
+ * - `onInit`: Before API initialization (inject hooks)
+ * - `onReady`: After API + seeding
+ * - `onShutdown`: Graceful shutdown
+ */
+export interface MomentumPluginConfig {
+	/** Unique plugin name */
+	name: string;
+	/** Called before API initialization */
+	onInit?(...args: unknown[]): void | Promise<void>;
+	/** Called after API + seeding complete */
+	onReady?(...args: unknown[]): void | Promise<void>;
+	/** Called on graceful shutdown */
+	onShutdown?(...args: unknown[]): void | Promise<void>;
+}
+
 /**
  * Momentum CMS configuration.
  */
@@ -268,6 +324,18 @@ export interface MomentumConfig {
 	 * Provides declarative data seeding with strict typing.
 	 */
 	seeding?: SeedingConfig;
+
+	/**
+	 * Logging configuration.
+	 * Controls log level, format, and timestamps.
+	 */
+	logging?: LoggingConfig;
+
+	/**
+	 * Plugins to register.
+	 * Plugins run in array order during init/ready, reverse during shutdown.
+	 */
+	plugins?: MomentumPluginConfig[];
 }
 
 /**
@@ -289,6 +357,7 @@ export interface ResolvedMomentumConfig extends MomentumConfig {
 	admin: Required<AdminPanelConfig>;
 	server: Required<ServerConfig>;
 	seeding?: ResolvedSeedingConfig;
+	logging: ResolvedLoggingConfig;
 }
 
 /**
@@ -342,6 +411,11 @@ export function defineMomentumConfig(config: MomentumConfig): ResolvedMomentumCo
 					},
 				}
 			: undefined,
+		logging: {
+			level: config.logging?.level ?? 'info',
+			format: config.logging?.format ?? 'pretty',
+			timestamps: config.logging?.timestamps ?? true,
+		},
 	};
 }
 

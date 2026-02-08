@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions needed to narrow Field union to NumberField after type guard */
+
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { McmsFormField, Input } from '@momentum-cms/ui';
 import type { ValidationError } from '@momentum-cms/ui';

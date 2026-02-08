@@ -12,6 +12,7 @@ export const Articles = defineCollection({
 		singular: 'Article',
 		plural: 'Articles',
 	},
+	admin: { group: 'Content' },
 	fields: [
 		text('title', { required: true, label: 'Title' }),
 		richText('content', { label: 'Content' }),

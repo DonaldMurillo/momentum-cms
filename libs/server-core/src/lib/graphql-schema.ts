@@ -4,6 +4,9 @@
  * Auto-generates a GraphQL schema from Momentum collection configs,
  * including query/mutation types with resolvers that delegate to the MomentumAPI.
  */
+
+/* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions needed for field type narrowing (SelectField spread) */
+
 import {
 	GraphQLSchema,
 	GraphQLObjectType,
@@ -25,7 +28,12 @@ import {
 } from 'graphql';
 import { GraphQLJSON } from './graphql-scalars';
 import type { CollectionConfig, UserContext } from '@momentum-cms/core';
-import { flattenDataFields, type Field, type SelectField, type BlocksField } from '@momentum-cms/core';
+import {
+	flattenDataFields,
+	type Field,
+	type SelectField,
+	type BlocksField,
+} from '@momentum-cms/core';
 import { getMomentumAPI } from './momentum-api';
 
 /** Context passed to every GraphQL resolver. */
@@ -54,7 +62,8 @@ export function buildGraphQLSchema(collections: CollectionConfig[]): GraphQLSche
 	/** Simple English singularization for GraphQL type names. */
 	function singularize(word: string): string {
 		if (word.endsWith('ies')) return word.slice(0, -3) + 'y';
-		if (word.endsWith('ses') || word.endsWith('xes') || word.endsWith('zes')) return word.slice(0, -2);
+		if (word.endsWith('ses') || word.endsWith('xes') || word.endsWith('zes'))
+			return word.slice(0, -2);
 		if (word.endsWith('s') && !word.endsWith('ss')) return word.slice(0, -1);
 		return word;
 	}
@@ -79,7 +88,9 @@ export function buildGraphQLSchema(collections: CollectionConfig[]): GraphQLSche
 		const values: Record<string, { value: string | number }> = {};
 		for (const opt of field.options) {
 			// GraphQL enum values must be valid identifiers
-			const enumKey = String(opt.value).replace(/[^A-Za-z0-9_]/g, '_').toUpperCase();
+			const enumKey = String(opt.value)
+				.replace(/[^A-Za-z0-9_]/g, '_')
+				.toUpperCase();
 			values[enumKey || `_${opt.value}`] = { value: opt.value };
 		}
 
@@ -285,7 +296,10 @@ export function buildGraphQLSchema(collections: CollectionConfig[]): GraphQLSche
 	// ---------- Find result wrapper ----------
 
 	/** Create a paginated result type for a collection. */
-	function createFindResultType(col: CollectionConfig, docType: GraphQLObjectType): GraphQLObjectType {
+	function createFindResultType(
+		col: CollectionConfig,
+		docType: GraphQLObjectType,
+	): GraphQLObjectType {
 		const name = `${getPluralName(col)}Result`;
 		return new GraphQLObjectType({
 			name,
@@ -473,14 +487,21 @@ export function buildGraphQLSchema(collections: CollectionConfig[]): GraphQLSche
 	// Build the schema
 	const query = new GraphQLObjectType({
 		name: 'Query',
-		fields: Object.keys(queryFields).length > 0
-			? queryFields
-			: { _empty: { type: GraphQLString, resolve: (): string => 'No collections with queries enabled' } },
+		fields:
+			Object.keys(queryFields).length > 0
+				? queryFields
+				: {
+						_empty: {
+							type: GraphQLString,
+							resolve: (): string => 'No collections with queries enabled',
+						},
+					},
 	});
 
-	const mutation = Object.keys(mutationFields).length > 0
-		? new GraphQLObjectType({ name: 'Mutation', fields: mutationFields })
-		: undefined;
+	const mutation =
+		Object.keys(mutationFields).length > 0
+			? new GraphQLObjectType({ name: 'Mutation', fields: mutationFields })
+			: undefined;
 
 	return new GraphQLSchema({ query, mutation });
 }

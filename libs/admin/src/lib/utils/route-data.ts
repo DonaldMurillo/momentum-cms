@@ -3,7 +3,7 @@
  */
 
 import type { CollectionConfig } from '@momentum-cms/core';
-import type { MomentumAdminBranding } from '../routes/momentum-admin-routes';
+import type { MomentumAdminBranding, AdminPluginRoute } from '../routes/momentum-admin-routes';
 import type { Data } from '@angular/router';
 
 /**
@@ -60,4 +60,16 @@ export function getBrandingFromRouteData(
 		return branding;
 	}
 	return undefined;
+}
+
+/**
+ * Extracts plugin routes from route data
+ */
+export function getPluginRoutesFromRouteData(data: Data | undefined): AdminPluginRoute[] {
+	if (!data) return [];
+	const routes = data['pluginRoutes'];
+	if (Array.isArray(routes)) {
+		return routes;
+	}
+	return [];
 }

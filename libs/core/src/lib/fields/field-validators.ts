@@ -56,9 +56,7 @@ export function validateFieldConstraints(field: Field, value: unknown): FieldCon
 				}
 				if (field.step !== undefined && field.step > 0) {
 					// Use rounding to handle floating point precision
-					const remainder = Math.abs(
-						Math.round((value / field.step) * 1e10) % Math.round(1e10),
-					);
+					const remainder = Math.abs(Math.round((value / field.step) * 1e10) % Math.round(1e10));
 					if (remainder > 1) {
 						errors.push({
 							field: field.name,
@@ -135,11 +133,13 @@ function validateSelectOptions(
 	const validValues = new Set(options.map((o) => o.value));
 
 	if (hasMany && Array.isArray(value)) {
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- array elements are string | number from select options
 		const allValid = value.every((v) => validValues.has(v as string | number));
 		if (!allValid) {
 			errors.push({ field: name, message: `${label} has an invalid selection` });
 		}
 	} else if (!Array.isArray(value)) {
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- value is string | number from select options
 		if (!validValues.has(value as string | number)) {
 			errors.push({ field: name, message: `${label} has an invalid selection` });
 		}

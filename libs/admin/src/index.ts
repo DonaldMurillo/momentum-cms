@@ -15,6 +15,13 @@ export {
 	type CollectionPermissions,
 } from './lib/services/collection-access.service';
 export { UploadService, type UploadProgress } from './lib/services/upload.service';
+export {
+	AnalyticsService,
+	type AnalyticsSummaryData,
+	type AnalyticsEventData,
+	type AnalyticsQueryResult as AdminAnalyticsQueryResult,
+	type AnalyticsQueryParams,
+} from './lib/services/analytics.service';
 
 // Momentum API (unified SSR/Browser)
 export {
@@ -137,10 +144,7 @@ export type {
 	EntityListFindResult,
 } from './lib/widgets/entity-list/entity-list.types';
 
-export type {
-	EntityFormMode,
-	FieldNodeState,
-} from './lib/widgets/entity-form/entity-form.types';
+export type { EntityFormMode, FieldNodeState } from './lib/widgets/entity-form/entity-form.types';
 
 export { getFieldNodeState, getSubNode } from './lib/widgets/entity-form/entity-form.types';
 

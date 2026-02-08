@@ -184,7 +184,7 @@ test.describe('Rich text field', () => {
 
 		// Sign in via the page context (API request context doesn't share cookies with page)
 		await page.goto('/admin/login');
-		await page.waitForLoadState('networkidle');
+		await page.waitForLoadState('domcontentloaded');
 
 		const pageSignIn = await page.request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },
@@ -197,7 +197,7 @@ test.describe('Rich text field', () => {
 
 		// Navigate to the article edit page
 		await page.goto(`/admin/collections/articles/${created.doc.id}/edit`);
-		await page.waitForLoadState('networkidle');
+		await page.waitForLoadState('domcontentloaded');
 
 		// The rich text editor container should be rendered
 		const editor = page.locator('[data-testid="rich-text-editor"]');

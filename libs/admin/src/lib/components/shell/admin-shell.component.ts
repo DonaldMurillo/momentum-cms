@@ -10,7 +10,12 @@ import { isPlatformBrowser } from '@angular/common';
 import { RouterOutlet, ActivatedRoute, Router } from '@angular/router';
 import type { CollectionConfig } from '@momentum-cms/core';
 import { SidebarService, SidebarTrigger } from '@momentum-cms/ui';
-import { getCollectionsFromRouteData, getBrandingFromRouteData } from '../../utils/route-data';
+import {
+	getCollectionsFromRouteData,
+	getBrandingFromRouteData,
+	getPluginRoutesFromRouteData,
+} from '../../utils/route-data';
+import type { AdminPluginRoute } from '../../routes/momentum-admin-routes';
 import { MomentumAuthService } from '../../services/auth.service';
 import { CollectionAccessService } from '../../services/collection-access.service';
 import { injectUser } from '../../utils/inject-user';
@@ -45,6 +50,7 @@ import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
 		<mcms-admin-sidebar
 			[branding]="sidebarBranding()"
 			[collections]="collections()"
+			[pluginRoutes]="pluginRoutes()"
 			[user]="sidebarUser()"
 			basePath="/admin"
 			(signOut)="onSignOut()"
@@ -83,6 +89,11 @@ export class AdminShellComponent implements OnInit {
 
 		// Filter to only accessible collections
 		return all.filter((c) => accessible.includes(c.slug));
+	});
+
+	/** Plugin routes from route data */
+	readonly pluginRoutes = computed((): AdminPluginRoute[] => {
+		return getPluginRoutesFromRouteData(this.route.snapshot.data);
 	});
 
 	/** Branding for sidebar */
