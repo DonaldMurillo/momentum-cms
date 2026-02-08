@@ -26,4 +26,4 @@ export {
 	type HealthMiddlewareOptions,
 	type HealthResponse,
 } from './lib/init-helpers';
-export { getPluginProviders, getPluginAdminRoutes } from './lib/plugin-middleware-registry';
+export { getPluginProviders } from './lib/plugin-middleware-registry';

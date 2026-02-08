@@ -61,7 +61,8 @@ test.describe('Collection Create Form - Articles', () => {
 		await expect(titleInput).toBeVisible();
 
 		// Content field (rich text editor - TipTap)
-		const contentLabel = authenticatedPage.getByText('Content');
+		// Scope to main area to avoid matching sidebar "Content" group header
+		const contentLabel = authenticatedPage.getByRole('main').getByText('Content');
 		await expect(contentLabel).toBeVisible();
 		const richTextEditor = authenticatedPage.locator('[data-testid="rich-text-editor"]');
 		await expect(richTextEditor).toBeVisible();

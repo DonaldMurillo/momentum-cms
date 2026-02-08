@@ -7,6 +7,7 @@ import type {
 	VersionCountOptions,
 	CreateVersionOptions,
 } from './versions';
+import type { MomentumPlugin } from './plugins';
 import type { StorageAdapter } from './storage';
 
 /**
@@ -266,30 +267,6 @@ export interface LoggingConfig {
  */
 export type ResolvedLoggingConfig = Required<LoggingConfig>;
 
-// ============================================
-// Plugin Configuration (types only — runtime in @momentum-cms/plugins)
-// ============================================
-
-/**
- * Minimal plugin interface for configuration.
- * Runtime implementation is in @momentum-cms/plugins.
- *
- * Plugins participate in the server lifecycle:
- * - `onInit`: Before API initialization (inject hooks)
- * - `onReady`: After API + seeding
- * - `onShutdown`: Graceful shutdown
- */
-export interface MomentumPluginConfig {
-	/** Unique plugin name */
-	name: string;
-	/** Called before API initialization */
-	onInit?(...args: unknown[]): void | Promise<void>;
-	/** Called after API + seeding complete */
-	onReady?(...args: unknown[]): void | Promise<void>;
-	/** Called on graceful shutdown */
-	onShutdown?(...args: unknown[]): void | Promise<void>;
-}
-
 /**
  * Momentum CMS configuration.
  */
@@ -335,7 +312,7 @@ export interface MomentumConfig {
 	 * Plugins to register.
 	 * Plugins run in array order during init/ready, reverse during shutdown.
 	 */
-	plugins?: MomentumPluginConfig[];
+	plugins?: MomentumPlugin[];
 }
 
 /**

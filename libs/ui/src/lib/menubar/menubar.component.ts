@@ -28,7 +28,7 @@ import { MenuBar as AriaMenuBar } from '@angular/aria/menu';
 		{
 			directive: AriaMenuBar,
 			inputs: ['disabled', 'wrap', 'typeaheadDelay', 'values'],
-			outputs: ['valuesChange', 'onSelect'],
+			outputs: ['valuesChange'],
 		},
 	],
 	host: {

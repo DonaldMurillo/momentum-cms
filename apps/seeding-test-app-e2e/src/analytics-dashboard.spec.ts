@@ -99,7 +99,9 @@ test.describe('Analytics API Endpoints', () => {
 		expect(signIn.ok(), 'Admin sign-in must succeed').toBe(true);
 	});
 
-	test('GET /api/analytics/summary returns summary data', async ({ request }) => {
+	test('GET /api/analytics/summary returns summary data with enhanced fields', async ({
+		request,
+	}) => {
 		// Generate some analytics data first
 		await request.get('/api/categories');
 
@@ -114,6 +116,10 @@ test.describe('Analytics API Endpoints', () => {
 			apiMetrics: { totalRequests: number; avgDuration: number };
 			activeSessions: number;
 			activeVisitors: number;
+			topPages: Array<{ url: string; count: number }>;
+			topReferrers: Array<{ referrer: string; count: number }>;
+			deviceBreakdown: Record<string, number>;
+			browserBreakdown: Record<string, number>;
 		};
 
 		expect(typeof data.totalEvents).toBe('number');
@@ -127,6 +133,12 @@ test.describe('Analytics API Endpoints', () => {
 		expect(typeof data.apiMetrics.avgDuration).toBe('number');
 		expect(typeof data.activeSessions).toBe('number');
 		expect(typeof data.activeVisitors).toBe('number');
+
+		// New enhanced fields
+		expect(Array.isArray(data.topPages)).toBe(true);
+		expect(Array.isArray(data.topReferrers)).toBe(true);
+		expect(typeof data.deviceBreakdown).toBe('object');
+		expect(typeof data.browserBreakdown).toBe('object');
 	});
 
 	test('GET /api/analytics/query returns paginated events', async ({ request }) => {
@@ -157,6 +169,75 @@ test.describe('Analytics API Endpoints', () => {
 		expect(typeof data.total).toBe('number');
 		expect(typeof data.page).toBe('number');
 		expect(typeof data.limit).toBe('number');
+	});
+
+	test('GET /api/analytics/query supports search filter', async ({ request }) => {
+		// Generate a known content event
+		const slug = `analytics-search-${Date.now()}`;
+		await request.post('/api/categories', {
+			headers: { 'Content-Type': 'application/json' },
+			data: { name: 'Search Filter Test', slug },
+		});
+
+		// Search for "content_created" by name
+		const response = await request.get('/api/analytics/query?search=content_created&limit=50');
+		expect(response.ok()).toBe(true);
+
+		const data = (await response.json()) as {
+			events: Array<{ name: string }>;
+			total: number;
+		};
+
+		// All returned events should match the search term
+		for (const event of data.events) {
+			expect(event.name).toContain('content_created');
+		}
+	});
+
+	test('GET /api/analytics/query supports pagination', async ({ request }) => {
+		// Generate enough events for pagination
+		for (let i = 0; i < 3; i++) {
+			await request.get('/api/categories');
+		}
+
+		const page1 = await request.get('/api/analytics/query?limit=2&page=1');
+		expect(page1.ok()).toBe(true);
+		const data1 = (await page1.json()) as {
+			events: Array<{ id: string }>;
+			total: number;
+			page: number;
+			limit: number;
+		};
+		expect(data1.page).toBe(1);
+		expect(data1.limit).toBe(2);
+		expect(data1.events.length).toBeLessThanOrEqual(2);
+
+		if (data1.total > 2) {
+			const page2 = await request.get('/api/analytics/query?limit=2&page=2');
+			expect(page2.ok()).toBe(true);
+			const data2 = (await page2.json()) as {
+				events: Array<{ id: string }>;
+				page: number;
+			};
+			expect(data2.page).toBe(2);
+			// Page 2 events should differ from page 1
+			if (data2.events.length > 0 && data1.events.length > 0) {
+				expect(data2.events[0].id).not.toBe(data1.events[0].id);
+			}
+		}
+	});
+
+	test('GET /api/analytics/query supports date range filtering', async ({ request }) => {
+		// Generate an event now
+		await request.get('/api/categories');
+
+		// Query with a from date in the future — should return no events
+		const futureDate = new Date(Date.now() + 86400000).toISOString();
+		const response = await request.get(`/api/analytics/query?from=${futureDate}&limit=50`);
+		expect(response.ok()).toBe(true);
+
+		const data = (await response.json()) as { events: unknown[]; total: number };
+		expect(data.total).toBe(0);
 	});
 
 	test('GET /api/analytics/query supports category filter', async ({ request }) => {
@@ -214,10 +295,51 @@ test.describe('Analytics Dashboard Page', () => {
 		});
 
 		// Category filter buttons should be present
-		await expect(authenticatedPage.getByRole('button', { name: 'All' })).toBeVisible();
+		// Note: "All" button appears in both date range and category selectors — check unique ones
 		await expect(authenticatedPage.getByRole('button', { name: 'Content' })).toBeVisible();
 		await expect(authenticatedPage.getByRole('button', { name: 'API' })).toBeVisible();
 		await expect(authenticatedPage.getByRole('button', { name: 'Custom' })).toBeVisible();
+	});
+
+	test('renders date range selector buttons', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/analytics');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		// Wait for dashboard to load
+		await expect(authenticatedPage.getByRole('heading', { name: 'Analytics' })).toBeVisible({
+			timeout: 15000,
+		});
+
+		// Date range buttons
+		await expect(authenticatedPage.getByRole('button', { name: '24h' })).toBeVisible();
+		await expect(authenticatedPage.getByRole('button', { name: '7d' })).toBeVisible();
+		await expect(authenticatedPage.getByRole('button', { name: '30d' })).toBeVisible();
+		// "All" button exists for both date range and category filter
+		const allButtons = authenticatedPage.getByRole('button', { name: 'All' });
+		await expect(allButtons.first()).toBeVisible();
+	});
+
+	test('renders search input', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/analytics');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		await expect(authenticatedPage.getByRole('heading', { name: 'Analytics' })).toBeVisible({
+			timeout: 15000,
+		});
+
+		const searchInput = authenticatedPage.getByLabel('Search analytics events');
+		await expect(searchInput).toBeVisible();
+	});
+
+	test('renders refresh button', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/analytics');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		await expect(authenticatedPage.getByRole('heading', { name: 'Analytics' })).toBeVisible({
+			timeout: 15000,
+		});
+
+		await expect(authenticatedPage.getByRole('button', { name: 'Refresh' })).toBeVisible();
 	});
 
 	test('renders events table after data loads', async ({ request, authenticatedPage }) => {

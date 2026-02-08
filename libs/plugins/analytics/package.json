@@ -1,0 +1,21 @@
+{
+	"name": "@momentum-cms/plugins-analytics",
+	"version": "0.0.1",
+	"type": "commonjs",
+	"main": "./index.cjs",
+	"types": "./src/index.d.ts",
+	"dependencies": {
+		"@momentum-cms/core": "0.0.1",
+		"@momentum-cms/logger": "0.0.1",
+		"@momentum-cms/plugins-core": "0.0.1",
+		"express": "^4.21.0"
+	},
+	"peerDependencies": {
+		"pg": "^8.0.0"
+	},
+	"peerDependenciesMeta": {
+		"pg": {
+			"optional": true
+		}
+	}
+}

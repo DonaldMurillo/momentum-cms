@@ -9,12 +9,8 @@ import {
 } from '@momentum-cms/server-core';
 import type { MomentumConfig, ResolvedMomentumConfig } from '@momentum-cms/core';
 import { initializeMomentumLogger, createLogger } from '@momentum-cms/logger';
-import { PluginRunner } from '@momentum-cms/plugins';
-import {
-	setPluginMiddleware,
-	setPluginProviders,
-	setPluginAdminRoutes,
-} from './plugin-middleware-registry';
+import { PluginRunner } from '@momentum-cms/plugins/core';
+import { setPluginMiddleware, setPluginProviders } from './plugin-middleware-registry';
 
 /**
  * Result of initializing Momentum CMS.
@@ -134,10 +130,9 @@ export function initializeMomentum(
 			log.info(`Initializing ${plugins.length} plugin(s)...`);
 			await pluginRunner.runInit();
 
-			// Store plugin middleware/providers/admin routes for auto-mounting
+			// Store plugin middleware/providers for auto-mounting
 			setPluginMiddleware(pluginRunner.getMiddleware());
 			setPluginProviders(pluginRunner.getProviders());
-			setPluginAdminRoutes(pluginRunner.getAdminRoutes());
 		}
 
 		// 2. Initialize database schema if adapter supports it

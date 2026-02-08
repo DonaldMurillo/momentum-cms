@@ -1,8 +1,8 @@
 import { defineMomentumConfig } from '@momentum-cms/core';
 import { postgresAdapter } from '@momentum-cms/db-drizzle';
 import { localStorageAdapter } from '@momentum-cms/storage';
-import { eventBusPlugin } from '@momentum-cms/plugins';
-import { analyticsPlugin, MemoryAnalyticsAdapter } from '@momentum-cms/analytics';
+import { eventBusPlugin } from '@momentum-cms/plugins/core';
+import { analyticsPlugin, MemoryAnalyticsAdapter } from '@momentum-cms/plugins/analytics';
 import {
 	Categories,
 	Articles,
@@ -32,10 +32,7 @@ export const analytics = analyticsPlugin({
 	flushBatchSize: 10,
 	ingestRateLimit: 10, // Low limit for fast rate-limit E2E testing
 	excludeCollections: ['_seed_tracking'],
-	adminDashboard: {
-		loadComponent: () =>
-			import('./pages/analytics-dashboard.page').then((m) => m.AnalyticsDashboardPage),
-	},
+	adminDashboard: true,
 });
 
 /**

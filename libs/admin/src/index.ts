@@ -15,14 +15,6 @@ export {
 	type CollectionPermissions,
 } from './lib/services/collection-access.service';
 export { UploadService, type UploadProgress } from './lib/services/upload.service';
-export {
-	AnalyticsService,
-	type AnalyticsSummaryData,
-	type AnalyticsEventData,
-	type AnalyticsQueryResult as AdminAnalyticsQueryResult,
-	type AnalyticsQueryParams,
-} from './lib/services/analytics.service';
-
 // Momentum API (unified SSR/Browser)
 export {
 	injectMomentumAPI,

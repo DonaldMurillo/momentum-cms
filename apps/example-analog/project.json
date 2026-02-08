@@ -4,7 +4,7 @@
 	"projectType": "application",
 	"prefix": "app",
 	"sourceRoot": "apps/example-analog/src",
-	"tags": [],
+	"tags": ["scope:app"],
 	"targets": {
 		"build": {
 			"executor": "@analogjs/platform:vite",

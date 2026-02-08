@@ -34,7 +34,7 @@ import {
 } from '@momentum-cms/server-core';
 import { createMomentumAuth } from '@momentum-cms/auth';
 import { provideMomentumAPI } from '@momentum-cms/admin';
-import type { CollectionEvent } from '@momentum-cms/plugins';
+import type { CollectionEvent } from '@momentum-cms/plugins/core';
 import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
 import momentumConfig, { events, analytics, analyticsAdapter } from './momentum.config';
 

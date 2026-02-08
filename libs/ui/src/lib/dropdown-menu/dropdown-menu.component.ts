@@ -23,7 +23,6 @@ import { Menu } from '@angular/aria/menu';
 		{
 			directive: Menu,
 			inputs: ['disabled', 'wrap', 'typeaheadDelay'],
-			outputs: ['onSelect'],
 		},
 	],
 	host: {

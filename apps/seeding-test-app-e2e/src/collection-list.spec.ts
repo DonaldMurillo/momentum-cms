@@ -196,27 +196,32 @@ test.describe('Collection List Page - Navigation', () => {
 	test('should be able to switch between collections via sidebar', async ({
 		authenticatedPage,
 	}) => {
-		await authenticatedPage.goto('/admin/collections/articles');
+		// Use client-side navigation to avoid SSR hydration timing issues with routerLink.
+		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		const nav = authenticatedPage.getByRole('navigation');
+		const nav = authenticatedPage.getByLabel('Main navigation');
+
+		// Navigate to Articles via sidebar (client-side navigation)
+		await nav.getByRole('link', { name: 'Articles' }).click();
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/articles/, { timeout: 10000 });
+		await expect(authenticatedPage.getByRole('heading', { name: 'Articles' })).toBeVisible();
 
 		// Navigate to Users via sidebar
 		await nav.getByRole('link', { name: 'Users' }).click();
-
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users/);
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users/, { timeout: 10000 });
 		await expect(authenticatedPage.getByRole('heading', { name: 'Users' })).toBeVisible();
 
 		// Navigate to Categories via sidebar
 		await nav.getByRole('link', { name: 'Categories' }).click();
-
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/categories/);
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/categories/, {
+			timeout: 10000,
+		});
 		await expect(authenticatedPage.getByRole('heading', { name: 'Categories' })).toBeVisible();
 
 		// Navigate back to Articles via sidebar
 		await nav.getByRole('link', { name: 'Articles' }).click();
-
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/articles/);
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/articles/, { timeout: 10000 });
 		await expect(authenticatedPage.getByRole('heading', { name: 'Articles' })).toBeVisible();
 	});
 });

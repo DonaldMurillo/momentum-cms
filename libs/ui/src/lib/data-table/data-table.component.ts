@@ -76,7 +76,7 @@ import { DropdownMenuItem } from '../dropdown-menu/dropdown-menu-item.component'
 					<mcms-search-input
 						[(value)]="searchQuery"
 						[placeholder]="searchPlaceholder()"
-						(search)="onSearchChange($event)"
+						(searchChange)="onSearchChange($event)"
 						class="w-full max-w-sm"
 					/>
 				}

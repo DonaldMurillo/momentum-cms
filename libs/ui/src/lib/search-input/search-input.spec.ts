@@ -87,7 +87,7 @@ describe('SearchInput', () => {
 	it('should emit search after debounce delay', async () => {
 		vi.useFakeTimers();
 		const searchSpy = vi.fn();
-		fixture.componentInstance.search.subscribe(searchSpy);
+		fixture.componentInstance.searchChange.subscribe(searchSpy);
 
 		// Set initial value to trigger the effect
 		fixture.componentInstance.value.set('test');
@@ -113,7 +113,7 @@ describe('SearchInput', () => {
 		customFixture.detectChanges();
 		await customFixture.whenStable();
 
-		customFixture.componentInstance.search.subscribe(searchSpy);
+		customFixture.componentInstance.searchChange.subscribe(searchSpy);
 
 		customFixture.componentInstance.value.set('custom');
 		customFixture.detectChanges();
@@ -130,7 +130,7 @@ describe('SearchInput', () => {
 	it('should debounce multiple rapid value changes', async () => {
 		vi.useFakeTimers();
 		const searchSpy = vi.fn();
-		fixture.componentInstance.search.subscribe(searchSpy);
+		fixture.componentInstance.searchChange.subscribe(searchSpy);
 
 		// Rapid changes
 		fixture.componentInstance.value.set('a');

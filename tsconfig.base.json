@@ -26,9 +26,15 @@
 			"@momentum-cms/storage": ["libs/storage/src/index.ts"],
 			"@momentum-cms/e2e-fixtures": ["libs/e2e-fixtures/src/index.ts"],
 			"@momentum-cms/logger": ["libs/logger/src/index.ts"],
-			"@momentum-cms/plugins": ["libs/plugins/src/index.ts"],
-			"@momentum-cms/plugin-otel": ["libs/plugin-otel/src/index.ts"],
-			"@momentum-cms/analytics": ["libs/analytics/src/index.ts"]
+			"@momentum-cms/plugins/core": ["libs/plugins/core/src/index.ts"],
+			"@momentum-cms/plugins/analytics": ["libs/plugins/analytics/src/index.ts"],
+			"@momentum-cms/plugins/otel": ["libs/plugins/otel/src/index.ts"],
+			"@momentum-cms/plugins/analytics/dashboard": [
+				"libs/plugins/analytics/src/lib/dashboard/analytics-dashboard.page.ts"
+			],
+			"@momentum-cms/plugins/analytics/admin-routes": [
+				"libs/plugins/analytics/src/lib/analytics-admin-routes.ts"
+			]
 		}
 	},
 	"exclude": ["node_modules", "tmp"]

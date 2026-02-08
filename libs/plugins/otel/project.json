@@ -1,0 +1,40 @@
+{
+	"name": "plugins-otel",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/plugins/otel/src",
+	"projectType": "library",
+	"release": {
+		"version": {
+			"manifestRootsToUpdate": ["dist/{projectRoot}"],
+			"currentVersionResolver": "git-tag",
+			"fallbackCurrentVersionResolver": "disk"
+		}
+	},
+	"tags": ["scope:plugin"],
+	"targets": {
+		"test": {
+			"executor": "@nx/vitest:test",
+			"outputs": ["{workspaceRoot}/coverage/libs/plugins/otel"],
+			"options": {
+				"config": "libs/plugins/otel/vitest.config.ts"
+			}
+		},
+		"build": {
+			"executor": "@nx/esbuild:esbuild",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/libs/plugins/otel",
+				"main": "libs/plugins/otel/src/index.ts",
+				"tsConfig": "libs/plugins/otel/tsconfig.lib.json",
+				"assets": ["libs/plugins/otel/*.md"],
+				"format": ["cjs"],
+				"generatePackageJson": true
+			}
+		},
+		"nx-release-publish": {
+			"options": {
+				"packageRoot": "dist/{projectRoot}"
+			}
+		}
+	}
+}

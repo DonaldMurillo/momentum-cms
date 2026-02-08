@@ -17,6 +17,9 @@ export * from './lib/access';
 // Configuration
 export * from './lib/config';
 
+// Plugin Types
+export * from './lib/plugins';
+
 // Storage
 export * from './lib/storage';
 

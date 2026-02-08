@@ -4,7 +4,7 @@
 	"projectType": "application",
 	"prefix": "app",
 	"sourceRoot": "apps/seeding-test-app/src",
-	"tags": [],
+	"tags": ["scope:app"],
 	"targets": {
 		"build": {
 			"executor": "@angular/build:application",

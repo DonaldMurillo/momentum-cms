@@ -14,12 +14,10 @@
 import type {
 	PluginMiddlewareDescriptor,
 	PluginProviderDescriptor,
-	PluginAdminRouteDescriptor,
-} from '@momentum-cms/plugins';
+} from '@momentum-cms/plugins/core';
 
 let pluginMiddleware: PluginMiddlewareDescriptor[] = [];
 let pluginProviders: PluginProviderDescriptor[] = [];
-let pluginAdminRoutes: PluginAdminRouteDescriptor[] = [];
 
 /**
  * Store plugin middleware descriptors collected during onInit.
@@ -63,20 +61,4 @@ export function setPluginProviders(providers: PluginProviderDescriptor[]): void 
  */
 export function getPluginProviders(): PluginProviderDescriptor[] {
 	return pluginProviders;
-}
-
-/**
- * Store plugin admin route descriptors collected during onInit.
- * Called by initializeMomentum() after pluginRunner.runInit().
- */
-export function setPluginAdminRoutes(routes: PluginAdminRouteDescriptor[]): void {
-	pluginAdminRoutes = routes;
-}
-
-/**
- * Get plugin admin route descriptors for Angular admin UI.
- * Called by app routing to generate admin child routes and sidebar nav items.
- */
-export function getPluginAdminRoutes(): PluginAdminRouteDescriptor[] {
-	return pluginAdminRoutes;
 }

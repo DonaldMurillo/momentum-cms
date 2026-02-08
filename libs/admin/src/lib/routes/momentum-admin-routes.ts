@@ -20,7 +20,11 @@
 
 import type { Routes, Route } from '@angular/router';
 import type { Type } from '@angular/core';
-import type { CollectionConfig } from '@momentum-cms/core';
+import type {
+	CollectionConfig,
+	MomentumConfig,
+	PluginAdminRouteDescriptor,
+} from '@momentum-cms/core';
 import { authGuard } from '../guards/auth.guard';
 import { guestGuard } from '../guards/guest.guard';
 import { setupGuard } from '../guards/setup.guard';
@@ -65,8 +69,8 @@ export interface MomentumAdminOptions {
 	branding?: MomentumAdminBranding;
 	/** Whether to include auth routes (login, setup). Defaults to true */
 	includeAuthRoutes?: boolean;
-	/** Plugin-registered admin routes */
-	pluginRoutes?: AdminPluginRoute[];
+	/** Plugin-registered admin routes. Accepts both Angular-typed and core-typed descriptors. */
+	pluginRoutes?: AdminPluginRoute[] | PluginAdminRouteDescriptor[];
 }
 
 export interface MomentumAdminRouteData {
@@ -76,19 +80,69 @@ export interface MomentumAdminRouteData {
 }
 
 /**
- * Creates Angular routes for the Momentum CMS admin UI
- * @param options Configuration options
- * @returns Array of Angular routes
+ * Converts a PluginAdminRouteDescriptor (from core) to an AdminPluginRoute (Angular-typed).
  */
-export function momentumAdminRoutes(options: MomentumAdminOptions): Routes {
-	// Remove leading slash from basePath
-	const basePath = options.basePath.replace(/^\//, '');
-	const includeAuthRoutes = options.includeAuthRoutes ?? true;
+function toAdminPluginRoute(descriptor: PluginAdminRouteDescriptor): AdminPluginRoute {
+	return {
+		path: descriptor.path,
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- core uses `unknown` for loadComponent to avoid Angular dependency
+		loadComponent: descriptor.loadComponent as () => Promise<Type<unknown>>,
+		data: descriptor.data,
+		label: descriptor.label,
+		icon: descriptor.icon,
+		group: descriptor.group,
+	};
+}
+
+/**
+ * Creates Angular routes for the Momentum CMS admin UI.
+ *
+ * Can be called with a full `MomentumConfig` (config-driven) or explicit options.
+ *
+ * Config-driven usage (recommended):
+ * ```typescript
+ * import config from '../momentum.config';
+ * export const routes = [...momentumAdminRoutes(config)];
+ * ```
+ *
+ * Options-based usage:
+ * ```typescript
+ * momentumAdminRoutes({ basePath: '/admin', collections, branding })
+ * ```
+ */
+export function momentumAdminRoutes(config: MomentumConfig): Routes;
+export function momentumAdminRoutes(options: MomentumAdminOptions): Routes;
+export function momentumAdminRoutes(
+	configOrOptions: MomentumConfig | MomentumAdminOptions,
+): Routes {
+	let basePath: string;
+	let collections: CollectionConfig[];
+	let branding: MomentumAdminBranding | undefined;
+	let includeAuthRoutes: boolean;
+	let pluginRoutes: AdminPluginRoute[] | undefined;
+
+	// Distinguish MomentumConfig (has `db`) from MomentumAdminOptions (has `basePath` as required string)
+	if ('db' in configOrOptions) {
+		const config = configOrOptions;
+		basePath = (config.admin?.basePath ?? '/admin').replace(/^\//, '');
+		collections = config.collections;
+		branding = config.admin?.branding;
+		includeAuthRoutes = true;
+		pluginRoutes = (config.plugins ?? [])
+			.flatMap((p) => p.adminRoutes ?? [])
+			.map(toAdminPluginRoute);
+	} else {
+		basePath = configOrOptions.basePath.replace(/^\//, '');
+		collections = configOrOptions.collections;
+		branding = configOrOptions.branding;
+		includeAuthRoutes = configOrOptions.includeAuthRoutes ?? true;
+		pluginRoutes = configOrOptions.pluginRoutes?.map(toAdminPluginRoute);
+	}
 
 	const routeData: MomentumAdminRouteData = {
-		collections: options.collections,
-		branding: options.branding,
-		pluginRoutes: options.pluginRoutes,
+		collections,
+		branding,
+		pluginRoutes,
 	};
 
 	const routes: Routes = [];
@@ -178,7 +232,7 @@ export function momentumAdminRoutes(options: MomentumAdminOptions): Routes {
 				canDeactivate: [unsavedChangesGuard],
 			},
 			// Plugin-registered routes
-			...(options.pluginRoutes ?? []).map((pr) => ({
+			...(pluginRoutes ?? []).map((pr) => ({
 				path: pr.path,
 				loadComponent: pr.loadComponent,
 				data: pr.data,

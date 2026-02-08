@@ -197,6 +197,74 @@ test.describe('Analytics', () => {
 		expect(results).toContain(202);
 	});
 
+	test('captures device and browser context in API events', async ({ request }) => {
+		// Make an API request — the api-collector should parse the user-agent
+		await request.get('/api/categories');
+
+		const response = await request.get('/api/test-analytics-events');
+		const data = (await response.json()) as {
+			events: Array<{
+				category: string;
+				name: string;
+				context: {
+					device?: string;
+					browser?: string;
+					os?: string;
+					url?: string;
+					ip?: string;
+				};
+			}>;
+		};
+
+		const apiEvent = data.events.find((e) => e.category === 'api' && e.name === 'api_request');
+		expect(apiEvent).toBeDefined();
+
+		// The api-collector should populate device/browser/os from user-agent
+		expect(apiEvent?.context.device).toBeDefined();
+		expect(apiEvent?.context.url).toBeDefined();
+	});
+
+	test('captures device and browser context in ingested events', async ({ request }) => {
+		const ingest = await request.post('/api/analytics/collect', {
+			headers: {
+				'Content-Type': 'application/json',
+				'User-Agent':
+					'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+			},
+			data: {
+				events: [
+					{
+						name: 'page_view',
+						category: 'page',
+						context: { url: 'http://localhost/test-ua' },
+					},
+				],
+			},
+		});
+		expect(ingest.status()).toBe(202);
+
+		const response = await request.get('/api/test-analytics-events');
+		const data = (await response.json()) as {
+			events: Array<{
+				name: string;
+				context: {
+					device?: string;
+					browser?: string;
+					os?: string;
+					source: string;
+				};
+			}>;
+		};
+
+		const pageEvent = data.events.find(
+			(e) => e.name === 'page_view' && e.context.source === 'client',
+		);
+		expect(pageEvent).toBeDefined();
+		expect(pageEvent?.context.device).toBe('desktop');
+		expect(pageEvent?.context.browser).toBe('Chrome');
+		expect(pageEvent?.context.os).toBe('macOS');
+	});
+
 	test('excludes _seed_tracking from analytics', async ({ request }) => {
 		// Seeding runs at startup and uses _seed_tracking collection internally.
 		// Analytics should NOT track events from excluded collections.

@@ -16,7 +16,7 @@ import {
  * <mcms-search-input
  *   placeholder="Search users..."
  *   [debounce]="300"
- *   (search)="onSearch($event)"
+ *   (searchChange)="onSearch($event)"
  * />
  * ```
  */
@@ -107,7 +107,7 @@ export class SearchInput {
 	readonly class = input('');
 
 	/** Emitted after debounce when search value changes. */
-	readonly search = output<string>();
+	readonly searchChange = output<string>();
 
 	/** Emitted when the clear button is clicked. */
 	readonly clear = output<void>();
@@ -130,7 +130,7 @@ export class SearchInput {
 			}
 
 			this.debounceTimer = setTimeout(() => {
-				this.search.emit(value);
+				this.searchChange.emit(value);
 			}, debounceMs);
 		});
 	}
