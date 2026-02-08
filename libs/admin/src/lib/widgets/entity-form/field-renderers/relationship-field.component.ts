@@ -361,7 +361,23 @@ export class RelationshipFieldRenderer {
 		const id = this.isMulti() ? this.multiValues()[0] : this.singleValue();
 		if (!id) return;
 
-		this.entitySheetService.openView(slug, id);
+		this.entitySheetService.openView(slug, id).subscribe((result) => {
+			if (result.action === 'deleted') {
+				const state = this.nodeState();
+				if (!state) return;
+
+				// Clear the deleted entity from the selection
+				if (this.isMulti()) {
+					const current = this.multiValues();
+					state.value.set(current.filter((v) => v !== id));
+				} else {
+					state.value.set(null);
+				}
+
+				// Refresh options to remove the deleted entity
+				this.fetchOptions(slug);
+			}
+		});
 	}
 
 	/** Fetch options from the related collection API, returns subscription for cleanup */

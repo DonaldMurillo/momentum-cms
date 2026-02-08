@@ -204,6 +204,7 @@ test.describe('Entity Sheet', () => {
 
 			// URL should contain sheet query params
 			await expect(authenticatedPage).toHaveURL(/sheetCollection=categories/, { timeout: 5000 });
+			await expect(authenticatedPage).toHaveURL(/sheetMode=view/, { timeout: 5000 });
 		});
 	});
 
@@ -213,8 +214,8 @@ test.describe('Entity Sheet', () => {
 
 			const sheetDialog = await openSheetViaNewButton(authenticatedPage, relationshipField);
 
-			// Click the backdrop (the area to the left of the sheet panel)
-			const backdrop = authenticatedPage.locator('[role="button"][aria-label="Close sheet"]');
+			// Click the backdrop (the presentation wrapper, far left of the sheet panel)
+			const backdrop = authenticatedPage.locator('[role="presentation"]');
 			await backdrop.click({ position: { x: 10, y: 300 } });
 
 			// Sheet should close
@@ -250,6 +251,9 @@ test.describe('Entity Sheet', () => {
 
 			// Sheet should close
 			await expect(sheetDialog).not.toBeVisible({ timeout: 5000 });
+
+			// URL should be clean
+			await expect(authenticatedPage).not.toHaveURL(/sheetCollection/);
 		});
 	});
 
@@ -312,6 +316,9 @@ test.describe('Entity Sheet', () => {
 
 			// Sheet should close (outlet deactivated)
 			await expect(sheetDialog).not.toBeVisible({ timeout: 5000 });
+
+			// URL should no longer contain sheet query params
+			await expect(authenticatedPage).not.toHaveURL(/sheetCollection/);
 		});
 	});
 });

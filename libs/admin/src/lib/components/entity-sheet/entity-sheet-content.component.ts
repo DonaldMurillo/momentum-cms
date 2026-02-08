@@ -55,6 +55,7 @@ import type { Entity } from '../../widgets/widget.types';
 					[showBreadcrumbs]="false"
 					[showVersionHistory]="false"
 					(edit)="onSwitchToEdit()"
+					(delete_)="onDeleted($event)"
 				/>
 			} @else if (collection()) {
 				<mcms-entity-form
@@ -153,6 +154,12 @@ export class EntitySheetContentComponent {
 			entity,
 			collection: slug,
 		});
+	}
+
+	/** Handle entity deleted */
+	onDeleted(entity: Entity): void {
+		const slug = this.collectionSlug() ?? '';
+		this.sheetService.close({ action: 'deleted', entity, collection: slug });
 	}
 
 	/** Handle close */

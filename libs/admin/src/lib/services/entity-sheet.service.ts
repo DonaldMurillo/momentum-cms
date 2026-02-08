@@ -10,7 +10,7 @@ import type { Entity } from '../widgets/widget.types';
  */
 export interface EntitySheetResult {
 	/** What happened in the sheet */
-	action: 'created' | 'updated' | 'cancelled';
+	action: 'created' | 'updated' | 'deleted' | 'cancelled';
 	/** The entity that was created or updated (undefined on cancel) */
 	entity?: Entity;
 	/** The collection slug */
@@ -171,6 +171,16 @@ export class EntitySheetService {
 	): Observable<EntitySheetResult> {
 		// Cancel any in-progress close animation
 		this.cancelCloseAnimation();
+
+		// Clean up any previous pending callback to prevent memory leaks
+		const oldCallbackId = this.getCurrentCallbackId();
+		if (oldCallbackId) {
+			const oldSubject = this.pendingCallbacks.get(oldCallbackId);
+			if (oldSubject) {
+				oldSubject.complete();
+				this.pendingCallbacks.delete(oldCallbackId);
+			}
+		}
 
 		// Capture the trigger element for focus restoration on close
 		this.triggerElement = this.document.activeElement;
