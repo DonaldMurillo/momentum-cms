@@ -89,6 +89,30 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * Get the best title field name from a collection config.
+ * Checks admin.useAsTitle first, then falls back to 'title' or 'name' fields.
+ */
+export function getTitleField(config: Record<string, unknown>): string {
+	const admin = config['admin'];
+	if (isRecord(admin) && typeof admin['useAsTitle'] === 'string') {
+		return admin['useAsTitle'];
+	}
+
+	const fields = config['fields'];
+	if (Array.isArray(fields)) {
+		for (const field of fields) {
+			if (isRecord(field) && typeof field['name'] === 'string') {
+				if (field['name'] === 'title' || field['name'] === 'name') {
+					return field['name'];
+				}
+			}
+		}
+	}
+
+	return 'id';
+}
+
+/**
  * Create initial form data from collection fields.
  */
 export function createInitialFormData(collection: CollectionConfig): Record<string, unknown> {

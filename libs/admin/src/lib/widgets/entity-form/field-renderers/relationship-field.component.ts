@@ -12,11 +12,12 @@ import type { Subscription } from 'rxjs';
 import { McmsFormField, Badge } from '@momentum-cms/ui';
 import type { ValidationError } from '@momentum-cms/ui';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroXMark } from '@ng-icons/heroicons/outline';
+import { heroXMark, heroPlus, heroEye } from '@ng-icons/heroicons/outline';
+import { EntitySheetService } from '../../../services/entity-sheet.service';
 import { humanizeFieldName } from '@momentum-cms/core';
 import type { Field } from '@momentum-cms/core';
 import type { EntityFormMode } from '../entity-form.types';
-import { getFieldNodeState, isRecord } from '../entity-form.types';
+import { getFieldNodeState, isRecord, getTitleField } from '../entity-form.types';
 
 /** Option for the relationship dropdown */
 interface RelationshipOption {
@@ -37,7 +38,7 @@ interface RelationshipOption {
 @Component({
 	selector: 'mcms-relationship-field-renderer',
 	imports: [McmsFormField, Badge, NgIcon],
-	providers: [provideIcons({ heroXMark })],
+	providers: [provideIcons({ heroXMark, heroPlus, heroEye })],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `
@@ -101,10 +102,36 @@ interface RelationshipOption {
 				</select>
 			}
 		</mcms-form-field>
+
+		@if (entitySheetService && !isDisabled()) {
+			<div class="flex gap-2 mt-1.5" aria-live="polite">
+				<button
+					type="button"
+					class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+					(click)="onCreateRelated()"
+					[attr.aria-label]="'Create new ' + relatedLabel()"
+				>
+					<ng-icon name="heroPlus" size="14" aria-hidden="true" />
+					New
+				</button>
+				@if (hasSelection()) {
+					<button
+						type="button"
+						class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+						(click)="onViewRelated()"
+						[attr.aria-label]="'View ' + relatedLabel()"
+					>
+						<ng-icon name="heroEye" size="14" aria-hidden="true" />
+						View
+					</button>
+				}
+			</div>
+		}
 	`,
 })
 export class RelationshipFieldRenderer {
 	private readonly http = inject(HttpClient);
+	readonly entitySheetService = inject(EntitySheetService, { optional: true });
 
 	/** Field definition (must be a RelationshipField) */
 	readonly field = input.required<Field>();
@@ -170,25 +197,7 @@ export class RelationshipFieldRenderer {
 		const config = f.collection();
 		if (!isRecord(config)) return 'id';
 
-		// Check admin.useAsTitle first
-		const admin = config['admin'];
-		if (isRecord(admin) && typeof admin['useAsTitle'] === 'string') {
-			return admin['useAsTitle'];
-		}
-
-		// Fall back to first field named 'title' or 'name'
-		const fields = config['fields'];
-		if (Array.isArray(fields)) {
-			for (const field of fields) {
-				if (isRecord(field) && typeof field['name'] === 'string') {
-					if (field['name'] === 'title' || field['name'] === 'name') {
-						return field['name'];
-					}
-				}
-			}
-		}
-
-		return 'id';
+		return getTitleField(config);
 	});
 
 	/** Label for the related collection (singular) */
@@ -307,6 +316,11 @@ export class RelationshipFieldRenderer {
 		state.value.set(currentValues.filter((v) => v !== valueToRemove));
 	}
 
+	/** Whether there is a current selection (for showing "View" button) */
+	readonly hasSelection = computed(
+		(): boolean => !!this.singleValue() || this.multiValues().length > 0,
+	);
+
 	/**
 	 * Handle blur from select elements.
 	 */
@@ -315,8 +329,59 @@ export class RelationshipFieldRenderer {
 		if (state) state.markAsTouched();
 	}
 
+	/** Open the entity sheet to create a new related entity */
+	onCreateRelated(): void {
+		const slug = this.relatedSlug();
+		if (!slug || !this.entitySheetService) return;
+
+		this.entitySheetService.openCreate(slug).subscribe((result) => {
+			if (result.action === 'created' && result.entity) {
+				const state = this.nodeState();
+				if (!state) return;
+
+				const entityId = String(result.entity.id);
+				if (this.isMulti()) {
+					const current = this.multiValues();
+					state.value.set([...current, entityId]);
+				} else {
+					state.value.set(entityId);
+				}
+
+				// Refresh options to include the newly created entity
+				this.fetchOptions(slug);
+			}
+		});
+	}
+
+	/** Open the entity sheet to view the selected related entity */
+	onViewRelated(): void {
+		const slug = this.relatedSlug();
+		if (!slug || !this.entitySheetService) return;
+
+		const id = this.isMulti() ? this.multiValues()[0] : this.singleValue();
+		if (!id) return;
+
+		this.entitySheetService.openView(slug, id).subscribe((result) => {
+			if (result.action === 'deleted') {
+				const state = this.nodeState();
+				if (!state) return;
+
+				// Clear the deleted entity from the selection
+				if (this.isMulti()) {
+					const current = this.multiValues();
+					state.value.set(current.filter((v) => v !== id));
+				} else {
+					state.value.set(null);
+				}
+
+				// Refresh options to remove the deleted entity
+				this.fetchOptions(slug);
+			}
+		});
+	}
+
 	/** Fetch options from the related collection API, returns subscription for cleanup */
-	private fetchOptions(slug: string): Subscription {
+	fetchOptions(slug: string): Subscription {
 		this.isLoading.set(true);
 		const titleField = this.titleField();
 
@@ -340,13 +405,9 @@ export class RelationshipFieldRenderer {
 				next: (response) => {
 					const docs = response.docs ?? [];
 					const options: RelationshipOption[] = docs.map((doc) => {
-						const id =
-							typeof doc['id'] === 'string' ? doc['id'] : String(doc['id'] ?? '');
+						const id = typeof doc['id'] === 'string' ? doc['id'] : String(doc['id'] ?? '');
 						const titleValue = doc[titleField];
-						const label =
-							titleField !== 'id' && typeof titleValue === 'string'
-								? titleValue
-								: id;
+						const label = titleField !== 'id' && typeof titleValue === 'string' ? titleValue : id;
 						return { value: id, label };
 					});
 					this.allOptions.set(options);

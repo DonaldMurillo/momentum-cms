@@ -215,6 +215,9 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	/** Whether to show breadcrumbs */
 	readonly showBreadcrumbs = input(true);
 
+	/** When true, prevents router navigation after save/cancel (used in entity sheet) */
+	readonly suppressNavigation = input(false);
+
 	/** Outputs */
 	readonly saved = output<T>();
 	readonly cancelled = output<void>();
@@ -432,8 +435,10 @@ export class EntityFormWidget<T extends Entity = Entity> {
 				ef().reset();
 				this.saved.emit(result);
 
-				const listPath = `${this.basePath()}/${slug}`;
-				this.router.navigate([listPath]);
+				if (!this.suppressNavigation()) {
+					const listPath = `${this.basePath()}/${slug}`;
+					this.router.navigate([listPath]);
+				}
 			} catch (err) {
 				const errorMessage = err instanceof Error ? err.message : 'Save failed';
 				this.formError.set(errorMessage);
@@ -455,8 +460,10 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	 */
 	onCancel(): void {
 		this.cancelled.emit();
-		const listPath = `${this.basePath()}/${this.collection().slug}`;
-		this.router.navigate([listPath]);
+		if (!this.suppressNavigation()) {
+			const listPath = `${this.basePath()}/${this.collection().slug}`;
+			this.router.navigate([listPath]);
+		}
 	}
 
 	/**
