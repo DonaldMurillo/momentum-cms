@@ -527,8 +527,8 @@ export class MediaLibraryPage {
 			const collection = this.api.collection('media');
 			const ids = Array.from(this.selectedItems());
 
-			// Delete all selected items
-			await Promise.all(ids.map((id) => collection.delete(id)));
+			// Use batchDelete for a single request with a single summary toast
+			await collection.batchDelete(ids);
 
 			this.selectedItems.set(new Set());
 			this.loadMedia(this.searchQuery(), this.currentPage());

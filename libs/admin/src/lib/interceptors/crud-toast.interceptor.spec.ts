@@ -15,6 +15,10 @@ describe('crudToastInterceptor', () => {
 			entityUpdated: vi.fn(),
 			entityDeleted: vi.fn(),
 			entitiesDeleted: vi.fn(),
+			entityPublished: vi.fn(),
+			entityUnpublished: vi.fn(),
+			draftSaved: vi.fn(),
+			versionRestored: vi.fn(),
 			operationFailed: vi.fn(),
 			notAuthorized: vi.fn(),
 			entityNotFound: vi.fn(),
@@ -191,6 +195,67 @@ describe('crudToastInterceptor', () => {
 		expect(feedback.entityUpdated).toHaveBeenCalledWith('Post');
 	});
 
+	it('should use plural slug directly for batch POST (no naive re-pluralization)', () => {
+		http.post('/api/business/batch', []).subscribe();
+
+		const req = httpMock.expectOne('/api/business/batch');
+		req.flush({ docs: [{ id: '1' }, { id: '2' }] });
+
+		// Should be "2 business" not "2 businesss" (triple s)
+		expect(feedback.entityCreated).toHaveBeenCalledWith('2 business');
+	});
+
+	// === Lifecycle sub-actions ===
+
+	it('should show entityPublished for POST to /publish', () => {
+		http.post('/api/posts/123/publish', {}).subscribe();
+
+		const req = httpMock.expectOne('/api/posts/123/publish');
+		req.flush({ doc: { id: '123' }, message: 'Published' });
+
+		expect(feedback.entityPublished).toHaveBeenCalledWith('Post');
+		expect(feedback.entityCreated).not.toHaveBeenCalled();
+	});
+
+	it('should show entityUnpublished for POST to /unpublish', () => {
+		http.post('/api/posts/123/unpublish', {}).subscribe();
+
+		const req = httpMock.expectOne('/api/posts/123/unpublish');
+		req.flush({ doc: { id: '123' }, message: 'Unpublished' });
+
+		expect(feedback.entityUnpublished).toHaveBeenCalledWith('Post');
+		expect(feedback.entityCreated).not.toHaveBeenCalled();
+	});
+
+	it('should show draftSaved for POST to /draft', () => {
+		http.post('/api/posts/123/draft', {}).subscribe();
+
+		const req = httpMock.expectOne('/api/posts/123/draft');
+		req.flush({ version: {}, message: 'Draft saved' });
+
+		expect(feedback.draftSaved).toHaveBeenCalled();
+		expect(feedback.entityCreated).not.toHaveBeenCalled();
+	});
+
+	it('should skip /status sub-action (no toast)', () => {
+		http.get('/api/posts/123/status').subscribe();
+
+		const req = httpMock.expectOne('/api/posts/123/status');
+		req.flush({ status: 'published' });
+
+		expect(feedback.entityCreated).not.toHaveBeenCalled();
+		expect(feedback.entityUpdated).not.toHaveBeenCalled();
+	});
+
+	it('should skip /versions sub-action (no toast)', () => {
+		http.get('/api/posts/123/versions').subscribe();
+
+		const req = httpMock.expectOne('/api/posts/123/versions');
+		req.flush({ docs: [] });
+
+		expect(feedback.entityCreated).not.toHaveBeenCalled();
+	});
+
 	// === Error toasts ===
 
 	it('should show notAuthorized on 403', () => {
@@ -228,13 +293,49 @@ describe('crudToastInterceptor', () => {
 		expect(feedback.validationFailed).toHaveBeenCalledWith(2);
 	});
 
-	it('should show operationFailed with server error message on 500', () => {
+	it('should show operationFailed with safe server error message on 500', () => {
 		http.delete('/api/posts/123').subscribe({ error: vi.fn() });
 
 		const req = httpMock.expectOne('/api/posts/123');
 		req.flush({ error: 'Database connection lost' }, { status: 500, statusText: 'Server Error' });
 
 		expect(feedback.operationFailed).toHaveBeenCalledWith('Database connection lost');
+	});
+
+	it('should sanitize server error messages containing SQL', () => {
+		http.delete('/api/posts/123').subscribe({ error: vi.fn() });
+
+		const req = httpMock.expectOne('/api/posts/123');
+		req.flush(
+			{ error: 'SELECT * FROM users WHERE id = 1' },
+			{ status: 500, statusText: 'Server Error' },
+		);
+
+		expect(feedback.operationFailed).toHaveBeenCalledWith('Failed to delete post');
+	});
+
+	it('should sanitize server error messages containing file paths', () => {
+		http.post('/api/posts', {}).subscribe({ error: vi.fn() });
+
+		const req = httpMock.expectOne('/api/posts');
+		req.flush(
+			{ error: 'Error at /app/libs/server-core/handler.ts' },
+			{ status: 500, statusText: 'Server Error' },
+		);
+
+		expect(feedback.operationFailed).toHaveBeenCalledWith('Failed to create post');
+	});
+
+	it('should sanitize server error messages containing stack traces', () => {
+		http.patch('/api/posts/123', {}).subscribe({ error: vi.fn() });
+
+		const req = httpMock.expectOne('/api/posts/123');
+		req.flush(
+			{ error: 'TypeError: Cannot read properties at module.js:42' },
+			{ status: 500, statusText: 'Server Error' },
+		);
+
+		expect(feedback.operationFailed).toHaveBeenCalledWith('Failed to update post');
 	});
 
 	it('should show operationFailed with fallback message when no error string', () => {
