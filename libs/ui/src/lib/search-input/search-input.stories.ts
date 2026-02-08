@@ -42,7 +42,7 @@ export const Default: Story = {
 		template: `
 			<mcms-search-input
 				[(value)]="value"
-				(search)="onSearch($event)"
+				(searchChange)="onSearch($event)"
 			/>
 		`,
 	}),
@@ -61,7 +61,7 @@ export const WithPlaceholder: Story = {
 			<mcms-search-input
 				[(value)]="value"
 				placeholder="Search users by name or email..."
-				(search)="onSearch($event)"
+				(searchChange)="onSearch($event)"
 			/>
 		`,
 	}),
@@ -100,7 +100,7 @@ export const CustomDebounce: Story = {
 					[(value)]="value"
 					[debounce]="1000"
 					placeholder="1 second debounce..."
-					(search)="onSearch($event)"
+					(searchChange)="onSearch($event)"
 				/>
 				<p class="text-sm text-muted-foreground">
 					Search emits 1 second after you stop typing

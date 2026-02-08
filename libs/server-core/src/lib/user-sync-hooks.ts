@@ -25,6 +25,9 @@
  */
 
 import { MIN_PASSWORD_LENGTH, type HookArgs, type HookFunction } from '@momentum-cms/core';
+import { createLogger } from '@momentum-cms/logger';
+
+const userSyncLogger = createLogger('UserSync');
 
 /**
  * Better Auth API interface for user creation.
@@ -140,8 +143,8 @@ export function createUserSyncHook(config: UserSyncConfig): HookFunction {
 			// For now, role is only set in Momentum collection.
 			const role = data['role'];
 			if (role && role !== 'user') {
-				console.warn(
-					`[UserSync] Role '${role}' set in Momentum only. Better Auth user has default role.`,
+				userSyncLogger.warn(
+					`Role '${role}' set in Momentum only. Better Auth user has default role.`,
 				);
 			}
 
@@ -181,9 +184,8 @@ export function createUserDeleteSyncHook(_config: UserSyncConfig): HookFunction 
 
 		const authId = doc['authId'];
 		if (authId) {
-			console.warn(
-				`[UserSync] Momentum user deleted but Better Auth user ${authId} remains. ` +
-					`Manual cleanup may be required.`,
+			userSyncLogger.warn(
+				`Momentum user deleted but Better Auth user ${authId} remains. Manual cleanup may be required.`,
 			);
 		}
 	};

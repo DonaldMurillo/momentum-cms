@@ -5,7 +5,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output, signal } f
  *
  * @example
  * ```html
- * <mcms-command-item value="settings" (select)="onSelect()">
+ * <mcms-command-item value="settings" (itemSelect)="onSelect()">
  *   <svg>...</svg>
  *   Settings
  *   <span class="ml-auto text-xs text-muted-foreground">⌘S</span>
@@ -43,7 +43,7 @@ export class CommandItem {
 	readonly selected = input(false);
 
 	/** Emits when the item is selected */
-	readonly select = output<void>();
+	readonly itemSelect = output<void>();
 
 	/** Additional CSS classes */
 	readonly class = input('');
@@ -61,7 +61,7 @@ export class CommandItem {
 
 	protected onSelect(): void {
 		if (!this.disabled()) {
-			this.select.emit();
+			this.itemSelect.emit();
 		}
 	}
 

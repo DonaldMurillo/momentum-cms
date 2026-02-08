@@ -38,6 +38,7 @@ import { TreeItem as AriaTreeItem, Tree as AriaTree, TreeItemGroup } from '@angu
 		'[attr.tabindex]': 'treeItem.active() ? 0 : -1',
 	},
 	template: `
+		<!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
 		<div [class]="contentClasses()" (click)="onClick($event)">
 			@if (hasChildren()) {
 				<button

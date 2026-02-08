@@ -13,6 +13,9 @@ import type {
 	WebhookEvent,
 	WebhookPayload,
 } from '@momentum-cms/core';
+import { createLogger } from '@momentum-cms/logger';
+
+const webhookLogger = createLogger('Webhook');
 
 /**
  * Sign a webhook payload with HMAC-SHA256.
@@ -71,9 +74,7 @@ async function sendWebhook(
 	attempt = 0,
 ): Promise<void> {
 	if (!isAllowedWebhookUrl(webhook.url)) {
-		console.warn(
-			`[Momentum Webhook] Blocked request to disallowed URL: ${webhook.url}`,
-		);
+		webhookLogger.warn(`Blocked request to disallowed URL: ${webhook.url}`);
 		return;
 	}
 
@@ -108,8 +109,8 @@ async function sendWebhook(
 		}
 
 		if (!response.ok) {
-			console.warn(
-				`[Momentum Webhook] Failed after ${attempt + 1} attempt(s) to ${webhook.url}: ${response.status} ${response.statusText}`,
+			webhookLogger.warn(
+				`Failed after ${attempt + 1} attempt(s) to ${webhook.url}: ${response.status} ${response.statusText}`,
 			);
 		}
 	} catch (error) {
@@ -120,9 +121,7 @@ async function sendWebhook(
 		}
 
 		const message = error instanceof Error ? error.message : 'Unknown error';
-		console.warn(
-			`[Momentum Webhook] Error after ${attempt + 1} attempt(s) to ${webhook.url}: ${message}`,
-		);
+		webhookLogger.warn(`Error after ${attempt + 1} attempt(s) to ${webhook.url}: ${message}`);
 	}
 }
 
@@ -158,8 +157,7 @@ function createWebhookAfterChangeHook(collection: CollectionConfig): HookFunctio
 		const operation = args.operation ?? 'create';
 		const doc = args.doc ?? args.data ?? {};
 
-		const event: WebhookEvent =
-			operation === 'create' ? 'afterCreate' : 'afterUpdate';
+		const event: WebhookEvent = operation === 'create' ? 'afterCreate' : 'afterUpdate';
 
 		const payload: WebhookPayload = {
 			event,

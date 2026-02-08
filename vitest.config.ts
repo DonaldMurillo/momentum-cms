@@ -27,6 +27,10 @@ export default defineConfig({
 			'@momentum-cms/db-drizzle': resolve(__dirname, 'libs/db-drizzle/src/index.ts'),
 			'@momentum-cms/auth': resolve(__dirname, 'libs/auth/src/index.ts'),
 			'@momentum-cms/storage': resolve(__dirname, 'libs/storage/src/index.ts'),
+			'@momentum-cms/logger': resolve(__dirname, 'libs/logger/src/index.ts'),
+			'@momentum-cms/plugins/core': resolve(__dirname, 'libs/plugins/core/src/index.ts'),
+			'@momentum-cms/plugins/otel': resolve(__dirname, 'libs/plugins/otel/src/index.ts'),
+			'@momentum-cms/plugins/analytics': resolve(__dirname, 'libs/plugins/analytics/src/index.ts'),
 		},
 	},
 });

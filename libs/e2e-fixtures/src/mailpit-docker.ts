@@ -7,6 +7,7 @@ import * as path from 'node:path';
 const MAILPIT_CONTAINER_NAME = 'e2e-mailpit';
 const MAILPIT_API = 'http://localhost:8025/api/v1';
 const MARKER_FILE = path.join(os.tmpdir(), 'e2e-mailpit-started-by-tests');
+const DOCKER_TIMEOUT_MS = 5000;
 
 /**
  * Check if Mailpit is running and accessible.
@@ -25,7 +26,7 @@ async function isMailpitAvailable(): Promise<boolean> {
  */
 function isDockerAvailable(): boolean {
 	try {
-		execFileSync('docker', ['--version'], { stdio: 'pipe' });
+		execFileSync('docker', ['--version'], { stdio: 'pipe', timeout: DOCKER_TIMEOUT_MS });
 		return true;
 	} catch {
 		return false;
@@ -55,45 +56,56 @@ export async function ensureMailpit(): Promise<void> {
 
 	console.log('[Mailpit] Not running. Starting via Docker...');
 
-	// Remove any stale container with the same name
 	try {
-		execFileSync('docker', ['rm', '-f', MAILPIT_CONTAINER_NAME], { stdio: 'pipe' });
-	} catch {
-		// Container didn't exist — that's fine
-	}
-
-	// Start Mailpit
-	execFileSync(
-		'docker',
-		[
-			'run',
-			'-d',
-			'--name',
-			MAILPIT_CONTAINER_NAME,
-			'-p',
-			'8025:8025',
-			'-p',
-			'1025:1025',
-			'axllent/mailpit',
-		],
-		{ stdio: 'pipe' },
-	);
-
-	// Write marker so teardown knows we started it
-	fs.writeFileSync(MARKER_FILE, String(Date.now()));
-
-	// Wait for Mailpit to become ready
-	const startTime = Date.now();
-	const timeout = 15000;
-	while (Date.now() - startTime < timeout) {
-		if (await isMailpitAvailable()) {
-			console.log('[Mailpit] Started successfully.');
-			return;
+		// Remove any stale container with the same name
+		try {
+			execFileSync('docker', ['rm', '-f', MAILPIT_CONTAINER_NAME], {
+				stdio: 'pipe',
+				timeout: DOCKER_TIMEOUT_MS,
+			});
+		} catch {
+			// Container didn't exist or Docker timed out — that's fine
 		}
-		await new Promise((resolve) => setTimeout(resolve, 500));
-	}
 
-	throw new Error(`[Mailpit] Failed to start within ${timeout / 1000} seconds.`);
+		// Start Mailpit
+		execFileSync(
+			'docker',
+			[
+				'run',
+				'-d',
+				'--name',
+				MAILPIT_CONTAINER_NAME,
+				'-p',
+				'8025:8025',
+				'-p',
+				'1025:1025',
+				'axllent/mailpit',
+			],
+			{ stdio: 'pipe', timeout: 30000 },
+		);
+
+		// Write marker so teardown knows we started it
+		fs.writeFileSync(MARKER_FILE, String(Date.now()));
+
+		// Wait for Mailpit to become ready
+		const startTime = Date.now();
+		const readyTimeout = 15000;
+		while (Date.now() - startTime < readyTimeout) {
+			if (await isMailpitAvailable()) {
+				console.log('[Mailpit] Started successfully.');
+				return;
+			}
+			await new Promise((resolve) => setTimeout(resolve, 500));
+		}
+
+		console.warn(
+			'[Mailpit] Started container but it did not become ready. Email tests will be skipped.',
+		);
+	} catch (error) {
+		console.warn(
+			`[Mailpit] Failed to start via Docker (${error instanceof Error ? error.message : error}). Email tests will be skipped.`,
+		);
+	}
 }
 
 /**
@@ -116,7 +128,10 @@ export async function stopMailpit(): Promise<void> {
 	}
 
 	try {
-		execFileSync('docker', ['rm', '-f', MAILPIT_CONTAINER_NAME], { stdio: 'pipe' });
+		execFileSync('docker', ['rm', '-f', MAILPIT_CONTAINER_NAME], {
+			stdio: 'pipe',
+			timeout: DOCKER_TIMEOUT_MS,
+		});
 		console.log('[Mailpit] Stopped container.');
 	} catch {
 		console.warn('[Mailpit] Failed to stop container (may have already been removed).');

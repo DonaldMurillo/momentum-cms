@@ -6,6 +6,8 @@
  * Respects collection-level and field-level access control.
  */
 
+/* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions needed to narrow populated[field.name] from unknown to Record/array */
+
 import type {
 	CollectionConfig,
 	DatabaseAdapter,
@@ -50,7 +52,11 @@ export async function populateRelationships(
 
 	for (const field of dataFields) {
 		// Recurse into group fields to find nested relationships
-		if (field.type === 'group' && populated[field.name] && typeof populated[field.name] === 'object') {
+		if (
+			field.type === 'group' &&
+			populated[field.name] &&
+			typeof populated[field.name] === 'object'
+		) {
 			populated[field.name] = await populateRelationships(
 				populated[field.name] as Record<string, unknown>,
 				field.fields,
@@ -137,9 +143,7 @@ async function populateSingleRelationship(
 
 	// Handle polymorphic relationships
 	if (isPolymorphicValue(value)) {
-		const collectionConfig = options.collections.find(
-			(c) => c.slug === value.relationTo,
-		);
+		const collectionConfig = options.collections.find((c) => c.slug === value.relationTo);
 		if (!collectionConfig) return value;
 
 		// Check collection-level read access on the target collection
@@ -153,11 +157,7 @@ async function populateSingleRelationship(
 		const filteredDoc = await applyFieldReadFiltering(relatedDoc, collectionConfig, options.req);
 
 		// Recursively populate the related document
-		const populatedDoc = await populateRelationships(
-			filteredDoc,
-			collectionConfig.fields,
-			options,
-		);
+		const populatedDoc = await populateRelationships(filteredDoc, collectionConfig.fields, options);
 
 		return {
 			relationTo: value.relationTo,

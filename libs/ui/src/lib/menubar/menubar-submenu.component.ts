@@ -21,7 +21,6 @@ import { Menu as AriaMenu, MenuItem as AriaMenuItem } from '@angular/aria/menu';
 		{
 			directive: AriaMenu,
 			inputs: ['disabled', 'wrap', 'typeaheadDelay'],
-			outputs: ['onSelect'],
 		},
 	],
 	host: {

@@ -32,6 +32,8 @@ import type {
 	DatabaseAdapter,
 	EndpointQueryHelper,
 } from '@momentum-cms/core';
+import { createLogger } from '@momentum-cms/logger';
+import { getPluginMiddleware } from './plugin-middleware-registry';
 
 /**
  * Sanitize error messages to prevent leaking internal details (SQL, file paths, etc.).
@@ -100,8 +102,8 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		const origin = Array.isArray(corsConfig.origin) ? corsConfig.origin[0] : corsConfig.origin;
 		const allowOrigin = origin ?? '*';
 		if (allowOrigin === '*' && process.env['NODE_ENV'] === 'production') {
-			console.warn(
-				'[Momentum] CORS origin is set to "*" in production. Configure explicit origins via config.server.cors.origin.',
+			createLogger('CORS').warn(
+				'Origin is set to "*" in production. Configure explicit origins via config.server.cors.origin.',
 			);
 		}
 		res.setHeader('Access-Control-Allow-Origin', allowOrigin);
@@ -119,6 +121,30 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	// Handle preflight requests
 	router.options('*', (_req: Request, res: Response) => {
 		res.sendStatus(204);
+	});
+
+	// Lazy-mount plugin middleware registered during onInit (before-api position).
+	// Plugins initialize asynchronously via initializeMomentum(), so middleware descriptors
+	// may not be available yet when this router is created. Deferred mounting ensures
+	// we read them on the first request (after init completes).
+	let beforeApiRouter: Router | null = null;
+	router.use((req: Request, res: Response, next: NextFunction) => {
+		if (!beforeApiRouter) {
+			const pluginMiddleware = getPluginMiddleware();
+			const beforeMw = pluginMiddleware.filter((mw) => mw.position !== 'after-api');
+			if (beforeMw.length > 0) {
+				beforeApiRouter = Router();
+				for (const mw of beforeMw) {
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- handler is Express Router/middleware, cast safe in server-express
+					beforeApiRouter.use(mw.path, mw.handler as Router);
+				}
+			}
+		}
+		if (beforeApiRouter) {
+			beforeApiRouter(req, res, next);
+		} else {
+			next();
+		}
 	});
 
 	// Convert Express method to Momentum method type
@@ -1084,6 +1110,27 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 		const response = await handlers.routeRequest(request);
 		res.status(response.status ?? 200).json(response);
+	});
+
+	// Lazy-mount plugin middleware registered during onInit (after-api position)
+	let afterApiRouter: Router | null = null;
+	router.use((req: Request, res: Response, next: NextFunction) => {
+		if (!afterApiRouter) {
+			const pluginMiddleware = getPluginMiddleware();
+			const afterMw = pluginMiddleware.filter((mw) => mw.position === 'after-api');
+			if (afterMw.length > 0) {
+				afterApiRouter = Router();
+				for (const mw of afterMw) {
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- handler is Express Router/middleware, cast safe in server-express
+					afterApiRouter.use(mw.path, mw.handler as Router);
+				}
+			}
+		}
+		if (afterApiRouter) {
+			afterApiRouter(req, res, next);
+		} else {
+			next();
+		}
 	});
 
 	return router;

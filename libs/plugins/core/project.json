@@ -1,0 +1,40 @@
+{
+	"name": "plugins-core",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/plugins/core/src",
+	"projectType": "library",
+	"release": {
+		"version": {
+			"manifestRootsToUpdate": ["dist/{projectRoot}"],
+			"currentVersionResolver": "git-tag",
+			"fallbackCurrentVersionResolver": "disk"
+		}
+	},
+	"tags": ["scope:plugin-infra"],
+	"targets": {
+		"test": {
+			"executor": "@nx/vitest:test",
+			"outputs": ["{workspaceRoot}/coverage/libs/plugins/core"],
+			"options": {
+				"config": "libs/plugins/core/vitest.config.ts"
+			}
+		},
+		"build": {
+			"executor": "@nx/esbuild:esbuild",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/libs/plugins/core",
+				"main": "libs/plugins/core/src/index.ts",
+				"tsConfig": "libs/plugins/core/tsconfig.lib.json",
+				"assets": ["libs/plugins/core/*.md"],
+				"format": ["cjs"],
+				"generatePackageJson": true
+			}
+		},
+		"nx-release-publish": {
+			"options": {
+				"packageRoot": "dist/{projectRoot}"
+			}
+		}
+	}
+}

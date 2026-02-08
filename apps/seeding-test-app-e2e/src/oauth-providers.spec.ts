@@ -35,7 +35,7 @@ test.describe('OAuth Provider Infrastructure', () => {
 		page,
 	}) => {
 		await page.goto(`/admin/login`);
-		await page.waitForLoadState('networkidle');
+		await page.waitForLoadState('domcontentloaded');
 
 		// Sign In form should be present
 		await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();

@@ -44,7 +44,7 @@ test.describe('Bulk actions UI', () => {
 	test('collection list shows selection checkboxes', async ({ authenticatedPage }) => {
 		// Navigate via client-side to avoid SSR hydration issues
 		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		await authenticatedPage
 			.getByLabel('Main navigation')
@@ -67,7 +67,7 @@ test.describe('Bulk actions UI', () => {
 
 	test('selecting items shows bulk action toolbar with count', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		await authenticatedPage
 			.getByLabel('Main navigation')
@@ -98,7 +98,7 @@ test.describe('Bulk actions UI', () => {
 
 	test('bulk delete removes selected items after confirmation', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		await authenticatedPage
 			.getByLabel('Main navigation')
@@ -164,7 +164,7 @@ test.describe('Bulk actions UI', () => {
 
 	test('cancelling bulk delete confirmation preserves items', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		await authenticatedPage
 			.getByLabel('Main navigation')

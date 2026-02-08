@@ -15,6 +15,7 @@ export const Categories = defineCollection({
 		singular: 'Category',
 		plural: 'Categories',
 	},
+	admin: { group: 'Content' },
 	fields: [
 		text('name', { required: true, label: 'Name' }),
 		text('slug', { required: true, label: 'Slug' }),

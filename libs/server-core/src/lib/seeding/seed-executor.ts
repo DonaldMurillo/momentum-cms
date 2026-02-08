@@ -24,6 +24,7 @@ import {
 	SeedRollbackError,
 	MIN_PASSWORD_LENGTH,
 } from '@momentum-cms/core';
+import { createLogger } from '@momentum-cms/logger';
 import type { MomentumAuthLike } from '../user-sync-hooks';
 import { createSeedTracker, type SeedTracker } from './seed-tracker';
 
@@ -212,8 +213,8 @@ async function processSeedEntity<T = Record<string, unknown>>(
 				}
 			}
 		} else if (!globalOptions.quiet) {
-			console.warn(
-				`[Momentum Seeding] Warning: Seed "${entity.seedId}" has syncAuth: true but no auth instance was provided. Creating without auth sync.`,
+			createLogger('Seeding').warn(
+				`Seed "${entity.seedId}" has syncAuth: true but no auth instance was provided. Creating without auth sync.`,
 			);
 		}
 	}
@@ -297,8 +298,7 @@ function createSeedContext(
 
 		log(message: string): void {
 			if (!globalOptions.quiet) {
-				// eslint-disable-next-line no-console -- Intentional logging for seeding
-				console.log(`[Momentum Seeding] ${message}`);
+				createLogger('Seeding').info(message);
 			}
 		},
 	};
@@ -405,10 +405,10 @@ export async function runSeeding(
 	const seededMap = new Map<string, SeededDocument>();
 	const results: SeededDocument[] = [];
 
+	const seedLogger = createLogger('Seeding');
 	const log = (message: string): void => {
 		if (!options.quiet) {
-			// eslint-disable-next-line no-console -- Intentional logging for seeding
-			console.log(`[Momentum Seeding] ${message}`);
+			seedLogger.info(message);
 		}
 	};
 

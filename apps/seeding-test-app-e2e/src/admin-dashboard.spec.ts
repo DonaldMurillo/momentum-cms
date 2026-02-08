@@ -12,7 +12,7 @@ import { test, expect } from './fixtures';
 test.describe('Admin Dashboard', () => {
 	test('should display dashboard with correct heading', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const heading = authenticatedPage.getByRole('heading', { name: 'Dashboard' });
 		await expect(heading).toBeVisible();
@@ -20,7 +20,7 @@ test.describe('Admin Dashboard', () => {
 
 	test('should display welcome subtitle', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// Dashboard subtitle
 		const subtitle = authenticatedPage.getByText(/Manage your content and collections/i);
@@ -31,7 +31,7 @@ test.describe('Admin Dashboard', () => {
 		authenticatedPage,
 	}) => {
 		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// Check collection cards are visible by their labels
 		await expect(authenticatedPage.getByRole('heading', { name: 'Categories' })).toBeVisible();
@@ -43,7 +43,7 @@ test.describe('Admin Dashboard', () => {
 		authenticatedPage,
 	}) => {
 		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// Find the Articles card and click its "View all" link
 		// The card has heading "Articles" and a "View all" button
@@ -60,7 +60,7 @@ test.describe('Admin Dashboard', () => {
 		authenticatedPage,
 	}) => {
 		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// Find the Users card and click its "View all" link
 		const usersCard = authenticatedPage.locator('mcms-collection-card', {
@@ -76,7 +76,7 @@ test.describe('Admin Dashboard', () => {
 test.describe('Admin Sidebar Navigation', () => {
 	test('should display sidebar with branding title', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// Sidebar with branding
 		const brandingTitle = authenticatedPage.getByRole('heading', { name: 'Seeding Test App' });
@@ -85,7 +85,7 @@ test.describe('Admin Sidebar Navigation', () => {
 
 	test('should have Dashboard link in sidebar', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// Dashboard link in sidebar navigation (not breadcrumbs)
 		const sidebar = authenticatedPage.getByLabel('Main navigation');
@@ -95,7 +95,7 @@ test.describe('Admin Sidebar Navigation', () => {
 
 	test('should have collection links in sidebar', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// Use sidebar label to avoid conflicts with breadcrumbs
 		const sidebar = authenticatedPage.getByLabel('Main navigation');
@@ -113,7 +113,7 @@ test.describe('Admin Sidebar Navigation', () => {
 
 	test('should navigate using sidebar links', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// Use sidebar label to avoid conflicts with breadcrumbs
 		const sidebar = authenticatedPage.getByLabel('Main navigation');
@@ -148,7 +148,7 @@ test.describe('Admin Sidebar Navigation', () => {
 
 	test('should display user info in sidebar', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// User info is rendered during SSR via injectUser() reading from MOMENTUM_API_CONTEXT.
 		// After hydration, MomentumAuthService initializes and keeps user displayed.

@@ -6,6 +6,8 @@
  * media upload, and GraphQL endpoints.
  */
 
+/* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions needed to narrow Field union to specific field types */
+
 import type {
 	CollectionConfig,
 	Field,
@@ -63,8 +65,7 @@ export function generateOpenAPISpec(
 			title,
 			version,
 			description:
-				options?.description ??
-				'Auto-generated REST API from Momentum CMS collection definitions.',
+				options?.description ?? 'Auto-generated REST API from Momentum CMS collection definitions.',
 		},
 		servers: options?.servers,
 		paths: {},
@@ -212,9 +213,17 @@ function fieldToJsonSchema(field: Field): Record<string, unknown> {
 			const sel = field as SelectField;
 			const enumVals = sel.options.map((o) => o.value);
 			if (sel.hasMany) {
-				return { ...base, type: 'array', items: { type: typeof enumVals[0] === 'number' ? 'number' : 'string', enum: enumVals } };
+				return {
+					...base,
+					type: 'array',
+					items: { type: typeof enumVals[0] === 'number' ? 'number' : 'string', enum: enumVals },
+				};
 			}
-			return { ...base, type: typeof enumVals[0] === 'number' ? 'number' : 'string', enum: enumVals };
+			return {
+				...base,
+				type: typeof enumVals[0] === 'number' ? 'number' : 'string',
+				enum: enumVals,
+			};
 		}
 
 		case 'radio': {
@@ -225,7 +234,11 @@ function fieldToJsonSchema(field: Field): Record<string, unknown> {
 
 		case 'upload':
 		case 'relationship':
-			return { ...base, type: 'string', description: (base['description'] ?? 'Related document ID') as string };
+			return {
+				...base,
+				type: 'string',
+				description: (base['description'] ?? 'Related document ID') as string,
+			};
 
 		case 'array': {
 			const arr = field as ArrayField;
@@ -297,9 +310,19 @@ function addCollectionPaths(
 			summary: `List ${plural}`,
 			operationId: `list${schemaName}`,
 			parameters: [
-				{ name: 'limit', in: 'query', schema: { type: 'integer' }, description: 'Max results per page' },
+				{
+					name: 'limit',
+					in: 'query',
+					schema: { type: 'integer' },
+					description: 'Max results per page',
+				},
 				{ name: 'page', in: 'query', schema: { type: 'integer' }, description: 'Page number' },
-				{ name: 'sort', in: 'query', schema: { type: 'string' }, description: 'Sort field (prefix with - for descending)' },
+				{
+					name: 'sort',
+					in: 'query',
+					schema: { type: 'string' },
+					description: 'Sort field (prefix with - for descending)',
+				},
 				{ name: 'locale', in: 'query', schema: { type: 'string' }, description: 'Locale code' },
 			],
 			responses: {
@@ -377,9 +400,7 @@ function addCollectionPaths(
 			tags: [tag],
 			summary: `Update ${singular}`,
 			operationId: `update${schemaName}`,
-			parameters: [
-				{ name: 'id', in: 'path', required: true, schema: { type: 'string' } },
-			],
+			parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
 			requestBody: {
 				required: true,
 				content: {
@@ -405,9 +426,7 @@ function addCollectionPaths(
 			tags: [tag],
 			summary: `Delete ${singular}`,
 			operationId: `delete${schemaName}`,
-			parameters: [
-				{ name: 'id', in: 'path', required: true, schema: { type: 'string' } },
-			],
+			parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
 			responses: {
 				'200': { description: 'Deleted' },
 				'404': { description: 'Not found' },
@@ -431,8 +450,19 @@ function addSearchPath(
 			summary: `Search ${plural}`,
 			operationId: `search${schemaName}`,
 			parameters: [
-				{ name: 'q', in: 'query', required: true, schema: { type: 'string' }, description: 'Search query' },
-				{ name: 'fields', in: 'query', schema: { type: 'string' }, description: 'Comma-separated field names to search' },
+				{
+					name: 'q',
+					in: 'query',
+					required: true,
+					schema: { type: 'string' },
+					description: 'Search query',
+				},
+				{
+					name: 'fields',
+					in: 'query',
+					schema: { type: 'string' },
+					description: 'Comma-separated field names to search',
+				},
 				{ name: 'limit', in: 'query', schema: { type: 'integer' } },
 				{ name: 'page', in: 'query', schema: { type: 'integer' } },
 			],
@@ -533,9 +563,7 @@ function addVersionPaths(
 			tags: [plural],
 			summary: 'Publish a document',
 			operationId: `publish${schemaName}`,
-			parameters: [
-				{ name: 'id', in: 'path', required: true, schema: { type: 'string' } },
-			],
+			parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
 			responses: {
 				'200': { description: 'Published' },
 			},
@@ -548,9 +576,7 @@ function addVersionPaths(
 			tags: [plural],
 			summary: 'Unpublish a document',
 			operationId: `unpublish${schemaName}`,
-			parameters: [
-				{ name: 'id', in: 'path', required: true, schema: { type: 'string' } },
-			],
+			parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
 			responses: {
 				'200': { description: 'Unpublished' },
 			},
@@ -563,9 +589,7 @@ function addVersionPaths(
 			tags: [plural],
 			summary: 'Restore a version',
 			operationId: `restore${schemaName}Version`,
-			parameters: [
-				{ name: 'id', in: 'path', required: true, schema: { type: 'string' } },
-			],
+			parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
 			requestBody: {
 				required: true,
 				content: {
@@ -593,9 +617,7 @@ function addVersionPaths(
 			tags: [plural],
 			summary: 'Schedule a document for future publishing',
 			operationId: `schedule${schemaName}Publish`,
-			parameters: [
-				{ name: 'id', in: 'path', required: true, schema: { type: 'string' } },
-			],
+			parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
 			requestBody: {
 				required: true,
 				content: {
@@ -617,10 +639,7 @@ function addVersionPaths(
 	};
 }
 
-function addCustomEndpointPaths(
-	doc: OpenAPIDocument,
-	collection: CollectionConfig,
-): void {
+function addCustomEndpointPaths(doc: OpenAPIDocument, collection: CollectionConfig): void {
 	const slug = collection.slug;
 	const plural = collection.labels?.plural ?? `${slug}s`;
 
@@ -629,7 +648,6 @@ function addCustomEndpointPaths(
 		if (!doc.paths[path]) {
 			doc.paths[path] = {};
 		}
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		(doc.paths[path] as Record<string, unknown>)[endpoint.method] = {
 			tags: [plural],
 			summary: `Custom: ${endpoint.method.toUpperCase()} ${endpoint.path}`,
@@ -676,7 +694,13 @@ function addMediaPaths(doc: OpenAPIDocument): void {
 			summary: 'Serve an uploaded file',
 			operationId: 'getMediaFile',
 			parameters: [
-				{ name: 'path', in: 'path', required: true, schema: { type: 'string' }, description: 'Storage path' },
+				{
+					name: 'path',
+					in: 'path',
+					required: true,
+					schema: { type: 'string' },
+					description: 'Storage path',
+				},
 			],
 			responses: {
 				'200': {

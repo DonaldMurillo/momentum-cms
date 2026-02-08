@@ -45,6 +45,7 @@ export function startPublishScheduler(
 	options?: PublishSchedulerOptions,
 ): PublishSchedulerHandle {
 	const intervalMs = options?.intervalMs ?? 10000;
+	// eslint-disable-next-line @typescript-eslint/no-empty-function -- noop default logger
 	const logger = options?.logger ?? (() => {});
 
 	// Filter to only versioned collections with drafts
@@ -57,6 +58,7 @@ export function startPublishScheduler(
 	if (versionedCollections.length === 0) {
 		logger('[PublishScheduler] No versioned collections found, scheduler not started');
 		return {
+			// eslint-disable-next-line @typescript-eslint/no-empty-function -- noop when no versioned collections
 			stop: () => {},
 			poll: async () => 0,
 		};
@@ -102,16 +104,12 @@ export function startPublishScheduler(
 						);
 					} catch (err) {
 						const message = err instanceof Error ? err.message : 'Unknown error';
-						logger(
-							`[PublishScheduler] Failed to publish ${collection.slug}/${doc.id}: ${message}`,
-						);
+						logger(`[PublishScheduler] Failed to publish ${collection.slug}/${doc.id}: ${message}`);
 					}
 				}
 			} catch (err) {
 				const message = err instanceof Error ? err.message : 'Unknown error';
-				logger(
-					`[PublishScheduler] Error polling ${collection.slug}: ${message}`,
-				);
+				logger(`[PublishScheduler] Error polling ${collection.slug}: ${message}`);
 			}
 		}
 

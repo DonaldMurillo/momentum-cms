@@ -15,7 +15,6 @@ export {
 	type CollectionPermissions,
 } from './lib/services/collection-access.service';
 export { UploadService, type UploadProgress } from './lib/services/upload.service';
-
 // Momentum API (unified SSR/Browser)
 export {
 	injectMomentumAPI,
@@ -137,10 +136,7 @@ export type {
 	EntityListFindResult,
 } from './lib/widgets/entity-list/entity-list.types';
 
-export type {
-	EntityFormMode,
-	FieldNodeState,
-} from './lib/widgets/entity-form/entity-form.types';
+export type { EntityFormMode, FieldNodeState } from './lib/widgets/entity-form/entity-form.types';
 
 export { getFieldNodeState, getSubNode } from './lib/widgets/entity-form/entity-form.types';
 

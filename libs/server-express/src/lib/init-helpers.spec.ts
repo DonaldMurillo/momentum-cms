@@ -18,6 +18,29 @@ vi.mock('@momentum-cms/server-core', () => ({
 	shouldRunSeeding: vi.fn((value) => value === true || value === 'always'),
 }));
 
+// Mock the logger module
+const mockLoggerInfo = vi.fn();
+vi.mock('@momentum-cms/logger', () => ({
+	createLogger: () => ({
+		debug: vi.fn(),
+		info: mockLoggerInfo,
+		warn: vi.fn(),
+		error: vi.fn(),
+		fatal: vi.fn(),
+		child: vi.fn(),
+	}),
+	initializeMomentumLogger: vi.fn(),
+}));
+
+// Mock the plugins module
+vi.mock('@momentum-cms/plugins', () => ({
+	PluginRunner: class MockPluginRunner {
+		runInit = vi.fn().mockResolvedValue(undefined);
+		runReady = vi.fn().mockResolvedValue(undefined);
+		runShutdown = vi.fn().mockResolvedValue(undefined);
+	},
+}));
+
 // Import mocked functions for assertions
 import { initializeMomentumAPI, runSeeding, shouldRunSeeding } from '@momentum-cms/server-core';
 
@@ -259,7 +282,8 @@ describe('initializeMomentum', () => {
 	});
 
 	describe('logging', () => {
-		it('should log messages when logging is enabled', async () => {
+		it('should log messages during initialization', async () => {
+			mockLoggerInfo.mockClear();
 			const adapter = createMockAdapter();
 			const config: MomentumConfig = {
 				collections: [mockCollection],
@@ -267,27 +291,13 @@ describe('initializeMomentum', () => {
 				server: { port: 4000 },
 			};
 
-			const logger = vi.fn();
-			const result = initializeMomentum(config, { logging: true, logger });
+			const result = initializeMomentum(config);
 			await result.ready;
 
-			expect(logger).toHaveBeenCalled();
-			expect(logger.mock.calls.some((call) => call[0].includes('Initializing'))).toBe(true);
-		});
-
-		it('should not log when logging is disabled', async () => {
-			const adapter = createMockAdapter();
-			const config: MomentumConfig = {
-				collections: [mockCollection],
-				db: { adapter },
-				server: { port: 4000 },
-			};
-
-			const logger = vi.fn();
-			const result = initializeMomentum(config, { logging: false, logger });
-			await result.ready;
-
-			expect(logger).not.toHaveBeenCalled();
+			expect(mockLoggerInfo).toHaveBeenCalled();
+			expect(
+				mockLoggerInfo.mock.calls.some((call: string[]) => call[0].includes('Initializing')),
+			).toBe(true);
 		});
 	});
 

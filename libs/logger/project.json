@@ -1,0 +1,40 @@
+{
+	"name": "logger",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/logger/src",
+	"projectType": "library",
+	"release": {
+		"version": {
+			"manifestRootsToUpdate": ["dist/{projectRoot}"],
+			"currentVersionResolver": "git-tag",
+			"fallbackCurrentVersionResolver": "disk"
+		}
+	},
+	"tags": ["scope:lib"],
+	"targets": {
+		"test": {
+			"executor": "@nx/vitest:test",
+			"outputs": ["{workspaceRoot}/coverage/libs/logger"],
+			"options": {
+				"config": "libs/logger/vitest.config.ts"
+			}
+		},
+		"build": {
+			"executor": "@nx/esbuild:esbuild",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/libs/logger",
+				"main": "libs/logger/src/index.ts",
+				"tsConfig": "libs/logger/tsconfig.lib.json",
+				"assets": ["libs/logger/*.md"],
+				"format": ["cjs"],
+				"generatePackageJson": true
+			}
+		},
+		"nx-release-publish": {
+			"options": {
+				"packageRoot": "dist/{projectRoot}"
+			}
+		}
+	}
+}

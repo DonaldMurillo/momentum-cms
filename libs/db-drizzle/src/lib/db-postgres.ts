@@ -13,6 +13,7 @@ import type {
 	VersionCountOptions,
 } from '@momentum-cms/core';
 import { flattenDataFields, ReferentialIntegrityError } from '@momentum-cms/core';
+import { createLogger } from '@momentum-cms/logger';
 
 /**
  * PostgreSQL adapter options.
@@ -419,7 +420,7 @@ async function ensureDatabaseExists(connectionString: string): Promise<void> {
 		const safeName = dbName.replace(/"/g, '""');
 		await adminClient.query(`CREATE DATABASE "${safeName}"`);
 
-		console.warn(`[Momentum DB] Created database "${dbName}"`);
+		createLogger('DB').info(`Created database "${dbName}"`);
 	} catch (createError: unknown) {
 		// Handle race condition: another process may have created it concurrently
 		const pgCreateError =

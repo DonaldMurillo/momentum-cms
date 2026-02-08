@@ -4,6 +4,7 @@ import type { Pool } from 'pg';
 import type { Database } from 'better-sqlite3';
 import { createEmailService, type EmailConfig, type EmailService } from './email';
 import { getPasswordResetEmail, getVerificationEmail } from './email-templates';
+import { createLogger } from '@momentum-cms/logger';
 
 /**
  * Database configuration for Better Auth.
@@ -136,8 +137,7 @@ function buildSocialProviders(
 		providers['google'] = {
 			clientId: googleClientId,
 			clientSecret: googleClientSecret,
-			redirectURI:
-				config?.google?.redirectURI ?? `${resolvedBaseURL}/api/auth/callback/google`,
+			redirectURI: config?.google?.redirectURI ?? `${resolvedBaseURL}/api/auth/callback/google`,
 		};
 	}
 
@@ -148,8 +148,7 @@ function buildSocialProviders(
 		providers['github'] = {
 			clientId: githubClientId,
 			clientSecret: githubClientSecret,
-			redirectURI:
-				config?.github?.redirectURI ?? `${resolvedBaseURL}/api/auth/callback/github`,
+			redirectURI: config?.github?.redirectURI ?? `${resolvedBaseURL}/api/auth/callback/github`,
 		};
 	}
 
@@ -269,8 +268,10 @@ export function createMomentumAuth(
 					text,
 					html,
 				})
-				.catch((err) => {
-					console.error('[MomentumAuth] Failed to send password reset email:', err);
+				.catch((err: unknown) => {
+					createLogger('Auth').error(
+						`Failed to send password reset email: ${err instanceof Error ? err.message : String(err)}`,
+					);
 				});
 		};
 	}
@@ -304,8 +305,10 @@ export function createMomentumAuth(
 							text,
 							html,
 						})
-						.catch((err) => {
-							console.error('[MomentumAuth] Failed to send verification email:', err);
+						.catch((err: unknown) => {
+							createLogger('Auth').error(
+								`Failed to send verification email: ${err instanceof Error ? err.message : String(err)}`,
+							);
 						});
 				},
 			}

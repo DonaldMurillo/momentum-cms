@@ -9,6 +9,7 @@ export const Pages = defineCollection({
 		singular: 'Page',
 		plural: 'Pages',
 	},
+	admin: { group: 'Content' },
 	fields: [
 		text('title', { required: true, label: 'Page Title' }),
 		text('slug', { required: true, label: 'URL Slug' }),

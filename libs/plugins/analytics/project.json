@@ -1,0 +1,41 @@
+{
+	"name": "plugins-analytics",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/plugins/analytics/src",
+	"projectType": "library",
+	"release": {
+		"version": {
+			"manifestRootsToUpdate": ["dist/{projectRoot}"],
+			"currentVersionResolver": "git-tag",
+			"fallbackCurrentVersionResolver": "disk"
+		}
+	},
+	"tags": ["scope:plugin"],
+	"targets": {
+		"test": {
+			"executor": "@nx/vitest:test",
+			"outputs": ["{workspaceRoot}/coverage/libs/plugins/analytics"],
+			"options": {
+				"config": "libs/plugins/analytics/vitest.config.ts"
+			}
+		},
+		"build": {
+			"executor": "@nx/esbuild:esbuild",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/libs/plugins/analytics",
+				"main": "libs/plugins/analytics/src/index.ts",
+				"tsConfig": "libs/plugins/analytics/tsconfig.lib.json",
+				"assets": ["libs/plugins/analytics/*.md"],
+				"format": ["cjs"],
+				"generatePackageJson": true,
+				"external": ["@angular/*", "@ng-icons/*", "@momentum-cms/ui"]
+			}
+		},
+		"nx-release-publish": {
+			"options": {
+				"packageRoot": "dist/{projectRoot}"
+			}
+		}
+	}
+}
