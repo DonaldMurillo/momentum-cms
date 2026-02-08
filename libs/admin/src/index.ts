@@ -38,6 +38,9 @@ export {
 	type TypedFindByIdOptions,
 } from './lib/services/momentum-api.service';
 
+// Entity Sheet Service
+export { EntitySheetService, type EntitySheetResult } from './lib/services/entity-sheet.service';
+
 // Version Service
 export {
 	VersionService,

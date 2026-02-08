@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { RouterOutlet, ActivatedRoute, Router } from '@angular/router';
+import { A11yModule } from '@angular/cdk/a11y';
 import type { CollectionConfig } from '@momentum-cms/core';
 import { SidebarService, SidebarTrigger } from '@momentum-cms/ui';
 import {
@@ -18,6 +19,8 @@ import {
 import type { AdminPluginRoute } from '../../routes/momentum-admin-routes';
 import { MomentumAuthService } from '../../services/auth.service';
 import { CollectionAccessService } from '../../services/collection-access.service';
+import { EntitySheetService } from '../../services/entity-sheet.service';
+import { EntitySheetContentComponent } from '../entity-sheet/entity-sheet-content.component';
 import { injectUser } from '../../utils/inject-user';
 import { AdminSidebarWidget } from '../../widgets/admin-sidebar/admin-sidebar.component';
 import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
@@ -32,12 +35,46 @@ import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
  * - Responsive sidebar (drawer on mobile, static on desktop)
  * - Keyboard shortcuts (Cmd+B / Ctrl+B to toggle sidebar)
  * - Mobile header with hamburger menu
+ * - Entity sheet for inline entity create/edit/view (driven by query params)
  */
 @Component({
 	selector: 'mcms-admin-shell',
-	imports: [RouterOutlet, AdminSidebarWidget, SidebarTrigger],
+	imports: [
+		RouterOutlet,
+		AdminSidebarWidget,
+		SidebarTrigger,
+		A11yModule,
+		EntitySheetContentComponent,
+	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
-	host: { class: 'flex h-screen overflow-hidden bg-background' },
+	host: {
+		class: 'flex h-screen overflow-hidden bg-background',
+		'(document:keydown.escape)': 'onEscapeKey()',
+	},
+	styles: `
+		@keyframes mcms-fade-in {
+			from {
+				opacity: 0;
+			}
+			to {
+				opacity: 1;
+			}
+		}
+		@keyframes mcms-slide-in-right {
+			from {
+				transform: translateX(100%);
+			}
+			to {
+				transform: translateX(0);
+			}
+		}
+		.sheet-backdrop {
+			animation: mcms-fade-in 0.15s ease-out;
+		}
+		.sheet-panel {
+			animation: mcms-slide-in-right 0.2s ease-out;
+		}
+	`,
 	template: `
 		<!-- Mobile header with hamburger (hidden at md breakpoint = 768px+) -->
 		<header
@@ -62,6 +99,32 @@ import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
 				<router-outlet></router-outlet>
 			}
 		</main>
+
+		<!-- Entity Sheet (query-param driven, no named router outlet) -->
+		@if (entitySheet.isOpen()) {
+			<div class="fixed inset-0 z-50" role="presentation">
+				<!-- Backdrop -->
+				<div
+					class="sheet-backdrop absolute inset-0 bg-black/50"
+					role="button"
+					tabindex="0"
+					aria-label="Close sheet"
+					(click)="onSheetBackdropClick()"
+					(keydown.enter)="onSheetBackdropClick()"
+					(keydown.space)="onSheetBackdropClick()"
+				></div>
+				<!-- Sheet panel -->
+				<div
+					class="sheet-panel absolute inset-y-0 right-0 w-full max-w-2xl bg-card border-l border-border shadow-xl flex flex-col"
+					role="dialog"
+					aria-modal="true"
+					cdkTrapFocus
+					cdkTrapFocusAutoCapture
+				>
+					<mcms-entity-sheet-content />
+				</div>
+			</div>
+		}
 	`,
 })
 export class AdminShellComponent implements OnInit {
@@ -71,6 +134,7 @@ export class AdminShellComponent implements OnInit {
 	private readonly auth = inject(MomentumAuthService);
 	private readonly collectionAccess = inject(CollectionAccessService);
 	private readonly sidebar = inject(SidebarService);
+	readonly entitySheet = inject(EntitySheetService);
 
 	/** All collections from route data */
 	private readonly allCollections = computed((): CollectionConfig[] => {
@@ -122,14 +186,27 @@ export class AdminShellComponent implements OnInit {
 	});
 
 	ngOnInit(): void {
-		// Keyboard shortcuts and auth service initialization only run in the browser.
+		// Keyboard shortcuts, auth, and sheet restoration only run in the browser.
 		// SSR user is provided via MOMENTUM_API_CONTEXT (used by injectUser above).
 		if (!isPlatformBrowser(this.platformId)) {
 			return;
 		}
 
 		this.sidebar.setupKeyboardShortcuts();
+		this.entitySheet.initFromQueryParams();
 		this.initializeAuth();
+	}
+
+	/** Close the sheet when the Escape key is pressed */
+	onEscapeKey(): void {
+		if (this.entitySheet.isOpen()) {
+			this.entitySheet.close();
+		}
+	}
+
+	/** Close the sheet when the backdrop is clicked */
+	onSheetBackdropClick(): void {
+		this.entitySheet.close();
 	}
 
 	private async initializeAuth(): Promise<void> {

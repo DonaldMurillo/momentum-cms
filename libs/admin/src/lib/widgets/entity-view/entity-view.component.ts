@@ -214,6 +214,9 @@ export class EntityViewWidget<T extends Entity = Entity> {
 	/** Whether to show version history (only shown if versioning is enabled) */
 	readonly showVersionHistory = input(true);
 
+	/** When true, prevents router navigation (used in entity sheet) */
+	readonly suppressNavigation = input(false);
+
 	/** Outputs */
 	readonly edit = output<T>();
 	readonly statusChanged = output<DocumentStatus>();
@@ -467,7 +470,9 @@ export class EntityViewWidget<T extends Entity = Entity> {
 		const e = this.entity();
 		if (e) {
 			this.edit.emit(e);
-			this.router.navigate([`${this.collectionListPath()}/${e.id}/edit`]);
+			if (!this.suppressNavigation()) {
+				this.router.navigate([`${this.collectionListPath()}/${e.id}/edit`]);
+			}
 		}
 	}
 
@@ -510,7 +515,9 @@ export class EntityViewWidget<T extends Entity = Entity> {
 	 * Navigate back to collection list.
 	 */
 	navigateBack(): void {
-		this.router.navigate([this.collectionListPath()]);
+		if (!this.suppressNavigation()) {
+			this.router.navigate([this.collectionListPath()]);
+		}
 	}
 
 	/**
