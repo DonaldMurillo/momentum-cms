@@ -17,7 +17,7 @@ import { EntitySheetService } from '../../../services/entity-sheet.service';
 import { humanizeFieldName } from '@momentum-cms/core';
 import type { Field } from '@momentum-cms/core';
 import type { EntityFormMode } from '../entity-form.types';
-import { getFieldNodeState, isRecord } from '../entity-form.types';
+import { getFieldNodeState, isRecord, getTitleField } from '../entity-form.types';
 
 /** Option for the relationship dropdown */
 interface RelationshipOption {
@@ -103,8 +103,8 @@ interface RelationshipOption {
 			}
 		</mcms-form-field>
 
-		@if (entitySheetService && !isDisabled() && !entitySheetService.isOpen()) {
-			<div class="flex gap-2 mt-1.5">
+		@if (entitySheetService && !isDisabled()) {
+			<div class="flex gap-2 mt-1.5" aria-live="polite">
 				<button
 					type="button"
 					class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -197,25 +197,7 @@ export class RelationshipFieldRenderer {
 		const config = f.collection();
 		if (!isRecord(config)) return 'id';
 
-		// Check admin.useAsTitle first
-		const admin = config['admin'];
-		if (isRecord(admin) && typeof admin['useAsTitle'] === 'string') {
-			return admin['useAsTitle'];
-		}
-
-		// Fall back to first field named 'title' or 'name'
-		const fields = config['fields'];
-		if (Array.isArray(fields)) {
-			for (const field of fields) {
-				if (isRecord(field) && typeof field['name'] === 'string') {
-					if (field['name'] === 'title' || field['name'] === 'name') {
-						return field['name'];
-					}
-				}
-			}
-		}
-
-		return 'id';
+		return getTitleField(config);
 	});
 
 	/** Label for the related collection (singular) */

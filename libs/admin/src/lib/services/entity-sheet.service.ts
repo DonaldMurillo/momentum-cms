@@ -1,4 +1,5 @@
-import { DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, Observable, Subject, take } from 'rxjs';
@@ -15,6 +16,17 @@ export interface EntitySheetResult {
 	/** The collection slug */
 	collection: string;
 }
+
+/** Query parameter keys used by the entity sheet */
+export const SHEET_QUERY_PARAMS = {
+	collection: 'sheetCollection',
+	entityId: 'sheetEntityId',
+	mode: 'sheetMode',
+	callback: 'sheetCallback',
+};
+
+/** Duration of the close animation in milliseconds (must match CSS) */
+const CLOSE_ANIMATION_MS = 200;
 
 /**
  * Service for opening/closing the entity sheet via query parameters.
@@ -38,12 +50,25 @@ export interface EntitySheetResult {
 export class EntitySheetService {
 	private readonly router = inject(Router);
 	private readonly destroyRef = inject(DestroyRef);
+	private readonly document = inject(DOCUMENT);
 
 	/** Pending callback subjects keyed by callback ID */
 	private readonly pendingCallbacks = new Map<string, Subject<EntitySheetResult>>();
 
+	/** Handle for the close animation timer (for cancellation on rapid open/close) */
+	private closeTimerId: ReturnType<typeof setTimeout> | null = null;
+
+	/** Element that had focus when the sheet was opened (for focus restoration) */
+	private triggerElement: Element | null = null;
+
 	/** Whether the sheet is currently open */
 	readonly isOpen = signal(false);
+
+	/** Whether the sheet is playing its close animation */
+	readonly isClosing = signal(false);
+
+	/** Whether the sheet DOM should be present (open or animating closed) */
+	readonly isVisible = computed(() => this.isOpen() || this.isClosing());
 
 	/**
 	 * Open the entity sheet to create a new entity.
@@ -67,10 +92,12 @@ export class EntitySheetService {
 	}
 
 	/**
-	 * Close the sheet and emit the result to any pending callback.
+	 * Close the sheet with a slide-out animation, then emit the result to any pending callback.
 	 */
 	close(result?: EntitySheetResult): void {
-		// Resolve pending callback
+		if (this.isClosing() || !this.isOpen()) return;
+
+		// Resolve pending callback immediately
 		const callbackId = this.getCurrentCallbackId();
 		if (callbackId) {
 			const subject = this.pendingCallbacks.get(callbackId);
@@ -83,18 +110,26 @@ export class EntitySheetService {
 			}
 		}
 
-		this.isOpen.set(false);
+		// Start close animation
+		this.isClosing.set(true);
 
-		// Clear sheet query params
-		this.router.navigate([], {
-			queryParams: {
-				sheetCollection: null,
-				sheetEntityId: null,
-				sheetMode: null,
-				sheetCallback: null,
-			},
-			queryParamsHandling: 'merge',
-		});
+		this.closeTimerId = setTimeout(() => {
+			this.closeTimerId = null;
+			this.isOpen.set(false);
+			this.isClosing.set(false);
+			this.restoreFocus();
+
+			// Clear sheet query params after animation completes
+			this.router.navigate([], {
+				queryParams: {
+					[SHEET_QUERY_PARAMS.collection]: null,
+					[SHEET_QUERY_PARAMS.entityId]: null,
+					[SHEET_QUERY_PARAMS.mode]: null,
+					[SHEET_QUERY_PARAMS.callback]: null,
+				},
+				queryParamsHandling: 'merge',
+			});
+		}, CLOSE_ANIMATION_MS);
 	}
 
 	/**
@@ -116,8 +151,17 @@ export class EntitySheetService {
 
 	private syncIsOpenFromUrl(): void {
 		const urlTree = this.router.parseUrl(this.router.url);
-		const hasSheet = !!urlTree.queryParams['sheetCollection'];
-		this.isOpen.set(hasSheet);
+		const hasSheet = !!urlTree.queryParams[SHEET_QUERY_PARAMS.collection];
+
+		if (hasSheet) {
+			this.cancelCloseAnimation();
+			this.isOpen.set(true);
+		} else if (this.isOpen() && !this.isClosing()) {
+			// URL lost sheet params (e.g., browser back button) — clean up and close immediately
+			this.cleanupAllPendingCallbacks();
+			this.isOpen.set(false);
+			this.restoreFocus();
+		}
 	}
 
 	private openSheet(
@@ -125,6 +169,12 @@ export class EntitySheetService {
 		entityId: string | undefined,
 		mode: 'view' | 'edit' | 'create',
 	): Observable<EntitySheetResult> {
+		// Cancel any in-progress close animation
+		this.cancelCloseAnimation();
+
+		// Capture the trigger element for focus restoration on close
+		this.triggerElement = this.document.activeElement;
+
 		const callbackId = crypto.randomUUID();
 		const subject = new Subject<EntitySheetResult>();
 		this.pendingCallbacks.set(callbackId, subject);
@@ -133,10 +183,10 @@ export class EntitySheetService {
 
 		this.router.navigate([], {
 			queryParams: {
-				sheetCollection: collection,
-				sheetMode: mode,
-				sheetCallback: callbackId,
-				sheetEntityId: entityId ?? null,
+				[SHEET_QUERY_PARAMS.collection]: collection,
+				[SHEET_QUERY_PARAMS.mode]: mode,
+				[SHEET_QUERY_PARAMS.callback]: callbackId,
+				[SHEET_QUERY_PARAMS.entityId]: entityId ?? null,
 			},
 			queryParamsHandling: 'merge',
 		});
@@ -144,9 +194,34 @@ export class EntitySheetService {
 		return subject.asObservable().pipe(take(1));
 	}
 
+	private cancelCloseAnimation(): void {
+		if (this.closeTimerId !== null) {
+			clearTimeout(this.closeTimerId);
+			this.closeTimerId = null;
+			this.isClosing.set(false);
+		}
+	}
+
+	/** Complete and remove all pending callback subjects (prevents memory leaks) */
+	private cleanupAllPendingCallbacks(): void {
+		for (const [, subject] of this.pendingCallbacks) {
+			subject.complete();
+		}
+		this.pendingCallbacks.clear();
+	}
+
+	/** Return focus to the element that triggered the sheet open */
+	private restoreFocus(): void {
+		const el = this.triggerElement;
+		this.triggerElement = null;
+		if (el instanceof HTMLElement) {
+			setTimeout(() => el.focus());
+		}
+	}
+
 	private getCurrentCallbackId(): string | null {
 		const urlTree = this.router.parseUrl(this.router.url);
-		const callbackParam = urlTree.queryParams['sheetCallback'];
+		const callbackParam = urlTree.queryParams[SHEET_QUERY_PARAMS.callback];
 		if (typeof callbackParam === 'string') return callbackParam;
 		return null;
 	}

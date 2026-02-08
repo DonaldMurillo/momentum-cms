@@ -8,7 +8,7 @@ import { heroXMark } from '@ng-icons/heroicons/outline';
 import { Button } from '@momentum-cms/ui';
 import { EntityFormWidget } from '../../widgets/entity-form/entity-form.component';
 import { EntityViewWidget } from '../../widgets/entity-view/entity-view.component';
-import { EntitySheetService } from '../../services/entity-sheet.service';
+import { EntitySheetService, SHEET_QUERY_PARAMS } from '../../services/entity-sheet.service';
 import { getCollectionsFromRouteData } from '../../utils/route-data';
 import type { EntityFormMode } from '../../widgets/entity-form/entity-form.types';
 import type { Entity } from '../../widgets/widget.types';
@@ -31,7 +31,9 @@ import type { Entity } from '../../widgets/widget.types';
 		<header
 			class="flex items-center justify-between gap-4 border-b border-border bg-card px-6 py-4 shrink-0"
 		>
-			<h2 class="text-lg font-semibold tracking-tight truncate">{{ title() }}</h2>
+			<h2 id="mcms-sheet-title" class="text-lg font-semibold tracking-tight truncate">
+				{{ title() }}
+			</h2>
 			<button
 				mcms-button
 				variant="ghost"
@@ -77,13 +79,19 @@ export class EntitySheetContentComponent {
 	private readonly queryParams = toSignal(this.route.queryParamMap);
 
 	/** The collection slug from query params */
-	readonly collectionSlug = computed(() => this.queryParams()?.get('sheetCollection') ?? null);
+	readonly collectionSlug = computed(
+		() => this.queryParams()?.get(SHEET_QUERY_PARAMS.collection) ?? null,
+	);
 
 	/** The entity ID from query params (null for create mode) */
-	readonly entityId = computed(() => this.queryParams()?.get('sheetEntityId') ?? undefined);
+	readonly entityId = computed(
+		() => this.queryParams()?.get(SHEET_QUERY_PARAMS.entityId) ?? undefined,
+	);
 
 	/** The mode from query params */
-	private readonly rawMode = computed(() => this.queryParams()?.get('sheetMode') ?? null);
+	private readonly rawMode = computed(
+		() => this.queryParams()?.get(SHEET_QUERY_PARAMS.mode) ?? null,
+	);
 
 	/** Local mode override (for switching from view to edit within the sheet) */
 	private readonly localModeOverride = signal<EntityFormMode | null>(null);
@@ -158,7 +166,7 @@ export class EntitySheetContentComponent {
 		this.localModeOverride.set('edit');
 		// Also update the query param so URL stays in sync
 		this.router.navigate([], {
-			queryParams: { sheetMode: 'edit' },
+			queryParams: { [SHEET_QUERY_PARAMS.mode]: 'edit' },
 			queryParamsHandling: 'merge',
 		});
 	}

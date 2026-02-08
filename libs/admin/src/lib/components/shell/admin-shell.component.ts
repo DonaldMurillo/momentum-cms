@@ -60,6 +60,14 @@ import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
 				opacity: 1;
 			}
 		}
+		@keyframes mcms-fade-out {
+			from {
+				opacity: 1;
+			}
+			to {
+				opacity: 0;
+			}
+		}
 		@keyframes mcms-slide-in-right {
 			from {
 				transform: translateX(100%);
@@ -68,11 +76,25 @@ import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
 				transform: translateX(0);
 			}
 		}
+		@keyframes mcms-slide-out-right {
+			from {
+				transform: translateX(0);
+			}
+			to {
+				transform: translateX(100%);
+			}
+		}
 		.sheet-backdrop {
 			animation: mcms-fade-in 0.15s ease-out;
 		}
+		.sheet-backdrop-closing {
+			animation: mcms-fade-out 0.15s ease-in forwards;
+		}
 		.sheet-panel {
 			animation: mcms-slide-in-right 0.2s ease-out;
+		}
+		.sheet-panel-closing {
+			animation: mcms-slide-out-right 0.2s ease-in forwards;
 		}
 	`,
 	template: `
@@ -101,23 +123,28 @@ import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
 		</main>
 
 		<!-- Entity Sheet (query-param driven, no named router outlet) -->
-		@if (entitySheet.isOpen()) {
+		@if (entitySheet.isVisible()) {
 			<div class="fixed inset-0 z-50" role="presentation">
-				<!-- Backdrop -->
+				<!-- Backdrop (not keyboard-interactive; Escape key handles keyboard close) -->
 				<div
-					class="sheet-backdrop absolute inset-0 bg-black/50"
-					role="button"
-					tabindex="0"
-					aria-label="Close sheet"
+					[class]="
+						entitySheet.isClosing()
+							? 'sheet-backdrop-closing absolute inset-0 bg-black/50'
+							: 'sheet-backdrop absolute inset-0 bg-black/50'
+					"
+					aria-hidden="true"
 					(click)="onSheetBackdropClick()"
-					(keydown.enter)="onSheetBackdropClick()"
-					(keydown.space)="onSheetBackdropClick()"
 				></div>
 				<!-- Sheet panel -->
 				<div
-					class="sheet-panel absolute inset-y-0 right-0 w-full max-w-2xl bg-card border-l border-border shadow-xl flex flex-col"
+					[class]="
+						entitySheet.isClosing()
+							? 'sheet-panel-closing absolute inset-y-0 right-0 w-full max-w-2xl bg-card border-l border-border shadow-xl flex flex-col'
+							: 'sheet-panel absolute inset-y-0 right-0 w-full max-w-2xl bg-card border-l border-border shadow-xl flex flex-col'
+					"
 					role="dialog"
 					aria-modal="true"
+					aria-labelledby="mcms-sheet-title"
 					cdkTrapFocus
 					cdkTrapFocusAutoCapture
 				>
@@ -199,14 +226,16 @@ export class AdminShellComponent implements OnInit {
 
 	/** Close the sheet when the Escape key is pressed */
 	onEscapeKey(): void {
-		if (this.entitySheet.isOpen()) {
+		if (this.entitySheet.isOpen() && !this.entitySheet.isClosing()) {
 			this.entitySheet.close();
 		}
 	}
 
 	/** Close the sheet when the backdrop is clicked */
 	onSheetBackdropClick(): void {
-		this.entitySheet.close();
+		if (!this.entitySheet.isClosing()) {
+			this.entitySheet.close();
+		}
 	}
 
 	private async initializeAuth(): Promise<void> {

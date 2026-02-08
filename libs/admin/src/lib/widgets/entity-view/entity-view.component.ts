@@ -32,6 +32,7 @@ import type {
 import { injectMomentumAPI } from '../../services/momentum-api.service';
 import { CollectionAccessService } from '../../services/collection-access.service';
 import { FeedbackService } from '../feedback/feedback.service';
+import { isRecord, getTitleField } from '../entity-form/entity-form.types';
 import type { Entity, EntityAction } from '../widget.types';
 import type { EntityViewFieldConfig } from './entity-view.types';
 import { VersionHistoryWidget } from '../version-history/version-history.component';
@@ -167,11 +168,13 @@ import { PublishControlsWidget } from '../publish-controls/publish-controls.comp
 					}
 				</mcms-card-content>
 
-				<mcms-card-footer class="flex justify-start border-t bg-muted/50 px-6 py-4">
-					<button mcms-button variant="outline" (click)="navigateBack()">
-						← Back to {{ collectionLabel() }}
-					</button>
-				</mcms-card-footer>
+				@if (!suppressNavigation()) {
+					<mcms-card-footer class="flex justify-start border-t bg-muted/50 px-6 py-4">
+						<button mcms-button variant="outline" (click)="navigateBack()">
+							← Back to {{ collectionLabel() }}
+						</button>
+					</mcms-card-footer>
+				}
 			</mcms-card>
 
 			@if (hasVersioning() && entity() && showVersionHistory()) {
@@ -422,16 +425,7 @@ export class EntityViewWidget<T extends Entity = Entity> {
 	 * Get sub-field metadata for group and array field types.
 	 */
 	getFieldMeta(field: Field): FieldDisplayFieldMeta[] {
-		if (field.type === 'group') {
-			return field.fields
-				.filter((f) => !f.admin?.hidden)
-				.map((f) => ({
-					name: f.name,
-					label: f.label ?? humanizeFieldName(f.name),
-					type: f.type,
-				}));
-		}
-		if (field.type === 'array') {
+		if (field.type === 'group' || field.type === 'array') {
 			return field.fields
 				.filter((f) => !f.admin?.hidden)
 				.map((f) => ({
@@ -559,7 +553,7 @@ export class EntityViewWidget<T extends Entity = Entity> {
 			if (!isRecord(config) || typeof config['slug'] !== 'string') continue;
 
 			const relSlug = config['slug'];
-			const titleField = this.getTitleField(config);
+			const titleField = getTitleField(config);
 
 			promises.push(
 				this.api
@@ -591,31 +585,4 @@ export class EntityViewWidget<T extends Entity = Entity> {
 			});
 		}
 	}
-
-	/**
-	 * Get title field from related collection config.
-	 */
-	private getTitleField(config: Record<string, unknown>): string {
-		const admin = config['admin'];
-		if (isRecord(admin) && typeof admin['useAsTitle'] === 'string') {
-			return admin['useAsTitle'];
-		}
-
-		const fields = config['fields'];
-		if (Array.isArray(fields)) {
-			for (const field of fields) {
-				if (isRecord(field) && typeof field['name'] === 'string') {
-					if (field['name'] === 'title' || field['name'] === 'name') {
-						return field['name'];
-					}
-				}
-			}
-		}
-
-		return 'id';
-	}
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

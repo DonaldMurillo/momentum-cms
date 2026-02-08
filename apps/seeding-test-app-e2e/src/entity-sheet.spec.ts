@@ -11,17 +11,16 @@ import type { Page, Locator } from '@playwright/test';
  * Categories require `name` and `slug` fields.
  *
  * NOTE: These tests interact with Angular event handlers, so they require Angular
- * to be fully hydrated (SSR → client). We use `networkidle` and retry-polling
- * to handle the hydration window.
+ * to be fully hydrated (SSR → client). We use element-visibility waits and
+ * retry-polling to handle the hydration window.
  */
 
 /**
  * Navigate to the articles create form and wait for it to be interactive.
- * Uses `networkidle` to ensure JS bundles are loaded and Angular can hydrate.
+ * Waits for form to render and Angular to hydrate before returning.
  */
 async function navigateToArticlesForm(page: Page): Promise<Locator> {
 	await page.goto('/admin/collections/articles/new');
-	await page.waitForLoadState('networkidle');
 
 	// Wait for form to render (submit button at bottom confirms Angular is active)
 	const main = page.locator('main');
@@ -288,7 +287,7 @@ test.describe('Entity Sheet', () => {
 			await expect(authenticatedPage).toHaveURL(/sheetMode=create/, { timeout: 5000 });
 
 			// Refresh the page
-			await authenticatedPage.reload({ waitUntil: 'networkidle' });
+			await authenticatedPage.reload();
 
 			// Sheet should reappear after hydration
 			const sheetDialog = authenticatedPage.locator('[role="dialog"][aria-modal="true"]');

@@ -39,7 +39,11 @@ export {
 } from './lib/services/momentum-api.service';
 
 // Entity Sheet Service
-export { EntitySheetService, type EntitySheetResult } from './lib/services/entity-sheet.service';
+export {
+	EntitySheetService,
+	SHEET_QUERY_PARAMS,
+	type EntitySheetResult,
+} from './lib/services/entity-sheet.service';
 
 // Version Service
 export {
@@ -141,7 +145,11 @@ export type {
 
 export type { EntityFormMode, FieldNodeState } from './lib/widgets/entity-form/entity-form.types';
 
-export { getFieldNodeState, getSubNode } from './lib/widgets/entity-form/entity-form.types';
+export {
+	getFieldNodeState,
+	getSubNode,
+	getTitleField,
+} from './lib/widgets/entity-form/entity-form.types';
 
 export type {
 	EntityViewFieldConfig,
