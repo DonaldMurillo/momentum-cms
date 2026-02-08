@@ -3,6 +3,13 @@ import baseConfig from '../../eslint.config.mjs';
 export default [
   ...baseConfig,
   {
+    files: ['**/*.ts'],
+    rules: {
+      // Server-side code legitimately uses setTimeout, setInterval, etc.
+      'local/no-direct-browser-apis': 'off',
+    },
+  },
+  {
     files: ['**/*.json'],
     rules: {
       '@nx/dependency-checks': [

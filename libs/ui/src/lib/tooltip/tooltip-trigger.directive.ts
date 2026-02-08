@@ -9,6 +9,7 @@ import {
 	signal,
 	ViewContainerRef,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { Overlay, OverlayRef, PositionStrategy } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import type { TooltipPosition } from './tooltip.types';
@@ -45,10 +46,11 @@ export class TooltipTrigger implements OnDestroy {
 	private readonly overlay = inject(Overlay);
 	private readonly elementRef = inject(ElementRef<HTMLElement>);
 	private readonly viewContainerRef = inject(ViewContainerRef);
+	private readonly document = inject(DOCUMENT);
 
 	private overlayRef: OverlayRef | null = null;
-	private showTimeout: ReturnType<typeof setTimeout> | null = null;
-	private hideTimeout: ReturnType<typeof setTimeout> | null = null;
+	private showTimeout: number | null = null;
+	private hideTimeout: number | null = null;
 
 	readonly isVisible = signal(false);
 	readonly tooltipId = computed(() => (this.isVisible() ? `tooltip-${this.uniqueId}` : null));
@@ -88,15 +90,17 @@ export class TooltipTrigger implements OnDestroy {
 		if (this.tooltipDisabled()) return;
 
 		this.cancelHide();
-		this.showTimeout = setTimeout(() => {
-			this.show();
-		}, this.tooltipDelay());
+		this.showTimeout =
+			this.document.defaultView?.setTimeout(() => {
+				this.show();
+			}, this.tooltipDelay()) ?? null;
 	}
 
 	private scheduleHide(): void {
-		this.hideTimeout = setTimeout(() => {
-			this.hide();
-		}, 100);
+		this.hideTimeout =
+			this.document.defaultView?.setTimeout(() => {
+				this.hide();
+			}, 100) ?? null;
 	}
 
 	private cancelShow(): void {

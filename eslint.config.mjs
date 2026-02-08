@@ -78,16 +78,21 @@ export default [
 
 			// No console in production code
 			'no-console': ['error', { allow: ['warn', 'error'] }],
+
+			// Ban direct browser API usage (window, document, setTimeout, etc.)
+			// Use inject(DOCUMENT) and .defaultView for SSR safety
+			'local/no-direct-browser-apis': 'error',
 		},
 	},
 	{
-		// Relax rules for test files
-		files: ['**/*.spec.ts', '**/*.test.ts', '**/e2e/**/*.ts'],
+		// Relax rules for test and story files
+		files: ['**/*.spec.ts', '**/*.test.ts', '**/e2e/**/*.ts', '**/*.stories.ts'],
 		rules: {
 			'@typescript-eslint/no-explicit-any': 'off',
 			'@typescript-eslint/consistent-type-assertions': 'off',
 			'@typescript-eslint/explicit-function-return-type': 'off',
 			'no-console': 'off',
+			'local/no-direct-browser-apis': 'off',
 		},
 	},
 	{
@@ -96,6 +101,18 @@ export default [
 		rules: {
 			'@typescript-eslint/explicit-function-return-type': 'off',
 			'@nx/enforce-module-boundaries': 'off',
+			'local/no-direct-browser-apis': 'off',
+		},
+	},
+	{
+		// Server-side code legitimately uses browser-like globals (setTimeout, setInterval in Node)
+		files: [
+			'libs/server-core/**/*.ts',
+			'libs/server-express/**/*.ts',
+			'libs/server-analog/**/*.ts',
+		],
+		rules: {
+			'local/no-direct-browser-apis': 'off',
 		},
 	},
 ];

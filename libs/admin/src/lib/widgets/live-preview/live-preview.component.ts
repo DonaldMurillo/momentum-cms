@@ -9,6 +9,7 @@ import {
 	signal,
 	viewChild,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { inject } from '@angular/core';
 import { Button } from '@momentum-cms/ui';
@@ -34,10 +35,19 @@ export type DeviceSize = 'desktop' | 'tablet' | 'mobile';
 			<div class="flex-1"></div>
 
 			<!-- Device size toggle -->
-			<div class="flex rounded-md border border-border overflow-hidden" role="group" aria-label="Preview device size" data-testid="device-toggle">
+			<div
+				class="flex rounded-md border border-border overflow-hidden"
+				role="group"
+				aria-label="Preview device size"
+				data-testid="device-toggle"
+			>
 				<button
 					class="px-2 py-1 text-xs transition-colors"
-					[class]="deviceSize() === 'desktop' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'"
+					[class]="
+						deviceSize() === 'desktop'
+							? 'bg-primary text-primary-foreground'
+							: 'bg-background text-muted-foreground hover:bg-muted'
+					"
 					[attr.aria-pressed]="deviceSize() === 'desktop'"
 					(click)="deviceSize.set('desktop')"
 					data-testid="device-desktop"
@@ -46,7 +56,11 @@ export type DeviceSize = 'desktop' | 'tablet' | 'mobile';
 				</button>
 				<button
 					class="px-2 py-1 text-xs border-l border-border transition-colors"
-					[class]="deviceSize() === 'tablet' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'"
+					[class]="
+						deviceSize() === 'tablet'
+							? 'bg-primary text-primary-foreground'
+							: 'bg-background text-muted-foreground hover:bg-muted'
+					"
 					[attr.aria-pressed]="deviceSize() === 'tablet'"
 					(click)="deviceSize.set('tablet')"
 					data-testid="device-tablet"
@@ -55,7 +69,11 @@ export type DeviceSize = 'desktop' | 'tablet' | 'mobile';
 				</button>
 				<button
 					class="px-2 py-1 text-xs border-l border-border transition-colors"
-					[class]="deviceSize() === 'mobile' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'"
+					[class]="
+						deviceSize() === 'mobile'
+							? 'bg-primary text-primary-foreground'
+							: 'bg-background text-muted-foreground hover:bg-muted'
+					"
 					[attr.aria-pressed]="deviceSize() === 'mobile'"
 					(click)="deviceSize.set('mobile')"
 					data-testid="device-mobile"
@@ -96,6 +114,7 @@ export type DeviceSize = 'desktop' | 'tablet' | 'mobile';
 	`,
 })
 export class LivePreviewComponent {
+	private readonly document = inject(DOCUMENT);
 	private readonly sanitizer = inject(DomSanitizer);
 	private readonly destroyRef = inject(DestroyRef);
 
@@ -165,7 +184,7 @@ export class LivePreviewComponent {
 	});
 
 	/** Debounce timer for postMessage updates */
-	private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	private debounceTimer: number | undefined = undefined;
 
 	constructor() {
 		// Send form data to iframe via postMessage whenever data changes
@@ -179,14 +198,11 @@ export class LivePreviewComponent {
 				clearTimeout(this.debounceTimer);
 			}
 
-			this.debounceTimer = setTimeout(() => {
+			this.debounceTimer = this.document.defaultView?.setTimeout(() => {
 				const iframeWindow = frame.nativeElement.contentWindow;
 				if (iframeWindow) {
-					const targetOrigin = window.location.origin;
-					iframeWindow.postMessage(
-						{ type: 'momentum-preview-update', data },
-						targetOrigin,
-					);
+					const targetOrigin = this.document.defaultView?.location?.origin ?? '';
+					iframeWindow.postMessage({ type: 'momentum-preview-update', data }, targetOrigin);
 				}
 			}, 300);
 		});
@@ -195,7 +211,7 @@ export class LivePreviewComponent {
 		this.destroyRef.onDestroy(() => {
 			if (this.debounceTimer) {
 				clearTimeout(this.debounceTimer);
-				this.debounceTimer = null;
+				this.debounceTimer = undefined;
 			}
 		});
 	}

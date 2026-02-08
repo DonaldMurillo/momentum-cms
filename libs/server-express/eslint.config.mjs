@@ -3,6 +3,12 @@ import baseConfig from '../../eslint.config.mjs';
 export default [
   ...baseConfig,
   {
+    files: ['**/*.ts'],
+    rules: {
+      'local/no-direct-browser-apis': 'off',
+    },
+  },
+  {
     files: ['**/*.json'],
     rules: {
       '@nx/dependency-checks': [

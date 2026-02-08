@@ -1,4 +1,5 @@
-import { Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import type { Toast, ToastConfig, ToastPosition } from './toast.types';
 
 let toastIdCounter = 0;
@@ -32,6 +33,8 @@ let toastIdCounter = 0;
  */
 @Injectable({ providedIn: 'root' })
 export class ToastService {
+	private readonly document = inject(DOCUMENT);
+
 	/** Current toast position. */
 	readonly position = signal<ToastPosition>('bottom-right');
 
@@ -70,7 +73,7 @@ export class ToastService {
 
 		// Schedule auto-dismiss
 		if (toast.duration > 0) {
-			setTimeout(() => {
+			this.document.defaultView?.setTimeout(() => {
 				this.dismiss(id);
 			}, toast.duration);
 		}

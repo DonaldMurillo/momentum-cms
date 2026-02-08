@@ -185,6 +185,15 @@ export interface AdminPanelConfig {
 		logo?: string;
 		title?: string;
 	};
+
+	/**
+	 * Auto-show toast notifications on CUD (Create, Update, Delete) operations.
+	 * When enabled, the admin UI shows success/error toasts for all database
+	 * modification operations without manual calls in each component.
+	 * Only active in the browser, not during SSR.
+	 * @default true
+	 */
+	toasts?: boolean;
 }
 
 /**
@@ -369,6 +378,7 @@ export function defineMomentumConfig(config: MomentumConfig): ResolvedMomentumCo
 		admin: {
 			basePath: config.admin?.basePath ?? '/admin',
 			branding: config.admin?.branding ?? {},
+			toasts: config.admin?.toasts ?? true,
 		},
 		server: {
 			port: config.server?.port ?? 3000,

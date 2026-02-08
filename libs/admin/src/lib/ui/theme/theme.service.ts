@@ -7,7 +7,7 @@ import {
 	inject,
 	DestroyRef,
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 
 /**
  * Theme options for the admin UI.
@@ -40,6 +40,7 @@ const THEME_STORAGE_KEY = 'mcms-theme';
 @Injectable({ providedIn: 'root' })
 export class McmsThemeService {
 	private readonly platformId = inject(PLATFORM_ID);
+	private readonly document = inject(DOCUMENT);
 	private readonly isBrowser = isPlatformBrowser(this.platformId);
 
 	/**
@@ -86,8 +87,8 @@ export class McmsThemeService {
 		this.theme.set(theme);
 
 		if (this.isBrowser) {
-			localStorage.setItem(THEME_STORAGE_KEY, theme);
-			document.cookie = `${THEME_STORAGE_KEY}=${theme}; path=/; max-age=31536000; SameSite=Lax`;
+			this.document.defaultView?.localStorage?.setItem(THEME_STORAGE_KEY, theme);
+			this.document.cookie = `${THEME_STORAGE_KEY}=${theme}; path=/; max-age=31536000; SameSite=Lax`;
 		}
 	}
 
@@ -108,7 +109,7 @@ export class McmsThemeService {
 			return 'system';
 		}
 
-		const stored = localStorage.getItem(THEME_STORAGE_KEY);
+		const stored = this.document.defaultView?.localStorage?.getItem(THEME_STORAGE_KEY) ?? null;
 		if (stored === 'light' || stored === 'dark' || stored === 'system') {
 			return stored;
 		}
@@ -124,8 +125,8 @@ export class McmsThemeService {
 			return 'light';
 		}
 
-		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-		return mediaQuery.matches ? 'dark' : 'light';
+		const mediaQuery = this.document.defaultView?.matchMedia('(prefers-color-scheme: dark)');
+		return mediaQuery?.matches ? 'dark' : 'light';
 	}
 
 	/**
@@ -137,9 +138,9 @@ export class McmsThemeService {
 		}
 
 		if (isDark) {
-			document.documentElement.classList.add('dark');
+			this.document.documentElement.classList.add('dark');
 		} else {
-			document.documentElement.classList.remove('dark');
+			this.document.documentElement.classList.remove('dark');
 		}
 	}
 
@@ -151,7 +152,8 @@ export class McmsThemeService {
 			return;
 		}
 
-		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+		const mediaQuery = this.document.defaultView?.matchMedia('(prefers-color-scheme: dark)');
+		if (!mediaQuery) return;
 
 		const handleChange = (): void => {
 			// Only react if theme is set to 'system'

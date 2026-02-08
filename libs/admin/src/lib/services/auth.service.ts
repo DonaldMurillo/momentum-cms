@@ -1,4 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
@@ -102,6 +103,7 @@ export interface TwoFactorEnableResult {
 @Injectable({ providedIn: 'root' })
 export class MomentumAuthService {
 	private readonly http = inject(HttpClient);
+	private readonly document = inject(DOCUMENT);
 	private readonly baseUrl = '/api/auth';
 
 	// === Writable signals (internal state) ===
@@ -298,8 +300,8 @@ export class MomentumAuthService {
 	async requestPasswordReset(email: string, redirectTo?: string): Promise<AuthResult> {
 		try {
 			// Use current origin for the redirect URL
-			const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-			const resetUrl = redirectTo ?? `${baseUrl}/admin/reset-password`;
+			const originUrl = this.document.defaultView?.location?.origin ?? '';
+			const resetUrl = redirectTo ?? `${originUrl}/admin/reset-password`;
 
 			await firstValueFrom(
 				this.http.post<AuthResponse>(
@@ -432,8 +434,9 @@ export class MomentumAuthService {
 	 */
 	signInWithOAuth(provider: string, callbackURL = '/admin'): void {
 		const url = `${this.baseUrl}/sign-in/social?provider=${encodeURIComponent(provider)}&callbackURL=${encodeURIComponent(callbackURL)}`;
-		if (typeof window !== 'undefined') {
-			window.location.href = url;
+		const win = this.document.defaultView;
+		if (win) {
+			win.location.href = url;
 		}
 	}
 

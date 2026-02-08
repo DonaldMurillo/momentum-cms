@@ -1,3 +1,5 @@
+/* eslint-disable local/no-direct-browser-apis -- Standalone client tracker, not Angular-managed */
+
 /**
  * Client-Side Analytics Tracker
  *

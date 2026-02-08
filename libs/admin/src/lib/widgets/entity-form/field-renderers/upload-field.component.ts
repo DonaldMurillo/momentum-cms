@@ -1,11 +1,5 @@
-import {
-	ChangeDetectionStrategy,
-	Component,
-	computed,
-	inject,
-	input,
-	signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { McmsFormField, Button, Progress, DialogService } from '@momentum-cms/ui';
 import type { ValidationError } from '@momentum-cms/ui';
 import { humanizeFieldName } from '@momentum-cms/core';
@@ -195,6 +189,7 @@ function getInputFromEvent(event: Event): HTMLInputElement | null {
 	`,
 })
 export class UploadFieldRenderer {
+	private readonly document = inject(DOCUMENT);
 	private readonly uploadService = inject(UploadService);
 	private readonly dialogService = inject(DialogService);
 
@@ -395,7 +390,7 @@ export class UploadFieldRenderer {
 	triggerFileInput(): void {
 		if (this.isDisabled()) return;
 
-		const input = document.querySelector(`#${this.fieldId()} input[type="file"]`);
+		const input = this.document.querySelector(`#${this.fieldId()} input[type="file"]`);
 		if (input instanceof HTMLInputElement) {
 			input.click();
 		}

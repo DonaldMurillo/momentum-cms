@@ -1,3 +1,5 @@
+/* eslint-disable local/no-direct-browser-apis -- Server-side event store, not Angular-managed */
+
 /**
  * Event Store
  *

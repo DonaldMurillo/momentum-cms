@@ -3,10 +3,12 @@ import {
 	Component,
 	computed,
 	effect,
+	inject,
 	input,
 	model,
 	output,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 
 /**
  * A search input component with debounce support and clear functionality.
@@ -91,6 +93,8 @@ import {
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SearchInput {
+	private readonly document = inject(DOCUMENT);
+
 	/** The current search value (two-way binding). */
 	readonly value = model('');
 
@@ -117,7 +121,7 @@ export class SearchInput {
 		return `${base} ${this.class()}`.trim();
 	});
 
-	private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	private debounceTimer: number | null = null;
 
 	constructor() {
 		// Effect to handle debounced search
@@ -129,9 +133,10 @@ export class SearchInput {
 				clearTimeout(this.debounceTimer);
 			}
 
-			this.debounceTimer = setTimeout(() => {
-				this.searchChange.emit(value);
-			}, debounceMs);
+			this.debounceTimer =
+				this.document.defaultView?.setTimeout(() => {
+					this.searchChange.emit(value);
+				}, debounceMs) ?? null;
 		});
 	}
 

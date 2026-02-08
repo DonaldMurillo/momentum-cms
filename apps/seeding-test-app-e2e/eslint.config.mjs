@@ -6,7 +6,9 @@ export default [
 	...baseConfig,
 	{
 		files: ['**/*.ts', '**/*.js'],
-		// Override or add rules here
-		rules: {},
+		rules: {
+			// E2E test code is not Angular — browser API rule does not apply
+			'local/no-direct-browser-apis': 'off',
+		},
 	},
 ];

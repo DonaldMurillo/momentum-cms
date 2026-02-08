@@ -25,6 +25,7 @@ import type { RadioOption } from './radio-group.types';
 	template: `
 		<div class="flex flex-col gap-2">
 			@for (option of options(); track option.value) {
+				<!-- eslint-disable-next-line @angular-eslint/template/label-has-associated-control -- label wraps button[role=radio], not a native input -->
 				<label
 					class="flex items-center gap-2 cursor-pointer"
 					[class.opacity-50]="option.disabled || disabled()"

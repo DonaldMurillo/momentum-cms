@@ -56,7 +56,7 @@ export class EntitySheetService {
 	private readonly pendingCallbacks = new Map<string, Subject<EntitySheetResult>>();
 
 	/** Handle for the close animation timer (for cancellation on rapid open/close) */
-	private closeTimerId: ReturnType<typeof setTimeout> | null = null;
+	private closeTimerId: number | undefined = undefined;
 
 	/** Element that had focus when the sheet was opened (for focus restoration) */
 	private triggerElement: Element | null = null;
@@ -113,8 +113,8 @@ export class EntitySheetService {
 		// Start close animation
 		this.isClosing.set(true);
 
-		this.closeTimerId = setTimeout(() => {
-			this.closeTimerId = null;
+		this.closeTimerId = this.document.defaultView?.setTimeout(() => {
+			this.closeTimerId = undefined;
 			this.isOpen.set(false);
 			this.isClosing.set(false);
 			this.restoreFocus();
@@ -205,9 +205,9 @@ export class EntitySheetService {
 	}
 
 	private cancelCloseAnimation(): void {
-		if (this.closeTimerId !== null) {
+		if (this.closeTimerId !== undefined) {
 			clearTimeout(this.closeTimerId);
-			this.closeTimerId = null;
+			this.closeTimerId = undefined;
 			this.isClosing.set(false);
 		}
 	}
@@ -225,7 +225,7 @@ export class EntitySheetService {
 		const el = this.triggerElement;
 		this.triggerElement = null;
 		if (el instanceof HTMLElement) {
-			setTimeout(() => el.focus());
+			this.document.defaultView?.setTimeout(() => el.focus(), 0);
 		}
 	}
 

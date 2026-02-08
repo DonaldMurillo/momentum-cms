@@ -10,7 +10,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { RouterOutlet, ActivatedRoute, Router } from '@angular/router';
 import { A11yModule } from '@angular/cdk/a11y';
 import type { CollectionConfig } from '@momentum-cms/core';
-import { SidebarService, SidebarTrigger } from '@momentum-cms/ui';
+import { SidebarService, SidebarTrigger, ToastContainer } from '@momentum-cms/ui';
 import {
 	getCollectionsFromRouteData,
 	getBrandingFromRouteData,
@@ -45,6 +45,7 @@ import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
 		SidebarTrigger,
 		A11yModule,
 		EntitySheetContentComponent,
+		ToastContainer,
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: {
@@ -121,6 +122,8 @@ import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
 				<router-outlet></router-outlet>
 			}
 		</main>
+
+		<mcms-toast-container />
 
 		<!-- Entity Sheet (query-param driven, no named router outlet) -->
 		@if (entitySheet.isVisible()) {

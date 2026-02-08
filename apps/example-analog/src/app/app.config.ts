@@ -2,7 +2,7 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { provideClientHydration } from '@angular/platform-browser';
 import { provideFileRouter, requestContextInterceptor, withExtraRoutes } from '@analogjs/router';
-import { momentumAdminRoutes } from '@momentum-cms/admin';
+import { momentumAdminRoutes, crudToastInterceptor } from '@momentum-cms/admin';
 import { Posts, Users } from '../collections';
 import { MediaCollection } from '@momentum-cms/core';
 
@@ -21,6 +21,9 @@ export const appConfig: ApplicationConfig = {
 
 		provideFileRouter(withExtraRoutes(adminRoutes)),
 		provideClientHydration(),
-		provideHttpClient(withFetch(), withInterceptors([requestContextInterceptor])),
+		provideHttpClient(
+			withFetch(),
+			withInterceptors([requestContextInterceptor, crudToastInterceptor]),
+		),
 	],
 };
