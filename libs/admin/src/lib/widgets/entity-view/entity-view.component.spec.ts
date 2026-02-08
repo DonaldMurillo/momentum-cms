@@ -422,7 +422,6 @@ describe('EntityViewWidget', () => {
 			await deletePromise;
 
 			expect(deleteSpy).toHaveBeenCalledWith(mockEntity);
-			expect(mockFeedbackService.entityDeleted).toHaveBeenCalledWith('Post');
 			expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections/posts']);
 		});
 

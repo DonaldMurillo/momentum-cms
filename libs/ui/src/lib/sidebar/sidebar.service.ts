@@ -7,7 +7,7 @@ import {
 	DestroyRef,
 	type Signal,
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
@@ -37,6 +37,7 @@ export class SidebarService {
 	private readonly breakpointObserver = inject(BreakpointObserver);
 	private readonly platformId = inject(PLATFORM_ID);
 	private readonly destroyRef = inject(DestroyRef);
+	private readonly document = inject(DOCUMENT);
 
 	/** Whether the sidebar is open (mobile) - starts closed on mobile */
 	readonly open = signal(false);
@@ -103,11 +104,11 @@ export class SidebarService {
 			}
 		};
 
-		document.addEventListener('keydown', handler);
+		this.document.addEventListener('keydown', handler);
 
 		// Cleanup on destroy
 		this.destroyRef.onDestroy(() => {
-			document.removeEventListener('keydown', handler);
+			this.document.removeEventListener('keydown', handler);
 		});
 	}
 }

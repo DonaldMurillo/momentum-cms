@@ -153,11 +153,9 @@ export class PublishControlsWidget {
 		try {
 			await this.versionService.publish(this.collection(), this.documentId());
 			this.updateStatusDisplay('published');
-			this.feedback.entityPublished(this.documentLabel());
 			this.statusChanged.emit('published');
-		} catch (err) {
-			const error = err instanceof Error ? err : new Error('Failed to publish');
-			this.feedback.operationFailed('Publish failed', error);
+		} catch {
+			// Error handled by crudToastInterceptor
 		} finally {
 			this.isUpdating.set(false);
 		}
@@ -178,11 +176,9 @@ export class PublishControlsWidget {
 		try {
 			await this.versionService.unpublish(this.collection(), this.documentId());
 			this.updateStatusDisplay('draft');
-			this.feedback.entityUnpublished(this.documentLabel());
 			this.statusChanged.emit('draft');
-		} catch (err) {
-			const error = err instanceof Error ? err : new Error('Failed to unpublish');
-			this.feedback.operationFailed('Unpublish failed', error);
+		} catch {
+			// Error handled by crudToastInterceptor
 		} finally {
 			this.isUpdating.set(false);
 		}

@@ -188,7 +188,6 @@ describe('EntityFormWidget', () => {
 
 			await submitPromise;
 
-			expect(mockFeedbackService.entityCreated).toHaveBeenCalledWith('Post');
 			expect(savedSpy).toHaveBeenCalled();
 			expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections/posts']);
 		});
@@ -227,8 +226,8 @@ describe('EntityFormWidget', () => {
 
 			await submitPromise;
 
-			expect(mockFeedbackService.operationFailed).toHaveBeenCalled();
 			expect(component.formError()).toBeTruthy();
+			expect(errorSpy).toHaveBeenCalled();
 		});
 	});
 
@@ -279,14 +278,11 @@ describe('EntityFormWidget', () => {
 
 			const updateReq = httpMock.expectOne('/api/posts/123');
 			expect(updateReq.request.method).toBe('PATCH');
-			expect(updateReq.request.body).toEqual(
-				expect.objectContaining({ title: 'Updated Title' }),
-			);
+			expect(updateReq.request.body).toEqual(expect.objectContaining({ title: 'Updated Title' }));
 			updateReq.flush({ doc: { ...mockEntity, title: 'Updated Title' } });
 
 			await submitPromise;
 
-			expect(mockFeedbackService.entityUpdated).toHaveBeenCalledWith('Post');
 			expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections/posts']);
 		});
 

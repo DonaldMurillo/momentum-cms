@@ -487,10 +487,9 @@ export class EntityViewWidget<T extends Entity = Entity> {
 			try {
 				await this.api.collection(this.collection().slug).delete(String(e.id));
 				this.delete_.emit(e);
-				this.feedback.entityDeleted(this.collectionLabelSingular());
 				this.navigateBack();
-			} catch (err) {
-				this.feedback.operationFailed('Delete failed', err instanceof Error ? err : undefined);
+			} catch {
+				// Error handled by crudToastInterceptor
 			}
 		}
 	}

@@ -421,13 +421,11 @@ export class EntityFormWidget<T extends Entity = Entity> {
 				if (this.mode() === 'create') {
 					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 					result = await this.api.collection<T>(slug).create(data as Partial<T>);
-					this.feedback.entityCreated(this.collectionLabelSingular());
 				} else {
 					const id = this.entityId();
 					if (!id) throw new Error('Entity ID required for update');
 					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 					result = await this.api.collection<T>(slug).update(id, data as Partial<T>);
-					this.feedback.entityUpdated(this.collectionLabelSingular());
 				}
 
 				this.originalData.set(result);
@@ -442,7 +440,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 			} catch (err) {
 				const errorMessage = err instanceof Error ? err.message : 'Save failed';
 				this.formError.set(errorMessage);
-				this.feedback.operationFailed('Save failed', err instanceof Error ? err : undefined);
+				// Error toast handled by crudToastInterceptor
 				this.saveError.emit(err instanceof Error ? err : new Error(errorMessage));
 			} finally {
 				this.isSubmitting.set(false);

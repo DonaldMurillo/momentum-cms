@@ -33,10 +33,4 @@ export default [...baseConfig, {
             },
         ],
     },
-}, {
-    files: ['**/*.html'],
-    rules: {
-        // Disable label association check - radio groups handle this differently
-        '@angular-eslint/template/label-has-associated-control': 'off',
-    },
 }, ...storybook.configs["flat/recommended"]];

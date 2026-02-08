@@ -1,6 +1,9 @@
 // Routes
 export * from './lib/routes';
 
+// Interceptors
+export { crudToastInterceptor, SKIP_AUTO_TOAST } from './lib/interceptors/crud-toast.interceptor';
+
 // Services
 export { MomentumApiService } from './lib/services/api.service';
 export {

@@ -6,6 +6,7 @@ import {
 	effect,
 	DestroyRef,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { type Subscription } from 'rxjs';
 import {
 	Button,
@@ -306,6 +307,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 	`,
 })
 export class MediaLibraryPage {
+	private readonly document = inject(DOCUMENT);
 	private readonly api = injectMomentumAPI();
 	private readonly uploadService = inject(UploadService);
 	private readonly feedback = inject(FeedbackService);
@@ -472,7 +474,7 @@ export class MediaLibraryPage {
 	 * View media file in a new tab.
 	 */
 	viewMedia(media: MediaItem): void {
-		window.open(this.getMediaUrl(media), '_blank');
+		this.document.defaultView?.open(this.getMediaUrl(media), '_blank');
 	}
 
 	/**
@@ -505,11 +507,10 @@ export class MediaLibraryPage {
 		try {
 			const collection = this.api.collection('media');
 			await collection.delete(media.id);
-			this.feedback.entityDeleted('Media');
 			this.loadMedia(this.searchQuery(), this.currentPage());
 		} catch (error) {
 			console.error('Failed to delete media:', error);
-			this.feedback.operationFailed('Failed to delete media');
+			// Error handled by crudToastInterceptor
 		}
 	}
 
@@ -526,15 +527,14 @@ export class MediaLibraryPage {
 			const collection = this.api.collection('media');
 			const ids = Array.from(this.selectedItems());
 
-			// Delete all selected items
-			await Promise.all(ids.map((id) => collection.delete(id)));
+			// Use batchDelete for a single request with a single summary toast
+			await collection.batchDelete(ids);
 
-			this.feedback.entitiesDeleted('Files', count);
 			this.selectedItems.set(new Set());
 			this.loadMedia(this.searchQuery(), this.currentPage());
 		} catch (error) {
 			console.error('Failed to delete media:', error);
-			this.feedback.operationFailed('Failed to delete some files');
+			// Error handled by crudToastInterceptor
 		}
 	}
 

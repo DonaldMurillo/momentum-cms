@@ -7,6 +7,9 @@ export default [
 	{
 		files: ['**/*.ts', '**/*.js'],
 		rules: {
+			// E2E test code is not Angular — browser API rule does not apply
+			'local/no-direct-browser-apis': 'off',
+
 			// Allow conditionals in tests for auth-aware test skipping
 			// This pattern is intentional: tests check auth state and skip gracefully
 			'playwright/no-conditional-in-test': 'off',

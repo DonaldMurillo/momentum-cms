@@ -7,6 +7,7 @@ import {
 	input,
 	signal,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { Avatar } from './avatar.component';
 
 /**
@@ -30,6 +31,7 @@ import { Avatar } from './avatar.component';
 })
 export class AvatarFallback {
 	private readonly avatar = inject(Avatar, { optional: true });
+	private readonly document = inject(DOCUMENT);
 
 	/** Delay in milliseconds before showing fallback. */
 	readonly delayMs = input(600);
@@ -48,7 +50,7 @@ export class AvatarFallback {
 			if (delay === 0) {
 				this.canRender.set(true);
 			} else {
-				const timer = setTimeout(() => this.canRender.set(true), delay);
+				const timer = this.document.defaultView?.setTimeout(() => this.canRender.set(true), delay);
 				return () => clearTimeout(timer);
 			}
 
