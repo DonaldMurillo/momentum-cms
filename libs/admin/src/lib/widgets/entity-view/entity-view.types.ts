@@ -20,7 +20,9 @@ export interface EntityViewFieldConfig {
 		| 'email'
 		| 'list'
 		| 'json'
-		| 'html';
+		| 'html'
+		| 'group'
+		| 'array-table';
 	/** Custom formatter function */
 	formatter?: (value: unknown, entity: Entity) => string;
 	/** Whether to hide this field */

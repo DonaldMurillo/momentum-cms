@@ -1,6 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import type { FieldDisplayType, FieldDisplayBadgeConfig } from './field-display.types';
+import type {
+	FieldDisplayType,
+	FieldDisplayBadgeConfig,
+	FieldDisplayFieldMeta,
+	FieldDisplayNumberFormat,
+	FieldDisplayDateFormat,
+} from './field-display.types';
 import { Badge } from '../badge/badge.component';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 /**
  * A read-only display component for rendering values with type-aware formatting.
@@ -10,6 +20,9 @@ import { Badge } from '../badge/badge.component';
  * <mcms-field-display [value]="user.name" type="text" label="Name" />
  * <mcms-field-display [value]="user.createdAt" type="date" label="Created" />
  * <mcms-field-display [value]="user.status" type="badge" [badgeConfig]="statusConfig" />
+ * <mcms-field-display [value]="product.price" type="number"
+ *   [numberFormat]="{ style: 'currency', currency: 'USD' }" label="Price" />
+ * <mcms-field-display [value]="product.seo" type="group" [fieldMeta]="seoMeta" label="SEO" />
  * ```
  */
 @Component({
@@ -139,6 +152,59 @@ import { Badge } from '../badge/badge.component';
 						></div>
 					}
 				}
+				@case ('group') {
+					@if (isEmpty()) {
+						<span class="text-muted-foreground">{{ emptyText() }}</span>
+					} @else {
+						<div class="space-y-2 rounded-md border border-border p-3">
+							@for (meta of fieldMeta(); track meta.name) {
+								<div class="flex justify-between gap-4 text-sm">
+									<span class="shrink-0 font-medium text-muted-foreground">
+										{{ meta.label || meta.name }}
+									</span>
+									<span class="truncate text-right">
+										{{ getGroupFieldValue(meta.name) }}
+									</span>
+								</div>
+							}
+						</div>
+					}
+				}
+				@case ('array-table') {
+					@if (isEmpty()) {
+						<span class="text-muted-foreground">{{ emptyText() }}</span>
+					} @else {
+						<div class="overflow-auto rounded-md border border-border">
+							<table class="w-full text-sm">
+								<thead>
+									<tr class="border-b bg-muted/50">
+										@for (meta of fieldMeta(); track meta.name) {
+											<th class="px-3 py-2 text-left font-medium text-muted-foreground">
+												{{ meta.label || meta.name }}
+											</th>
+										}
+									</tr>
+								</thead>
+								<tbody>
+									@for (row of displayList(); track $index) {
+										<tr class="border-b last:border-0">
+											@for (meta of fieldMeta(); track meta.name) {
+												<td class="px-3 py-2">
+													{{ getArrayCellValue(row, meta) }}
+												</td>
+											}
+										</tr>
+									}
+								</tbody>
+							</table>
+							@if (hasMoreItems()) {
+								<div class="bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+									+{{ remainingItems() }} more rows
+								</div>
+							}
+						</div>
+					}
+				}
 				@default {
 					<span>{{ displayValue() }}</span>
 				}
@@ -169,11 +235,20 @@ export class FieldDisplay {
 	/** Whether to open links in new tab. */
 	readonly openInNewTab = input(true);
 
-	/** Maximum items to show for list type. */
+	/** Maximum items to show for list/array-table types. */
 	readonly maxItems = input(5);
 
 	/** Additional CSS classes. */
 	readonly class = input('');
+
+	/** Sub-field metadata for 'group' and 'array-table' display types. */
+	readonly fieldMeta = input<FieldDisplayFieldMeta[]>([]);
+
+	/** Number format options (e.g. currency, percent). */
+	readonly numberFormat = input<FieldDisplayNumberFormat | undefined>(undefined);
+
+	/** Date format options (e.g. preset style, locale). */
+	readonly dateFormat = input<FieldDisplayDateFormat | undefined>(undefined);
 
 	readonly hostClasses = computed(() => {
 		const base = 'block';
@@ -209,6 +284,19 @@ export class FieldDisplay {
 		const val = this.value();
 		const num = typeof val === 'number' ? val : parseFloat(String(val));
 		if (isNaN(num)) return this.emptyText();
+
+		const fmt = this.numberFormat();
+		if (fmt) {
+			const options: Intl.NumberFormatOptions = {};
+			if (fmt.style) options.style = fmt.style;
+			if (fmt.currency) options.currency = fmt.currency;
+			if (fmt.minimumFractionDigits !== undefined)
+				options.minimumFractionDigits = fmt.minimumFractionDigits;
+			if (fmt.maximumFractionDigits !== undefined)
+				options.maximumFractionDigits = fmt.maximumFractionDigits;
+			return new Intl.NumberFormat(fmt.locale, options).format(num);
+		}
+
 		return num.toLocaleString();
 	});
 
@@ -217,6 +305,16 @@ export class FieldDisplay {
 		const val = this.value();
 		const date = val instanceof Date ? val : new Date(String(val));
 		if (isNaN(date.getTime())) return this.emptyText();
+
+		const fmt = this.dateFormat();
+		if (fmt?.preset) {
+			const options: Intl.DateTimeFormatOptions = { dateStyle: fmt.preset };
+			if (fmt.includeTime && fmt.timePreset) {
+				options.timeStyle = fmt.timePreset;
+			}
+			return new Intl.DateTimeFormat(fmt.locale, options).format(date);
+		}
+
 		return date.toLocaleDateString();
 	});
 
@@ -225,6 +323,16 @@ export class FieldDisplay {
 		const val = this.value();
 		const date = val instanceof Date ? val : new Date(String(val));
 		if (isNaN(date.getTime())) return this.emptyText();
+
+		const fmt = this.dateFormat();
+		if (fmt?.preset) {
+			const options: Intl.DateTimeFormatOptions = {
+				dateStyle: fmt.preset,
+				timeStyle: fmt.timePreset ?? 'short',
+			};
+			return new Intl.DateTimeFormat(fmt.locale, options).format(date);
+		}
+
 		return date.toLocaleString();
 	});
 
@@ -277,4 +385,23 @@ export class FieldDisplay {
 	readonly remainingItems = computed(() => {
 		return this.listValue().length - this.maxItems();
 	});
+
+	/** Extract a sub-field value from a group object. */
+	getGroupFieldValue(fieldName: string): string {
+		const val = this.value();
+		if (!isRecord(val)) return '-';
+		const fieldValue = val[fieldName];
+		if (fieldValue === null || fieldValue === undefined) return '-';
+		if (typeof fieldValue === 'boolean') return fieldValue ? 'Yes' : 'No';
+		return String(fieldValue);
+	}
+
+	/** Extract a cell value from an array row. */
+	getArrayCellValue(row: unknown, meta: FieldDisplayFieldMeta): string {
+		if (!isRecord(row)) return String(row);
+		const cellValue = row[meta.name];
+		if (cellValue === null || cellValue === undefined) return '-';
+		if (typeof cellValue === 'boolean') return cellValue ? 'Yes' : 'No';
+		return String(cellValue);
+	}
 }

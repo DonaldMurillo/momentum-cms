@@ -38,6 +38,8 @@ import type {
 	Field,
 	BaseFieldOptions,
 	OnDeleteAction,
+	NumberDisplayFormat,
+	DateDisplayFormat,
 } from './field.types';
 
 // ============================================
@@ -93,6 +95,8 @@ export interface NumberFieldOptions extends BaseFieldOptions {
 	min?: number;
 	max?: number;
 	step?: number;
+	/** Display format for read-only views (e.g. currency, percent) */
+	displayFormat?: NumberDisplayFormat;
 }
 
 export function number(name: string, options: NumberFieldOptions = {}): NumberField {
@@ -107,7 +111,10 @@ export function number(name: string, options: NumberFieldOptions = {}): NumberFi
 // Date
 // ============================================
 
-export type DateFieldOptions = BaseFieldOptions;
+export interface DateFieldOptions extends BaseFieldOptions {
+	/** Display format for read-only views (e.g. preset style, locale) */
+	displayFormat?: DateDisplayFormat;
+}
 
 export function date(name: string, options: DateFieldOptions = {}): DateField {
 	return {
@@ -245,6 +252,8 @@ export interface ArrayFieldOptions extends BaseFieldOptions {
 	fields: Field[];
 	minRows?: number;
 	maxRows?: number;
+	/** Name of the sub-field to use as summary label in read-only views. Falls back to first text sub-field. */
+	displayField?: string;
 }
 
 export function array(name: string, options: ArrayFieldOptions): ArrayField {
