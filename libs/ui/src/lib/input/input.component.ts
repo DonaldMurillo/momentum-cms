@@ -57,8 +57,9 @@ import type { InputType, ValidationError } from './input.types';
 		}
 		input:focus-visible {
 			outline: none;
-			ring: 2px solid hsl(var(--mcms-ring));
-			ring-offset: 2px;
+			box-shadow:
+				0 0 0 2px hsl(var(--mcms-background)),
+				0 0 0 4px hsl(var(--mcms-ring));
 		}
 		input:disabled {
 			cursor: not-allowed;

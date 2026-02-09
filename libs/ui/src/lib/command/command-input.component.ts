@@ -104,7 +104,7 @@ export class CommandInput {
 	});
 
 	protected readonly inputClasses = computed(() => {
-		return 'flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50';
+		return 'flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50';
 	});
 
 	protected onInput(event: Event): void {

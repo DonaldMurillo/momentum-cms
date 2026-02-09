@@ -31,8 +31,8 @@ const SKIP_ACTIONS = new Set(['status', 'versions', 'versions/restore', 'version
 
 /** Patterns indicating internal server details that should not be shown to users. */
 const INTERNAL_ERROR_PATTERNS = [
-	/SELECT |INSERT |UPDATE |DELETE |FROM |WHERE /i,
-	/\/[a-z_-]+\/[a-z_-]+\//i,
+	/\b(?:SELECT|INSERT INTO|UPDATE|DELETE FROM)\b.+\b(?:FROM|WHERE|SET|VALUES)\b/i,
+	/(?:\/[a-z_-]+){2,}\.(?:[jt]sx?|mjs)(?::\d+)?/i,
 	/at .+\.[jt]s:/,
 	/SQLITE_|ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i,
 	/relation ".+" does not exist/i,

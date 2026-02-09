@@ -41,7 +41,7 @@ async function replaceFieldText(
 	text: string,
 ): Promise<void> {
 	await locator.click();
-	await page.keyboard.press('Meta+a');
+	await page.keyboard.press('ControlOrMeta+a');
 	await locator.pressSequentially(text, { delay: 20 });
 }
 
