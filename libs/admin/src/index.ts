@@ -114,6 +114,19 @@ export {
 	type DeviceSize,
 } from './lib/widgets/live-preview/live-preview.component';
 
+// Visual Block Editor
+export { VisualBlockEditorComponent } from './lib/widgets/visual-block-editor/visual-block-editor.component';
+export { BlockWrapperComponent } from './lib/widgets/visual-block-editor/block-wrapper.component';
+export { BlockInserterComponent } from './lib/widgets/visual-block-editor/block-inserter.component';
+export type {
+	BlockItem,
+	VisualEditorState,
+} from './lib/widgets/visual-block-editor/visual-editor.types';
+export {
+	BlockEditDialog,
+	type BlockEditDialogData,
+} from './lib/widgets/visual-block-editor/block-edit-dialog.component';
+
 // Field Renderers (for custom forms)
 export { FieldRenderer } from './lib/widgets/entity-form/field-renderers/field-renderer.component';
 export { TextFieldRenderer } from './lib/widgets/entity-form/field-renderers/text-field.component';

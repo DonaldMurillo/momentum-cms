@@ -205,5 +205,11 @@ export * from './lib/search-input/search-input.component';
 export * from './lib/field-display/field-display.types';
 export * from './lib/field-display/field-display.component';
 
+// Block Renderer
+export * from './lib/block-renderer/block-renderer.types';
+export * from './lib/block-renderer/block-admin-mode.service';
+export * from './lib/block-renderer/block-outlet.component';
+export * from './lib/block-renderer/block-renderer.component';
+
 // Kitchen Sink (demo page)
 export * from './lib/kitchen-sink/kitchen-sink.page';

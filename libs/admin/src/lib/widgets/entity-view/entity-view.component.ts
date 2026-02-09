@@ -103,8 +103,20 @@ import { PublishControlsWidget } from '../publish-controls/publish-controls.comp
 					<p class="mt-1 text-muted-foreground">
 						Viewing {{ collectionLabelSingular().toLowerCase() }} details
 					</p>
+					<ng-content select="[entityViewHeaderExtra]" />
 				</div>
 				<div class="flex items-center gap-3">
+					@if (previewUrl(); as url) {
+						<a
+							mcms-button
+							variant="outline"
+							[href]="url"
+							target="_blank"
+							rel="noopener noreferrer"
+							data-testid="open-page-link"
+							>Open Page ↗</a
+						>
+					}
 					@if (canEdit()) {
 						<button mcms-button variant="outline" (click)="onEditClick()">Edit</button>
 					}
@@ -321,6 +333,22 @@ export class EntityViewWidget<T extends Entity = Entity> {
 		const status = e['_status'];
 		if (status === 'published') return 'published';
 		return 'draft';
+	});
+
+	/** Preview URL derived from collection's admin.preview config */
+	readonly previewUrl = computed((): string | null => {
+		const col = this.collection();
+		const e = this.entity();
+		if (!e || !col.admin?.preview) return null;
+		if (typeof col.admin.preview === 'function') {
+			try {
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T extends Entity with index signature
+				return col.admin.preview(e as Record<string, unknown>);
+			} catch {
+				return null;
+			}
+		}
+		return null;
 	});
 
 	constructor() {

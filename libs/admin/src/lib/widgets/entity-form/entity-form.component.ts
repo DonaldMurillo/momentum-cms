@@ -107,6 +107,7 @@ import { VersionHistoryWidget } from '../version-history/version-history.compone
 						</p>
 					</div>
 				</div>
+				<ng-content select="[entityFormHeaderExtra]" />
 			</div>
 
 			<mcms-card>

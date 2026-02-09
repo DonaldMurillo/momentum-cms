@@ -226,6 +226,11 @@ export default defineMomentumConfig({
 					},
 				],
 			}),
+			collection<PageDoc>('pages').create('page-empty', {
+				title: 'Empty Page',
+				slug: 'empty',
+				content: [],
+			}),
 			collection<ProductDoc>('products').create('product-phone', {
 				name: 'Test Phone',
 				description: 'A phone for E2E testing.',

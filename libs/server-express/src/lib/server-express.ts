@@ -49,6 +49,27 @@ function sanitizeErrorMessage(error: unknown, fallback: string): string {
 }
 
 /**
+ * Parses the `where` query parameter from an Express request.
+ * Handles both JSON string format (?where={"slug":{"equals":"home"}})
+ * and Express/qs bracket notation (?where[slug][equals]=home).
+ */
+function parseWhereParam(raw: unknown): Record<string, unknown> | undefined {
+	if (typeof raw === 'string') {
+		try {
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- JSON.parse returns unknown
+			return JSON.parse(raw) as Record<string, unknown>;
+		} catch {
+			return undefined;
+		}
+	}
+	if (typeof raw === 'object' && raw !== null) {
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- qs parsed object
+		return raw as Record<string, unknown>;
+	}
+	return undefined;
+}
+
+/**
  * Extended Express Request with user context from auth middleware.
  */
 interface AuthenticatedRequest extends Request {
@@ -1050,6 +1071,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				page: req.query['page'] ? Number(req.query['page']) : undefined,
 				sort: typeof sortParam === 'string' ? sortParam : undefined,
 				depth: req.query['depth'] ? Number(req.query['depth']) : undefined,
+				where: parseWhereParam(req.query['where']),
 			},
 			user: extractUserFromRequest(req),
 		};

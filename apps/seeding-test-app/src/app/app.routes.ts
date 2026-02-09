@@ -4,14 +4,14 @@ import { analyticsAdminRoutes } from '@momentum-cms/plugins/analytics/admin-rout
 import { collections } from '../collections';
 
 export const appRoutes: Route[] = [
-	// Redirect root to admin
+	// Home page (renders the page with slug 'home')
 	{
 		path: '',
-		redirectTo: 'admin',
+		loadComponent: () => import('./pages/page.component').then((m) => m.PageComponent),
 		pathMatch: 'full',
+		data: { slug: 'home' },
 	},
-	// Mount admin UI at /admin
-	// Plugin admin routes are imported directly from each plugin's browser-safe export
+	// Mount admin UI at /admin (before :slug catch-all)
 	...momentumAdminRoutes({
 		basePath: '/admin',
 		collections,
@@ -20,4 +20,9 @@ export const appRoutes: Route[] = [
 		},
 		pluginRoutes: analyticsAdminRoutes,
 	}),
+	// Dynamic page rendering by slug
+	{
+		path: ':slug',
+		loadComponent: () => import('./pages/page.component').then((m) => m.PageComponent),
+	},
 ];

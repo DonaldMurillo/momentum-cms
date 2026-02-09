@@ -153,10 +153,12 @@ export class EntitySheetService {
 		const urlTree = this.router.parseUrl(this.router.url);
 		const hasSheet = !!urlTree.queryParams[SHEET_QUERY_PARAMS.collection];
 
-		if (hasSheet) {
-			this.cancelCloseAnimation();
+		if (hasSheet && !this.isClosing()) {
+			// Open sheet from URL (page refresh, browser forward). Skip if close is in progress
+			// because a delayed NavigationEnd from the original openSheet() navigation may fire
+			// during the 200ms close animation — the explicit close takes priority.
 			this.isOpen.set(true);
-		} else if (this.isOpen() && !this.isClosing()) {
+		} else if (!hasSheet && this.isOpen() && !this.isClosing()) {
 			// URL lost sheet params (e.g., browser back button) — clean up and close immediately
 			this.cleanupAllPendingCallbacks();
 			this.isOpen.set(false);
