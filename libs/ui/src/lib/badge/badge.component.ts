@@ -16,6 +16,7 @@ import type { BadgeVariant } from './badge.types';
 	selector: 'mcms-badge',
 	host: {
 		role: 'status',
+		'[attr.aria-label]': 'ariaLabel() || null',
 		'[style.--badge-bg]': 'variantBg()',
 		'[style.--badge-color]': 'variantColor()',
 		'[style.--badge-border]': 'variantBorder()',
@@ -45,6 +46,8 @@ import type { BadgeVariant } from './badge.types';
 export class Badge {
 	readonly variant = input<BadgeVariant>('default');
 	readonly class = input('');
+	/** Accessible label for screen reader override. */
+	readonly ariaLabel = input<string | undefined>(undefined);
 
 	readonly hostClass = computed(() => this.class());
 

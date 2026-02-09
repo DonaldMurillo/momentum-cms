@@ -17,6 +17,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 	host: {
 		'[class]': 'hostClasses()',
 		'[style.display]': '"table-header-group"',
+		role: 'rowgroup',
 	},
 	template: `<ng-content />`,
 	styles: `

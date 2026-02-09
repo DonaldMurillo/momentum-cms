@@ -11,21 +11,27 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
  * </mcms-command-group>
  * ```
  */
+let nextGroupId = 0;
+
 @Component({
 	selector: 'mcms-command-group',
 	host: {
 		'[class]': 'hostClasses()',
 		role: 'group',
+		'[attr.aria-labelledby]': 'label() ? labelId : null',
 	},
 	template: `
 		@if (label()) {
-			<div [class]="labelClasses()">{{ label() }}</div>
+			<div [attr.id]="labelId" [class]="labelClasses()">{{ label() }}</div>
 		}
 		<ng-content />
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CommandGroup {
+	/** Auto-generated unique ID for the label element. */
+	readonly labelId = `mcms-command-group-label-${nextGroupId++}`;
+
 	/** Label for the group */
 	readonly label = input<string>();
 

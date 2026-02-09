@@ -16,6 +16,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 	selector: 'mcms-table-body',
 	host: {
 		'[class]': 'hostClasses()',
+		role: 'rowgroup',
 	},
 	template: `<ng-content />`,
 	styles: `

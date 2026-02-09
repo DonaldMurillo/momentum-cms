@@ -29,6 +29,7 @@ import type { ValidationError } from '../input/input.types';
 			[rows]="rows()"
 			[attr.aria-invalid]="hasError() || null"
 			[attr.aria-describedby]="ariaDescribedBy()"
+			[attr.aria-required]="required() || null"
 			(input)="value.set(textareaEl.value)"
 			(blur)="blurred.emit()"
 			class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm

@@ -156,7 +156,7 @@ interface PluginRouteGroup {
 					}
 					@if (collections().length === 0) {
 						<mcms-sidebar-section title="Collections">
-							<p class="px-3 py-2 text-sm text-muted-foreground">No collections available</p>
+							<p class="px-3 py-2 text-sm text-sidebar-foreground/70">No collections available</p>
 						</mcms-sidebar-section>
 					}
 
@@ -186,14 +186,14 @@ interface PluginRouteGroup {
 						aria-haspopup="menu"
 						[attr.aria-label]="'User menu for ' + u.name"
 					>
-						<mcms-avatar size="sm">
+						<mcms-avatar size="sm" [ariaLabel]="u.name + ' avatar'">
 							<mcms-avatar-fallback [delayMs]="0">
 								{{ getUserInitials(u.name) }}
 							</mcms-avatar-fallback>
 						</mcms-avatar>
 						<div class="flex-1 min-w-0">
 							<p class="text-sm font-medium truncate">{{ u.name }}</p>
-							<p class="text-xs text-muted-foreground truncate">{{ u.email }}</p>
+							<p class="text-xs text-sidebar-foreground/70 truncate">{{ u.email }}</p>
 						</div>
 						<ng-icon
 							name="heroChevronUpDown"

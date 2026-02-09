@@ -26,6 +26,7 @@ import type { ValidationError } from '../input/input.types';
 			[attr.aria-checked]="indeterminate() ? 'mixed' : value()"
 			[attr.aria-invalid]="hasError() || null"
 			[attr.aria-describedby]="ariaDescribedBy()"
+			[attr.aria-label]="ariaLabel() || null"
 			[disabled]="disabled()"
 			(click)="toggle()"
 			(keydown.space)="toggle(); $event.preventDefault()"
@@ -135,6 +136,8 @@ export class Checkbox {
 	readonly describedBy = input<string | undefined>(undefined);
 	/** Shows a horizontal dash instead of check mark (used for partial selections). */
 	readonly indeterminate = input(false);
+	/** Accessible label for the checkbox button (for use without visible label). */
+	readonly ariaLabel = input<string | undefined>(undefined);
 
 	// === Computed state ===
 	readonly hasError = computed(() => this.errors().length > 0);

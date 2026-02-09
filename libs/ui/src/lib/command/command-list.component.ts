@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { Listbox } from '@angular/aria/listbox';
 
+let nextListId = 0;
+
 /**
  * Container for command items. Provides the scrollable list area.
  *
@@ -23,12 +25,16 @@ import { Listbox } from '@angular/aria/listbox';
 	],
 	host: {
 		'[class]': 'hostClasses()',
+		'[attr.id]': 'listId',
 		role: 'listbox',
 	},
 	template: `<ng-content />`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CommandList {
+	/** Auto-generated unique ID for ARIA association with CommandInput. */
+	readonly listId = `mcms-command-list-${nextListId++}`;
+
 	/** Maximum height of the list */
 	readonly maxHeight = input('300px');
 

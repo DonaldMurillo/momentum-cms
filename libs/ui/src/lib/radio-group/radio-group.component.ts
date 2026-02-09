@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, input, model } from '@angular/core';
+import {
+	ChangeDetectionStrategy,
+	Component,
+	computed,
+	ElementRef,
+	inject,
+	input,
+	model,
+} from '@angular/core';
 import type { ValidationError } from '../input/input.types';
 import type { RadioOption } from './radio-group.types';
 
@@ -21,6 +29,8 @@ import type { RadioOption } from './radio-group.types';
 		'[class.mcms-radio-group--disabled]': 'disabled()',
 		'[attr.aria-invalid]': 'hasError() || null',
 		'[attr.aria-describedby]': 'ariaDescribedBy()',
+		'[attr.aria-required]': 'required() || null',
+		'(keydown)': 'onKeydown($event)',
 	},
 	template: `
 		<div class="flex flex-col gap-2">
@@ -36,6 +46,7 @@ import type { RadioOption } from './radio-group.types';
 						role="radio"
 						[attr.aria-checked]="value() === option.value"
 						[disabled]="option.disabled || disabled()"
+						[attr.tabindex]="focusableValue() === option.value ? 0 : -1"
 						(click)="selectOption(option.value)"
 						class="aspect-square h-4 w-4 rounded-full border border-primary text-primary
 						       focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
@@ -56,6 +67,8 @@ import type { RadioOption } from './radio-group.types';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RadioGroup {
+	private readonly elementRef = inject(ElementRef<HTMLElement>);
+
 	// === FormValueControl implementation ===
 	readonly value = model('');
 	readonly disabled = input(false);
@@ -66,6 +79,7 @@ export class RadioGroup {
 	readonly name = input('');
 	readonly options = input<RadioOption[]>([]);
 	readonly describedBy = input<string | undefined>(undefined);
+	readonly required = input(false);
 
 	// === Computed state ===
 	readonly hasError = computed(() => this.errors().length > 0);
@@ -78,9 +92,56 @@ export class RadioGroup {
 		return parts.length > 0 ? parts.join(' ') : null;
 	});
 
+	/** Determines which option value should receive tabindex="0" (roving tabindex). */
+	protected readonly focusableValue = computed(() => {
+		const current = this.value();
+		const opts = this.options();
+		if (current) {
+			const currentOpt = opts.find((o) => o.value === current);
+			if (currentOpt && !currentOpt.disabled) return current;
+		}
+		const first = opts.find((o) => !o.disabled);
+		return first?.value ?? '';
+	});
+
 	selectOption(optionValue: string): void {
 		if (!this.disabled()) {
 			this.value.set(optionValue);
+		}
+	}
+
+	protected onKeydown(event: KeyboardEvent): void {
+		const enabledOpts = this.options().filter((o) => !o.disabled && !this.disabled());
+		if (enabledOpts.length === 0) return;
+
+		const currentIndex = enabledOpts.findIndex((o) => o.value === this.value());
+		let newIndex: number;
+
+		switch (event.key) {
+			case 'ArrowDown':
+			case 'ArrowRight':
+				event.preventDefault();
+				newIndex = currentIndex < enabledOpts.length - 1 ? currentIndex + 1 : 0;
+				break;
+			case 'ArrowUp':
+			case 'ArrowLeft':
+				event.preventDefault();
+				newIndex = currentIndex > 0 ? currentIndex - 1 : enabledOpts.length - 1;
+				break;
+			default:
+				return;
+		}
+
+		const newValue = enabledOpts[newIndex].value;
+		this.value.set(newValue);
+
+		// Focus the corresponding radio button
+		const allOpts = this.options();
+		const fullIndex = allOpts.findIndex((o) => o.value === newValue);
+		const buttons = this.elementRef.nativeElement.querySelectorAll('button[role="radio"]');
+		const button = buttons[fullIndex];
+		if (button instanceof HTMLElement) {
+			button.focus();
 		}
 	}
 }

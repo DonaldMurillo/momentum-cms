@@ -94,3 +94,6 @@ export {
 } from './worker-server.fixture';
 
 export type { TestUserCredentials } from '@momentum-cms/e2e-fixtures';
+
+// Accessibility helpers
+export { checkA11y } from './axe-helpers';

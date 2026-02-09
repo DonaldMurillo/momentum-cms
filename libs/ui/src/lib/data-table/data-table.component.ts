@@ -145,6 +145,7 @@ import { DropdownMenuItem } from '../dropdown-menu/dropdown-menu-item.component'
 									<mcms-checkbox
 										[value]="allSelected()"
 										[indeterminate]="someSelected()"
+										[ariaLabel]="'Select all rows'"
 										(valueChange)="toggleSelectAll()"
 									/>
 								</mcms-table-head>
@@ -156,8 +157,7 @@ import { DropdownMenuItem } from '../dropdown-menu/dropdown-menu-item.component'
 									[style.text-align]="col.align || 'left'"
 									[class.cursor-pointer]="col.sortable && sortable()"
 									[class.select-none]="col.sortable && sortable()"
-									[attr.aria-sort]="col.sortable && sortable() && sort()?.field === col.field ? (sort()?.direction === 'asc' ? 'ascending' : 'descending') : null"
-									[attr.role]="col.sortable && sortable() ? 'button' : null"
+									[attr.aria-sort]="col.sortable && sortable() ? (sort()?.field === col.field ? (sort()?.direction === 'asc' ? 'ascending' : 'descending') : 'none') : null"
 									[attr.tabindex]="col.sortable && sortable() ? 0 : null"
 									(click)="col.sortable && sortable() && toggleSort(col.field)"
 									(keydown.enter)="col.sortable && sortable() && toggleSort(col.field)"
@@ -200,7 +200,11 @@ import { DropdownMenuItem } from '../dropdown-menu/dropdown-menu-item.component'
 							>
 								@if (selectable()) {
 									<mcms-table-cell (click)="$event.stopPropagation()">
-										<mcms-checkbox [value]="isSelected(item)" (valueChange)="toggleSelect(item)" />
+										<mcms-checkbox
+											[value]="isSelected(item)"
+											[ariaLabel]="'Select row ' + (idx + 1)"
+											(valueChange)="toggleSelect(item)"
+										/>
 									</mcms-table-cell>
 								}
 								@for (col of columns(); track col.field) {

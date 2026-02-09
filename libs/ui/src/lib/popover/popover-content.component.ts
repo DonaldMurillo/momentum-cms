@@ -14,6 +14,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 	selector: 'mcms-popover-content',
 	host: {
 		class: 'block',
+		role: 'dialog',
 	},
 	template: `<ng-content />`,
 	styles: `

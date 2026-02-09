@@ -32,6 +32,7 @@ import { generatePaginationItems } from './pagination.types';
 					aria-label="Go to previous page"
 				>
 					<svg
+						aria-hidden="true"
 						xmlns="http://www.w3.org/2000/svg"
 						width="16"
 						height="16"
@@ -51,8 +52,9 @@ import { generatePaginationItems } from './pagination.types';
 			@for (item of paginationItems(); track $index) {
 				<li>
 					@if (item === 'ellipsis') {
-						<span class="flex h-9 w-9 items-center justify-center">
+						<span class="flex h-9 w-9 items-center justify-center" aria-hidden="true">
 							<svg
+								aria-hidden="true"
 								xmlns="http://www.w3.org/2000/svg"
 								width="16"
 								height="16"
@@ -80,6 +82,7 @@ import { generatePaginationItems } from './pagination.types';
 							[class.bg-primary]="item === currentPage()"
 							[class.text-primary-foreground]="item === currentPage()"
 							[attr.aria-current]="item === currentPage() ? 'page' : null"
+							[attr.aria-label]="'Go to page ' + item"
 							(click)="goToPage(item)"
 						>
 							{{ item }}
@@ -98,6 +101,7 @@ import { generatePaginationItems } from './pagination.types';
 					aria-label="Go to next page"
 				>
 					<svg
+						aria-hidden="true"
 						xmlns="http://www.w3.org/2000/svg"
 						width="16"
 						height="16"

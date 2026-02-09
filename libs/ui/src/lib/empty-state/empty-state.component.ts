@@ -16,6 +16,7 @@ import type { EmptyStateSize } from './empty-state.types';
 	selector: 'mcms-empty-state',
 	host: {
 		'[class]': 'hostClasses()',
+		role: 'status',
 	},
 	template: `
 		<div class="mb-4">

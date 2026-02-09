@@ -30,6 +30,7 @@ import type { InputType, ValidationError } from './input.types';
 			[placeholder]="placeholder()"
 			[attr.aria-invalid]="hasError() || null"
 			[attr.aria-describedby]="ariaDescribedBy()"
+			[attr.aria-required]="required() || null"
 			[attr.autocomplete]="autocomplete()"
 			[attr.min]="min()"
 			[attr.max]="max()"
