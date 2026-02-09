@@ -194,7 +194,9 @@ export class MomentumAuthService {
 
 			if (response.user) {
 				this.user.set(response.user);
-				return response.user;
+				// Fetch correct role from Momentum (Better Auth returns default role)
+				await this.resolveUserRole();
+				return this.user();
 			}
 
 			this.user.set(null);
@@ -202,6 +204,26 @@ export class MomentumAuthService {
 		} catch {
 			this.user.set(null);
 			return null;
+		}
+	}
+
+	/**
+	 * Fetch the current user from the Momentum session resolver,
+	 * which has the correctly-resolved role from the users collection.
+	 * Better Auth's get-session returns the default role, not the Momentum role.
+	 */
+	private async resolveUserRole(): Promise<void> {
+		try {
+			const response = await firstValueFrom(
+				this.http.get<{ user: AuthUser | null }>('/api/me', {
+					withCredentials: true,
+				}),
+			);
+			if (response.user) {
+				this.user.set(response.user);
+			}
+		} catch {
+			// Role resolution failed — keep the Better Auth user as-is
 		}
 	}
 
@@ -224,7 +246,8 @@ export class MomentumAuthService {
 
 			if (response.user) {
 				this.user.set(response.user);
-				return { success: true, user: response.user };
+				await this.resolveUserRole();
+				return { success: true, user: this.user() ?? response.user };
 			}
 
 			return { success: false, error: 'Unknown error occurred' };
@@ -265,9 +288,10 @@ export class MomentumAuthService {
 			}
 
 			if (response.user) {
-				this.user.set(response.user);
 				this.needsSetup.set(false);
-				return { success: true, user: response.user };
+				this.user.set(response.user);
+				await this.resolveUserRole();
+				return { success: true, user: this.user() ?? response.user };
 			}
 
 			return { success: false, error: 'Unknown error occurred' };

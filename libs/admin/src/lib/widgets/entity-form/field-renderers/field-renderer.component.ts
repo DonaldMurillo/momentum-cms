@@ -15,6 +15,7 @@ import { RichTextFieldRenderer } from './rich-text-field.component';
 import { TabsFieldRenderer } from './tabs-field.component';
 import { CollapsibleFieldRenderer } from './collapsible-field.component';
 import { RowFieldRenderer } from './row-field.component';
+import { VisualBlockEditorComponent } from '../../visual-block-editor/visual-block-editor.component';
 
 /**
  * Dynamic field renderer that switches based on field type.
@@ -39,40 +40,91 @@ import { RowFieldRenderer } from './row-field.component';
 		TabsFieldRenderer,
 		CollapsibleFieldRenderer,
 		RowFieldRenderer,
+		VisualBlockEditorComponent,
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `
 		@switch (fieldType()) {
 			@case ('text') {
-				<mcms-text-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
+				<mcms-text-field-renderer
+					[field]="field()"
+					[formNode]="formNode()"
+					[mode]="mode()"
+					[path]="path()"
+				/>
 			}
 			@case ('textarea') {
-				<mcms-text-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
+				<mcms-text-field-renderer
+					[field]="field()"
+					[formNode]="formNode()"
+					[mode]="mode()"
+					[path]="path()"
+				/>
 			}
 			@case ('richText') {
-				<mcms-rich-text-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
+				<mcms-rich-text-field-renderer
+					[field]="field()"
+					[formNode]="formNode()"
+					[mode]="mode()"
+					[path]="path()"
+				/>
 			}
 			@case ('email') {
-				<mcms-text-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
+				<mcms-text-field-renderer
+					[field]="field()"
+					[formNode]="formNode()"
+					[mode]="mode()"
+					[path]="path()"
+				/>
 			}
 			@case ('slug') {
-				<mcms-text-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
+				<mcms-text-field-renderer
+					[field]="field()"
+					[formNode]="formNode()"
+					[mode]="mode()"
+					[path]="path()"
+				/>
 			}
 			@case ('number') {
-				<mcms-number-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
+				<mcms-number-field-renderer
+					[field]="field()"
+					[formNode]="formNode()"
+					[mode]="mode()"
+					[path]="path()"
+				/>
 			}
 			@case ('select') {
-				<mcms-select-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
+				<mcms-select-field-renderer
+					[field]="field()"
+					[formNode]="formNode()"
+					[mode]="mode()"
+					[path]="path()"
+				/>
 			}
 			@case ('checkbox') {
-				<mcms-checkbox-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
+				<mcms-checkbox-field-renderer
+					[field]="field()"
+					[formNode]="formNode()"
+					[mode]="mode()"
+					[path]="path()"
+				/>
 			}
 			@case ('date') {
-				<mcms-date-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
+				<mcms-date-field-renderer
+					[field]="field()"
+					[formNode]="formNode()"
+					[mode]="mode()"
+					[path]="path()"
+				/>
 			}
 			@case ('upload') {
-				<mcms-upload-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
+				<mcms-upload-field-renderer
+					[field]="field()"
+					[formNode]="formNode()"
+					[mode]="mode()"
+					[path]="path()"
+				/>
 			}
 			@case ('group') {
 				<mcms-group-field-renderer
@@ -95,14 +147,25 @@ import { RowFieldRenderer } from './row-field.component';
 				/>
 			}
 			@case ('blocks') {
-				<mcms-blocks-field-renderer
-					[field]="field()"
-					[formNode]="formNode()"
-					[formTree]="formTree()"
-					[formModel]="formModel()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
+				@if (field().admin?.editor === 'visual') {
+					<mcms-visual-block-editor
+						[field]="field()"
+						[formNode]="formNode()"
+						[formTree]="formTree()"
+						[formModel]="formModel()"
+						[mode]="mode()"
+						[path]="path()"
+					/>
+				} @else {
+					<mcms-blocks-field-renderer
+						[field]="field()"
+						[formNode]="formNode()"
+						[formTree]="formTree()"
+						[formModel]="formModel()"
+						[mode]="mode()"
+						[path]="path()"
+					/>
+				}
 			}
 			@case ('relationship') {
 				<mcms-relationship-field-renderer
@@ -141,7 +204,12 @@ import { RowFieldRenderer } from './row-field.component';
 				/>
 			}
 			@default {
-				<mcms-text-field-renderer [field]="field()" [formNode]="formNode()" [mode]="mode()" [path]="path()" />
+				<mcms-text-field-renderer
+					[field]="field()"
+					[formNode]="formNode()"
+					[mode]="mode()"
+					[path]="path()"
+				/>
 			}
 		}
 	`,

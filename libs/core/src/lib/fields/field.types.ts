@@ -24,6 +24,8 @@ export interface FieldAdminConfig {
 	readOnly?: boolean;
 	hidden?: boolean;
 	placeholder?: string;
+	/** For blocks fields: editor rendering mode. 'visual' enables the WYSIWYG block editor. */
+	editor?: 'visual' | 'form';
 }
 
 // Field-level access control
@@ -285,6 +287,14 @@ export interface GroupField extends BaseField {
 	fields: Field[];
 }
 
+/** Editor configuration for a block type in the visual block editor */
+export interface BlockEditorConfig {
+	/** Custom Angular component for visual rendering in the editor */
+	component?: unknown;
+	/** Which fields should be inline-editable (defaults to auto-detect text/textarea/richText) */
+	inlineFields?: string[];
+}
+
 // Block definition for blocks field
 export interface BlockConfig {
 	slug: string;
@@ -293,6 +303,8 @@ export interface BlockConfig {
 		singular?: string;
 		plural?: string;
 	};
+	/** Visual editor customization for this block type */
+	editor?: BlockEditorConfig;
 }
 
 // Blocks field

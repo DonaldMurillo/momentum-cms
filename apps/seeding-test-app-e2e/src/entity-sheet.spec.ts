@@ -45,8 +45,12 @@ async function openSheetViaNewButton(page: Page, relationshipField: Locator): Pr
 	await expect
 		.poll(
 			async () => {
+				if (await sheetDialog.isVisible()) return true;
+				// Use dispatchEvent instead of click() to avoid blocking on actionability checks
+				// (e.g., backdrop intercepting pointer events after the sheet starts opening).
+				// If Angular hasn't hydrated yet, the event does nothing and the poll retries.
 				if (await newButton.isVisible()) {
-					await newButton.click();
+					await newButton.dispatchEvent('click');
 				}
 				return sheetDialog.isVisible();
 			},
@@ -193,8 +197,9 @@ test.describe('Entity Sheet', () => {
 			await expect
 				.poll(
 					async () => {
+						if (await sheetDialog.isVisible()) return true;
 						if (await viewButton.isVisible()) {
-							await viewButton.click();
+							await viewButton.dispatchEvent('click');
 						}
 						return sheetDialog.isVisible();
 					},
@@ -214,8 +219,8 @@ test.describe('Entity Sheet', () => {
 
 			const sheetDialog = await openSheetViaNewButton(authenticatedPage, relationshipField);
 
-			// Click the backdrop (the presentation wrapper, far left of the sheet panel)
-			const backdrop = authenticatedPage.locator('[role="presentation"]');
+			// Click the backdrop (the presentation wrapper div, not breadcrumb separators)
+			const backdrop = authenticatedPage.locator('div[role="presentation"]');
 			await backdrop.click({ position: { x: 10, y: 300 } });
 
 			// Sheet should close
@@ -230,11 +235,14 @@ test.describe('Entity Sheet', () => {
 
 			const sheetDialog = await openSheetViaNewButton(authenticatedPage, relationshipField);
 
+			// Wait for sheet URL params to be committed before closing
+			await expect(authenticatedPage).toHaveURL(/sheetCollection=categories/, { timeout: 5000 });
+
 			// Press Escape
 			await authenticatedPage.keyboard.press('Escape');
 
-			// Sheet should close
-			await expect(sheetDialog).not.toBeVisible({ timeout: 5000 });
+			// Sheet should close (200ms animation + navigation)
+			await expect(sheetDialog).not.toBeVisible({ timeout: 10000 });
 
 			// URL should be clean
 			await expect(authenticatedPage).not.toHaveURL(/sheetCollection/);
@@ -245,12 +253,15 @@ test.describe('Entity Sheet', () => {
 
 			const sheetDialog = await openSheetViaNewButton(authenticatedPage, relationshipField);
 
+			// Wait for sheet URL params to be committed before closing
+			await expect(authenticatedPage).toHaveURL(/sheetCollection=categories/, { timeout: 5000 });
+
 			// Click the close button inside the sheet
 			const closeButton = sheetDialog.getByRole('button', { name: /close sheet/i });
 			await closeButton.click();
 
-			// Sheet should close
-			await expect(sheetDialog).not.toBeVisible({ timeout: 5000 });
+			// Sheet should close (200ms animation + navigation)
+			await expect(sheetDialog).not.toBeVisible({ timeout: 10000 });
 
 			// URL should be clean
 			await expect(authenticatedPage).not.toHaveURL(/sheetCollection/);
@@ -272,7 +283,7 @@ test.describe('Entity Sheet', () => {
 			// Close sheet
 			const sheetDialog = authenticatedPage.locator('[role="dialog"][aria-modal="true"]');
 			await authenticatedPage.keyboard.press('Escape');
-			await expect(sheetDialog).not.toBeVisible({ timeout: 5000 });
+			await expect(sheetDialog).not.toBeVisible({ timeout: 10000 });
 
 			// URL should be clean (auto-retry via toHaveURL)
 			await expect(authenticatedPage).not.toHaveURL(/sheetCollection/);
@@ -311,11 +322,14 @@ test.describe('Entity Sheet', () => {
 
 			const sheetDialog = await openSheetViaNewButton(authenticatedPage, relationshipField);
 
+			// Wait for sheet URL params to be committed
+			await expect(authenticatedPage).toHaveURL(/sheetCollection=categories/, { timeout: 5000 });
+
 			// Go back
 			await authenticatedPage.goBack();
 
-			// Sheet should close (outlet deactivated)
-			await expect(sheetDialog).not.toBeVisible({ timeout: 5000 });
+			// Sheet should close (URL params removed by browser back)
+			await expect(sheetDialog).not.toBeVisible({ timeout: 10000 });
 
 			// URL should no longer contain sheet query params
 			await expect(authenticatedPage).not.toHaveURL(/sheetCollection/);

@@ -6,6 +6,7 @@ import {
 	effect,
 	ElementRef,
 	input,
+	output,
 	signal,
 	viewChild,
 } from '@angular/core';
@@ -130,6 +131,9 @@ export class LivePreviewComponent {
 	/** Document ID (undefined for create mode) */
 	readonly entityId = input<string | undefined>(undefined);
 
+	/** Emitted when the preview iframe requests editing a block */
+	readonly editBlockRequest = output<number>();
+
 	/** Current device size */
 	readonly deviceSize = signal<DeviceSize>('desktop');
 
@@ -206,6 +210,21 @@ export class LivePreviewComponent {
 				}
 			}, 300);
 		});
+
+		// Listen for edit block requests from preview iframe
+		const win = this.document.defaultView;
+		if (win) {
+			const editHandler = (event: MessageEvent): void => {
+				if (event.origin !== win.location.origin) return;
+				if (event.data?.type !== 'momentum-edit-block') return;
+				const blockIndex = event.data.blockIndex;
+				if (typeof blockIndex === 'number') {
+					this.editBlockRequest.emit(blockIndex);
+				}
+			};
+			win.addEventListener('message', editHandler);
+			this.destroyRef.onDestroy(() => win.removeEventListener('message', editHandler));
+		}
 
 		// Clean up debounce timer on destroy
 		this.destroyRef.onDestroy(() => {

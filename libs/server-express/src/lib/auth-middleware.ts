@@ -52,10 +52,7 @@ export interface AuthMiddlewareOptions {
 	socialProviders?: OAuthProvidersConfig;
 }
 
-export function createAuthMiddleware(
-	auth: MomentumAuth,
-	options?: AuthMiddlewareOptions,
-): Router {
+export function createAuthMiddleware(auth: MomentumAuth, options?: AuthMiddlewareOptions): Router {
 	const router = createRouter();
 
 	// Expose which OAuth providers are enabled (public endpoint, no auth required)
@@ -186,6 +183,14 @@ export function createSessionResolverMiddleware(
 		} catch {
 			// Session validation failed - continue without auth
 			// This is fine for SSR, client will handle unauthenticated state
+		}
+
+		// Built-in current-user endpoint: returns req.user with correctly-resolved role
+		// Better Auth's get-session returns the default role, not the Momentum-resolved role.
+		// This endpoint exposes the enriched req.user that the session resolver built.
+		if (req.method === 'GET' && req.path === '/api/me') {
+			res.json({ user: req.user ?? null });
+			return;
 		}
 
 		next();

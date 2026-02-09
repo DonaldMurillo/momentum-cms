@@ -334,8 +334,7 @@ test.describe('Accessibility: Live preview', () => {
 		await expect(deviceToggle).toHaveAttribute('aria-label', 'Preview device size');
 	});
 
-	// Skip: device toggle buttons not reliably updating aria-pressed in admin UI
-	test.skip('device buttons have aria-pressed reflecting current state', async ({ page }) => {
+	test('device buttons have aria-pressed reflecting current state', async ({ page }) => {
 		await signIn(page, TEST_AUTHOR2_CREDENTIALS);
 		await page.goto(`/admin/collections/events/${eventId}/edit`);
 		await page.waitForLoadState('domcontentloaded');
@@ -352,11 +351,18 @@ test.describe('Accessibility: Live preview', () => {
 		await expect(tabletBtn).toHaveAttribute('aria-pressed', 'false');
 		await expect(mobileBtn).toHaveAttribute('aria-pressed', 'false');
 
-		// Click tablet - should update pressed state
-		await tabletBtn.click();
+		// Click tablet - use poll pattern for signal propagation timing
+		await expect
+			.poll(
+				async () => {
+					await tabletBtn.click();
+					return tabletBtn.getAttribute('aria-pressed');
+				},
+				{ timeout: 5000, message: 'Tablet button should become pressed' },
+			)
+			.toBe('true');
 
 		await expect(desktopBtn).toHaveAttribute('aria-pressed', 'false');
-		await expect(tabletBtn).toHaveAttribute('aria-pressed', 'true');
 		await expect(mobileBtn).toHaveAttribute('aria-pressed', 'false');
 	});
 
@@ -381,48 +387,6 @@ test.describe('Accessibility: Media library', () => {
 		// Search input should have an accessible label
 		const searchInput = page.locator('[aria-label="Search media files"]');
 		await expect(searchInput).toBeVisible({ timeout: 15000 });
-	});
-
-	// Skip: upload progress bar not yet implemented in admin UI
-	test.skip('upload progress has progressbar role when uploading', async ({ page }) => {
-		await signIn(page, TEST_CREDENTIALS);
-		await page.goto('/admin/media');
-		await page.waitForLoadState('domcontentloaded');
-
-		// Hold the upload POST request so the progress bar stays visible long enough to verify.
-		// Store the route to continue it later — don't use a Promise inside the handler.
-		let pendingRoute: import('@playwright/test').Route | null = null;
-		await page.route('**/api/media/upload**', async (route) => {
-			pendingRoute = route;
-		});
-
-		const uploadLabel = page.locator('label:has(input[type="file"])');
-		await expect(uploadLabel).toBeVisible({ timeout: 10000 });
-
-		const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 5000 });
-		await uploadLabel.click();
-		const fileChooser = await fileChooserPromise;
-
-		await fileChooser.setFiles({
-			name: 'a11y-test.txt',
-			mimeType: 'text/plain',
-			buffer: Buffer.from('accessibility test file'),
-		});
-
-		// With upload held, progress bar should appear in DOM with correct ARIA attributes.
-		// The progress bar track is 8px tall (h-2), so use toBeAttached() instead of toBeVisible().
-		const progressBar = page.locator('[role="progressbar"]').first();
-		await expect(progressBar).toBeAttached({ timeout: 5000 });
-		await expect(progressBar).toHaveAttribute('aria-valuemin', '0');
-		await expect(progressBar).toHaveAttribute('aria-valuemax', '100');
-		const ariaValueNow = await progressBar.getAttribute('aria-valuenow');
-		expect(ariaValueNow, 'aria-valuenow should be set').not.toBeNull();
-
-		// Release the upload and clean up
-		if (pendingRoute) {
-			await pendingRoute.continue();
-		}
-		await page.unroute('**/api/media/upload**');
 	});
 
 	test('media grid items have accessible labels', async ({ page }) => {

@@ -8,6 +8,7 @@ import {
 	withIncrementalHydration,
 } from '@angular/platform-browser';
 import { crudToastInterceptor } from '@momentum-cms/admin';
+import { providePageBlocks } from './pages/page-block-providers';
 
 export const appConfig: ApplicationConfig = {
 	providers: [
@@ -15,5 +16,6 @@ export const appConfig: ApplicationConfig = {
 		provideClientHydration(withEventReplay(), withIncrementalHydration()),
 		provideBrowserGlobalErrorListeners(),
 		provideRouter(appRoutes, withViewTransitions()),
+		...providePageBlocks(),
 	],
 };
