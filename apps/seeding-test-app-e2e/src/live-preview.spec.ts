@@ -103,8 +103,7 @@ test.describe('Live Preview', () => {
 		expect(bodyText).toContain('Preview City');
 	});
 
-	// Skip: Live preview device toggle not reliably responding to click events
-	test.skip('device size toggle changes iframe width', async ({ page }) => {
+	test('device size toggle changes iframe width', async ({ page }) => {
 		await signInPage(page);
 		await page.goto(`/admin/collections/events/${eventId}/edit`);
 		await page.waitForLoadState('domcontentloaded');
@@ -115,22 +114,37 @@ test.describe('Live Preview', () => {
 		const iframe = page.locator('[data-testid="preview-iframe"]');
 		await expect(iframe).toBeVisible({ timeout: 10000 });
 
-		// Switch to tablet
-		await page.locator('[data-testid="device-tablet"]').click();
+		// Switch to tablet — retry click for hydration timing
 		await expect
-			.poll(() => iframe.evaluate((el) => el.style.width), { timeout: 5000 })
+			.poll(
+				async () => {
+					await page.locator('[data-testid="device-tablet"]').click();
+					return iframe.evaluate((el) => el.style.width);
+				},
+				{ timeout: 5000 },
+			)
 			.toBe('768px');
 
 		// Switch to mobile
-		await page.locator('[data-testid="device-mobile"]').click();
 		await expect
-			.poll(() => iframe.evaluate((el) => el.style.width), { timeout: 5000 })
+			.poll(
+				async () => {
+					await page.locator('[data-testid="device-mobile"]').click();
+					return iframe.evaluate((el) => el.style.width);
+				},
+				{ timeout: 5000 },
+			)
 			.toBe('375px');
 
 		// Switch back to desktop
-		await page.locator('[data-testid="device-desktop"]').click();
 		await expect
-			.poll(() => iframe.evaluate((el) => el.style.width), { timeout: 5000 })
+			.poll(
+				async () => {
+					await page.locator('[data-testid="device-desktop"]').click();
+					return iframe.evaluate((el) => el.style.width);
+				},
+				{ timeout: 5000 },
+			)
 			.toBe('100%');
 	});
 
@@ -148,8 +162,7 @@ test.describe('Live Preview', () => {
 		await expect(iframe).not.toBeVisible();
 	});
 
-	// Skip: Live preview postMessage integration requires signal form change detection fixes
-	test.skip('postMessage payload contains correct field values after edit', async ({ page }) => {
+	test('postMessage payload contains correct field values after edit', async ({ page }) => {
 		await signInPage(page);
 		await page.goto(`/admin/collections/events/${eventId}/edit`);
 		await page.waitForLoadState('domcontentloaded');
@@ -157,47 +170,75 @@ test.describe('Live Preview', () => {
 		const iframe = page.locator('[data-testid="preview-iframe"]');
 		await expect(iframe).toBeVisible({ timeout: 15000 });
 
-		// Get the iframe's content frame
-		const iframeHandle = await iframe.elementHandle();
-		const frame = await iframeHandle?.contentFrame();
-		expect(frame).toBeTruthy();
-
-		// Wait for preview to load
-		await frame!.waitForLoadState('domcontentloaded');
-
-		// Set up postMessage listener in the iframe
-		await frame!.evaluate(() => {
-			(window as unknown as Record<string, unknown>)['_previewMessages'] = [];
-			window.addEventListener('message', (event: MessageEvent) => {
-				if (event.data?.type === 'momentum-preview-update') {
-					((window as unknown as Record<string, unknown>)['_previewMessages'] as unknown[]).push(
-						event.data,
-					);
-				}
-			});
+		// Wait for iframe content to fully render using frameLocator (resilient to navigation)
+		const iframeLocator = page.frameLocator('[data-testid="preview-iframe"]');
+		await expect(iframeLocator.locator('h1')).toContainText('LP-Preview Test Event', {
+			timeout: 15000,
 		});
 
-		// Edit the location field to trigger a form change
-		const locationInput = page.getByLabel('Location');
-		await expect(locationInput).toBeVisible({ timeout: 10000 });
-		await locationInput.fill('Updated Preview City');
+		// Helper to get a fresh frame reference (handles stale frames after iframe navigation)
+		const getFrame = async (): Promise<import('@playwright/test').Frame> => {
+			const handle = await iframe.elementHandle();
+			const f = await handle?.contentFrame();
+			if (!f) throw new Error('No iframe content frame');
+			return f;
+		};
 
-		// Wait for debounced postMessage to arrive in iframe
+		// Set up postMessage listener in the iframe.
+		// Uses expect.poll which retries on thrown errors (e.g. if frame navigates during setup).
+		// The listener setup is idempotent via the _previewListenerReady flag.
 		await expect
 			.poll(
-				() =>
-					frame!.evaluate(() => {
+				async () => {
+					const f = await getFrame();
+					return f.evaluate(() => {
+						if (!(window as unknown as Record<string, boolean>)['_previewListenerReady']) {
+							(window as unknown as Record<string, unknown>)['_previewMessages'] = [];
+							window.addEventListener('message', (event: MessageEvent) => {
+								if (event.data?.type === 'momentum-preview-update') {
+									(
+										(window as unknown as Record<string, unknown>)['_previewMessages'] as unknown[]
+									).push(event.data);
+								}
+							});
+							(window as unknown as Record<string, boolean>)['_previewListenerReady'] = true;
+						}
+						return true;
+					});
+				},
+				{ timeout: 10000, message: 'Should set up postMessage listener in iframe' },
+			)
+			.toBe(true);
+
+		// Edit the location field using pressSequentially to trigger signal form change detection
+		const locationInput = page.getByLabel('Location');
+		await expect(locationInput).toBeVisible({ timeout: 10000 });
+		await locationInput.click();
+		await page.keyboard.press('Meta+a');
+		await locationInput.pressSequentially('Updated Preview City', { delay: 20 });
+
+		// Wait for debounced postMessage containing the UPDATED location value.
+		// The admin component may send initial messages with original values before the
+		// edit propagates, so poll for the last message to contain the edited value.
+		await expect
+			.poll(
+				async () => {
+					const f = await getFrame();
+					return f.evaluate(() => {
 						const msgs = (window as unknown as Record<string, unknown>)[
 							'_previewMessages'
-						] as Array<unknown>;
-						return msgs?.length ?? 0;
-					}),
-				{ timeout: 5000 },
+						] as Array<{ data: Record<string, unknown> }>;
+						if (msgs.length === 0) return null;
+						return msgs[msgs.length - 1].data?.['location'] ?? null;
+					});
+				},
+				{ timeout: 10000 },
 			)
-			.toBeGreaterThan(0);
+			.toBe('Updated Preview City');
 
-		// Verify the iframe received the message with correct data
-		const lastMessage = await frame!.evaluate(() => {
+		// Verify the full message structure
+		const frame = await getFrame();
+		const lastMessage = await frame.evaluate(() => {
 			const messages = (window as unknown as Record<string, unknown>)['_previewMessages'] as Array<{
 				type: string;
 				data: Record<string, unknown>;
@@ -207,10 +248,6 @@ test.describe('Live Preview', () => {
 
 		expect(lastMessage).toBeTruthy();
 		expect(lastMessage!.type).toBe('momentum-preview-update');
-		expect(lastMessage!.data).toBeDefined();
-		// Verify the edited field value
-		expect(lastMessage!.data['location']).toBe('Updated Preview City');
-		// Verify other fields are present
 		expect(lastMessage!.data['title']).toBe('LP-Preview Test Event');
 	});
 

@@ -19,30 +19,57 @@ import { test, expect } from './fixtures';
  * - price: number, min: 0
  * - status: select (active/draft/archived), required
  * - tags: array, minRows: 1, maxRows: 5, sub-field: label (text, required)
+ *
+ * NOTE: Uses pressSequentially() instead of fill() because the mcms-input
+ * component updates signals via native (input) events, which pressSequentially()
+ * reliably fires per keystroke.
  */
 
-// Skip: Angular signal-based forms don't detect Playwright fill()/blur() events reliably.
-// The admin UI components need to be updated to bridge Playwright input events with
-// Angular's model() signals. See auth.spec.ts for the same issue.
-test.describe.skip('Signal Forms - Validation Behavior', () => {
+/** Helper to type into a field (click + clear + type) */
+async function typeIntoField(
+	locator: import('@playwright/test').Locator,
+	text: string,
+): Promise<void> {
+	await locator.click();
+	await locator.pressSequentially(text, { delay: 20 });
+}
+
+/** Helper to replace text in a field (select all + type) */
+async function replaceFieldText(
+	page: import('@playwright/test').Page,
+	locator: import('@playwright/test').Locator,
+	text: string,
+): Promise<void> {
+	await locator.click();
+	await page.keyboard.press('Meta+a');
+	await locator.pressSequentially(text, { delay: 20 });
+}
+
+test.describe('Signal Forms - Validation Behavior', () => {
 	test('should show humanized labels in error messages', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/field-test-items/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
-		// Fill title with value below minLength (3)
+		// Type title with value below minLength (3)
 		const titleInput = authenticatedPage.locator('input#field-title');
-		await titleInput.fill('ab');
+		await typeIntoField(titleInput, 'ab');
 		await titleInput.blur();
 
 		// Error should show humanized "Title" not raw "title"
-		await expect(authenticatedPage.getByText(/Title must be at least 3 characters/)).toBeVisible();
+		await expect(authenticatedPage.getByText(/Title must be at least 3 characters/)).toBeVisible({
+			timeout: 5000,
+		});
 	});
 
 	test('should not show errors on untouched fields', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/field-test-items/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		// Don't interact with any fields — verify no validation errors visible
 		await expect(authenticatedPage.getByText(/is required/)).not.toBeVisible();
@@ -52,38 +79,46 @@ test.describe.skip('Signal Forms - Validation Behavior', () => {
 	test('should validate on blur, not on every keystroke', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/field-test-items/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		const titleInput = authenticatedPage.locator('input#field-title');
 
 		// Type one character — no error yet (field not blurred)
-		await titleInput.fill('a');
+		await typeIntoField(titleInput, 'a');
 		await expect(
 			authenticatedPage.getByText(/Title must be at least 3 characters/),
 		).not.toBeVisible();
 
 		// Blur — now the error should appear
 		await titleInput.blur();
-		await expect(authenticatedPage.getByText(/Title must be at least 3 characters/)).toBeVisible();
+		await expect(authenticatedPage.getByText(/Title must be at least 3 characters/)).toBeVisible({
+			timeout: 5000,
+		});
 	});
 
 	test('should clear error when user fixes the value', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/field-test-items/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		const titleInput = authenticatedPage.locator('input#field-title');
 
 		// Trigger error
-		await titleInput.fill('ab');
+		await typeIntoField(titleInput, 'ab');
 		await titleInput.blur();
-		await expect(authenticatedPage.getByText(/Title must be at least 3 characters/)).toBeVisible();
+		await expect(authenticatedPage.getByText(/Title must be at least 3 characters/)).toBeVisible({
+			timeout: 5000,
+		});
 
 		// Fix it — error should clear (field is already touched, live clearing)
-		await titleInput.fill('Valid Title');
+		await replaceFieldText(authenticatedPage, titleInput, 'Valid Title');
 		await expect(
 			authenticatedPage.getByText(/Title must be at least 3 characters/),
-		).not.toBeVisible();
+		).not.toBeVisible({ timeout: 5000 });
 	});
 
 	test('should show number max validation error without clamping', async ({
@@ -91,14 +126,18 @@ test.describe.skip('Signal Forms - Validation Behavior', () => {
 	}) => {
 		await authenticatedPage.goto('/admin/collections/field-test-items/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		const ratingInput = authenticatedPage.locator('input#field-rating');
-		await ratingInput.fill('6');
+		await typeIntoField(ratingInput, '6');
 		await ratingInput.blur();
 
 		// Should show error, NOT silently clamp to 5
-		await expect(authenticatedPage.getByText(/Rating must be no more than 5/)).toBeVisible();
+		await expect(authenticatedPage.getByText(/Rating must be no more than 5/)).toBeVisible({
+			timeout: 5000,
+		});
 		// Value should remain 6 (not clamped)
 		await expect(ratingInput).toHaveValue('6');
 	});
@@ -106,58 +145,80 @@ test.describe.skip('Signal Forms - Validation Behavior', () => {
 	test('should show number min validation error', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/field-test-items/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		const ratingInput = authenticatedPage.locator('input#field-rating');
-		await ratingInput.fill('0');
+		await typeIntoField(ratingInput, '0');
 		await ratingInput.blur();
 
-		await expect(authenticatedPage.getByText(/Rating must be at least 1/)).toBeVisible();
+		await expect(authenticatedPage.getByText(/Rating must be at least 1/)).toBeVisible({
+			timeout: 5000,
+		});
 	});
 
 	test('should validate email format', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/field-test-items/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		const emailInput = authenticatedPage.locator('input#field-contactEmail');
-		await emailInput.fill('not-an-email');
+		await typeIntoField(emailInput, 'not-an-email');
 		await emailInput.blur();
 
-		await expect(authenticatedPage.getByText(/Contact Email must be a valid email/)).toBeVisible();
+		await expect(authenticatedPage.getByText(/Contact Email must be a valid email/)).toBeVisible({
+			timeout: 5000,
+		});
 	});
 });
 
-test.describe.skip('Signal Forms - Submit Behavior', () => {
+test.describe('Signal Forms - Submit Behavior', () => {
 	test('should show form-level error when submitting with validation errors', async ({
 		authenticatedPage,
 	}) => {
 		await authenticatedPage.goto('/admin/collections/field-test-items/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		const createButton = authenticatedPage.getByRole('button', { name: 'Create' });
+		const createButton = authenticatedPage.getByRole('button', {
+			name: 'Create',
+			exact: true,
+		});
 		await expect(createButton).toBeVisible();
 
 		// Click Create without filling required fields
 		await createButton.click();
 
 		// Should show a form-level error message
-		await expect(authenticatedPage.getByText(/Please fix the errors above/)).toBeVisible();
+		await expect(authenticatedPage.getByText(/Please fix the errors above/)).toBeVisible({
+			timeout: 5000,
+		});
 
 		// All required fields should now show errors (submit marks all as touched)
-		await expect(authenticatedPage.getByText(/Title is required/)).toBeVisible();
-		await expect(authenticatedPage.getByText(/Status is required/)).toBeVisible();
+		await expect(authenticatedPage.getByText(/Title is required/)).toBeVisible({
+			timeout: 5000,
+		});
+		await expect(authenticatedPage.getByText(/Status is required/)).toBeVisible({
+			timeout: 5000,
+		});
 	});
 
 	test('should successfully create and navigate to list', async ({ authenticatedPage }) => {
 		const timestamp = Date.now();
 		await authenticatedPage.goto('/admin/collections/field-test-items/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		// Fill all required fields with valid data
-		await authenticatedPage.locator('input#field-title').fill(`E2E Signal Form ${timestamp}`);
-		await authenticatedPage.locator('input#field-code').fill('SF01');
+		await typeIntoField(
+			authenticatedPage.locator('input#field-title'),
+			`E2E Signal Form ${timestamp}`,
+		);
+		await typeIntoField(authenticatedPage.locator('input#field-code'), 'SF01');
 		await authenticatedPage.locator('select#field-status').selectOption('active');
 
 		// Add one tag row (minRows: 1)
@@ -165,10 +226,10 @@ test.describe.skip('Signal Forms - Submit Behavior', () => {
 		// Wait for the new row to appear, then fill the label
 		const tagInput = authenticatedPage.locator('input#field-tags-0-label');
 		await expect(tagInput).toBeVisible({ timeout: 5000 });
-		await tagInput.fill('test-tag');
+		await typeIntoField(tagInput, 'test-tag');
 
 		// Submit
-		await authenticatedPage.getByRole('button', { name: 'Create' }).click();
+		await authenticatedPage.getByRole('button', { name: 'Create', exact: true }).click();
 
 		// Should navigate to collection list on success
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/field-test-items$/, {
@@ -187,7 +248,7 @@ test.describe.skip('Signal Forms - Submit Behavior', () => {
 	});
 });
 
-test.describe.skip('Signal Forms - Edit Flow', () => {
+test.describe('Signal Forms - Edit Flow', () => {
 	test('should load existing data and save edits', async ({ authenticatedPage }) => {
 		const timestamp = Date.now();
 
@@ -208,7 +269,9 @@ test.describe.skip('Signal Forms - Edit Flow', () => {
 		// Navigate to edit page
 		await authenticatedPage.goto(`/admin/collections/field-test-items/${docId}/edit`);
 		await authenticatedPage.waitForLoadState('domcontentloaded');
-		await expect(authenticatedPage.getByRole('button', { name: 'Save Changes' })).toBeVisible();
+		await expect(authenticatedPage.getByRole('button', { name: 'Save Changes' })).toBeVisible({
+			timeout: 15000,
+		});
 
 		// Verify pre-filled values
 		await expect(authenticatedPage.locator('input#field-title')).toHaveValue(
@@ -216,7 +279,11 @@ test.describe.skip('Signal Forms - Edit Flow', () => {
 		);
 
 		// Edit title
-		await authenticatedPage.locator('input#field-title').fill(`Edited ${timestamp}`);
+		await replaceFieldText(
+			authenticatedPage,
+			authenticatedPage.locator('input#field-title'),
+			`Edited ${timestamp}`,
+		);
 
 		// Save
 		await authenticatedPage.getByRole('button', { name: 'Save Changes' }).click();

@@ -39,93 +39,134 @@ test.describe('Authentication Flow', () => {
 			await page.goto('/admin/setup');
 			await page.waitForLoadState('domcontentloaded');
 
-			if (page.url().includes('/setup')) {
-				// Submit button should be disabled with empty form
-				const submitButton = page.getByRole('button', { name: /create|submit|sign up/i });
-				await expect(submitButton).toBeDisabled();
-			}
+			// Wait for Angular hydration
+			await page.waitForFunction(() => {
+				const appRoot = document.querySelector('app-root');
+				return appRoot && appRoot.hasAttribute('ng-version');
+			});
+
+			// After hydration, route guards evaluate asynchronously (API call to check users).
+			// Wait for all network activity to complete before checking URL.
+			await page.waitForLoadState('networkidle');
+
+			// If users already exist, router redirected to /login — test is N/A
+			if (!page.url().includes('/setup')) return;
+
+			// Submit button should be disabled with empty form
+			const submitButton = page.getByRole('button', { name: /create|submit|sign up/i });
+			await expect(submitButton).toBeDisabled();
 		});
 
-		// Skip: Angular's signal-based forms don't detect Playwright input events
-		// This is a known limitation with Angular 21's model() signals
-		test.skip('setup form should enable submit with valid data', async ({ page }) => {
+		test('setup form should enable submit with valid data', async ({ page }) => {
 			await page.goto('/admin/setup');
 			await page.waitForLoadState('domcontentloaded');
 
-			if (page.url().includes('/setup')) {
-				// Wait for Angular hydration
-				await page.waitForFunction(() => {
-					const appRoot = document.querySelector('app-root');
-					return appRoot && appRoot.hasAttribute('ng-version');
-				});
+			// Wait for Angular hydration + route guard evaluation
+			await page.waitForFunction(() => {
+				const appRoot = document.querySelector('app-root');
+				return appRoot && appRoot.hasAttribute('ng-version');
+			});
+			await page.waitForLoadState('networkidle');
 
-				const submitButton = page.getByRole('button', { name: /create|submit|sign up/i });
+			// If users already exist, router redirected to /login — test is N/A
+			if (!page.url().includes('/setup')) return;
 
-				// Initially disabled
-				await expect(submitButton).toBeDisabled();
+			const submitButton = page.getByRole('button', { name: /create|submit|sign up/i });
 
-				// Fill with valid data using keyboard typing
-				await page.getByLabel(/full name/i).click();
-				await page.getByLabel(/full name/i).pressSequentially('Test User', { delay: 20 });
+			// Initially disabled
+			await expect(submitButton).toBeDisabled();
 
-				await page.getByLabel(/email address/i).click();
-				await page
-					.getByLabel(/email address/i)
-					.pressSequentially('test@example.com', { delay: 20 });
+			// Fill with valid data using keyboard typing
+			await page.getByLabel(/full name/i).click();
+			await page.getByLabel(/full name/i).pressSequentially('Test User', { delay: 20 });
 
-				await page.getByRole('textbox', { name: /^password$/i }).click();
-				await page
-					.getByRole('textbox', { name: /^password$/i })
-					.pressSequentially('ValidPassword123!', { delay: 20 });
+			await page.getByLabel(/email address/i).click();
+			await page.getByLabel(/email address/i).pressSequentially('test@example.com', { delay: 20 });
 
-				await page.getByRole('textbox', { name: /confirm password/i }).click();
-				await page
-					.getByRole('textbox', { name: /confirm password/i })
-					.pressSequentially('ValidPassword123!', { delay: 20 });
+			await page.getByRole('textbox', { name: /^password$/i }).click();
+			await page
+				.getByRole('textbox', { name: /^password$/i })
+				.pressSequentially('ValidPassword123!', { delay: 20 });
 
-				// Submit button should now be enabled
-				await expect(submitButton).toBeEnabled({ timeout: 5000 });
-			}
+			await page.getByRole('textbox', { name: /confirm password/i }).click();
+			await page
+				.getByRole('textbox', { name: /confirm password/i })
+				.pressSequentially('ValidPassword123!', { delay: 20 });
+
+			// Submit button should now be enabled
+			await expect(submitButton).toBeEnabled({ timeout: 5000 });
 		});
 
-		// Skip: Angular signal-based forms don't detect Playwright fill() events
-		test.skip('setup form should keep submit disabled for short password', async ({ page }) => {
+		test('setup form should keep submit disabled for short password', async ({ page }) => {
 			await page.goto('/admin/setup');
 			await page.waitForLoadState('domcontentloaded');
 
-			if (page.url().includes('/setup')) {
-				// Fill form with weak password (less than 8 chars)
-				await page.getByLabel(/full name/i).fill('Test User');
-				await page.getByLabel(/email address/i).fill('test@example.com');
-				await page.getByRole('textbox', { name: /^password$/i }).fill('short');
-				await page.getByRole('textbox', { name: /confirm password/i }).fill('short');
+			// Wait for Angular hydration + route guard evaluation
+			await page.waitForFunction(() => {
+				const appRoot = document.querySelector('app-root');
+				return appRoot && appRoot.hasAttribute('ng-version');
+			});
+			await page.waitForLoadState('networkidle');
 
-				// Submit button should still be disabled (password too short)
-				const submitButton = page.getByRole('button', { name: /create|submit|sign up/i });
-				await expect(submitButton).toBeDisabled();
-			}
+			// If users already exist, router redirected to /login — test is N/A
+			if (!page.url().includes('/setup')) return;
+
+			// Fill form with weak password (less than 8 chars)
+			await page.getByLabel(/full name/i).click();
+			await page.getByLabel(/full name/i).pressSequentially('Test User', { delay: 20 });
+
+			await page.getByLabel(/email address/i).click();
+			await page.getByLabel(/email address/i).pressSequentially('test@example.com', { delay: 20 });
+
+			await page.getByRole('textbox', { name: /^password$/i }).click();
+			await page
+				.getByRole('textbox', { name: /^password$/i })
+				.pressSequentially('short', { delay: 20 });
+
+			await page.getByRole('textbox', { name: /confirm password/i }).click();
+			await page
+				.getByRole('textbox', { name: /confirm password/i })
+				.pressSequentially('short', { delay: 20 });
+
+			// Submit button should still be disabled (password too short)
+			const submitButton = page.getByRole('button', { name: /create|submit|sign up/i });
+			await expect(submitButton).toBeDisabled();
 		});
 
-		// Skip: Angular signal-based forms don't detect Playwright fill() events
-		test.skip('setup form should keep submit disabled for mismatched passwords', async ({
-			page,
-		}) => {
+		test('setup form should keep submit disabled for mismatched passwords', async ({ page }) => {
 			await page.goto('/admin/setup');
 			await page.waitForLoadState('domcontentloaded');
 
-			if (page.url().includes('/setup')) {
-				// Fill form with mismatched passwords
-				await page.getByLabel(/full name/i).fill('Test User');
-				await page.getByLabel(/email address/i).fill('test@example.com');
-				await page.getByRole('textbox', { name: /^password$/i }).fill('ValidPassword123!');
-				await page
-					.getByRole('textbox', { name: /confirm password/i })
-					.fill('DifferentPassword123!');
+			// Wait for Angular hydration + route guard evaluation
+			await page.waitForFunction(() => {
+				const appRoot = document.querySelector('app-root');
+				return appRoot && appRoot.hasAttribute('ng-version');
+			});
+			await page.waitForLoadState('networkidle');
 
-				// Submit button should be disabled (passwords don't match)
-				const submitButton = page.getByRole('button', { name: /create|submit|sign up/i });
-				await expect(submitButton).toBeDisabled();
-			}
+			// If users already exist, router redirected to /login — test is N/A
+			if (!page.url().includes('/setup')) return;
+
+			// Fill form with mismatched passwords
+			await page.getByLabel(/full name/i).click();
+			await page.getByLabel(/full name/i).pressSequentially('Test User', { delay: 20 });
+
+			await page.getByLabel(/email address/i).click();
+			await page.getByLabel(/email address/i).pressSequentially('test@example.com', { delay: 20 });
+
+			await page.getByRole('textbox', { name: /^password$/i }).click();
+			await page
+				.getByRole('textbox', { name: /^password$/i })
+				.pressSequentially('ValidPassword123!', { delay: 20 });
+
+			await page.getByRole('textbox', { name: /confirm password/i }).click();
+			await page
+				.getByRole('textbox', { name: /confirm password/i })
+				.pressSequentially('DifferentPassword123!', { delay: 20 });
+
+			// Submit button should be disabled (passwords don't match)
+			const submitButton = page.getByRole('button', { name: /create|submit|sign up/i });
+			await expect(submitButton).toBeDisabled();
 		});
 	});
 
@@ -143,8 +184,7 @@ test.describe('Authentication Flow', () => {
 			}
 		});
 
-		// Skip: Angular's signal-based forms don't detect Playwright input events
-		test.skip('login form should validate required fields', async ({ page }) => {
+		test('login form should validate required fields', async ({ page }) => {
 			await page.goto('/admin/login');
 			await page.waitForLoadState('domcontentloaded');
 
@@ -178,8 +218,7 @@ test.describe('Authentication Flow', () => {
 			}
 		});
 
-		// Skip: Angular's signal-based forms don't detect Playwright input events
-		test.skip('login should show error for invalid credentials', async ({ page }) => {
+		test('login should show error for invalid credentials', async ({ page }) => {
 			await page.goto('/admin/login');
 			await page.waitForLoadState('domcontentloaded');
 
@@ -213,11 +252,7 @@ test.describe('Authentication Flow', () => {
 	});
 
 	test.describe('Protected Routes', () => {
-		// Skip: With SSR, Angular guards run during route activation but SSR pre-renders
-		// the dashboard. After hydration, the guard doesn't re-run because the route
-		// is already active. The auth redirect happens via auth service effect, which
-		// has timing issues in E2E tests. Access control is verified by API tests instead.
-		test.skip('should redirect unauthenticated users to login or setup', async ({ page }) => {
+		test('should redirect unauthenticated users to login or setup', async ({ page }) => {
 			// Clear any existing session
 			await page.context().clearCookies();
 
@@ -230,8 +265,8 @@ test.describe('Authentication Flow', () => {
 				return appRoot && appRoot.hasAttribute('ng-version');
 			});
 
-			// Wait for client-side redirect after hydration
-			await page.waitForURL(/\/(admin\/setup|admin\/login)$/, { timeout: 10000 });
+			// Wait for client-side redirect after hydration (generous timeout for auth effect)
+			await page.waitForURL(/\/(admin\/setup|admin\/login)$/, { timeout: 15000 });
 
 			// Should be on login or setup page, not the dashboard
 			const url = page.url();

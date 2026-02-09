@@ -16,7 +16,9 @@ test.describe('Collection Create Form - Articles', () => {
 		await authenticatedPage.goto('/admin/collections/articles/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		const heading = authenticatedPage.getByRole('heading', { name: /Create Article/i });
 		await expect(heading).toBeVisible();
@@ -26,7 +28,9 @@ test.describe('Collection Create Form - Articles', () => {
 		await authenticatedPage.goto('/admin/collections/articles/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		// Check breadcrumbs component exists and contains link to Articles list
 		// Scope to breadcrumbs to avoid conflict with sidebar links
@@ -39,7 +43,9 @@ test.describe('Collection Create Form - Articles', () => {
 		await authenticatedPage.goto('/admin/collections/articles/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		// Click the breadcrumb link (not the sidebar link)
 		const breadcrumbs = authenticatedPage.locator('mcms-breadcrumbs');
@@ -52,7 +58,9 @@ test.describe('Collection Create Form - Articles', () => {
 		await authenticatedPage.goto('/admin/collections/articles/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		// Title field
 		const titleLabel = authenticatedPage.getByText('Title');
@@ -72,7 +80,7 @@ test.describe('Collection Create Form - Articles', () => {
 		await authenticatedPage.goto('/admin/collections/articles/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		const submitButton = authenticatedPage.getByRole('button', { name: 'Create' });
+		const submitButton = authenticatedPage.getByRole('button', { name: 'Create', exact: true });
 		await expect(submitButton).toBeVisible();
 	});
 
@@ -80,7 +88,9 @@ test.describe('Collection Create Form - Articles', () => {
 		await authenticatedPage.goto('/admin/collections/articles/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		const cancelButton = authenticatedPage.getByRole('button', { name: 'Cancel' });
 		await expect(cancelButton).toBeVisible();
@@ -90,7 +100,9 @@ test.describe('Collection Create Form - Articles', () => {
 		await authenticatedPage.goto('/admin/collections/articles/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		// Fill title
 		await authenticatedPage.locator('input#field-title').fill('Test Article Title');
@@ -130,7 +142,9 @@ test.describe('Collection Create Form - Categories', () => {
 		await authenticatedPage.goto('/admin/collections/categories/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		const heading = authenticatedPage.getByRole('heading', { name: /Create Category/i });
 		await expect(heading).toBeVisible();
@@ -140,7 +154,9 @@ test.describe('Collection Create Form - Categories', () => {
 		await authenticatedPage.goto('/admin/collections/categories/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		// Name field
 		const nameLabel = authenticatedPage.getByText('Name');
@@ -161,7 +177,9 @@ test.describe('Collection Create Form - Users', () => {
 		await authenticatedPage.goto('/admin/collections/users/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		const heading = authenticatedPage.getByRole('heading', { name: /Create User/i });
 		await expect(heading).toBeVisible();
@@ -171,7 +189,9 @@ test.describe('Collection Create Form - Users', () => {
 		await authenticatedPage.goto('/admin/collections/users/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		// Name field
 		const nameLabel = authenticatedPage.getByText('Name');
@@ -203,7 +223,9 @@ test.describe('Collection Create Form - Users', () => {
 		await authenticatedPage.goto('/admin/collections/users/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		const roleSelect = authenticatedPage.locator('select#field-role');
 
@@ -216,7 +238,9 @@ test.describe('Collection Create Form - Users', () => {
 		await authenticatedPage.goto('/admin/collections/users/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		await expect(authenticatedPage.getByRole('button', { name: 'Create' })).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
 
 		// Fill name
 		const nameInput = authenticatedPage.locator('input#field-name');
@@ -244,18 +268,24 @@ test.describe('Collection Create Form - Users', () => {
 	});
 });
 
-// Skip: Admin UI Cancel button navigation not yet implemented
-test.describe.skip('Collection Edit Form - Cancel Navigation', () => {
+test.describe('Collection Edit Form - Cancel Navigation', () => {
 	test('should navigate back to list when clicking Cancel on Articles', async ({
 		authenticatedPage,
 	}) => {
 		await authenticatedPage.goto('/admin/collections/articles/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
+		// Wait for Angular hydration so event handlers are bound
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
+
 		const cancelButton = authenticatedPage.getByRole('button', { name: 'Cancel' });
 		await cancelButton.click();
 
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/articles$/);
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/articles$/, {
+			timeout: 10000,
+		});
 	});
 
 	test('should navigate back to list when clicking Cancel on Users', async ({
@@ -264,9 +294,16 @@ test.describe.skip('Collection Edit Form - Cancel Navigation', () => {
 		await authenticatedPage.goto('/admin/collections/users/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
+		// Wait for Angular hydration so event handlers are bound
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
+
 		const cancelButton = authenticatedPage.getByRole('button', { name: 'Cancel' });
 		await cancelButton.click();
 
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users$/);
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users$/, {
+			timeout: 10000,
+		});
 	});
 });
