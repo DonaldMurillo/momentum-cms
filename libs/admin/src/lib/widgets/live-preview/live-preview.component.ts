@@ -89,6 +89,7 @@ export type DeviceSize = 'desktop' | 'tablet' | 'mobile';
 				size="sm"
 				(click)="refreshPreview()"
 				data-testid="preview-refresh"
+				aria-label="Refresh preview"
 			>
 				↻ Refresh
 			</button>

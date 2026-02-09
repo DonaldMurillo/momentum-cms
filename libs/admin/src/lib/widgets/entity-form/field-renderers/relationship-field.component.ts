@@ -104,7 +104,7 @@ interface RelationshipOption {
 		</mcms-form-field>
 
 		@if (entitySheetService && !isDisabled()) {
-			<div class="flex gap-2 mt-1.5" aria-live="polite">
+			<div class="flex gap-2 mt-1.5">
 				<button
 					type="button"
 					class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"

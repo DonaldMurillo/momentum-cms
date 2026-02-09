@@ -8,11 +8,24 @@ import {
 } from '@angular/cdk/drag-drop';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { heroPlus, heroTrash, heroBars2 } from '@ng-icons/heroicons/outline';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter, Button, Badge } from '@momentum-cms/ui';
+import {
+	Card,
+	CardHeader,
+	CardTitle,
+	CardContent,
+	CardFooter,
+	Button,
+	Badge,
+} from '@momentum-cms/ui';
 import { humanizeFieldName } from '@momentum-cms/core';
 import type { Field, BlockConfig } from '@momentum-cms/core';
 import type { EntityFormMode } from '../entity-form.types';
-import { getFieldNodeState, getSubNode, isRecord, getFieldDefaultValue } from '../entity-form.types';
+import {
+	getFieldNodeState,
+	getSubNode,
+	isRecord,
+	getFieldDefaultValue,
+} from '../entity-form.types';
 import { FieldRenderer } from './field-renderer.component';
 
 /** Shape of a block item in the stored data */
@@ -71,13 +84,15 @@ interface BlockItem {
 						No blocks yet. Add a block to get started.
 					</p>
 				} @else {
-					<div cdkDropList (cdkDropListDropped)="onDrop($event)" class="space-y-3">
+					<div
+						cdkDropList
+						(cdkDropListDropped)="onDrop($event)"
+						class="space-y-3"
+						role="list"
+						aria-label="Content blocks"
+					>
 						@for (block of blocks(); track $index; let i = $index) {
-							<div
-								cdkDrag
-								class="border rounded-lg bg-card"
-								[cdkDragDisabled]="isDisabled()"
-							>
+							<div cdkDrag class="border rounded-lg bg-card" [cdkDragDisabled]="isDisabled()">
 								<div class="flex items-center gap-3 px-4 py-2 border-b bg-muted/50 rounded-t-lg">
 									<div
 										cdkDragHandle
@@ -126,12 +141,8 @@ interface BlockItem {
 				<mcms-card-footer>
 					<div class="flex gap-2">
 						@for (blockDef of blockDefinitions(); track blockDef.slug) {
-							<button
-								mcms-button
-								variant="outline"
-								(click)="addBlock(blockDef.slug)"
-							>
-								<ng-icon name="heroPlus" size="16" />
+							<button mcms-button variant="outline" (click)="addBlock(blockDef.slug)">
+								<ng-icon name="heroPlus" size="16" aria-hidden="true" />
 								{{ blockDef.labels?.singular || blockDef.slug }}
 							</button>
 						}
@@ -196,8 +207,9 @@ export class BlocksFieldRenderer {
 		if (!state) return [];
 		const val = state.value();
 		if (Array.isArray(val)) {
-			return val
-				.filter((item): item is BlockItem => isRecord(item) && typeof item['blockType'] === 'string');
+			return val.filter(
+				(item): item is BlockItem => isRecord(item) && typeof item['blockType'] === 'string',
+			);
 		}
 		return [];
 	});

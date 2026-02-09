@@ -10,6 +10,7 @@ import {
 	TemplateRef,
 	ViewContainerRef,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { Overlay, OverlayRef, PositionStrategy } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
 import type { DropdownMenuAlign, DropdownMenuSide } from './dropdown-menu.types';
@@ -56,6 +57,7 @@ export class DropdownTrigger implements OnDestroy {
 	private readonly overlay = inject(Overlay);
 	private readonly elementRef = inject(ElementRef<HTMLElement>);
 	private readonly viewContainerRef = inject(ViewContainerRef);
+	private readonly document = inject(DOCUMENT);
 
 	private overlayRef: OverlayRef | null = null;
 
@@ -121,6 +123,13 @@ export class DropdownTrigger implements OnDestroy {
 			close: () => this.close(),
 		});
 		this.overlayRef.attach(portal);
+
+		// Focus first menu item after overlay renders
+		const overlayElement = this.overlayRef.overlayElement;
+		this.document.defaultView?.requestAnimationFrame(() => {
+			const firstItem = overlayElement.querySelector<HTMLElement>('[role="menuitem"]');
+			firstItem?.focus();
+		});
 	}
 
 	private getPositionStrategy(): PositionStrategy {

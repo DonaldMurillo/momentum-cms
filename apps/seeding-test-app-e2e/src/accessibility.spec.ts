@@ -54,21 +54,23 @@ test.describe('Accessibility: Login page', () => {
 		await expect(passwordLabel).toBeVisible();
 	});
 
-	test('submit button has aria-busy when loading', async ({ page }) => {
+	test('submit button is disabled when form is empty and enabled when filled', async ({ page }) => {
 		await page.goto('/admin/login');
 		await page.waitForLoadState('domcontentloaded');
 
-		const emailInput = page.locator('#login-email');
-		await expect(emailInput).toBeVisible({ timeout: 10000 });
-		await emailInput.fill('test@example.com');
-		await page.locator('#login-password').fill('WrongPassword123!');
+		// Submit button should exist with type="submit"
+		const submitButton = page.getByRole('button', { name: 'Sign In' });
+		await expect(submitButton).toBeVisible({ timeout: 10000 });
 
-		// The submit button should have aria-busy attribute available
-		const submitButton = page.locator('button[type="submit"]');
-		await expect(submitButton).toBeVisible();
+		// Button should be disabled when fields are empty
+		await expect(submitButton).toBeDisabled();
 
-		// Before submission, aria-busy should be "false"
-		await expect(submitButton).toHaveAttribute('aria-busy', 'false');
+		// Fill email and password using role-based locators (targets the inner <input>)
+		await page.getByRole('textbox', { name: 'Email' }).fill('test@example.com');
+		await page.getByRole('textbox', { name: 'Password' }).fill('WrongPassword123!');
+
+		// Button should become enabled after filling both fields
+		await expect(submitButton).toBeEnabled();
 	});
 });
 
@@ -157,7 +159,7 @@ test.describe('Accessibility: Entity form', () => {
 		await signIn(page, TEST_CREDENTIALS);
 
 		// Navigate to create page
-		await page.goto('/admin/collections/articles/create');
+		await page.goto('/admin/collections/articles/new');
 		await page.waitForLoadState('domcontentloaded');
 
 		// Wait for the form to render
@@ -471,8 +473,9 @@ test.describe('Accessibility: Upload field', () => {
 		await page.waitForLoadState('domcontentloaded');
 
 		// The media library should have an upload button with an accessible label
-		const uploadButton = page.locator('button:has-text("Upload")');
-		await expect(uploadButton.first()).toBeVisible({ timeout: 15000 });
+		// The upload "button" is a <span mcms-button> inside a <label>, so use role-based locator
+		const uploadButton = page.getByRole('button', { name: /Upload Files/ });
+		await expect(uploadButton).toBeVisible({ timeout: 15000 });
 
 		// File input should be present in the DOM for upload functionality
 		const fileInput = page.locator('input[type="file"]');
@@ -560,34 +563,25 @@ test.describe('Accessibility: Keyboard navigation', () => {
 
 		// Navigate to a collection list that has sortable columns
 		await page.goto('/admin/collections/articles');
-		await page.waitForLoadState('domcontentloaded');
+		await page.waitForLoadState('networkidle');
 
-		// Wait for data table to render
-		const table = page.locator('table');
-		await expect(table).toBeVisible({ timeout: 15000 });
+		// Wait for data table rows to render (ensures data is loaded and Angular hydrated)
+		const gridRows = page.locator('[role="grid"] [role="row"] [role="gridcell"]');
+		await expect(gridRows.first()).toBeVisible({ timeout: 15000 });
 
-		// Sort header buttons must be present - articles table always has sortable columns
-		const sortButtons = page.locator('th button');
-		await expect(sortButtons.first()).toBeVisible({ timeout: 5000 });
+		// Sortable column headers have aria-sort and tabindex (managed by CDK grid navigation
+		// using roving tabindex: -1 for inactive, 0 for active cell)
+		const titleHeader = page.locator('[role="columnheader"]', { hasText: 'Title' });
+		await expect(titleHeader).toBeVisible({ timeout: 10000 });
+		await expect(titleHeader).toHaveAttribute('aria-sort', 'none', { timeout: 10000 });
 
-		// Focus the first sort button and verify it's keyboard-accessible
-		await sortButtons.first().focus();
-		await expect(sortButtons.first()).toBeFocused();
+		// Focus the header programmatically (tabindex=-1 is focusable via JS, just not Tab key)
+		await titleHeader.focus();
+		await expect(titleHeader).toBeFocused();
 
-		// Press Enter to activate sort (should change aria-sort)
-		const th = page.locator('th').first();
-		const sortBefore = await th.getAttribute('aria-sort');
-		await page.keyboard.press('Enter');
-
-		// After pressing Enter, aria-sort should change
-		await expect
-			.poll(
-				async () => {
-					return th.getAttribute('aria-sort');
-				},
-				{ timeout: 5000, message: 'aria-sort should change after Enter' },
-			)
-			.not.toBe(sortBefore);
+		// Press Enter to activate sort — should change aria-sort to "ascending"
+		await titleHeader.press('Enter');
+		await expect(titleHeader).toHaveAttribute('aria-sort', 'ascending', { timeout: 10000 });
 	});
 });
 
@@ -700,6 +694,209 @@ test.describe('Accessibility: axe-core WCAG 2.1 AA scans', () => {
 		expect(
 			results.violations,
 			`Media library has ${results.violations.length} axe violation(s):\n${formatViolations(results.violations)}`,
+		).toEqual([]);
+	});
+});
+
+// ─────────────────────────────────────────────────────────
+// Phase 6: Remaining a11y gap fixes verification
+// ─────────────────────────────────────────────────────────
+
+test.describe('Accessibility: Phase 6 remaining gaps', () => {
+	test('dropdown menu focuses first menu item on open', async ({ page }) => {
+		await signIn(page, TEST_CREDENTIALS);
+		await page.goto('/admin');
+		await page.waitForLoadState('domcontentloaded');
+
+		// Find the user menu button (always present in admin shell)
+		const userMenuButton = page.locator('button[aria-haspopup="menu"]');
+		await expect(userMenuButton).toBeVisible({ timeout: 15000 });
+
+		// Click the dropdown trigger
+		await userMenuButton.click();
+
+		// The first menu item inside the dropdown should receive focus
+		await expect
+			.poll(
+				async () => {
+					return page.evaluate(() => {
+						const el = document.activeElement;
+						return el?.getAttribute('role');
+					});
+				},
+				{ timeout: 5000, message: 'First menu item should receive focus on dropdown open' },
+			)
+			.toBe('menuitem');
+	});
+
+	// Note: Toast close button SVG aria-hidden is verified by unit tests (toast.spec.ts)
+	// and axe scans. Client-side form validation uses inline alerts, not mcms-toast,
+	// so we cannot reliably trigger a dismissible toast in E2E.
+
+	test.describe('Array field accessibility', () => {
+		test('drop list has role="list" and aria-label', async ({ page }) => {
+			await signIn(page, TEST_CREDENTIALS);
+			await page.goto('/admin/collections/field-test-items/new');
+			await page.waitForLoadState('domcontentloaded');
+
+			// Wait for form to render
+			const heading = page.locator('main h1');
+			await expect(heading).toBeVisible({ timeout: 15000 });
+
+			// The field-test-items collection has an array field "tags" with minRows: 1
+			// Add a row to ensure the drop list renders
+			const addRowButton = page.locator('mcms-array-field-renderer button:has-text("Add Row")');
+			await expect(addRowButton).toBeVisible({ timeout: 10000 });
+			await addRowButton.click();
+
+			// The cdkDropList container should have proper roles
+			const dropList = page.locator('mcms-array-field-renderer [role="list"]');
+			await expect(dropList).toBeVisible({ timeout: 5000 });
+			await expect(dropList).toHaveAttribute('aria-label', 'Array rows');
+		});
+
+		test('add row button icon has aria-hidden', async ({ page }) => {
+			await signIn(page, TEST_CREDENTIALS);
+			await page.goto('/admin/collections/field-test-items/new');
+			await page.waitForLoadState('domcontentloaded');
+
+			const heading = page.locator('main h1');
+			await expect(heading).toBeVisible({ timeout: 15000 });
+
+			// The "Add Row" button icon should have aria-hidden
+			const addRowIcon = page.locator(
+				'mcms-array-field-renderer button:has-text("Add Row") ng-icon',
+			);
+			await expect(addRowIcon).toBeVisible({ timeout: 10000 });
+			await expect(addRowIcon).toHaveAttribute('aria-hidden', 'true');
+		});
+	});
+
+	// Note: Blocks field accessibility (role="list", aria-label, icon aria-hidden) is verified
+	// by unit tests. The seeding-test-app's pages collection uses admin: { editor: 'visual' }
+	// which renders the visual block editor instead of mcms-blocks-field-renderer.
+
+	test.describe('Live preview accessibility', () => {
+		let eventId: string;
+
+		test.beforeAll(async ({ request }) => {
+			const signInResponse = await request.post('/api/auth/sign-in/email', {
+				headers: { 'Content-Type': 'application/json' },
+				data: {
+					email: TEST_AUTHOR2_CREDENTIALS.email,
+					password: TEST_AUTHOR2_CREDENTIALS.password,
+				},
+			});
+			expect(signInResponse.ok()).toBe(true);
+
+			const createResponse = await request.post('/api/events', {
+				headers: { 'Content-Type': 'application/json' },
+				data: {
+					title: 'A11Y-Phase6 Preview Event',
+					description: 'Event for Phase 6 a11y testing',
+					location: 'Test City',
+				},
+			});
+			expect(createResponse.status(), 'Event create should return 201').toBe(201);
+
+			const created = (await createResponse.json()) as {
+				doc: { id: string };
+			};
+			eventId = created.doc.id;
+		});
+
+		test.afterAll(async ({ request }) => {
+			await request.post('/api/auth/sign-in/email', {
+				headers: { 'Content-Type': 'application/json' },
+				data: {
+					email: TEST_AUTHOR2_CREDENTIALS.email,
+					password: TEST_AUTHOR2_CREDENTIALS.password,
+				},
+			});
+			if (eventId) {
+				await request.delete(`/api/events/${eventId}`);
+			}
+		});
+
+		test('refresh button has aria-label', async ({ page }) => {
+			await signIn(page, TEST_AUTHOR2_CREDENTIALS);
+			await page.goto(`/admin/collections/events/${eventId}/edit`);
+			await page.waitForLoadState('domcontentloaded');
+
+			const previewLayout = page.locator('[data-testid="preview-layout"]');
+			await expect(previewLayout).toBeVisible({ timeout: 15000 });
+
+			// Refresh button should have an accessible label
+			const refreshButton = page.locator('[data-testid="preview-refresh"]');
+			await expect(refreshButton).toBeVisible();
+			await expect(refreshButton).toHaveAttribute('aria-label', 'Refresh preview');
+		});
+	});
+
+	test('relationship field action buttons do NOT have aria-live', async ({ page }) => {
+		await signIn(page, TEST_CREDENTIALS);
+		await page.goto('/admin/collections/articles/new');
+		await page.waitForLoadState('domcontentloaded');
+
+		const heading = page.locator('main h1');
+		await expect(heading).toBeVisible({ timeout: 15000 });
+
+		// The relationship field renderer should be present (articles have a "category" field)
+		const relationshipRenderer = page.locator('mcms-relationship-field-renderer');
+		await expect(relationshipRenderer.first()).toBeVisible({ timeout: 10000 });
+
+		// The "New" button should be visible (it's inside the action buttons container)
+		const newButton = relationshipRenderer.first().locator('button:has-text("New")');
+		await expect(newButton).toBeVisible({ timeout: 5000 });
+
+		// The parent container of the "New" button should NOT have aria-live attribute
+		// (was removed because it's a static container, not a dynamic live region)
+		const ariaLive = await newButton.locator('..').getAttribute('aria-live');
+		expect(ariaLive, 'Relationship action buttons should not have aria-live').toBeNull();
+	});
+
+	// Note: Sidebar section toggle SVGs (accordion trigger) and menubar SVG aria-hidden
+	// fixes are verified by unit tests. The seeding-test-app sidebar sections use
+	// collapsible=false (default), so no toggle buttons/SVGs are rendered.
+
+	test('full axe re-scan on field-test-items create form (Phase 6 validation)', async ({
+		page,
+	}) => {
+		await signIn(page, TEST_CREDENTIALS);
+		await page.goto('/admin/collections/field-test-items/new');
+		await page.waitForLoadState('domcontentloaded');
+
+		const heading = page.locator('main h1');
+		await expect(heading).toBeVisible({ timeout: 15000 });
+
+		// Exclude known pre-existing color-contrast issues on destructive variants
+		// (theme color issue tracked separately, not part of Phase 6 ARIA fixes)
+		const results = await checkA11y(page, {
+			exclude: ['[variant="destructive"]', 'mcms-toast', 'mcms-alert'],
+		});
+		expect(
+			results.violations,
+			`field-test-items create form has ${results.violations.length} axe violation(s):\n${formatViolations(results.violations)}`,
+		).toEqual([]);
+	});
+
+	test('full axe re-scan on pages create form with blocks (Phase 6 validation)', async ({
+		page,
+	}) => {
+		await signIn(page, TEST_CREDENTIALS);
+		await page.goto('/admin/collections/pages/new');
+		await page.waitForLoadState('domcontentloaded');
+
+		const heading = page.locator('main h1');
+		await expect(heading).toBeVisible({ timeout: 15000 });
+
+		// Exclude known pre-existing color-contrast issues on destructive variants
+		const results = await checkA11y(page, {
+			exclude: ['[variant="destructive"]', 'mcms-toast', 'mcms-alert'],
+		});
+		expect(
+			results.violations,
+			`Pages create form has ${results.violations.length} axe violation(s):\n${formatViolations(results.violations)}`,
 		).toEqual([]);
 	});
 });
