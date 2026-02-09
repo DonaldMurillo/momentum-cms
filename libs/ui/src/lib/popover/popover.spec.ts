@@ -84,7 +84,8 @@ describe('PopoverTrigger', () => {
 
 		// Close via backdrop click
 		const backdrop = document.querySelector('.cdk-overlay-backdrop') as HTMLElement;
-		backdrop?.click();
+		expect(backdrop).toBeTruthy();
+		backdrop.click();
 		fixture.detectChanges();
 
 		expect(buttonElement.getAttribute('aria-expanded')).toBe('false');

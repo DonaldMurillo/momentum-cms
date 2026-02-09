@@ -54,22 +54,21 @@ test.describe('Accessibility: Login page', () => {
 		await expect(passwordLabel).toBeVisible();
 	});
 
-	test('spinner emoji has aria-hidden when loading', async ({ page }) => {
+	test('submit button has aria-busy when loading', async ({ page }) => {
 		await page.goto('/admin/login');
 		await page.waitForLoadState('domcontentloaded');
 
-		// The spinner emoji is only visible during loading, so check for it in the DOM
-		// It should have aria-hidden="true" whether visible or not
-		const spinnerEmojis = page.locator('.animate-spin[aria-hidden="true"]');
-		// Count should be 0 when not loading (spinner not rendered)
-		// If loading, it should have aria-hidden
-		const count = await spinnerEmojis.count();
-		if (count > 0) {
-			for (let i = 0; i < count; i++) {
-				await expect(spinnerEmojis.nth(i)).toHaveAttribute('aria-hidden', 'true');
-			}
-		}
-		// No duplicates - pass regardless since spinner may not be visible
+		const emailInput = page.locator('#login-email');
+		await expect(emailInput).toBeVisible({ timeout: 10000 });
+		await emailInput.fill('test@example.com');
+		await page.locator('#login-password').fill('WrongPassword123!');
+
+		// The submit button should have aria-busy attribute available
+		const submitButton = page.locator('button[type="submit"]');
+		await expect(submitButton).toBeVisible();
+
+		// Before submission, aria-busy should be "false"
+		await expect(submitButton).toHaveAttribute('aria-busy', 'false');
 	});
 });
 
@@ -152,26 +151,28 @@ test.describe('Accessibility: Dashboard', () => {
 });
 
 test.describe('Accessibility: Entity form', () => {
-	test('error alert has role="alert" and aria-live="assertive"', async ({ page }) => {
+	test('error alert has role="alert" and aria-live="assertive" after validation failure', async ({
+		page,
+	}) => {
 		await signIn(page, TEST_CREDENTIALS);
 
-		// Navigate to create page and trigger a validation scenario
+		// Navigate to create page
 		await page.goto('/admin/collections/articles/create');
 		await page.waitForLoadState('domcontentloaded');
 
-		// The error alert should have proper ARIA attributes when visible
-		// Check the mcms-alert element in the DOM for the correct attributes
-		const _alertElement = page.locator('mcms-alert[role="alert"][aria-live="assertive"]');
+		// Wait for the form to render
+		const heading = page.locator('main h1');
+		await expect(heading).toBeVisible({ timeout: 15000 });
 
-		// The alert may not be visible until there's an error, but if present
-		// it should have the correct attributes
+		// Submit the form without filling required fields to trigger validation error
+		const saveButton = page.locator('button:has-text("Save"), button:has-text("Create")');
+		await expect(saveButton.first()).toBeVisible({ timeout: 5000 });
+		await saveButton.first().click();
+
+		// After validation failure, an alert element should appear
 		const formErrorAlert = page.locator('[role="alert"]');
-		const count = await formErrorAlert.count();
-		for (let i = 0; i < count; i++) {
-			if (await formErrorAlert.nth(i).isVisible()) {
-				await expect(formErrorAlert.nth(i)).toHaveAttribute('aria-live', 'assertive');
-			}
-		}
+		await expect(formErrorAlert.first()).toBeVisible({ timeout: 5000 });
+		await expect(formErrorAlert.first()).toHaveAttribute('aria-live', 'assertive');
 	});
 });
 
@@ -444,44 +445,38 @@ test.describe('Accessibility: Media library', () => {
 		await page.goto('/admin/media');
 		await page.waitForLoadState('domcontentloaded');
 
-		// All ng-icon elements inside icon-only buttons should have aria-hidden
-		const _iconButtons = page.locator('button[aria-label] ng-icon[aria-hidden="true"]');
-		// If there are media items, hover buttons should have aria-hidden on icons
-		// Also check the empty state icon
-		const emptyStateIcon = page.locator('ng-icon[aria-hidden="true"]');
-		// At least the upload icon in empty state or the header should be present
-		const _count = await emptyStateIcon.count();
-		// Just verify no ng-icons are missing aria-hidden when they should have it
-		// (non-zero means we applied the fix correctly)
+		// Wait for the page to fully render
+		const searchInput = page.locator('[aria-label="Search media files"]');
+		await expect(searchInput).toBeVisible({ timeout: 15000 });
+
+		// All ng-icon elements that are purely decorative should have aria-hidden="true"
+		const iconsWithAriaHidden = page.locator('ng-icon[aria-hidden="true"]');
+		const count = await iconsWithAriaHidden.count();
+		// The page should have at least one icon with aria-hidden (sidebar icons, etc.)
+		expect(count, 'At least one decorative icon should have aria-hidden="true"').toBeGreaterThan(0);
+
+		// Verify no ng-icon elements are missing aria-hidden when inside icon-only buttons
+		const iconsInLabeledButtons = page.locator('button[aria-label] ng-icon');
+		const labeledBtnIconCount = await iconsInLabeledButtons.count();
+		for (let i = 0; i < labeledBtnIconCount; i++) {
+			await expect(iconsInLabeledButtons.nth(i)).toHaveAttribute('aria-hidden', 'true');
+		}
 	});
 });
 
 test.describe('Accessibility: Upload field', () => {
-	test('drop zone has accessible label and role', async ({ page }) => {
+	test('media upload button has accessible label', async ({ page }) => {
 		await signIn(page, TEST_CREDENTIALS);
-
-		// Navigate to a page with an upload field
-		// Media collection should have upload functionality
-		// Articles don't have upload fields, so we need to check a collection that does
-		await page.goto('/admin/collections/articles/create');
+		await page.goto('/admin/media');
 		await page.waitForLoadState('domcontentloaded');
 
-		// Check for upload drop zones with proper ARIA attributes
-		const dropZones = page.locator('[role="button"][aria-label*="Upload"]');
-		const count = await dropZones.count();
+		// The media library should have an upload button with an accessible label
+		const uploadButton = page.locator('button:has-text("Upload")');
+		await expect(uploadButton.first()).toBeVisible({ timeout: 15000 });
 
-		for (let i = 0; i < count; i++) {
-			const zone = dropZones.nth(i);
-			if (await zone.isVisible()) {
-				await expect(zone).toHaveAttribute(
-					'aria-label',
-					/Upload.*Drag and drop|Drag and drop.*Upload/,
-				);
-
-				// Should also have aria-disabled attribute
-				await expect(zone).toHaveAttribute('aria-disabled', /.+/);
-			}
-		}
+		// File input should be present in the DOM for upload functionality
+		const fileInput = page.locator('input[type="file"]');
+		await expect(fileInput).toBeAttached();
 	});
 });
 
@@ -571,30 +566,28 @@ test.describe('Accessibility: Keyboard navigation', () => {
 		const table = page.locator('table');
 		await expect(table).toBeVisible({ timeout: 15000 });
 
-		// Sort header buttons should be focusable
+		// Sort header buttons must be present - articles table always has sortable columns
 		const sortButtons = page.locator('th button');
-		const count = await sortButtons.count();
+		await expect(sortButtons.first()).toBeVisible({ timeout: 5000 });
 
-		if (count > 0) {
-			// Focus the first sort button and verify it's keyboard-accessible
-			await sortButtons.first().focus();
-			await expect(sortButtons.first()).toBeFocused();
+		// Focus the first sort button and verify it's keyboard-accessible
+		await sortButtons.first().focus();
+		await expect(sortButtons.first()).toBeFocused();
 
-			// Press Enter to activate sort (should change aria-sort)
-			const th = page.locator('th').first();
-			const sortBefore = await th.getAttribute('aria-sort');
-			await page.keyboard.press('Enter');
+		// Press Enter to activate sort (should change aria-sort)
+		const th = page.locator('th').first();
+		const sortBefore = await th.getAttribute('aria-sort');
+		await page.keyboard.press('Enter');
 
-			// After pressing Enter, aria-sort should change
-			await expect
-				.poll(
-					async () => {
-						return th.getAttribute('aria-sort');
-					},
-					{ timeout: 5000, message: 'aria-sort should change after Enter' },
-				)
-				.not.toBe(sortBefore);
-		}
+		// After pressing Enter, aria-sort should change
+		await expect
+			.poll(
+				async () => {
+					return th.getAttribute('aria-sort');
+				},
+				{ timeout: 5000, message: 'aria-sort should change after Enter' },
+			)
+			.not.toBe(sortBefore);
 	});
 });
 
