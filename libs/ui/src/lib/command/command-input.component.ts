@@ -52,8 +52,9 @@ import {
 			(input)="onInput($event)"
 			role="combobox"
 			aria-autocomplete="list"
-			aria-expanded="true"
-			aria-controls=""
+			[attr.aria-expanded]="ariaExpanded()"
+			[attr.aria-controls]="ariaControls() || null"
+			[attr.aria-label]="ariaLabel() || placeholder() || 'Search'"
 		/>
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
@@ -73,6 +74,15 @@ export class CommandInput {
 
 	/** Whether to autofocus the input on mount */
 	readonly autofocus = input(false);
+
+	/** ID of the associated command list for aria-controls */
+	readonly ariaControls = input('');
+
+	/** Whether the associated list is expanded */
+	readonly ariaExpanded = input(true);
+
+	/** Accessible label for the input */
+	readonly ariaLabel = input('');
 
 	/** Additional CSS classes */
 	readonly class = input('');
@@ -94,7 +104,7 @@ export class CommandInput {
 	});
 
 	protected readonly inputClasses = computed(() => {
-		return 'flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50';
+		return 'flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50';
 	});
 
 	protected onInput(event: Event): void {

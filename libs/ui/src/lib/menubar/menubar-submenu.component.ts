@@ -98,6 +98,7 @@ export class MenubarSubmenu {
 				stroke-linecap="round"
 				stroke-linejoin="round"
 				class="ml-2 h-4 w-4"
+				aria-hidden="true"
 			>
 				<polyline points="9 18 15 12 9 6" />
 			</svg>

@@ -16,11 +16,12 @@ import { GridCell } from '@angular/aria/grid';
 	hostDirectives: [
 		{
 			directive: GridCell,
-			inputs: ['disabled', 'colSpan', 'rowSpan', 'role'],
+			inputs: ['disabled', 'colSpan', 'rowSpan'],
 		},
 	],
 	host: {
 		'[class]': 'hostClasses()',
+		'[attr.role]': '"columnheader"',
 	},
 	template: `<ng-content />`,
 	styles: `

@@ -31,7 +31,7 @@
 
 		/* Muted - Light gray for subtle backgrounds */
 		--mcms-muted: 210 40% 96%;
-		--mcms-muted-foreground: 215 16% 47%;
+		--mcms-muted-foreground: 215 16% 43%;
 
 		/* Accent - Hover states */
 		--mcms-accent: 210 40% 96%;

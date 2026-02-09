@@ -1,12 +1,23 @@
 import { ChangeDetectionStrategy, Component, computed, forwardRef, input } from '@angular/core';
-import { CdkDropList, CdkDrag, CdkDragHandle, type CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import {
+	CdkDropList,
+	CdkDrag,
+	CdkDragHandle,
+	type CdkDragDrop,
+	moveItemInArray,
+} from '@angular/cdk/drag-drop';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { heroPlus, heroTrash, heroBars2 } from '@ng-icons/heroicons/outline';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, Button } from '@momentum-cms/ui';
 import { humanizeFieldName } from '@momentum-cms/core';
 import type { Field } from '@momentum-cms/core';
 import type { EntityFormMode } from '../entity-form.types';
-import { getFieldNodeState, getSubNode, isRecord, getFieldDefaultValue } from '../entity-form.types';
+import {
+	getFieldNodeState,
+	getSubNode,
+	isRecord,
+	getFieldDefaultValue,
+} from '../entity-form.types';
 import { FieldRenderer } from './field-renderer.component';
 
 /**
@@ -58,7 +69,13 @@ import { FieldRenderer } from './field-renderer.component';
 						No items yet. Click "Add Row" to get started.
 					</p>
 				} @else {
-					<div cdkDropList (cdkDropListDropped)="onDrop($event)" class="space-y-3">
+					<div
+						cdkDropList
+						(cdkDropListDropped)="onDrop($event)"
+						class="space-y-3"
+						role="list"
+						aria-label="Array rows"
+					>
 						@for (row of rows(); track $index; let i = $index) {
 							<div
 								cdkDrag
@@ -108,7 +125,7 @@ import { FieldRenderer } from './field-renderer.component';
 			@if (canAddRow()) {
 				<mcms-card-footer>
 					<button mcms-button variant="outline" (click)="addRow()">
-						<ng-icon name="heroPlus" size="16" />
+						<ng-icon name="heroPlus" size="16" aria-hidden="true" />
 						Add Row
 					</button>
 				</mcms-card-footer>

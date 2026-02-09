@@ -59,6 +59,7 @@ import { DOCUMENT } from '@angular/common';
 				[value]="value()"
 				[placeholder]="placeholder()"
 				[disabled]="disabled()"
+				[attr.aria-label]="ariaLabel()"
 				(input)="value.set(inputEl.value)"
 				(keydown.escape)="onClear()"
 				class="flex-1 bg-transparent outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
@@ -73,6 +74,7 @@ import { DOCUMENT } from '@angular/common';
 					[attr.aria-label]="'Clear search'"
 				>
 					<svg
+						aria-hidden="true"
 						xmlns="http://www.w3.org/2000/svg"
 						width="14"
 						height="14"
@@ -106,6 +108,9 @@ export class SearchInput {
 
 	/** Whether the input is disabled. */
 	readonly disabled = input(false);
+
+	/** Accessible label for the search input. */
+	readonly ariaLabel = input('Search');
 
 	/** Additional CSS classes. */
 	readonly class = input('');

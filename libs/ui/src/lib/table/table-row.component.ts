@@ -22,6 +22,7 @@ import { GridRow } from '@angular/aria/grid';
 	],
 	host: {
 		'[class]': 'hostClasses()',
+		role: 'row',
 	},
 	template: `<ng-content />`,
 	styles: `

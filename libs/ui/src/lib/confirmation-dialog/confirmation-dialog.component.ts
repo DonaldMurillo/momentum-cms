@@ -32,6 +32,7 @@ import type { ConfirmationConfig } from './confirmation-dialog.types';
 						@switch (config.icon) {
 							@case ('warning') {
 								<svg
+									aria-hidden="true"
 									xmlns="http://www.w3.org/2000/svg"
 									width="24"
 									height="24"
@@ -51,6 +52,7 @@ import type { ConfirmationConfig } from './confirmation-dialog.types';
 							}
 							@case ('danger') {
 								<svg
+									aria-hidden="true"
 									xmlns="http://www.w3.org/2000/svg"
 									width="24"
 									height="24"
@@ -68,6 +70,7 @@ import type { ConfirmationConfig } from './confirmation-dialog.types';
 							}
 							@case ('info') {
 								<svg
+									aria-hidden="true"
 									xmlns="http://www.w3.org/2000/svg"
 									width="24"
 									height="24"
@@ -85,6 +88,7 @@ import type { ConfirmationConfig } from './confirmation-dialog.types';
 							}
 							@case ('question') {
 								<svg
+									aria-hidden="true"
 									xmlns="http://www.w3.org/2000/svg"
 									width="24"
 									height="24"

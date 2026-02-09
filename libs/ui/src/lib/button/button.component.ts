@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import {
+	ChangeDetectionStrategy,
+	Component,
+	computed,
+	effect,
+	ElementRef,
+	inject,
+	input,
+} from '@angular/core';
 import type { ButtonSize, ButtonVariant } from './button.types';
 
 /**
@@ -9,13 +17,18 @@ import type { ButtonSize, ButtonVariant } from './button.types';
  * <button mcms-button>Default</button>
  * <button mcms-button variant="destructive">Delete</button>
  * <button mcms-button variant="outline" size="sm">Small</button>
+ * <a mcms-button [disabled]="true">Disabled Link</a>
+ * <button mcms-button [loading]="true">Saving...</button>
+ * <button mcms-button size="icon" ariaLabel="Settings"><svg>...</svg></button>
  * ```
  */
 @Component({
 	selector: 'button[mcms-button], a[mcms-button]',
 	host: {
 		'[class]': 'class()',
-		'[attr.disabled]': 'disabled() || null',
+		'[attr.disabled]': 'isNativeDisabled()',
+		'[attr.aria-disabled]': 'isEffectivelyDisabled() || null',
+		'[attr.aria-busy]': 'loading() || null',
 		'[style.--btn-bg]': 'variantBg()',
 		'[style.--btn-color]': 'variantColor()',
 		'[style.--btn-hover-bg]': 'variantHoverBg()',
@@ -44,7 +57,7 @@ import type { ButtonSize, ButtonVariant } from './button.types';
 			background-color: var(--btn-bg);
 			color: var(--btn-color);
 		}
-		:host(:hover:not([disabled])) {
+		:host(:hover:not([disabled]):not([aria-disabled='true'])) {
 			background-color: var(--btn-hover-bg);
 		}
 		:host(:focus-visible) {
@@ -53,7 +66,8 @@ import type { ButtonSize, ButtonVariant } from './button.types';
 				0 0 0 2px hsl(var(--mcms-background)),
 				0 0 0 4px hsl(var(--mcms-ring));
 		}
-		:host([disabled]) {
+		:host([disabled]),
+		:host([aria-disabled='true']) {
 			pointer-events: none;
 			opacity: 0.5;
 			cursor: not-allowed;
@@ -62,10 +76,38 @@ import type { ButtonSize, ButtonVariant } from './button.types';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Button {
+	private readonly el = inject(ElementRef<HTMLElement>);
+
+	/** Whether the host element is an anchor tag (determined once at construction). */
+	private readonly isAnchor = this.el.nativeElement.tagName === 'A';
+
 	readonly variant = input<ButtonVariant>('primary');
 	readonly size = input<ButtonSize>('md');
 	readonly disabled = input(false);
+	readonly loading = input(false);
+	readonly ariaLabel = input<string | undefined>(undefined);
 	readonly class = input('');
+
+	constructor() {
+		effect(() => {
+			const label = this.ariaLabel();
+			if (label !== undefined) {
+				this.el.nativeElement.setAttribute('aria-label', label);
+			}
+		});
+	}
+
+	/** Whether the button is effectively disabled (disabled or loading). */
+	readonly isEffectivelyDisabled = computed(() => this.disabled() || this.loading());
+
+	/**
+	 * Native disabled attribute — only applied to `<button>` elements.
+	 * `<a>` elements don't support `disabled`; they use `aria-disabled` instead.
+	 */
+	readonly isNativeDisabled = computed(() => {
+		if (this.isAnchor) return null;
+		return this.isEffectivelyDisabled() || null;
+	});
 
 	// Size styles
 	readonly sizeHeight = computed(() => {

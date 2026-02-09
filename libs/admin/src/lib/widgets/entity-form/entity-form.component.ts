@@ -12,6 +12,7 @@ import {
 	untracked,
 } from '@angular/core';
 import { Router } from '@angular/router';
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { form, submit } from '@angular/forms/signals';
 import type { CollectionConfig, Field } from '@momentum-cms/core';
 import { humanizeFieldName } from '@momentum-cms/core';
@@ -200,6 +201,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	private readonly collectionAccess = inject(CollectionAccessService);
 	private readonly feedback = inject(FeedbackService);
 	private readonly router = inject(Router);
+	private readonly liveAnnouncer = inject(LiveAnnouncer);
 
 	/** The collection configuration */
 	readonly collection = input.required<CollectionConfig>();
@@ -451,6 +453,10 @@ export class EntityFormWidget<T extends Entity = Entity> {
 		// submit() didn't call the callback — form is invalid
 		if (!submitted) {
 			this.formError.set('Please fix the errors above before submitting.');
+			void this.liveAnnouncer.announce(
+				'Form submission failed. Please fix the errors above before submitting.',
+				'assertive',
+			);
 		}
 	}
 

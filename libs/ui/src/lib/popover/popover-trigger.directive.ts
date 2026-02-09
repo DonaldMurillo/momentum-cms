@@ -10,6 +10,7 @@ import {
 	TemplateRef,
 	ViewContainerRef,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { Overlay, OverlayRef, PositionStrategy } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
 import type { PopoverAlign, PopoverSide } from './popover.types';
@@ -49,6 +50,7 @@ export class PopoverTrigger implements OnDestroy {
 	readonly opened = output<void>();
 	readonly closed = output<void>();
 
+	private readonly doc = inject(DOCUMENT);
 	private readonly overlay = inject(Overlay);
 	private readonly elementRef = inject(ElementRef<HTMLElement>);
 	private readonly viewContainerRef = inject(ViewContainerRef);
@@ -115,6 +117,17 @@ export class PopoverTrigger implements OnDestroy {
 
 		const portal = new TemplatePortal(this.mcmsPopoverTrigger(), this.viewContainerRef);
 		this.overlayRef.attach(portal);
+
+		// Focus the first focusable element inside the popover for keyboard accessibility
+		this.doc.defaultView?.requestAnimationFrame(() => {
+			const overlayEl = this.overlayRef?.overlayElement;
+			if (overlayEl) {
+				const focusable = overlayEl.querySelector<HTMLElement>(
+					'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+				);
+				focusable?.focus();
+			}
+		});
 	}
 
 	private getPositionStrategy(): PositionStrategy {

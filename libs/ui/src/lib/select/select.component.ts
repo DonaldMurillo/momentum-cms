@@ -28,6 +28,8 @@ import type { SelectOption } from './select.types';
 				[disabled]="disabled()"
 				[attr.aria-invalid]="hasError() || null"
 				[attr.aria-describedby]="ariaDescribedBy()"
+				[attr.aria-required]="required() || null"
+				[attr.aria-label]="ariaLabel() || null"
 				(change)="value.set(selectEl.value)"
 				(blur)="blurred.emit()"
 				class="flex h-10 w-full appearance-none items-center rounded-md border border-input bg-background pl-3 pr-10 py-2 text-sm
@@ -88,6 +90,8 @@ export class Select {
 	readonly placeholder = input('');
 	readonly options = input<SelectOption[]>([]);
 	readonly describedBy = input<string | undefined>(undefined);
+	/** Accessible label for the select element. */
+	readonly ariaLabel = input<string | undefined>(undefined);
 
 	// === Computed state ===
 	readonly hasError = computed(() => this.errors().length > 0);

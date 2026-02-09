@@ -99,6 +99,14 @@ import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
 		}
 	`,
 	template: `
+		<!-- Skip navigation link for keyboard users -->
+		<a
+			href="#mcms-main-content"
+			class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:shadow-lg"
+		>
+			Skip to main content
+		</a>
+
 		<!-- Mobile header with hamburger (hidden at md breakpoint = 768px+) -->
 		<header
 			class="md:hidden fixed top-0 inset-x-0 h-14 border-b border-border bg-background z-30 flex items-center px-4 gap-4"
@@ -117,7 +125,7 @@ import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
 		/>
 
 		<!-- Main Content (with top padding on mobile for header, normal padding at md+) -->
-		<main class="flex-1 p-8 overflow-y-auto overflow-x-hidden pt-20 md:pt-8">
+		<main id="mcms-main-content" class="flex-1 p-8 overflow-y-auto overflow-x-hidden pt-20 md:pt-8">
 			@defer (hydrate on immediate) {
 				<router-outlet></router-outlet>
 			}

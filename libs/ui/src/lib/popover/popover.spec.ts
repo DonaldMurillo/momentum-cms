@@ -20,6 +20,7 @@ import { PopoverTrigger } from './popover-trigger.directive';
 		<ng-template #popoverContent>
 			<mcms-popover-content>
 				<p>Test popover content</p>
+				<button class="focusable-btn">Focusable button</button>
 			</mcms-popover-content>
 		</ng-template>
 	`,
@@ -68,6 +69,27 @@ describe('PopoverTrigger', () => {
 	it('should have aria-haspopup="dialog"', () => {
 		expect(buttonElement.getAttribute('aria-haspopup')).toBe('dialog');
 	});
+
+	it('should set aria-expanded="true" when opened', () => {
+		buttonElement.click();
+		fixture.detectChanges();
+
+		expect(buttonElement.getAttribute('aria-expanded')).toBe('true');
+	});
+
+	it('should set aria-expanded="false" when closed', () => {
+		buttonElement.click();
+		fixture.detectChanges();
+		expect(buttonElement.getAttribute('aria-expanded')).toBe('true');
+
+		// Close via backdrop click
+		const backdrop = document.querySelector('.cdk-overlay-backdrop') as HTMLElement;
+		expect(backdrop).toBeTruthy();
+		backdrop.click();
+		fixture.detectChanges();
+
+		expect(buttonElement.getAttribute('aria-expanded')).toBe('false');
+	});
 });
 
 describe('PopoverContent', () => {
@@ -84,5 +106,9 @@ describe('PopoverContent', () => {
 
 	it('should create', () => {
 		expect(fixture.componentInstance).toBeTruthy();
+	});
+
+	it('should have role="dialog"', () => {
+		expect(fixture.nativeElement.getAttribute('role')).toBe('dialog');
 	});
 });

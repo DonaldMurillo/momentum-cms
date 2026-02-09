@@ -12,6 +12,8 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 	selector: 'mcms-command-empty',
 	host: {
 		'[class]': 'hostClasses()',
+		role: 'status',
+		'aria-live': 'polite',
 	},
 	template: `<ng-content />`,
 	changeDetection: ChangeDetectionStrategy.OnPush,

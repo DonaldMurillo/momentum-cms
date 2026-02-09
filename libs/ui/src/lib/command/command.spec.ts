@@ -121,6 +121,65 @@ describe('CommandInput', () => {
 		const input = fixture.nativeElement.querySelector('input');
 		expect(input.getAttribute('placeholder')).toBe('Search...');
 	});
+
+	it('should have role="combobox" on input', () => {
+		const input = fixture.nativeElement.querySelector('input');
+		expect(input.getAttribute('role')).toBe('combobox');
+	});
+
+	it('should have aria-autocomplete="list" on input', () => {
+		const input = fixture.nativeElement.querySelector('input');
+		expect(input.getAttribute('aria-autocomplete')).toBe('list');
+	});
+
+	it('should not set aria-controls when empty', () => {
+		const input = fixture.nativeElement.querySelector('input');
+		expect(input.getAttribute('aria-controls')).toBeNull();
+	});
+
+	it('should set aria-controls when provided', () => {
+		fixture.componentRef.setInput('ariaControls', 'my-list-id');
+		fixture.detectChanges();
+		const input = fixture.nativeElement.querySelector('input');
+		expect(input.getAttribute('aria-controls')).toBe('my-list-id');
+	});
+
+	it('should default aria-expanded to true', () => {
+		const input = fixture.nativeElement.querySelector('input');
+		expect(input.getAttribute('aria-expanded')).toBe('true');
+	});
+
+	it('should reflect ariaExpanded input', () => {
+		fixture.componentRef.setInput('ariaExpanded', false);
+		fixture.detectChanges();
+		const input = fixture.nativeElement.querySelector('input');
+		expect(input.getAttribute('aria-expanded')).toBe('false');
+	});
+
+	it('should fall back to placeholder for aria-label', () => {
+		fixture.componentRef.setInput('placeholder', 'Search items');
+		fixture.detectChanges();
+		const input = fixture.nativeElement.querySelector('input');
+		expect(input.getAttribute('aria-label')).toBe('Search items');
+	});
+
+	it('should use explicit ariaLabel over placeholder', () => {
+		fixture.componentRef.setInput('placeholder', 'Search items');
+		fixture.componentRef.setInput('ariaLabel', 'Custom label');
+		fixture.detectChanges();
+		const input = fixture.nativeElement.querySelector('input');
+		expect(input.getAttribute('aria-label')).toBe('Custom label');
+	});
+
+	it('should fall back to "Search" when no placeholder or ariaLabel', () => {
+		const input = fixture.nativeElement.querySelector('input');
+		expect(input.getAttribute('aria-label')).toBe('Search');
+	});
+
+	it('should have aria-hidden on search icon SVG', () => {
+		const svg = fixture.nativeElement.querySelector('svg');
+		expect(svg.getAttribute('aria-hidden')).toBe('true');
+	});
 });
 
 describe('CommandEmpty', () => {
@@ -150,6 +209,14 @@ describe('CommandEmpty', () => {
 
 	it('should have padding', () => {
 		expect(fixture.nativeElement.classList.contains('py-6')).toBe(true);
+	});
+
+	it('should have role="status"', () => {
+		expect(fixture.nativeElement.getAttribute('role')).toBe('status');
+	});
+
+	it('should have aria-live="polite"', () => {
+		expect(fixture.nativeElement.getAttribute('aria-live')).toBe('polite');
 	});
 });
 
@@ -184,6 +251,48 @@ describe('CommandGroup', () => {
 	it('should not render label when not provided', () => {
 		const label = fixture.nativeElement.querySelector('div');
 		expect(label).toBeNull();
+	});
+
+	it('should set aria-labelledby when label is provided', () => {
+		fixture.componentRef.setInput('label', 'Test Group');
+		fixture.detectChanges();
+		const labelledBy = fixture.nativeElement.getAttribute('aria-labelledby');
+		expect(labelledBy).toBeTruthy();
+		// The ID should match the label element's id
+		const labelEl = fixture.nativeElement.querySelector('div');
+		expect(labelEl.getAttribute('id')).toBe(labelledBy);
+	});
+
+	it('should not set aria-labelledby when no label', () => {
+		expect(fixture.nativeElement.getAttribute('aria-labelledby')).toBeNull();
+	});
+});
+
+describe('CommandList', () => {
+	let fixture: ComponentFixture<CommandList>;
+
+	beforeEach(async () => {
+		await TestBed.configureTestingModule({
+			imports: [CommandList],
+		}).compileComponents();
+
+		fixture = TestBed.createComponent(CommandList);
+		fixture.detectChanges();
+		await fixture.whenStable();
+	});
+
+	it('should create', () => {
+		expect(fixture.componentInstance).toBeTruthy();
+	});
+
+	it('should have a unique auto-generated id', () => {
+		const id = fixture.nativeElement.getAttribute('id');
+		expect(id).toBeTruthy();
+		expect(id).toMatch(/^mcms-command-list-\d+$/);
+	});
+
+	it('should have role="listbox"', () => {
+		expect(fixture.nativeElement.getAttribute('role')).toBe('listbox');
 	});
 });
 
@@ -276,5 +385,20 @@ describe('Command Integration', () => {
 		expect(labels.length).toBe(2);
 		expect(labels[0].textContent).toContain('Suggestions');
 		expect(labels[1].textContent).toContain('Settings');
+	});
+
+	it('should have aria-labelledby on groups with labels', () => {
+		const groups = fixture.nativeElement.querySelectorAll('mcms-command-group');
+		for (const group of groups) {
+			const labelledBy = group.getAttribute('aria-labelledby');
+			expect(labelledBy).toBeTruthy();
+			const labelEl = group.querySelector(`#${labelledBy}`);
+			expect(labelEl).toBeTruthy();
+		}
+	});
+
+	it('should have unique id on command list', () => {
+		const list = fixture.nativeElement.querySelector('mcms-command-list');
+		expect(list.getAttribute('id')).toMatch(/^mcms-command-list-\d+$/);
 	});
 });

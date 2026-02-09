@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import {
 	Button,
+	Dialog,
 	DialogHeader,
 	DialogTitle,
 	DialogContent,
@@ -83,6 +84,7 @@ export interface MediaPickerResult {
 	selector: 'mcms-media-picker-dialog',
 	imports: [
 		Button,
+		Dialog,
 		DialogHeader,
 		DialogTitle,
 		DialogContent,
@@ -95,6 +97,7 @@ export interface MediaPickerResult {
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `
+		<mcms-dialog>
 		<mcms-dialog-header>
 			<mcms-dialog-title>Select Media</mcms-dialog-title>
 		</mcms-dialog-header>
@@ -175,6 +178,7 @@ export interface MediaPickerResult {
 				Select
 			</button>
 		</mcms-dialog-footer>
+		</mcms-dialog>
 	`,
 })
 export class MediaPickerDialog {

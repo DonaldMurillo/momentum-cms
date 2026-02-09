@@ -45,7 +45,7 @@ import type { TableFocusMode, TableSelectionMode, TableWrapMode } from './table.
 		role: 'grid',
 	},
 	template: `
-		<table [class]="tableClasses()">
+		<table role="none" [class]="tableClasses()">
 			<ng-content />
 		</table>
 	`,

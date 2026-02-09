@@ -214,7 +214,7 @@ test.describe('Live Preview', () => {
 		const locationInput = page.getByLabel('Location');
 		await expect(locationInput).toBeVisible({ timeout: 10000 });
 		await locationInput.click();
-		await page.keyboard.press('Meta+a');
+		await page.keyboard.press('ControlOrMeta+a');
 		await locationInput.pressSequentially('Updated Preview City', { delay: 20 });
 
 		// Wait for debounced postMessage containing the UPDATED location value.

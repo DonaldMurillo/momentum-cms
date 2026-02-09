@@ -1,5 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import type { Toast, ToastConfig, ToastPosition } from './toast.types';
 
 let toastIdCounter = 0;
@@ -34,6 +35,7 @@ let toastIdCounter = 0;
 @Injectable({ providedIn: 'root' })
 export class ToastService {
 	private readonly document = inject(DOCUMENT);
+	private readonly liveAnnouncer = inject(LiveAnnouncer);
 
 	/** Current toast position. */
 	readonly position = signal<ToastPosition>('bottom-right');
@@ -70,6 +72,11 @@ export class ToastService {
 			}
 			return newToasts;
 		});
+
+		// Announce to screen readers
+		const announcement = description ? `${title}. ${description}` : title;
+		const politeness = toast.variant === 'destructive' ? 'assertive' : 'polite';
+		void this.liveAnnouncer.announce(announcement, politeness);
 
 		// Schedule auto-dismiss
 		if (toast.duration > 0) {

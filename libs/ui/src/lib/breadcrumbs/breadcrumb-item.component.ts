@@ -16,6 +16,7 @@ import { NgTemplateOutlet } from '@angular/common';
 	imports: [RouterLink, NgTemplateOutlet],
 	host: {
 		'[class]': 'hostClasses()',
+		role: 'listitem',
 	},
 	template: `
 		<ng-template #content><ng-content /></ng-template>

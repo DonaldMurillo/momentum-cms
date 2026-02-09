@@ -269,12 +269,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 							[attr.aria-pressed]="isBlockquote()"
 							(click)="toggleBlockquote()"
 						>
-							<svg
-								aria-hidden="true"
-								class="h-4 w-4"
-								viewBox="0 0 24 24"
-								fill="currentColor"
-							>
+							<svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
 								<path
 									d="M4.583 17.321C3.553 16.227 3 15 3 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 01-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179zm10 0C13.553 16.227 13 15 13 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 01-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179z"
 								/>
@@ -331,9 +326,6 @@ import Placeholder from '@tiptap/extension-placeholder';
 					<div
 						#editorElement
 						class="tiptap-editor prose prose-sm dark:prose-invert max-w-none px-3 py-2"
-						role="textbox"
-						aria-multiline="true"
-						[attr.aria-label]="label() + ' editor'"
 						data-testid="rich-text-editor"
 					></div>
 				</div>
@@ -542,6 +534,13 @@ export class RichTextFieldRenderer {
 
 		this.editor = new Editor({
 			element: el.nativeElement,
+			editorProps: {
+				attributes: {
+					role: 'textbox',
+					'aria-multiline': 'true',
+					'aria-label': this.label() + ' editor',
+				},
+			},
 			extensions: [
 				StarterKit.configure({
 					heading: { levels: [1, 2, 3] },

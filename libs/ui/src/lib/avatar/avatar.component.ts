@@ -17,6 +17,8 @@ import { AVATAR_SIZE_CLASSES } from './avatar.types';
 	selector: 'mcms-avatar',
 	host: {
 		'[class]': 'hostClasses()',
+		role: 'img',
+		'[attr.aria-label]': 'ariaLabel() || null',
 	},
 	template: `<ng-content />`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,6 +29,9 @@ export class Avatar {
 
 	/** Additional CSS classes. */
 	readonly class = input('');
+
+	/** Accessible label for the avatar. */
+	readonly ariaLabel = input<string | undefined>(undefined);
 
 	/** Internal state for image loading status. */
 	readonly imageLoaded = signal(false);
