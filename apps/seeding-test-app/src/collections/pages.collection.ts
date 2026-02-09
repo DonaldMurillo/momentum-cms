@@ -1,4 +1,4 @@
-import { defineCollection, text, textarea, blocks, allowAll } from '@momentum-cms/core';
+import { defineCollection, text, textarea, blocks, allowAll, hasRole } from '@momentum-cms/core';
 
 /**
  * Pages collection for testing blocks field renderer.
@@ -9,13 +9,17 @@ export const Pages = defineCollection({
 		singular: 'Page',
 		plural: 'Pages',
 	},
-	admin: { group: 'Content' },
+	admin: {
+		group: 'Content',
+		preview: (doc) => '/' + String(doc['slug'] ?? ''),
+	},
 	fields: [
 		text('title', { required: true, label: 'Page Title' }),
 		text('slug', { required: true, label: 'URL Slug' }),
 		blocks('content', {
 			label: 'Page Content',
 			description: 'Build your page using content blocks.',
+			admin: { editor: 'visual' },
 			blocks: [
 				{
 					slug: 'hero',
@@ -49,9 +53,9 @@ export const Pages = defineCollection({
 	],
 	access: {
 		read: allowAll(),
-		create: allowAll(),
-		update: allowAll(),
-		delete: allowAll(),
-		admin: allowAll(),
+		create: hasRole('admin'),
+		update: hasRole('admin'),
+		delete: hasRole('admin'),
+		admin: hasRole('admin'),
 	},
 });
