@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type {
 	DatabaseAdapter,
 	CollectionConfig,
+	GlobalConfig,
 	Field,
 	RelationshipField,
 	OnDeleteAction,
@@ -1074,6 +1075,65 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 					}
 				}
 			}
+		},
+
+		// ============================================
+		// Globals Support
+		// ============================================
+
+		async initializeGlobals(_globals: GlobalConfig[]): Promise<void> {
+			await pool.query(`
+				CREATE TABLE IF NOT EXISTS "_globals" (
+					"slug" VARCHAR(255) PRIMARY KEY,
+					"data" JSONB NOT NULL DEFAULT '{}',
+					"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+					"updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+				)
+			`);
+		},
+
+		async findGlobal(slug: string): Promise<Record<string, unknown> | null> {
+			const result: QueryResult = await pool.query('SELECT * FROM "_globals" WHERE "slug" = $1', [
+				slug,
+			]);
+			if (result.rows.length === 0) return null;
+			const row = result.rows[0];
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- pg row is Record<string, unknown>
+			const data = (
+				typeof row['data'] === 'string' ? JSON.parse(row['data']) : row['data']
+			) as Record<string, unknown>;
+			return {
+				...data,
+				slug: row['slug'],
+				createdAt: row['createdAt'],
+				updatedAt: row['updatedAt'],
+			};
+		},
+
+		async updateGlobal(
+			slug: string,
+			data: Record<string, unknown>,
+		): Promise<Record<string, unknown>> {
+			const now = new Date().toISOString();
+			const jsonData = JSON.stringify(data);
+			const result: QueryResult = await pool.query(
+				`INSERT INTO "_globals" ("slug", "data", "createdAt", "updatedAt")
+				 VALUES ($1, $2::jsonb, $3, $4)
+				 ON CONFLICT ("slug") DO UPDATE SET "data" = $2::jsonb, "updatedAt" = $4
+				 RETURNING *`,
+				[slug, jsonData, now, now],
+			);
+			const row = result.rows[0];
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- pg row is Record<string, unknown>
+			const returned = (
+				typeof row['data'] === 'string' ? JSON.parse(row['data']) : row['data']
+			) as Record<string, unknown>;
+			return {
+				...returned,
+				slug: row['slug'],
+				createdAt: row['createdAt'],
+				updatedAt: row['updatedAt'],
+			};
 		},
 
 		async transaction<T>(callback: (txAdapter: DatabaseAdapter) => Promise<T>): Promise<T> {

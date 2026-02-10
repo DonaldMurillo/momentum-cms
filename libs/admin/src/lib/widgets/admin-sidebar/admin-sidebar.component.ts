@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import type { CollectionConfig } from '@momentum-cms/core';
+import type { CollectionConfig, GlobalConfig } from '@momentum-cms/core';
 import {
 	Sidebar,
 	SidebarNav,
@@ -36,6 +36,11 @@ import type { AdminPluginRoute } from '../../routes/momentum-admin-routes';
 interface CollectionGroup {
 	name: string;
 	collections: CollectionConfig[];
+}
+
+interface GlobalGroup {
+	name: string;
+	globals: GlobalConfig[];
 }
 
 interface PluginRouteGroup {
@@ -160,6 +165,19 @@ interface PluginRouteGroup {
 						</mcms-sidebar-section>
 					}
 
+					<!-- Global Sections (grouped by admin.group) -->
+					@for (group of globalGroups(); track group.name) {
+						<mcms-sidebar-section [title]="group.name">
+							@for (global of group.globals; track global.slug) {
+								<mcms-sidebar-nav-item
+									[label]="getGlobalLabel(global)"
+									[href]="basePath() + '/globals/' + global.slug"
+									icon="heroCog6Tooth"
+								/>
+							}
+						</mcms-sidebar-section>
+					}
+
 					<!-- Plugin Route Sections -->
 					@for (group of pluginRouteGroups(); track group.name) {
 						<mcms-sidebar-section [title]="group.name">
@@ -230,6 +248,9 @@ export class AdminSidebarWidget {
 	/** Collections to display in navigation */
 	readonly collections = input<CollectionConfig[]>([]);
 
+	/** Globals to display in navigation */
+	readonly globals = input<GlobalConfig[]>([]);
+
 	/** Plugin-registered admin routes */
 	readonly pluginRoutes = input<AdminPluginRoute[]>([]);
 
@@ -271,6 +292,28 @@ export class AdminSidebarWidget {
 		}
 		const defaultGroup = groupMap.get(DEFAULT_GROUP);
 		if (defaultGroup) groups.push({ name: DEFAULT_GROUP, collections: defaultGroup });
+		return groups;
+	});
+
+	/** Globals grouped by admin.group field */
+	readonly globalGroups = computed((): GlobalGroup[] => {
+		const globals = this.globals();
+		if (globals.length === 0) return [];
+
+		const DEFAULT_GROUP = 'Globals';
+		const groupMap = new Map<string, GlobalConfig[]>();
+
+		for (const g of globals) {
+			const name = g.admin?.group ?? DEFAULT_GROUP;
+			const list = groupMap.get(name) ?? [];
+			list.push(g);
+			groupMap.set(name, list);
+		}
+
+		const groups: GlobalGroup[] = [];
+		for (const [name, globalList] of groupMap) {
+			groups.push({ name, globals: globalList });
+		}
 		return groups;
 	});
 
@@ -324,6 +367,13 @@ export class AdminSidebarWidget {
 	 */
 	getCollectionIcon(collection: CollectionConfig): string {
 		return this.collectionIcons[collection.slug] || this.collectionIcons['default'];
+	}
+
+	/**
+	 * Get display label for a global.
+	 */
+	getGlobalLabel(global: GlobalConfig): string {
+		return global.label ?? humanizeFieldName(global.slug);
 	}
 
 	/**

@@ -359,6 +359,68 @@ describe('defineGlobal()', () => {
 		});
 	});
 
+	describe('Slug Validation', () => {
+		it('should enforce kebab-case slug', () => {
+			expect(() =>
+				defineGlobal({
+					slug: 'SiteSettings',
+					fields: [text('siteName')],
+				}),
+			).toThrow('must be kebab-case');
+		});
+
+		it('should reject slugs starting with numbers', () => {
+			expect(() =>
+				defineGlobal({
+					slug: '123settings',
+					fields: [text('siteName')],
+				}),
+			).toThrow('must be kebab-case');
+		});
+
+		it('should reject slugs with underscores', () => {
+			expect(() =>
+				defineGlobal({
+					slug: 'site_settings',
+					fields: [text('siteName')],
+				}),
+			).toThrow('must be kebab-case');
+		});
+
+		it('should reject slugs with spaces', () => {
+			expect(() =>
+				defineGlobal({
+					slug: 'site settings',
+					fields: [text('siteName')],
+				}),
+			).toThrow('must be kebab-case');
+		});
+
+		it('should accept valid kebab-case slugs', () => {
+			const global = defineGlobal({
+				slug: 'site-settings',
+				fields: [text('siteName')],
+			});
+			expect(global.slug).toBe('site-settings');
+		});
+
+		it('should accept single word slugs', () => {
+			const global = defineGlobal({
+				slug: 'navigation',
+				fields: [text('title')],
+			});
+			expect(global.slug).toBe('navigation');
+		});
+
+		it('should accept slugs with numbers after letters', () => {
+			const global = defineGlobal({
+				slug: 'settings2024',
+				fields: [text('siteName')],
+			});
+			expect(global.slug).toBe('settings2024');
+		});
+	});
+
 	describe('Global Features', () => {
 		it('should accept label', () => {
 			const SiteSettings = defineGlobal({

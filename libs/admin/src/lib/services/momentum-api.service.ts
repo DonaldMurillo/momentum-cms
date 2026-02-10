@@ -154,6 +154,7 @@ export function provideMomentumAPI(
  */
 export interface MomentumAPIServer {
 	collection<T = Record<string, unknown>>(slug: string): CollectionOperationsServer<T>;
+	global<T = Record<string, unknown>>(slug: string): GlobalOperationsServer<T>;
 	getConfig(): unknown;
 	setContext(ctx: MomentumAPIContext): MomentumAPIServer;
 	getContext(): MomentumAPIContext;
@@ -175,6 +176,27 @@ export interface CollectionOperationsServer<T = Record<string, unknown>> {
 }
 
 /**
+ * Server-side global operations.
+ */
+export interface GlobalOperationsServer<T = Record<string, unknown>> {
+	findOne(options?: { depth?: number }): Promise<T>;
+	update(data: Partial<T>): Promise<T>;
+}
+
+/**
+ * Client-side global operations (both Observable and Promise).
+ */
+export interface MomentumGlobalAPI<T = Record<string, unknown>> {
+	// Observable methods
+	findOne$(options?: { depth?: number }): Observable<T>;
+	update$(data: Partial<T>): Observable<T>;
+
+	// Promise methods
+	findOne(options?: { depth?: number }): Promise<T>;
+	update(data: Partial<T>): Promise<T>;
+}
+
+/**
  * Unified client API interface.
  * Works identically on both server (SSR) and browser.
  */
@@ -183,6 +205,11 @@ export interface MomentumClientAPI {
 	 * Get operations for a specific collection.
 	 */
 	collection<T = Record<string, unknown>>(slug: string): MomentumCollectionAPI<T>;
+
+	/**
+	 * Get operations for a global (singleton document).
+	 */
+	global<T = Record<string, unknown>>(slug: string): MomentumGlobalAPI<T>;
 }
 
 /**
@@ -489,6 +516,46 @@ class ServerMomentumAPI implements MomentumClientAPI {
 			this.transferState,
 		);
 	}
+
+	global<T = Record<string, unknown>>(slug: string): MomentumGlobalAPI<T> {
+		return new ServerGlobalAPI<T>(this.contextualApi.global<T>(slug));
+	}
+}
+
+class ServerGlobalAPI<T> implements MomentumGlobalAPI<T> {
+	constructor(private readonly ops: GlobalOperationsServer<T>) {}
+
+	findOne$(options?: { depth?: number }): Observable<T> {
+		return new Observable((subscriber) => {
+			this.ops
+				.findOne(options)
+				.then((result) => {
+					subscriber.next(result);
+					subscriber.complete();
+				})
+				.catch((err: unknown) => subscriber.error(err));
+		});
+	}
+
+	update$(data: Partial<T>): Observable<T> {
+		return new Observable((subscriber) => {
+			this.ops
+				.update(data)
+				.then((result) => {
+					subscriber.next(result);
+					subscriber.complete();
+				})
+				.catch((err: unknown) => subscriber.error(err));
+		});
+	}
+
+	findOne(options?: { depth?: number }): Promise<T> {
+		return this.ops.findOne(options);
+	}
+
+	update(data: Partial<T>): Promise<T> {
+		return this.ops.update(data);
+	}
 }
 
 class ServerCollectionAPI<T> implements MomentumCollectionAPI<T> {
@@ -704,6 +771,47 @@ class BrowserMomentumAPI implements MomentumClientAPI {
 			this.transferState,
 			this.platformId,
 		);
+	}
+
+	global<T = Record<string, unknown>>(slug: string): MomentumGlobalAPI<T> {
+		return new BrowserGlobalAPI<T>(this.http, `${this.baseUrl}/globals/${slug}`);
+	}
+}
+
+class BrowserGlobalAPI<T> implements MomentumGlobalAPI<T> {
+	constructor(
+		private readonly http: HttpClient,
+		private readonly endpoint: string,
+	) {}
+
+	findOne$(options?: { depth?: number }): Observable<T> {
+		let params = new HttpParams();
+		if (options?.depth !== undefined) {
+			params = params.set('depth', String(options.depth));
+		}
+		return (
+			this.http
+				.get<ApiResponse<T>>(this.endpoint, { params })
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- ApiResponse.doc is unknown
+				.pipe(map((response) => response.doc as T))
+		);
+	}
+
+	update$(data: Partial<T>): Observable<T> {
+		return (
+			this.http
+				.patch<ApiResponse<T>>(this.endpoint, data)
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- ApiResponse.doc is unknown
+				.pipe(map((response) => response.doc as T))
+		);
+	}
+
+	findOne(options?: { depth?: number }): Promise<T> {
+		return firstValueFrom(this.findOne$(options));
+	}
+
+	update(data: Partial<T>): Promise<T> {
+		return firstValueFrom(this.update$(data));
 	}
 }
 

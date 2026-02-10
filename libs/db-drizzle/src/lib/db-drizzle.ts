@@ -5,6 +5,7 @@ import { dirname } from 'node:path';
 import type {
 	DatabaseAdapter,
 	CollectionConfig,
+	GlobalConfig,
 	Field,
 	DocumentVersion,
 	DocumentStatus,
@@ -335,10 +336,7 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 	// Sync implementations shared by normal and transactional adapters
 	// ============================================
 
-	function findSync(
-		collection: string,
-		query: Record<string, unknown>,
-	): Record<string, unknown>[] {
+	function findSync(collection: string, query: Record<string, unknown>): Record<string, unknown>[] {
 		validateCollectionSlug(collection);
 		const limitValue = typeof query['limit'] === 'number' ? query['limit'] : 100;
 		const pageValue = typeof query['page'] === 'number' ? query['page'] : 1;
@@ -381,10 +379,7 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		return isRecord(row) ? row : null;
 	}
 
-	function createSync(
-		collection: string,
-		data: Record<string, unknown>,
-	): Record<string, unknown> {
+	function createSync(collection: string, data: Record<string, unknown>): Record<string, unknown> {
 		validateCollectionSlug(collection);
 		const id = randomUUID();
 		const now = new Date().toISOString();
@@ -435,9 +430,7 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 			.prepare(`UPDATE "${collection}" SET ${setClauses.join(', ')} WHERE id = ?`)
 			.run(...values);
 
-		const updated: unknown = sqlite
-			.prepare(`SELECT * FROM "${collection}" WHERE id = ?`)
-			.get(id);
+		const updated: unknown = sqlite.prepare(`SELECT * FROM "${collection}" WHERE id = ?`).get(id);
 		if (!isRecord(updated)) {
 			throw new Error('Failed to fetch updated document');
 		}
@@ -479,7 +472,16 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 				`INSERT INTO "${tableName}" ("id", "parent", "version", "_status", "autosave", "publishedAt", "createdAt", "updatedAt")
 				 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 			)
-			.run(doc.id, doc.parent, doc.version, doc._status, autosave, doc.publishedAt ?? null, doc.createdAt, doc.updatedAt);
+			.run(
+				doc.id,
+				doc.parent,
+				doc.version,
+				doc._status,
+				autosave,
+				doc.publishedAt ?? null,
+				doc.createdAt,
+				doc.updatedAt,
+			);
 
 		return doc;
 	}
@@ -524,7 +526,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 	function findVersionByIdSync(collection: string, versionId: string): DocumentVersion | null {
 		validateCollectionSlug(collection);
 		const tableName = `${collection}_versions`;
-		const row: unknown = sqlite.prepare(`SELECT * FROM "${tableName}" WHERE "id" = ?`).get(versionId);
+		const row: unknown = sqlite
+			.prepare(`SELECT * FROM "${tableName}" WHERE "id" = ?`)
+			.get(versionId);
 
 		if (!isRecord(row)) return null;
 
@@ -544,7 +548,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		validateCollectionSlug(collection);
 		const tableName = `${collection}_versions`;
 
-		const versionRow: unknown = sqlite.prepare(`SELECT * FROM "${tableName}" WHERE "id" = ?`).get(versionId);
+		const versionRow: unknown = sqlite
+			.prepare(`SELECT * FROM "${tableName}" WHERE "id" = ?`)
+			.get(versionId);
 		if (!isRecord(versionRow)) {
 			throw new Error(`Version "${versionId}" not found in collection "${collection}"`);
 		}
@@ -574,7 +580,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		values.push(now);
 		values.push(parentId);
 
-		sqlite.prepare(`UPDATE "${collection}" SET ${setClauses.join(', ')} WHERE "id" = ?`).run(...values);
+		sqlite
+			.prepare(`UPDATE "${collection}" SET ${setClauses.join(', ')} WHERE "id" = ?`)
+			.run(...values);
 
 		const newVersionId = randomUUID();
 		sqlite
@@ -584,7 +592,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 			)
 			.run(newVersionId, parentId, String(versionRow['version']), originalStatus, now, now);
 
-		const updated: unknown = sqlite.prepare(`SELECT * FROM "${collection}" WHERE "id" = ?`).get(parentId);
+		const updated: unknown = sqlite
+			.prepare(`SELECT * FROM "${collection}" WHERE "id" = ?`)
+			.get(parentId);
 		if (!isRecord(updated)) {
 			throw new Error('Failed to fetch restored document');
 		}
@@ -601,7 +611,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		}
 
 		const keepIds = sqlite
-			.prepare(`SELECT "id" FROM "${tableName}" WHERE "parent" = ? ORDER BY "createdAt" DESC LIMIT ?`)
+			.prepare(
+				`SELECT "id" FROM "${tableName}" WHERE "parent" = ? ORDER BY "createdAt" DESC LIMIT ?`,
+			)
 			.all(parentId, keepLatest)
 			.filter(isRecord)
 			.map((row) => String(row['id']));
@@ -615,7 +627,11 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		return result.changes;
 	}
 
-	function countVersionsSync(collection: string, parentId: string, options?: VersionCountOptions): number {
+	function countVersionsSync(
+		collection: string,
+		parentId: string,
+		options?: VersionCountOptions,
+	): number {
 		validateCollectionSlug(collection);
 		const tableName = `${collection}_versions`;
 
@@ -629,7 +645,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		}
 
 		const whereClause = whereClauses.join(' AND ');
-		const result = sqlite.prepare(`SELECT COUNT(*) as count FROM "${tableName}" WHERE ${whereClause}`).get(...whereValues);
+		const result = sqlite
+			.prepare(`SELECT COUNT(*) as count FROM "${tableName}" WHERE ${whereClause}`)
+			.get(...whereValues);
 
 		if (isRecord(result) && typeof result['count'] === 'number') return result['count'];
 		return 0;
@@ -638,7 +656,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 	function updateStatusSync(collection: string, id: string, status: DocumentStatus): void {
 		validateCollectionSlug(collection);
 		const now = new Date().toISOString();
-		sqlite.prepare(`UPDATE "${collection}" SET "_status" = ?, "updatedAt" = ? WHERE "id" = ?`).run(status, now, id);
+		sqlite
+			.prepare(`UPDATE "${collection}" SET "_status" = ?, "updatedAt" = ? WHERE "id" = ?`)
+			.run(status, now, id);
 	}
 
 	// ============================================
@@ -660,26 +680,102 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 			}
 		},
 
-		async find(collection, query) { return findSync(collection, query); },
-		async findById(collection, id) { return findByIdSync(collection, id); },
-		async create(collection, data) { return writeQueue.enqueue(() => createSync(collection, data)); },
-		async update(collection, id, data) { return writeQueue.enqueue(() => updateSync(collection, id, data)); },
-		async delete(collection, id) { return writeQueue.enqueue(() => deleteSync(collection, id)); },
+		async find(collection, query) {
+			return findSync(collection, query);
+		},
+		async findById(collection, id) {
+			return findByIdSync(collection, id);
+		},
+		async create(collection, data) {
+			return writeQueue.enqueue(() => createSync(collection, data));
+		},
+		async update(collection, id, data) {
+			return writeQueue.enqueue(() => updateSync(collection, id, data));
+		},
+		async delete(collection, id) {
+			return writeQueue.enqueue(() => deleteSync(collection, id));
+		},
 
 		async createVersion(collection, parentId, data, options) {
 			return writeQueue.enqueue(() => createVersionSync(collection, parentId, data, options));
 		},
-		async findVersions(collection, parentId, options) { return findVersionsSync(collection, parentId, options); },
-		async findVersionById(collection, versionId) { return findVersionByIdSync(collection, versionId); },
+		async findVersions(collection, parentId, options) {
+			return findVersionsSync(collection, parentId, options);
+		},
+		async findVersionById(collection, versionId) {
+			return findVersionByIdSync(collection, versionId);
+		},
 		async restoreVersion(collection, versionId) {
 			return writeQueue.enqueue(() => restoreVersionSync(collection, versionId));
 		},
 		async deleteVersions(collection, parentId, keepLatest) {
 			return writeQueue.enqueue(() => deleteVersionsSync(collection, parentId, keepLatest));
 		},
-		async countVersions(collection, parentId, options) { return countVersionsSync(collection, parentId, options); },
+		async countVersions(collection, parentId, options) {
+			return countVersionsSync(collection, parentId, options);
+		},
 		async updateStatus(collection, id, status) {
 			return writeQueue.enqueue(() => updateStatusSync(collection, id, status));
+		},
+
+		// ============================================
+		// Globals Support
+		// ============================================
+
+		async initializeGlobals(_globals: GlobalConfig[]): Promise<void> {
+			sqlite.exec(`
+				CREATE TABLE IF NOT EXISTS "_globals" (
+					"slug" TEXT PRIMARY KEY,
+					"data" TEXT NOT NULL DEFAULT '{}',
+					"createdAt" TEXT NOT NULL DEFAULT (datetime('now')),
+					"updatedAt" TEXT NOT NULL DEFAULT (datetime('now'))
+				)
+			`);
+		},
+
+		async findGlobal(slug: string): Promise<Record<string, unknown> | null> {
+			const row = sqlite.prepare('SELECT * FROM "_globals" WHERE "slug" = ?').get(slug);
+			if (!row || !isRecord(row)) return null;
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- JSON.parse returns unknown
+			const data = JSON.parse(String(row['data'])) as Record<string, unknown>;
+			return {
+				...data,
+				slug: row['slug'],
+				createdAt: row['createdAt'],
+				updatedAt: row['updatedAt'],
+			};
+		},
+
+		async updateGlobal(
+			slug: string,
+			data: Record<string, unknown>,
+		): Promise<Record<string, unknown>> {
+			return writeQueue.enqueue(() => {
+				const now = new Date().toISOString();
+				const jsonData = JSON.stringify(data);
+				sqlite
+					.prepare(
+						`
+					INSERT INTO "_globals" ("slug", "data", "createdAt", "updatedAt")
+					VALUES (?, ?, ?, ?)
+					ON CONFLICT ("slug") DO UPDATE SET "data" = excluded."data", "updatedAt" = excluded."updatedAt"
+				`,
+					)
+					.run(slug, jsonData, now, now);
+
+				const row = sqlite.prepare('SELECT * FROM "_globals" WHERE "slug" = ?').get(slug);
+				if (!row || !isRecord(row)) {
+					return { slug, ...data, createdAt: now, updatedAt: now };
+				}
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- JSON.parse returns unknown
+				const returned = JSON.parse(String(row['data'])) as Record<string, unknown>;
+				return {
+					...returned,
+					slug: row['slug'],
+					createdAt: row['createdAt'],
+					updatedAt: row['updatedAt'],
+				};
+			});
 		},
 
 		async transaction<T>(callback: (txAdapter: DatabaseAdapter) => Promise<T>): Promise<T> {
@@ -687,18 +783,42 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 				sqlite.exec('BEGIN IMMEDIATE');
 				try {
 					const txAdapter: DatabaseAdapter = {
-						async find(c, q) { return findSync(c, q); },
-						async findById(c, id) { return findByIdSync(c, id); },
-						async create(c, d) { return createSync(c, d); },
-						async update(c, id, d) { return updateSync(c, id, d); },
-						async delete(c, id) { return deleteSync(c, id); },
-						async createVersion(c, pid, d, o) { return createVersionSync(c, pid, d, o); },
-						async findVersions(c, pid, o) { return findVersionsSync(c, pid, o); },
-						async findVersionById(c, vid) { return findVersionByIdSync(c, vid); },
-						async restoreVersion(c, vid) { return restoreVersionSync(c, vid); },
-						async deleteVersions(c, pid, k) { return deleteVersionsSync(c, pid, k); },
-						async countVersions(c, pid, o) { return countVersionsSync(c, pid, o); },
-						async updateStatus(c, id, s) { updateStatusSync(c, id, s); },
+						async find(c, q) {
+							return findSync(c, q);
+						},
+						async findById(c, id) {
+							return findByIdSync(c, id);
+						},
+						async create(c, d) {
+							return createSync(c, d);
+						},
+						async update(c, id, d) {
+							return updateSync(c, id, d);
+						},
+						async delete(c, id) {
+							return deleteSync(c, id);
+						},
+						async createVersion(c, pid, d, o) {
+							return createVersionSync(c, pid, d, o);
+						},
+						async findVersions(c, pid, o) {
+							return findVersionsSync(c, pid, o);
+						},
+						async findVersionById(c, vid) {
+							return findVersionByIdSync(c, vid);
+						},
+						async restoreVersion(c, vid) {
+							return restoreVersionSync(c, vid);
+						},
+						async deleteVersions(c, pid, k) {
+							return deleteVersionsSync(c, pid, k);
+						},
+						async countVersions(c, pid, o) {
+							return countVersionsSync(c, pid, o);
+						},
+						async updateStatus(c, id, s) {
+							updateStatusSync(c, id, s);
+						},
 					};
 					const result = await callback(txAdapter);
 					sqlite.exec('COMMIT');
