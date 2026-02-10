@@ -66,7 +66,8 @@ test.describe('Collection Create Form - Posts', () => {
 		await expect(slugInput).toBeVisible();
 
 		// Content field (textarea)
-		const contentLabel = authenticatedPage.getByText('Content');
+		// exact: true avoids matching "Skip to main content" link (case-insensitive substring)
+		const contentLabel = authenticatedPage.getByText('Content', { exact: true });
 		await expect(contentLabel).toBeVisible();
 		const contentTextarea = authenticatedPage.locator('textarea#field-content');
 		await expect(contentTextarea).toBeVisible();

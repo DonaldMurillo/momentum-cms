@@ -432,8 +432,12 @@ export class EntityFormWidget<T extends Entity = Entity> {
 			if (data) {
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 				this.originalData.set(data as T);
+				// Merge API data with initial field defaults so all field keys exist in the model.
+				// Auto-created globals only have metadata (slug, timestamps) — without merging,
+				// signal-forms can't update fields that don't exist in the model.
+				const initial = createInitialFormData(this.collection());
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-				this.formModel.set({ ...(data as Record<string, unknown>) });
+				this.formModel.set({ ...initial, ...(data as Record<string, unknown>) });
 				const ef = this.entityForm();
 				if (ef) ef().reset();
 			}

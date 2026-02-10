@@ -117,6 +117,11 @@ test.describe('Globals API - Access Control', () => {
 			data: { 'site-name': 'Viewer Attempt' },
 		});
 		expect(response.status()).toBe(403);
+
+		// Verify data was NOT mutated
+		const readResponse = await viewerPage.request.get('/api/globals/site-settings');
+		const data = await readResponse.json();
+		expect(data.doc['site-name']).not.toBe('Viewer Attempt');
 	});
 
 	test('editor cannot update globals (403)', async ({ editorPage }) => {
@@ -124,6 +129,11 @@ test.describe('Globals API - Access Control', () => {
 			data: { 'site-name': 'Editor Attempt' },
 		});
 		expect(response.status()).toBe(403);
+
+		// Verify data was NOT mutated
+		const readResponse = await editorPage.request.get('/api/globals/site-settings');
+		const data = await readResponse.json();
+		expect(data.doc['site-name']).not.toBe('Editor Attempt');
 	});
 
 	test('unauthenticated user can read globals (public read)', async ({ request }) => {
@@ -131,5 +141,105 @@ test.describe('Globals API - Access Control', () => {
 		expect(response.status()).toBe(200);
 		const data = await response.json();
 		expect(data.doc).toBeDefined();
+	});
+});
+
+// ============================================
+// Globals Admin UI
+// ============================================
+
+test.describe('Globals Admin UI', () => {
+	test('sidebar shows globals section with Site Settings link', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		const sidebarNav = authenticatedPage.getByLabel('Main navigation');
+
+		// Globals section heading should be visible
+		await expect(sidebarNav.getByText('Globals')).toBeVisible();
+
+		// Site Settings link should exist with correct href
+		const settingsLink = sidebarNav.getByRole('link', { name: 'Site Settings' });
+		await expect(settingsLink).toBeVisible();
+		await expect(settingsLink).toHaveAttribute('href', '/admin/globals/site-settings');
+	});
+
+	test('clicking sidebar link navigates to global edit page', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		const sidebarNav = authenticatedPage.getByLabel('Main navigation');
+		await sidebarNav.getByRole('link', { name: 'Site Settings' }).click();
+
+		await expect(authenticatedPage).toHaveURL(/\/admin\/globals\/site-settings$/);
+		await expect(authenticatedPage.getByRole('heading', { name: 'Site Settings' })).toBeVisible();
+	});
+
+	test('global edit page displays expected fields', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/globals/site-settings');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		// Wait for form to render
+		await expect(authenticatedPage.getByRole('heading', { name: 'Site Settings' })).toBeVisible();
+
+		// Site Name field (text input, required)
+		await expect(authenticatedPage.getByText('Site Name')).toBeVisible();
+		await expect(authenticatedPage.locator('input#field-site-name')).toBeVisible();
+
+		// Description field (textarea)
+		await expect(authenticatedPage.getByText('Site Description')).toBeVisible();
+		await expect(authenticatedPage.locator('textarea#field-description')).toBeVisible();
+
+		// Maintenance Mode field (checkbox)
+		await expect(authenticatedPage.getByText('Maintenance Mode')).toBeVisible();
+		await expect(
+			authenticatedPage.locator('[role="checkbox"]#field-maintenance-mode'),
+		).toBeVisible();
+
+		// Save Changes button (edit mode)
+		await expect(authenticatedPage.getByRole('button', { name: 'Save Changes' })).toBeVisible();
+	});
+
+	test('can save global form and data persists', async ({ authenticatedPage }) => {
+		const timestamp = Date.now();
+		const siteName = `UI Test Site ${timestamp}`;
+
+		await authenticatedPage.goto('/admin/globals/site-settings');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		// Wait for form to be ready
+		await expect(authenticatedPage.getByRole('button', { name: 'Save Changes' })).toBeVisible();
+
+		// Fill in the site name field
+		const siteNameInput = authenticatedPage.locator('input#field-site-name');
+		await siteNameInput.click();
+		await siteNameInput.clear();
+		await siteNameInput.fill(siteName);
+
+		// Fill description
+		const descriptionInput = authenticatedPage.locator('textarea#field-description');
+		await descriptionInput.click();
+		await descriptionInput.clear();
+		await descriptionInput.fill('Saved from admin UI');
+
+		// Click Save Changes
+		await authenticatedPage.getByRole('button', { name: 'Save Changes' }).click();
+
+		// Verify data persisted via API (avoids flaky UI reload assertions)
+		await expect
+			.poll(
+				async () => {
+					const response = await authenticatedPage.request.get('/api/globals/site-settings');
+					const data = await response.json();
+					return data.doc['site-name'];
+				},
+				{ timeout: 10000 },
+			)
+			.toBe(siteName);
+
+		// Also verify description persisted
+		const verifyResponse = await authenticatedPage.request.get('/api/globals/site-settings');
+		const verifyData = await verifyResponse.json();
+		expect(verifyData.doc.description).toBe('Saved from admin UI');
 	});
 });
