@@ -4,6 +4,11 @@
  * Browser-safe: no server-side dependencies (Express, pg, etc.).
  * This file is the entry point for `@momentum-cms/plugins/analytics/admin-routes`.
  *
+ * Three admin pages:
+ * - Analytics Dashboard  — general system overview (all event types, API metrics, sessions)
+ * - Content Performance  — deep-dive page traffic analysis (per-URL visitors, referrers)
+ * - Tracking Rules       — admin-managed CSS-selector-to-event mappings for the client rule engine
+ *
  * Used by:
  * - Angular app routing (browser build)
  * - Analytics plugin factory (server build, as defaults)
@@ -21,6 +26,22 @@ export const analyticsAdminRoutes: PluginAdminRouteDescriptor[] = [
 		icon: 'heroChartBarSquare',
 		loadComponent: (): Promise<unknown> =>
 			import('./dashboard/analytics-dashboard.page').then((m) => m.AnalyticsDashboardPage),
-		group: 'Tools',
+		group: 'Analytics',
+	},
+	{
+		path: 'analytics/content',
+		label: 'Content Perf.',
+		icon: 'heroDocumentText',
+		loadComponent: (): Promise<unknown> =>
+			import('./dashboard/content-performance.page').then((m) => m.ContentPerformancePage),
+		group: 'Analytics',
+	},
+	{
+		path: 'analytics/tracking-rules',
+		label: 'Tracking Rules',
+		icon: 'heroCursorArrowRays',
+		loadComponent: (): Promise<unknown> =>
+			import('./dashboard/tracking-rules.page').then((m) => m.TrackingRulesPage),
+		group: 'Analytics',
 	},
 ];

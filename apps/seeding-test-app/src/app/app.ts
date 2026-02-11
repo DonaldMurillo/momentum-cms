@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, afterNextRender } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 @Component({
@@ -9,4 +9,17 @@ import { RouterModule } from '@angular/router';
 })
 export class App {
 	protected title = 'seeding-test-app';
+
+	constructor() {
+		afterNextRender(() => {
+			void import('@momentum-cms/plugins/analytics/client').then((m) => {
+				m.createTracker({
+					endpoint: '/api/analytics/collect',
+					trackingRules: true,
+					blockTracking: true,
+					flushInterval: 1000,
+				});
+			});
+		});
+	}
 }

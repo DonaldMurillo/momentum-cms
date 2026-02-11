@@ -22,14 +22,20 @@
 import type {
 	MomentumPlugin,
 	PluginContext,
+	PluginReadyContext,
 	PluginAdminRouteDescriptor,
+	MomentumAPI,
 } from '@momentum-cms/plugins/core';
 import type { AnalyticsConfig } from './analytics-config.types';
 import { EventStore } from './event-store';
 import { injectCollectionCollector } from './collectors/collection-collector';
+import { injectBlockAnalyticsFields } from './collectors/block-field-injector';
 import { createIngestRouter } from './ingest-handler';
 import { createApiCollectorMiddleware } from './collectors/api-collector';
 import { createAnalyticsQueryRouter } from './analytics-query-handler';
+import { createContentPerformanceRouter } from './content-performance/content-performance-handler';
+import { createTrackingRulesRouter } from './tracking-rules/tracking-rules-endpoint';
+import { TrackingRules } from './tracking-rules/tracking-rules-collection';
 
 /**
  * Analytics plugin with access to the event store.
@@ -64,7 +70,7 @@ function resolveAdminRoutes(
 		label: 'Analytics',
 		icon: 'heroChartBarSquare',
 		loadComponent: defaultLoadComponent,
-		group: 'Tools',
+		group: 'Analytics',
 	};
 
 	if (dashboardConfig === undefined || dashboardConfig === true) {
@@ -95,6 +101,34 @@ export function analyticsPlugin(config: AnalyticsConfig): AnalyticsPluginInstanc
 
 	const adminRoutes = resolveAdminRoutes(config.adminDashboard);
 
+	let momentumApi: MomentumAPI | null = null;
+
+	// Content performance admin route
+	if (config.contentPerformance !== false && config.adminDashboard !== false) {
+		const contentPerfModule = './dashboard/content-performance.page';
+		adminRoutes.push({
+			path: 'analytics/content',
+			label: 'Content Perf.',
+			icon: 'heroDocumentText',
+			loadComponent: (): Promise<unknown> =>
+				import(contentPerfModule).then((m: Record<string, unknown>) => m['ContentPerformancePage']),
+			group: 'Analytics',
+		});
+	}
+
+	// Tracking rules admin route
+	if (config.trackingRules !== false && config.adminDashboard !== false) {
+		const trackingRulesModule = './dashboard/tracking-rules.page';
+		adminRoutes.push({
+			path: 'analytics/tracking-rules',
+			label: 'Tracking Rules',
+			icon: 'heroCursorArrowRays',
+			loadComponent: (): Promise<unknown> =>
+				import(trackingRulesModule).then((m: Record<string, unknown>) => m['TrackingRulesPage']),
+			group: 'Analytics',
+		});
+	}
+
 	return {
 		name: 'analytics',
 		eventStore,
@@ -111,6 +145,12 @@ export function analyticsPlugin(config: AnalyticsConfig): AnalyticsPluginInstanc
 			if (config.adapter.initialize) {
 				logger.info('Initializing analytics adapter...');
 				await config.adapter.initialize();
+			}
+
+			// Inject block analytics fields (admin toggles per block instance)
+			if (config.blockTracking !== false) {
+				injectBlockAnalyticsFields(collections);
+				logger.info('Block analytics fields injected');
 			}
 
 			// Inject collection CRUD tracking hooks
@@ -150,6 +190,55 @@ export function analyticsPlugin(config: AnalyticsConfig): AnalyticsPluginInstanc
 				});
 			}
 
+			// Register content performance endpoint
+			if (config.contentPerformance !== false) {
+				const contentPerfRouter = createContentPerformanceRouter(config.adapter);
+				registerMiddleware({
+					path: '/analytics',
+					handler: contentPerfRouter,
+					position: 'before-api',
+				});
+				logger.info('Content performance endpoint registered');
+			}
+
+			// Register tracking rules collection and endpoint
+			if (config.trackingRules !== false) {
+				const cacheTtl =
+					typeof config.trackingRules === 'object' ? config.trackingRules.cacheTtl : undefined;
+				const { router: trackingRulesRouter, invalidateCache } = createTrackingRulesRouter(
+					() => momentumApi,
+					cacheTtl != null ? { cacheTtl } : undefined,
+				);
+
+				// Add cache invalidation hooks so CRUD operations clear stale rules
+				const rulesWithHooks = {
+					...TrackingRules,
+					hooks: {
+						...TrackingRules.hooks,
+						afterChange: [
+							...(TrackingRules.hooks?.afterChange ?? []),
+							(): void => {
+								invalidateCache();
+							},
+						],
+						afterDelete: [
+							...(TrackingRules.hooks?.afterDelete ?? []),
+							(): void => {
+								invalidateCache();
+							},
+						],
+					},
+				};
+				collections.push(rulesWithHooks);
+
+				registerMiddleware({
+					path: '/analytics',
+					handler: trackingRulesRouter,
+					position: 'before-api',
+				});
+				logger.info('Tracking rules collection and endpoint registered');
+			}
+
 			if (adminRoutes.length > 0) {
 				logger.info('Analytics admin dashboard route declared');
 			}
@@ -157,8 +246,11 @@ export function analyticsPlugin(config: AnalyticsConfig): AnalyticsPluginInstanc
 			logger.info('Analytics plugin initialized');
 		},
 
-		async onReady({ logger }) {
+		async onReady({ logger, api }: PluginReadyContext) {
 			if (config.enabled === false) return;
+
+			// Store API reference for tracking rules endpoint
+			momentumApi = api;
 
 			// Start the periodic flush timer
 			eventStore.start();

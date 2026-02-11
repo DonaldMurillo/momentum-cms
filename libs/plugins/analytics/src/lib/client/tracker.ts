@@ -20,6 +20,15 @@ export interface TrackerConfig {
 	endpoint?: string;
 	/** Flush interval in ms. @default 5000 */
 	flushInterval?: number;
+	/** Enable block-level analytics (impressions + clicks on blocks with `data-block-track`). @default false */
+	blockTracking?: boolean;
+	/**
+	 * Enable element tracking rules (admin-managed CSS selector listeners).
+	 * - `true`: enable with default endpoint
+	 * - object: override rules endpoint URL
+	 * @default false
+	 */
+	trackingRules?: boolean | { endpoint?: string };
 }
 
 /**
@@ -49,6 +58,8 @@ export interface MomentumTracker {
 	identify(userId: string, traits?: Record<string, unknown>): void;
 	/** Flush pending events */
 	flush(): void;
+	/** Flush pending events and clean up all listeners, timers, and observers */
+	destroy(): void;
 }
 
 /**
@@ -87,6 +98,18 @@ function generateId(): string {
 }
 
 /**
+ * Schedule initialization after the DOM is ready.
+ */
+function onDomReady(fn: () => void): void {
+	if (typeof document === 'undefined') return;
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', fn, { once: true });
+	} else {
+		fn();
+	}
+}
+
+/**
  * Create a Momentum Analytics tracker.
  *
  * @param config - Tracker configuration
@@ -106,6 +129,7 @@ export function createTracker(config: TrackerConfig = {}): MomentumTracker {
 	const buffer: ClientEvent[] = [];
 	let userId: string | undefined;
 	let _timer: ReturnType<typeof setInterval> | null = null;
+	const cleanups: Array<() => void> = [];
 
 	const visitorId = getVisitorId();
 	const sessionId = getSessionId();
@@ -129,8 +153,10 @@ export function createTracker(config: TrackerConfig = {}): MomentumTracker {
 		const body = JSON.stringify({ events });
 
 		// Use sendBeacon if available (reliable on page exit)
+		// Wrap in Blob with application/json so Express body parser handles it
 		if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-			navigator.sendBeacon(endpoint, body);
+			const blob = new Blob([body], { type: 'application/json' });
+			navigator.sendBeacon(endpoint, blob);
 		} else if (typeof fetch !== 'undefined') {
 			void fetch(endpoint, {
 				method: 'POST',
@@ -144,14 +170,19 @@ export function createTracker(config: TrackerConfig = {}): MomentumTracker {
 	// Start flush timer
 	if (typeof setInterval !== 'undefined') {
 		_timer = setInterval(flush, flushInterval);
+		cleanups.push(() => {
+			if (_timer) clearInterval(_timer);
+			_timer = null;
+		});
 	}
 
 	// Flush on page exit
 	if (typeof addEventListener !== 'undefined') {
 		addEventListener('beforeunload', flush);
+		cleanups.push(() => removeEventListener('beforeunload', flush));
 	}
 
-	return {
+	const tracker: MomentumTracker = {
 		pageView(properties?: Record<string, unknown>): void {
 			addEvent({
 				name: 'page_view',
@@ -185,5 +216,36 @@ export function createTracker(config: TrackerConfig = {}): MomentumTracker {
 		},
 
 		flush,
+
+		destroy(): void {
+			flush();
+			for (const fn of cleanups) fn();
+			cleanups.length = 0;
+		},
 	};
+
+	// Block tracking: lazy-load and attach after DOM is ready
+	if (config.blockTracking) {
+		onDomReady(() => {
+			void import('./block-tracker').then((m) => {
+				const blockCleanup = m.attachBlockTracking(tracker);
+				cleanups.push(blockCleanup);
+			});
+		});
+	}
+
+	// Tracking rules: lazy-load and attach after DOM is ready
+	if (config.trackingRules) {
+		const rulesEndpoint =
+			typeof config.trackingRules === 'object' ? config.trackingRules.endpoint : undefined;
+		onDomReady(() => {
+			void import('./rule-engine').then((m) => {
+				const engine = m.createRuleEngine(tracker, { endpoint: rulesEndpoint });
+				void engine.start();
+				cleanups.push(() => engine.stop());
+			});
+		});
+	}
+
+	return tracker;
 }

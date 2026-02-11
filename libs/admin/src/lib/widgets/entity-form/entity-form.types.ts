@@ -5,7 +5,7 @@
  */
 
 import type { Signal, WritableSignal } from '@angular/core';
-import type { Field, CollectionConfig } from '@momentum-cms/core';
+import type { Field, CollectionConfig, BlockConfig } from '@momentum-cms/core';
 import { flattenDataFields } from '@momentum-cms/core';
 
 /**
@@ -73,12 +73,47 @@ export function getFieldDefaultValue(field: Field): unknown {
 			return null;
 		case 'array':
 			return [];
-		case 'group':
+		case 'group': {
+			const groupDefaults: Record<string, unknown> = {};
+			for (const subField of field.fields) {
+				groupDefaults[subField.name] = getFieldDefaultValue(subField);
+			}
+			return groupDefaults;
+		}
 		case 'json':
 			return {};
 		default:
 			return null;
 	}
+}
+
+/**
+ * Normalize block items: ensure every block has defaults for all fields defined
+ * in its block definition. Blocks saved before new fields were added won't have
+ * those keys, and signal-forms only creates controls for keys present in the model.
+ */
+export function normalizeBlockDefaults(
+	items: unknown[],
+	blockDefMap: Map<string, BlockConfig>,
+): { normalized: unknown[]; changed: boolean } {
+	let changed = false;
+	const normalized = items.map((item) => {
+		if (!isRecord(item) || typeof item['blockType'] !== 'string') return item;
+		const def = blockDefMap.get(item['blockType']);
+		if (!def) return item;
+
+		let augmented = item;
+		for (const field of def.fields) {
+			if (!(field.name in item)) {
+				if (augmented === item) augmented = { ...item };
+				augmented[field.name] = getFieldDefaultValue(field);
+				changed = true;
+			}
+		}
+		return augmented;
+	});
+
+	return { normalized, changed };
 }
 
 /**

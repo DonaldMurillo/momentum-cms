@@ -2,10 +2,21 @@ import {
 	ChangeDetectionStrategy,
 	Component,
 	computed,
+	effect,
 	forwardRef,
 	input,
+	signal,
 } from '@angular/core';
-import { Card, CardHeader, CardTitle, CardContent } from '@momentum-cms/ui';
+import {
+	Card,
+	CardHeader,
+	CardTitle,
+	CardContent,
+	Accordion,
+	AccordionItem,
+	AccordionTrigger,
+	AccordionContent,
+} from '@momentum-cms/ui';
 import { humanizeFieldName } from '@momentum-cms/core';
 import type { Field } from '@momentum-cms/core';
 import type { EntityFormMode } from '../entity-form.types';
@@ -16,35 +27,73 @@ import { FieldRenderer } from './field-renderer.component';
  * Group field renderer.
  *
  * Renders a group of sub-fields inside a bordered card section.
+ * When `admin.collapsible` is true, renders as an accordion instead.
  * Data container pattern: passes sub-field FieldTree nodes via getSubNode().
  */
 @Component({
 	selector: 'mcms-group-field-renderer',
-	imports: [Card, CardHeader, CardTitle, CardContent, forwardRef(() => FieldRenderer)],
+	imports: [
+		Card,
+		CardHeader,
+		CardTitle,
+		CardContent,
+		Accordion,
+		AccordionItem,
+		AccordionTrigger,
+		AccordionContent,
+		forwardRef(() => FieldRenderer),
+	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `
-		<mcms-card>
-			<mcms-card-header>
-				<mcms-card-title>{{ label() }}</mcms-card-title>
-				@if (description()) {
-					<p class="text-sm text-muted-foreground">{{ description() }}</p>
-				}
-			</mcms-card-header>
-			<mcms-card-content>
-				<div class="space-y-4">
-					@for (subField of subFields(); track subField.name) {
-						<mcms-field-renderer
-							[field]="subField"
-							[formNode]="getSubFormNode(subField.name)"
-							[formTree]="formTree()"
-							[formModel]="formModel()"
-							[mode]="mode()"
-							[path]="getSubFieldPath(subField.name)"
-						/>
+		@if (collapsible()) {
+			<mcms-accordion>
+				<mcms-accordion-item>
+					<mcms-accordion-trigger [panelId]="panelId()" [(expanded)]="isExpanded">
+						{{ label() }}
+					</mcms-accordion-trigger>
+					<mcms-accordion-content [panelId]="panelId()">
+						@if (description()) {
+							<p class="text-sm text-muted-foreground mb-4">{{ description() }}</p>
+						}
+						<div class="space-y-4 py-4">
+							@for (subField of subFields(); track subField.name) {
+								<mcms-field-renderer
+									[field]="subField"
+									[formNode]="getSubFormNode(subField.name)"
+									[formTree]="formTree()"
+									[formModel]="formModel()"
+									[mode]="mode()"
+									[path]="getSubFieldPath(subField.name)"
+								/>
+							}
+						</div>
+					</mcms-accordion-content>
+				</mcms-accordion-item>
+			</mcms-accordion>
+		} @else {
+			<mcms-card>
+				<mcms-card-header>
+					<mcms-card-title>{{ label() }}</mcms-card-title>
+					@if (description()) {
+						<p class="text-sm text-muted-foreground">{{ description() }}</p>
 					}
-				</div>
-			</mcms-card-content>
-		</mcms-card>
+				</mcms-card-header>
+				<mcms-card-content>
+					<div class="space-y-4">
+						@for (subField of subFields(); track subField.name) {
+							<mcms-field-renderer
+								[field]="subField"
+								[formNode]="getSubFormNode(subField.name)"
+								[formTree]="formTree()"
+								[formModel]="formModel()"
+								[mode]="mode()"
+								[path]="getSubFieldPath(subField.name)"
+							/>
+						}
+					</div>
+				</mcms-card-content>
+			</mcms-card>
+		}
 	`,
 })
 export class GroupFieldRenderer {
@@ -66,6 +115,15 @@ export class GroupFieldRenderer {
 	/** Field path (e.g., "seo") */
 	readonly path = input.required<string>();
 
+	/** Whether the accordion is expanded (only used in collapsible mode) */
+	readonly isExpanded = signal(false);
+
+	/** Whether this group should render as collapsible accordion */
+	readonly collapsible = computed(() => !!this.field().admin?.collapsible);
+
+	/** Unique panel ID for accordion aria linkage */
+	readonly panelId = computed(() => `group-${this.path().replace(/\./g, '-')}`);
+
 	/** Computed label */
 	readonly label = computed(() => this.field().label || humanizeFieldName(this.field().name));
 
@@ -80,6 +138,14 @@ export class GroupFieldRenderer {
 		}
 		return [];
 	});
+
+	constructor() {
+		effect(() => {
+			if (this.collapsible() && this.field().admin?.defaultOpen) {
+				this.isExpanded.set(true);
+			}
+		});
+	}
 
 	/** Get a FieldTree sub-node for a sub-field */
 	getSubFormNode(subFieldName: string): unknown {

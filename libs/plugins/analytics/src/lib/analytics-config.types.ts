@@ -48,6 +48,24 @@ export interface AnalyticsConfig {
 	/** Collections to exclude from tracking */
 	excludeCollections?: string[];
 	/**
+	 * Inject analytics toggle fields into block definitions.
+	 * When enabled, admins can toggle impression/click tracking per block instance.
+	 * @default true
+	 */
+	blockTracking?: boolean;
+	/**
+	 * Content performance endpoint and admin page.
+	 * @default true
+	 */
+	contentPerformance?: boolean;
+	/**
+	 * Element tracking rules (admin-managed CSS selector listeners).
+	 * - `true` (default): enable with default settings
+	 * - `false`: disable
+	 * - object: override cache TTL
+	 */
+	trackingRules?: boolean | { cacheTtl?: number };
+	/**
 	 * Admin dashboard configuration.
 	 * - `true` (default): use built-in dashboard
 	 * - `false`: disable dashboard

@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, forwardRef, input } from '@angular/core';
+import {
+	ChangeDetectionStrategy,
+	Component,
+	computed,
+	effect,
+	forwardRef,
+	input,
+	untracked,
+} from '@angular/core';
 import {
 	CdkDropList,
 	CdkDrag,
@@ -25,6 +33,7 @@ import {
 	getSubNode,
 	isRecord,
 	getFieldDefaultValue,
+	normalizeBlockDefaults,
 } from '../entity-form.types';
 import { FieldRenderer } from './field-renderer.component';
 
@@ -212,6 +221,23 @@ export class BlocksFieldRenderer {
 			);
 		}
 		return [];
+	});
+
+	/**
+	 * Normalize loaded blocks: ensure every block has defaults for all definition fields.
+	 * Blocks saved before new fields were added won't have those keys, and
+	 * signal-forms only creates controls for keys present in the model.
+	 */
+	private readonly _normalizeBlocks = effect(() => {
+		const state = this.nodeState();
+		if (!state) return;
+		const val = state.value();
+		if (!Array.isArray(val)) return;
+
+		const { normalized, changed } = normalizeBlockDefaults(val, this.blockDefMap());
+		if (changed) {
+			untracked(() => state.value.set(normalized));
+		}
 	});
 
 	/** Whether the field is disabled (view mode) */

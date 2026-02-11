@@ -52,3 +52,31 @@ export { createAnalyticsQueryRouter, type AnalyticsSummary } from './lib/analyti
 
 // Convenience middleware factory
 export { createAnalyticsMiddleware, type AnalyticsMiddleware } from './lib/analytics-middleware';
+
+// Block analytics
+export { injectBlockAnalyticsFields } from './lib/collectors/block-field-injector';
+export { attachBlockTracking } from './lib/client/block-tracker';
+
+// Rule engine
+export { createRuleEngine, type RuleEngine, type RuleEngineConfig } from './lib/client/rule-engine';
+
+// Tracking rules
+export { TrackingRules } from './lib/tracking-rules/tracking-rules-collection';
+export {
+	createTrackingRulesRouter,
+	type TrackingRulesEndpointOptions,
+	type TrackingRulesRouterResult,
+} from './lib/tracking-rules/tracking-rules-endpoint';
+export type {
+	TrackingRule,
+	ClientTrackingRule,
+	TrackingEventType,
+	PropertyExtraction,
+} from './lib/tracking-rules/tracking-rule.types';
+
+// Content performance
+export { createContentPerformanceRouter } from './lib/content-performance/content-performance-handler';
+export type {
+	ContentPerformanceData,
+	ContentPerformanceQuery,
+} from './lib/content-performance/content-performance.types';
