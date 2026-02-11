@@ -51,7 +51,7 @@ async function createTestPage(
 	return body.doc;
 }
 
-test.describe('Block Analytics Fields', () => {
+test.describe('Block Analytics Fields', { tag: ['@analytics', '@crud'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },

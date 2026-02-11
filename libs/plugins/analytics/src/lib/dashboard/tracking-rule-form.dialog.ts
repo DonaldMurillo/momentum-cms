@@ -88,7 +88,20 @@ const EVENT_TYPE_OPTIONS = [
 				<div class="space-y-4">
 					<mcms-form-field id="rule-name" [required]="true">
 						<span mcmsLabel>Rule Name</span>
-						<mcms-input [(value)]="name" placeholder="e.g. CTA Button Click" id="rule-name" />
+						<mcms-input
+							[(value)]="name"
+							placeholder="e.g. CTA Button Click"
+							id="rule-name"
+							[attr.aria-invalid]="submitted() && name().trim().length === 0"
+							[attr.aria-describedby]="
+								submitted() && name().trim().length === 0 ? 'rule-name-error' : null
+							"
+						/>
+						@if (submitted() && name().trim().length === 0) {
+							<span id="rule-name-error" class="text-sm text-destructive mt-1"
+								>Rule Name is required</span
+							>
+						}
 					</mcms-form-field>
 
 					<mcms-form-field id="rule-selector" [required]="true">
@@ -97,7 +110,16 @@ const EVENT_TYPE_OPTIONS = [
 							[(value)]="selector"
 							placeholder="e.g. .cta-button, #signup-form"
 							id="rule-selector"
+							[attr.aria-invalid]="submitted() && selector().trim().length === 0"
+							[attr.aria-describedby]="
+								submitted() && selector().trim().length === 0 ? 'rule-selector-error' : null
+							"
 						/>
+						@if (submitted() && selector().trim().length === 0) {
+							<span id="rule-selector-error" class="text-sm text-destructive mt-1"
+								>CSS Selector is required</span
+							>
+						}
 					</mcms-form-field>
 
 					<mcms-form-field id="rule-event-type" [required]="true">
@@ -107,7 +129,20 @@ const EVENT_TYPE_OPTIONS = [
 
 					<mcms-form-field id="rule-event-name" [required]="true">
 						<span mcmsLabel>Event Name</span>
-						<mcms-input [(value)]="eventName" placeholder="e.g. cta_click" id="rule-event-name" />
+						<mcms-input
+							[(value)]="eventName"
+							placeholder="e.g. cta_click"
+							id="rule-event-name"
+							[attr.aria-invalid]="submitted() && eventName().trim().length === 0"
+							[attr.aria-describedby]="
+								submitted() && eventName().trim().length === 0 ? 'rule-event-name-error' : null
+							"
+						/>
+						@if (submitted() && eventName().trim().length === 0) {
+							<span id="rule-event-name-error" class="text-sm text-destructive mt-1"
+								>Event Name is required</span
+							>
+						}
 					</mcms-form-field>
 
 					<mcms-form-field id="rule-url-pattern" [hint]="'Use * for wildcards, e.g. /blog/*'">
@@ -169,6 +204,7 @@ export class TrackingRuleFormDialog {
 			: '',
 	);
 	readonly saving = signal(false);
+	readonly submitted = signal(false);
 
 	readonly eventTypeOptions = EVENT_TYPE_OPTIONS;
 
@@ -180,6 +216,7 @@ export class TrackingRuleFormDialog {
 	);
 
 	async save(): Promise<void> {
+		this.submitted.set(true);
 		if (!this.isValid() || this.saving()) return;
 		if (!isPlatformBrowser(this.platformId)) return;
 

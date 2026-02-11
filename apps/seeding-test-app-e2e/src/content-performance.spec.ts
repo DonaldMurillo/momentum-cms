@@ -11,7 +11,7 @@ import { test, expect, TEST_CREDENTIALS } from './fixtures';
  * - Row expansion shows referrer details
  */
 
-test.describe('Content Performance', () => {
+test.describe('Content Performance', { tag: ['@analytics', '@api'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		// Sign in as admin
 		const signIn = await request.post('/api/auth/sign-in/email', {

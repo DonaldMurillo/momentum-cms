@@ -10,7 +10,7 @@ import { test, expect, TEST_CREDENTIALS } from './fixtures';
  * - Analytics dashboard page rendering and navigation
  */
 
-test.describe('Sidebar Collection Grouping', () => {
+test.describe('Sidebar Collection Grouping', { tag: ['@analytics', '@smoke'] }, () => {
 	test('displays collection groups based on admin.group field', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
@@ -59,7 +59,7 @@ test.describe('Sidebar Collection Grouping', () => {
 	});
 });
 
-test.describe('Plugin Admin Routes in Sidebar', () => {
+test.describe('Plugin Admin Routes in Sidebar', { tag: ['@analytics', '@smoke'] }, () => {
 	test('displays Analytics section with plugin links', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
@@ -85,7 +85,7 @@ test.describe('Plugin Admin Routes in Sidebar', () => {
 	});
 });
 
-test.describe('Analytics API Endpoints', () => {
+test.describe('Analytics API Endpoints', { tag: ['@analytics', '@api'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		// Sign in as admin
 		const signIn = await request.post('/api/auth/sign-in/email', {
@@ -194,7 +194,7 @@ test.describe('Analytics API Endpoints', () => {
 	});
 
 	test('GET /api/analytics/query supports pagination', async ({ request }) => {
-		// Generate enough events for pagination
+		// Generate enough events for pagination (at least 3 so limit=2 gives 2 pages)
 		for (let i = 0; i < 3; i++) {
 			await request.get('/api/categories');
 		}
@@ -211,19 +211,19 @@ test.describe('Analytics API Endpoints', () => {
 		expect(data1.limit).toBe(2);
 		expect(data1.events.length).toBeLessThanOrEqual(2);
 
-		if (data1.total > 2) {
-			const page2 = await request.get('/api/analytics/query?limit=2&page=2');
-			expect(page2.ok()).toBe(true);
-			const data2 = (await page2.json()) as {
-				events: Array<{ id: string }>;
-				page: number;
-			};
-			expect(data2.page).toBe(2);
-			// Page 2 events should differ from page 1
-			if (data2.events.length > 0 && data1.events.length > 0) {
-				expect(data2.events[0].id).not.toBe(data1.events[0].id);
-			}
-		}
+		// We generated 3+ events, so total should exceed our limit
+		expect(data1.total).toBeGreaterThan(2);
+
+		const page2 = await request.get('/api/analytics/query?limit=2&page=2');
+		expect(page2.ok()).toBe(true);
+		const data2 = (await page2.json()) as {
+			events: Array<{ id: string }>;
+			page: number;
+		};
+		expect(data2.page).toBe(2);
+		expect(data2.events.length).toBeGreaterThan(0);
+		// Page 2 events should differ from page 1
+		expect(data2.events[0].id).not.toBe(data1.events[0].id);
 	});
 
 	test('GET /api/analytics/query supports date range filtering', async ({ request }) => {
@@ -261,7 +261,7 @@ test.describe('Analytics API Endpoints', () => {
 	});
 });
 
-test.describe('Analytics Dashboard Page', () => {
+test.describe('Analytics Dashboard Page', { tag: ['@analytics', '@smoke'] }, () => {
 	test('renders dashboard heading and overview section', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/analytics');
 		await authenticatedPage.waitForLoadState('domcontentloaded');

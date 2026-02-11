@@ -9,7 +9,7 @@ import { test, expect, TEST_CREDENTIALS } from './fixtures';
  * - Tracking Rules admin page: empty state, create, edit, toggle, delete
  */
 
-test.describe('Tracking Rules API', () => {
+test.describe('Tracking Rules API', { tag: ['@analytics', '@api', '@crud'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		// Sign in as admin
 		const signIn = await request.post('/api/auth/sign-in/email', {
@@ -128,7 +128,7 @@ test.describe('Tracking Rules API', () => {
 	});
 });
 
-test.describe('Tracking Rules Admin Page', () => {
+test.describe('Tracking Rules Admin Page', { tag: ['@analytics', '@crud'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		// Sign in as admin
 		const signIn = await request.post('/api/auth/sign-in/email', {

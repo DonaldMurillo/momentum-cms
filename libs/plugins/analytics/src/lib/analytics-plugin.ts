@@ -203,13 +203,34 @@ export function analyticsPlugin(config: AnalyticsConfig): AnalyticsPluginInstanc
 
 			// Register tracking rules collection and endpoint
 			if (config.trackingRules !== false) {
-				collections.push(TrackingRules);
 				const cacheTtl =
 					typeof config.trackingRules === 'object' ? config.trackingRules.cacheTtl : undefined;
-				const trackingRulesRouter = createTrackingRulesRouter(
+				const { router: trackingRulesRouter, invalidateCache } = createTrackingRulesRouter(
 					() => momentumApi,
 					cacheTtl != null ? { cacheTtl } : undefined,
 				);
+
+				// Add cache invalidation hooks so CRUD operations clear stale rules
+				const rulesWithHooks = {
+					...TrackingRules,
+					hooks: {
+						...TrackingRules.hooks,
+						afterChange: [
+							...(TrackingRules.hooks?.afterChange ?? []),
+							(): void => {
+								invalidateCache();
+							},
+						],
+						afterDelete: [
+							...(TrackingRules.hooks?.afterDelete ?? []),
+							(): void => {
+								invalidateCache();
+							},
+						],
+					},
+				};
+				collections.push(rulesWithHooks);
+
 				registerMiddleware({
 					path: '/analytics',
 					handler: trackingRulesRouter,

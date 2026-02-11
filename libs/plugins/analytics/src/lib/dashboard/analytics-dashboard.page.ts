@@ -117,7 +117,8 @@ interface DateRangeOption {
 		<div class="flex gap-2 mb-6">
 			@for (range of dateRanges; track range.value) {
 				<button
-					class="px-3 py-1.5 text-sm rounded-md transition-colors cursor-pointer border"
+					class="px-3 py-1.5 text-sm rounded-md transition-colors cursor-pointer border
+						focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2"
 					[class]="
 						selectedRange() === range.value
 							? 'bg-primary text-primary-foreground border-primary'
@@ -277,7 +278,8 @@ interface DateRangeOption {
 				<div class="flex gap-2">
 					@for (cat of categoryFilters; track cat.value) {
 						<button
-							class="px-3 py-1.5 text-sm rounded-md transition-colors cursor-pointer border"
+							class="px-3 py-1.5 text-sm rounded-md transition-colors cursor-pointer border
+								focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2"
 							[class]="
 								selectedCategory() === cat.value
 									? 'bg-primary text-primary-foreground border-primary'

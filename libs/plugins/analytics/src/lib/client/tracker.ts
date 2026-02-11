@@ -58,6 +58,8 @@ export interface MomentumTracker {
 	identify(userId: string, traits?: Record<string, unknown>): void;
 	/** Flush pending events */
 	flush(): void;
+	/** Flush pending events and clean up all listeners, timers, and observers */
+	destroy(): void;
 }
 
 /**
@@ -127,6 +129,7 @@ export function createTracker(config: TrackerConfig = {}): MomentumTracker {
 	const buffer: ClientEvent[] = [];
 	let userId: string | undefined;
 	let _timer: ReturnType<typeof setInterval> | null = null;
+	const cleanups: Array<() => void> = [];
 
 	const visitorId = getVisitorId();
 	const sessionId = getSessionId();
@@ -167,11 +170,16 @@ export function createTracker(config: TrackerConfig = {}): MomentumTracker {
 	// Start flush timer
 	if (typeof setInterval !== 'undefined') {
 		_timer = setInterval(flush, flushInterval);
+		cleanups.push(() => {
+			if (_timer) clearInterval(_timer);
+			_timer = null;
+		});
 	}
 
 	// Flush on page exit
 	if (typeof addEventListener !== 'undefined') {
 		addEventListener('beforeunload', flush);
+		cleanups.push(() => removeEventListener('beforeunload', flush));
 	}
 
 	const tracker: MomentumTracker = {
@@ -208,12 +216,21 @@ export function createTracker(config: TrackerConfig = {}): MomentumTracker {
 		},
 
 		flush,
+
+		destroy(): void {
+			flush();
+			for (const fn of cleanups) fn();
+			cleanups.length = 0;
+		},
 	};
 
 	// Block tracking: lazy-load and attach after DOM is ready
 	if (config.blockTracking) {
 		onDomReady(() => {
-			void import('./block-tracker').then((m) => m.attachBlockTracking(tracker));
+			void import('./block-tracker').then((m) => {
+				const blockCleanup = m.attachBlockTracking(tracker);
+				cleanups.push(blockCleanup);
+			});
 		});
 	}
 
@@ -225,6 +242,7 @@ export function createTracker(config: TrackerConfig = {}): MomentumTracker {
 			void import('./rule-engine').then((m) => {
 				const engine = m.createRuleEngine(tracker, { endpoint: rulesEndpoint });
 				void engine.start();
+				cleanups.push(() => engine.stop());
 			});
 		});
 	}

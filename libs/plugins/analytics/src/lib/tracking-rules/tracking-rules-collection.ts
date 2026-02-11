@@ -14,6 +14,7 @@ import {
 	number,
 	hasRole,
 } from '@momentum-cms/core';
+import { isSelectorBlocked } from '../utils/selector-security';
 
 /**
  * Tracking Rules collection config.
@@ -38,6 +39,15 @@ export const TrackingRules = defineCollection({
 			description:
 				'CSS selector to match elements (e.g., ".cta-button", "#signup-form"). ' +
 				'Selectors targeting password, hidden, or credit card fields are blocked.',
+			validate: (value: unknown): string | true => {
+				if (typeof value !== 'string' || value.trim().length === 0) {
+					return 'CSS Selector is required';
+				}
+				if (isSelectorBlocked(value)) {
+					return 'Selectors targeting password, hidden, or credit card fields are not allowed';
+				}
+				return true;
+			},
 		}),
 		select('eventType', {
 			required: true,

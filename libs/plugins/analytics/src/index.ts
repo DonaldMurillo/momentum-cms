@@ -65,6 +65,7 @@ export { TrackingRules } from './lib/tracking-rules/tracking-rules-collection';
 export {
 	createTrackingRulesRouter,
 	type TrackingRulesEndpointOptions,
+	type TrackingRulesRouterResult,
 } from './lib/tracking-rules/tracking-rules-endpoint';
 export type {
 	TrackingRule,

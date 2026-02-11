@@ -22,17 +22,26 @@ const BLOCKED_SELECTOR_PATTERNS: RegExp[] = [
 ];
 
 /**
- * Decode CSS hex escape sequences in a selector string.
+ * Decode CSS escape sequences in a selector string.
  *
- * CSS allows `\HH` through `\HHHHHH` (1–6 hex digits) followed by an optional
- * whitespace character. Without normalization, an attacker can write
- * `[type=\70assword]` to bypass a regex that checks for the literal "password".
+ * CSS allows two forms of escapes (CSS Syntax Level 3, §4.3.7):
+ * 1. Hex escapes: `\HH` through `\HHHHHH` (1–6 hex digits) + optional whitespace
+ * 2. Character escapes: `\<non-hex-char>` resolves to the literal character
+ *
+ * Without normalization, an attacker can write `[type=\70assword]` (hex) or
+ * `[type=\password]` (character escape) to bypass regex blocklist checks.
  *
  * @see https://www.w3.org/TR/css-syntax-3/#consume-escaped-code-point
  */
 function normalizeCssEscapes(selector: string): string {
-	return selector.replace(/\\([0-9a-fA-F]{1,6})\s?/g, (_, hex: string) =>
-		String.fromCodePoint(parseInt(hex, 16)),
+	return (
+		selector
+			// 1. Hex escapes: \HH … \HHHHHH followed by optional whitespace
+			.replace(/\\([0-9a-fA-F]{1,6})\s?/g, (_, hex: string) =>
+				String.fromCodePoint(parseInt(hex, 16)),
+			)
+			// 2. Character escapes: \<non-hex-char> → literal char (e.g. \p → p)
+			.replace(/\\([^0-9a-fA-F\n])/g, '$1')
 	);
 }
 

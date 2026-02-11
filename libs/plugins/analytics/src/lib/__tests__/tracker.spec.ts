@@ -34,11 +34,18 @@ async function beaconBody(callIndex = 0): Promise<{ events: Array<Record<string,
 	return JSON.parse(arg);
 }
 
-// Track addEventListener calls
+// Track addEventListener/removeEventListener calls
 const eventListeners: Record<string, (() => void)[]> = {};
 vi.stubGlobal('addEventListener', (event: string, handler: () => void) => {
 	eventListeners[event] = eventListeners[event] ?? [];
 	eventListeners[event].push(handler);
+});
+vi.stubGlobal('removeEventListener', (event: string, handler: () => void) => {
+	const list = eventListeners[event];
+	if (list) {
+		const idx = list.indexOf(handler);
+		if (idx >= 0) list.splice(idx, 1);
+	}
 });
 
 describe('createTracker', () => {
@@ -199,5 +206,36 @@ describe('createTracker', () => {
 		const body = await beaconBody();
 		const props = body.events[0]['properties'] as Record<string, unknown>;
 		expect(props['section']).toBe('blog');
+	});
+
+	it('should expose a destroy method', () => {
+		const tracker = createTracker();
+		expect(tracker.destroy).toBeDefined();
+		expect(typeof tracker.destroy).toBe('function');
+	});
+
+	it('should flush pending events on destroy', async () => {
+		const tracker = createTracker();
+		tracker.track('pending_event');
+
+		expect(mockSendBeacon).not.toHaveBeenCalled();
+
+		tracker.destroy();
+
+		expect(mockSendBeacon).toHaveBeenCalledOnce();
+		const body = await beaconBody();
+		expect(body.events[0].name).toBe('pending_event');
+	});
+
+	it('should stop the flush timer on destroy', () => {
+		const tracker = createTracker({ flushInterval: 2000 });
+		tracker.track('event_1');
+
+		tracker.destroy();
+		mockSendBeacon.mockClear();
+
+		// Advance past the flush interval — no more flushes should happen
+		vi.advanceTimersByTime(5000);
+		expect(mockSendBeacon).not.toHaveBeenCalled();
 	});
 });

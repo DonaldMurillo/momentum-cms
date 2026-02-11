@@ -33,6 +33,8 @@ import type { MomentumTracker } from './tracker';
 export function attachBlockTracking(tracker: MomentumTracker, container?: HTMLElement): () => void {
 	const root = container ?? document.body;
 	const impressionsSeen = new Set<string>();
+	const hoverCooldowns = new Map<string, number>();
+	const HOVER_COOLDOWN_MS = 5_000; // 5 seconds between hover events per block
 	let observer: IntersectionObserver | null = null;
 
 	// --- Impressions via IntersectionObserver ---
@@ -88,6 +90,13 @@ export function attachBlockTracking(tracker: MomentumTracker, container?: HTMLEl
 		const blockIndex = blockEl.dataset['blockIndex'];
 		if (!blockType) return;
 
+		// Deduplicate: one hover event per block per cooldown period
+		const key = `${blockType}:${blockIndex ?? '?'}`;
+		const now = Date.now();
+		const lastFired = hoverCooldowns.get(key);
+		if (lastFired !== undefined && now - lastFired < HOVER_COOLDOWN_MS) return;
+		hoverCooldowns.set(key, now);
+
 		tracker.track('block_hover', {
 			blockType,
 			blockIndex: blockIndex ? Number(blockIndex) : undefined,
@@ -103,5 +112,6 @@ export function attachBlockTracking(tracker: MomentumTracker, container?: HTMLEl
 		observer = null;
 		root.removeEventListener('mouseenter', handleHover, true);
 		impressionsSeen.clear();
+		hoverCooldowns.clear();
 	};
 }

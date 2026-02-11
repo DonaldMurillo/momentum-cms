@@ -8,7 +8,7 @@ import { test, expect, TEST_CREDENTIALS } from './fixtures';
  * - Inactive rule filtering, property passthrough, URL pattern matching
  */
 
-test.describe('Tracking Rules Behavior', () => {
+test.describe('Tracking Rules Behavior', { tag: ['@analytics', '@smoke'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		// Sign in as admin
 		const signIn = await request.post('/api/auth/sign-in/email', {

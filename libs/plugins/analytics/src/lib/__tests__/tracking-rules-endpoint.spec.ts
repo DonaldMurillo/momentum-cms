@@ -36,9 +36,20 @@ function createApp(
 	getApi: () => MomentumAPI | null,
 	options?: TrackingRulesEndpointOptions,
 ): express.Express {
+	const result = createTrackingRulesRouter(getApi, options);
 	const app = express();
-	app.use('/analytics', createTrackingRulesRouter(getApi, options));
+	app.use('/analytics', result.router);
 	return app;
+}
+
+function createAppWithInvalidation(
+	getApi: () => MomentumAPI | null,
+	options?: TrackingRulesEndpointOptions,
+): { app: express.Express; invalidateCache: () => void } {
+	const result = createTrackingRulesRouter(getApi, options);
+	const app = express();
+	app.use('/analytics', result.router);
+	return { app, invalidateCache: result.invalidateCache };
 }
 
 describe('createTrackingRulesRouter', () => {
@@ -196,6 +207,64 @@ describe('createTrackingRulesRouter', () => {
 		expect(res.body.rules[0].name).toBe('Allowed');
 	});
 
+	it('should filter out rules using non-hex CSS escape bypass for password inputs', async () => {
+		api = createMockApi([
+			makeRule({ selector: 'input[type=\\password]', name: 'Bypass Blocked' }),
+			makeRule({ selector: '.cta-button', name: 'Allowed' }),
+		]);
+		const app = createApp(() => api);
+
+		const res = await request(app).get('/analytics/tracking-rules');
+
+		expect(res.status).toBe(200);
+		expect(res.body.rules).toHaveLength(1);
+		expect(res.body.rules[0].name).toBe('Allowed');
+	});
+
+	it('should filter out rules using non-hex CSS escape bypass for hidden inputs', async () => {
+		api = createMockApi([
+			makeRule({ selector: 'input[type=\\hidden]', name: 'Bypass Blocked' }),
+			makeRule({ selector: '#signup-form', name: 'Allowed' }),
+		]);
+		const app = createApp(() => api);
+
+		const res = await request(app).get('/analytics/tracking-rules');
+
+		expect(res.status).toBe(200);
+		expect(res.body.rules).toHaveLength(1);
+		expect(res.body.rules[0].name).toBe('Allowed');
+	});
+
+	it('should filter out rules using multiple non-hex CSS escape bypasses', async () => {
+		api = createMockApi([
+			makeRule({ selector: 'input[type=\\passw\\ord]', name: 'Multi Bypass Blocked' }),
+			makeRule({ selector: '.safe-btn', name: 'Allowed' }),
+		]);
+		const app = createApp(() => api);
+
+		const res = await request(app).get('/analytics/tracking-rules');
+
+		expect(res.status).toBe(200);
+		expect(res.body.rules).toHaveLength(1);
+		expect(res.body.rules[0].name).toBe('Allowed');
+	});
+
+	it('should filter out rules using hex escape with trailing space + non-hex bypass', async () => {
+		// \70 followed by a space (consumed by CSS hex escape) resolves to 'p'
+		// \word resolves to 'word' via non-hex escape of \w
+		api = createMockApi([
+			makeRule({ selector: 'input[type=\\70 ass\\word]', name: 'Mixed Bypass Blocked' }),
+			makeRule({ selector: '.safe-btn', name: 'Allowed' }),
+		]);
+		const app = createApp(() => api);
+
+		const res = await request(app).get('/analytics/tracking-rules');
+
+		expect(res.status).toBe(200);
+		expect(res.body.rules).toHaveLength(1);
+		expect(res.body.rules[0].name).toBe('Allowed');
+	});
+
 	it('should filter out rules targeting hidden inputs', async () => {
 		api = createMockApi([
 			makeRule({ selector: 'input[type=hidden]', name: 'Blocked' }),
@@ -246,5 +315,30 @@ describe('createTrackingRulesRouter', () => {
 			where: { active: { equals: true } },
 			limit: 500,
 		});
+	});
+
+	it('should re-fetch rules from DB after cache is invalidated', async () => {
+		const findFn = vi
+			.fn()
+			.mockResolvedValueOnce({ docs: [makeRule({ name: 'Before' })] })
+			.mockResolvedValueOnce({ docs: [makeRule({ name: 'After' })] });
+		api = {
+			collection: vi.fn().mockReturnValue({ find: findFn }),
+			getConfig: vi.fn(),
+		} as unknown as MomentumAPI;
+
+		// Use a long TTL so cache won't expire naturally
+		const { app, invalidateCache } = createAppWithInvalidation(() => api, { cacheTtl: 60_000 });
+
+		const res1 = await request(app).get('/analytics/tracking-rules');
+		expect(res1.body.rules[0].name).toBe('Before');
+
+		// Invalidate the cache (simulates afterChange/afterDelete hook)
+		invalidateCache();
+
+		const res2 = await request(app).get('/analytics/tracking-rules');
+		expect(res2.body.rules[0].name).toBe('After');
+		// DB was queried twice: once initially, once after invalidation
+		expect(findFn).toHaveBeenCalledTimes(2);
 	});
 });

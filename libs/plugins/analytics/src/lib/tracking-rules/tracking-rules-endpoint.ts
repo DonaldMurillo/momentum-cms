@@ -93,15 +93,25 @@ function toClientRule(doc: unknown): Record<string, unknown> | null {
  * @param options - Endpoint options
  * @returns Express Router
  */
+export interface TrackingRulesRouterResult {
+	router: Router;
+	invalidateCache: () => void;
+}
+
 export function createTrackingRulesRouter(
 	getApi: () => MomentumAPI | null,
 	options: TrackingRulesEndpointOptions = {},
-): Router {
+): TrackingRulesRouterResult {
 	const router = Router();
 	const cacheTtl = options.cacheTtl ?? 60_000;
 
 	let cachedRules: Array<Record<string, unknown>> | null = null;
 	let cacheTimestamp = 0;
+
+	function invalidateCache(): void {
+		cachedRules = null;
+		cacheTimestamp = 0;
+	}
 
 	router.get('/tracking-rules', async (_req: Request, res: Response) => {
 		try {
@@ -149,5 +159,5 @@ export function createTrackingRulesRouter(
 		}
 	});
 
-	return router;
+	return { router, invalidateCache };
 }

@@ -80,7 +80,8 @@ interface DateRangeOption {
 		<div class="flex gap-2 mb-6">
 			@for (range of dateRanges; track range.value) {
 				<button
-					class="px-3 py-1.5 text-sm rounded-md transition-colors cursor-pointer border"
+					class="px-3 py-1.5 text-sm rounded-md transition-colors cursor-pointer border
+					focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2"
 					[class]="
 						selectedRange() === range.value
 							? 'bg-primary text-primary-foreground border-primary'
@@ -224,9 +225,11 @@ interface DateRangeOption {
 						<tbody>
 							@for (page of filteredPages(); track page.url; let idx = $index) {
 								<tr
-									class="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+									class="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer
+										focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
 									tabindex="0"
 									role="row"
+									[attr.aria-label]="'Show referrers for ' + page.url"
 									[attr.aria-expanded]="expandedRow() === page.url"
 									(click)="toggleRow(page.url)"
 									(keydown.enter)="toggleRow(page.url)"
