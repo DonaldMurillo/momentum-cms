@@ -10,7 +10,7 @@ import type { Request, Response } from 'express';
 import type { EventStore } from './event-store';
 import type { AnalyticsAdapter } from './analytics-config.types';
 import type { AnalyticsCategory, AnalyticsQueryOptions } from './analytics-event.types';
-import { requireAuth } from './analytics-auth';
+import { requireAdmin } from './analytics-auth';
 
 /**
  * Pre-aggregated analytics summary.
@@ -82,7 +82,7 @@ export function createAnalyticsQueryRouter(
 	 * GET /query — Paginated event query
 	 * Query params: category, name, collection, search, from, to, limit, page
 	 */
-	router.get('/query', requireAuth, async (req: Request, res: Response) => {
+	router.get('/query', requireAdmin, async (req: Request, res: Response) => {
 		try {
 			// Flush pending events before querying
 			await eventStore.flush();
@@ -139,7 +139,7 @@ export function createAnalyticsQueryRouter(
 	 * GET /summary — Pre-aggregated metrics
 	 * Query params: from, to (date range filtering)
 	 */
-	router.get('/summary', requireAuth, async (req: Request, res: Response) => {
+	router.get('/summary', requireAdmin, async (req: Request, res: Response) => {
 		try {
 			// Flush pending events before computing summary
 			await eventStore.flush();

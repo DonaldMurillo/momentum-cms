@@ -9,7 +9,7 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import type { AnalyticsAdapter } from '../analytics-config.types';
 import type { ContentPerformanceData } from './content-performance.types';
-import { requireAuth } from '../analytics-auth';
+import { requireAdmin } from '../analytics-auth';
 
 /**
  * Check if an event's URL exactly matches the expected document path.
@@ -36,7 +36,7 @@ function matchesDocumentUrl(eventUrl: string | undefined, documentPath: string):
 export function createContentPerformanceRouter(adapter: AnalyticsAdapter): Router {
 	const router = Router();
 
-	router.get('/content-performance', requireAuth, async (req: Request, res: Response) => {
+	router.get('/content-performance', requireAdmin, async (req: Request, res: Response) => {
 		try {
 			const query = req.query;
 			const collection = typeof query['collection'] === 'string' ? query['collection'] : undefined;

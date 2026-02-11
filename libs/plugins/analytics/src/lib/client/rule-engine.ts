@@ -128,7 +128,8 @@ function extractProperties(el: HTMLElement, rule: ClientRule): Record<string, un
 		const source = typeof raw['source'] === 'string' ? raw['source'] : null;
 		if (!key || !source) continue;
 
-		const maxLen = typeof raw['maxLength'] === 'number' ? raw['maxLength'] : MAX_EXTRACT_LENGTH;
+		const rawMaxLen = typeof raw['maxLength'] === 'number' ? raw['maxLength'] : MAX_EXTRACT_LENGTH;
+		const maxLen = Math.min(rawMaxLen, MAX_EXTRACT_LENGTH);
 
 		switch (source) {
 			case 'text':
@@ -234,9 +235,13 @@ export function createRuleEngine(
 				if (!(target instanceof HTMLElement)) return;
 
 				for (const rule of typeRules) {
-					const matched = target.closest(rule.selector);
-					if (matched instanceof HTMLElement) {
-						fireRule(rule, matched);
+					try {
+						const matched = target.closest(rule.selector);
+						if (matched instanceof HTMLElement) {
+							fireRule(rule, matched);
+						}
+					} catch {
+						// Invalid CSS selector — skip this rule silently
 					}
 				}
 			};
@@ -257,7 +262,11 @@ export function createRuleEngine(
 						if (!(el instanceof HTMLElement)) continue;
 
 						for (const rule of scrollRules) {
-							if (!el.matches(rule.selector)) continue;
+							try {
+								if (!el.matches(rule.selector)) continue;
+							} catch {
+								continue; // Invalid CSS selector — skip this rule
+							}
 							const key = `${rule.eventName}:${rule.selector}`;
 							if (seen.has(key)) continue;
 							seen.add(key);
@@ -270,8 +279,12 @@ export function createRuleEngine(
 			);
 
 			for (const rule of scrollRules) {
-				const elements = Array.from(document.querySelectorAll(rule.selector));
-				for (const el of elements) observer.observe(el);
+				try {
+					const elements = Array.from(document.querySelectorAll(rule.selector));
+					for (const el of elements) observer.observe(el);
+				} catch {
+					// Invalid CSS selector — skip this rule silently
+				}
 			}
 
 			activeCleanups.push(() => observer.disconnect());
