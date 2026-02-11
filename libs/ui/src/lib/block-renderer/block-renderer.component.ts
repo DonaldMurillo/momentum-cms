@@ -19,6 +19,10 @@ import { BlockOutletComponent } from './block-outlet.component';
 import { BLOCK_ADMIN_MODE } from './block-renderer.types';
 import { BlockAdminModeService } from './block-admin-mode.service';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 @Component({
 	selector: 'mcms-block-renderer',
 	imports: [BlockOutletComponent],
@@ -33,7 +37,9 @@ import { BlockAdminModeService } from './block-admin-mode.service';
 					<div
 						class="group relative"
 						data-testid="block-edit-wrapper"
+						[attr.data-block-type]="type"
 						[attr.data-block-index]="$index"
+						[attr.data-block-track]="getBlockTrack(block)"
 					>
 						<mcms-block-outlet [blockType]="type" [blockData]="block" />
 						<!-- Admin edit overlay -->
@@ -51,7 +57,13 @@ import { BlockAdminModeService } from './block-admin-mode.service';
 						</div>
 					</div>
 				} @else {
-					<mcms-block-outlet [blockType]="type" [blockData]="block" />
+					<mcms-block-outlet
+						[blockType]="type"
+						[blockData]="block"
+						[attr.data-block-type]="type"
+						[attr.data-block-index]="$index"
+						[attr.data-block-track]="getBlockTrack(block)"
+					/>
 				}
 			}
 		}
@@ -78,6 +90,20 @@ export class BlockRendererComponent {
 	getBlockType(block: Record<string, unknown>): string | null {
 		const val = block[this.typeField()];
 		return typeof val === 'string' ? val : null;
+	}
+
+	/**
+	 * Read the `_analytics` group from block data and return a tracking descriptor.
+	 * Returns null if no tracking is configured (attribute won't be rendered).
+	 */
+	getBlockTrack(block: Record<string, unknown>): string | null {
+		const analytics = block['_analytics'];
+		if (!isRecord(analytics)) return null;
+
+		const parts: string[] = [];
+		if (analytics['trackImpressions']) parts.push('impressions');
+		if (analytics['trackHover']) parts.push('hover');
+		return parts.length > 0 ? parts.join(',') : null;
 	}
 
 	onEditBlock(index: number): void {

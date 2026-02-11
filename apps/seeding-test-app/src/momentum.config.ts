@@ -31,9 +31,10 @@ export const analytics = analyticsPlugin({
 	trackApi: true,
 	flushInterval: 1000, // 1s for fast E2E feedback
 	flushBatchSize: 10,
-	ingestRateLimit: 10, // Low limit for fast rate-limit E2E testing
+	ingestRateLimit: 1000, // High enough for full E2E suite (rate-limit logic unit-tested separately)
 	excludeCollections: ['_seed_tracking'],
 	adminDashboard: true,
+	trackingRules: { cacheTtl: 0 }, // No cache for E2E testing
 });
 
 /**

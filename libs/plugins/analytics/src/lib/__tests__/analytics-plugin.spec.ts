@@ -125,22 +125,23 @@ describe('analyticsPlugin', () => {
 		const plugin = analyticsPlugin(config);
 		await plugin.onInit!(createMockContext({ registerMiddleware }));
 
-		expect(registerMiddleware).toHaveBeenCalledTimes(3);
+		// Verify each middleware is registered by checking paths
+		const paths = registeredMiddleware.map((m) => m.path);
+		expect(paths).toContain('/analytics/collect'); // ingest router
+		expect(paths).toContain('/'); // API collector
 
-		// First: ingest router
-		expect(registeredMiddleware[0].path).toBe('/analytics/collect');
-		expect(registeredMiddleware[0].position).toBe('before-api');
-		expect(registeredMiddleware[0].handler).toBeDefined();
+		// Three separate middleware at /analytics: query + content perf + tracking rules
+		const analyticsPaths = registeredMiddleware.filter((m) => m.path === '/analytics');
+		expect(analyticsPaths).toHaveLength(3);
 
-		// Second: query router
-		expect(registeredMiddleware[1].path).toBe('/analytics');
-		expect(registeredMiddleware[1].position).toBe('before-api');
-		expect(registeredMiddleware[1].handler).toBeDefined();
+		// All middleware should be before-api
+		for (const mw of registeredMiddleware) {
+			expect(mw.position).toBe('before-api');
+			expect(mw.handler).toBeDefined();
+		}
 
-		// Third: API collector
-		expect(registeredMiddleware[2].path).toBe('/');
-		expect(registeredMiddleware[2].position).toBe('before-api');
-		expect(registeredMiddleware[2].handler).toBeDefined();
+		// Total: ingest + query + api collector + content perf + tracking rules
+		expect(registeredMiddleware).toHaveLength(5);
 	});
 
 	it('should use custom ingestPath when configured', async () => {
@@ -164,10 +165,59 @@ describe('analyticsPlugin', () => {
 		const plugin = analyticsPlugin({ ...config, trackApi: false });
 		await plugin.onInit!(createMockContext({ registerMiddleware }));
 
-		// Only ingest router + query router should be registered (not API collector)
-		expect(registerMiddleware).toHaveBeenCalledTimes(2);
-		expect(registeredMiddleware[0].path).toBe('/analytics/collect');
-		expect(registeredMiddleware[1].path).toBe('/analytics');
+		// API collector at path '/' should NOT be registered
+		const rootPaths = registeredMiddleware.filter((m) => m.path === '/');
+		expect(rootPaths).toHaveLength(0);
+
+		// ingest + query + content perf + tracking rules = 4
+		expect(registeredMiddleware).toHaveLength(4);
+	});
+
+	it('should skip content performance middleware when contentPerformance is false', async () => {
+		const registeredMiddleware: PluginMiddlewareDescriptor[] = [];
+		const registerMiddleware = vi.fn((d: PluginMiddlewareDescriptor) =>
+			registeredMiddleware.push(d),
+		);
+
+		const plugin = analyticsPlugin({ ...config, contentPerformance: false });
+		await plugin.onInit!(createMockContext({ registerMiddleware }));
+
+		// query + tracking rules = 2 at /analytics (no content perf)
+		const analyticsPaths = registeredMiddleware.filter((m) => m.path === '/analytics');
+		expect(analyticsPaths).toHaveLength(2);
+
+		// ingest + query + api collector + tracking rules = 4
+		expect(registeredMiddleware).toHaveLength(4);
+	});
+
+	it('should skip tracking rules middleware when trackingRules is false', async () => {
+		const registeredMiddleware: PluginMiddlewareDescriptor[] = [];
+		const registerMiddleware = vi.fn((d: PluginMiddlewareDescriptor) =>
+			registeredMiddleware.push(d),
+		);
+
+		const collections: CollectionConfig[] = [];
+		const plugin = analyticsPlugin({ ...config, trackingRules: false });
+		await plugin.onInit!(createMockContext({ registerMiddleware, collections }));
+
+		// query + content perf = 2 at /analytics (no tracking rules)
+		const analyticsPaths = registeredMiddleware.filter((m) => m.path === '/analytics');
+		expect(analyticsPaths).toHaveLength(2);
+
+		// tracking-rules collection should NOT be injected
+		expect(collections.some((c) => c.slug === 'tracking-rules')).toBe(false);
+
+		// ingest + query + api collector + content perf = 4
+		expect(registeredMiddleware).toHaveLength(4);
+	});
+
+	it('should inject tracking-rules collection when trackingRules is enabled', async () => {
+		const collections: CollectionConfig[] = [];
+
+		const plugin = analyticsPlugin(config);
+		await plugin.onInit!(createMockContext({ collections }));
+
+		expect(collections.some((c) => c.slug === 'tracking-rules')).toBe(true);
 	});
 
 	it('should start the event store on onReady', async () => {

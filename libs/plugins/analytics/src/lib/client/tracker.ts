@@ -20,6 +20,15 @@ export interface TrackerConfig {
 	endpoint?: string;
 	/** Flush interval in ms. @default 5000 */
 	flushInterval?: number;
+	/** Enable block-level analytics (impressions + clicks on blocks with `data-block-track`). @default false */
+	blockTracking?: boolean;
+	/**
+	 * Enable element tracking rules (admin-managed CSS selector listeners).
+	 * - `true`: enable with default endpoint
+	 * - object: override rules endpoint URL
+	 * @default false
+	 */
+	trackingRules?: boolean | { endpoint?: string };
 }
 
 /**
@@ -87,6 +96,18 @@ function generateId(): string {
 }
 
 /**
+ * Schedule initialization after the DOM is ready.
+ */
+function onDomReady(fn: () => void): void {
+	if (typeof document === 'undefined') return;
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', fn, { once: true });
+	} else {
+		fn();
+	}
+}
+
+/**
  * Create a Momentum Analytics tracker.
  *
  * @param config - Tracker configuration
@@ -129,8 +150,10 @@ export function createTracker(config: TrackerConfig = {}): MomentumTracker {
 		const body = JSON.stringify({ events });
 
 		// Use sendBeacon if available (reliable on page exit)
+		// Wrap in Blob with application/json so Express body parser handles it
 		if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-			navigator.sendBeacon(endpoint, body);
+			const blob = new Blob([body], { type: 'application/json' });
+			navigator.sendBeacon(endpoint, blob);
 		} else if (typeof fetch !== 'undefined') {
 			void fetch(endpoint, {
 				method: 'POST',
@@ -151,7 +174,7 @@ export function createTracker(config: TrackerConfig = {}): MomentumTracker {
 		addEventListener('beforeunload', flush);
 	}
 
-	return {
+	const tracker: MomentumTracker = {
 		pageView(properties?: Record<string, unknown>): void {
 			addEvent({
 				name: 'page_view',
@@ -186,4 +209,25 @@ export function createTracker(config: TrackerConfig = {}): MomentumTracker {
 
 		flush,
 	};
+
+	// Block tracking: lazy-load and attach after DOM is ready
+	if (config.blockTracking) {
+		onDomReady(() => {
+			void import('./block-tracker').then((m) => m.attachBlockTracking(tracker));
+		});
+	}
+
+	// Tracking rules: lazy-load and attach after DOM is ready
+	if (config.trackingRules) {
+		const rulesEndpoint =
+			typeof config.trackingRules === 'object' ? config.trackingRules.endpoint : undefined;
+		onDomReady(() => {
+			void import('./rule-engine').then((m) => {
+				const engine = m.createRuleEngine(tracker, { endpoint: rulesEndpoint });
+				void engine.start();
+			});
+		});
+	}
+
+	return tracker;
 }

@@ -60,18 +60,17 @@ test.describe('Sidebar Collection Grouping', () => {
 });
 
 test.describe('Plugin Admin Routes in Sidebar', () => {
-	test('displays Tools section with Analytics link', async ({ authenticatedPage }) => {
+	test('displays Analytics section with plugin links', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const sidebar = authenticatedPage.getByLabel('Main navigation');
 
-		// "Tools" group from the analytics plugin route
-		await expect(sidebar.getByText('Tools', { exact: true })).toBeVisible();
-
-		// Analytics nav item
+		// "Analytics" group heading and link both exist in sidebar
 		const analyticsLink = sidebar.getByRole('link', { name: 'Analytics' });
 		await expect(analyticsLink).toBeVisible();
+		await expect(sidebar.getByRole('link', { name: 'Content Perf.' })).toBeVisible();
+		await expect(sidebar.getByRole('link', { name: 'Tracking Rules' })).toBeVisible();
 	});
 
 	test('Analytics sidebar link navigates to analytics dashboard', async ({ authenticatedPage }) => {

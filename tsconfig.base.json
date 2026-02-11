@@ -34,6 +34,12 @@
 			],
 			"@momentum-cms/plugins/analytics/admin-routes": [
 				"libs/plugins/analytics/src/lib/analytics-admin-routes.ts"
+			],
+			"@momentum-cms/plugins/analytics/client": [
+				"libs/plugins/analytics/src/lib/client/tracker.ts"
+			],
+			"@momentum-cms/plugins/analytics/block-fields": [
+				"libs/plugins/analytics/src/lib/collectors/block-field-injector.ts"
 			]
 		}
 	},

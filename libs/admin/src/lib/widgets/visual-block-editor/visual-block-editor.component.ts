@@ -12,7 +12,15 @@
  * - Writes via nodeState.value.set(newArray)
  */
 
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import {
+	ChangeDetectionStrategy,
+	Component,
+	computed,
+	effect,
+	input,
+	signal,
+	untracked,
+} from '@angular/core';
 import {
 	CdkDropList,
 	CdkDrag,
@@ -27,6 +35,7 @@ import {
 	getFieldNodeState,
 	getFieldDefaultValue,
 	isRecord,
+	normalizeBlockDefaults,
 } from '../entity-form/entity-form.types';
 import type { BlockItem, VisualEditorState } from './visual-editor.types';
 import { BlockWrapperComponent } from './block-wrapper.component';
@@ -210,6 +219,24 @@ export class VisualBlockEditorComponent {
 	});
 
 	readonly isDisabled = computed(() => this.mode() === 'view');
+
+	/**
+	 * Normalize loaded blocks: ensure every block has defaults for all fields
+	 * defined in its block definition. This is needed because blocks saved before
+	 * a new field was added (e.g. _analytics) won't have those keys, and the
+	 * signal-forms tree only creates controls for keys present in the model.
+	 */
+	private readonly _normalizeBlocks = effect(() => {
+		const state = this.nodeState();
+		if (!state) return;
+		const val = state.value();
+		if (!Array.isArray(val)) return;
+
+		const { normalized, changed } = normalizeBlockDefaults(val, this.blockDefMap());
+		if (changed) {
+			untracked(() => state.value.set(normalized));
+		}
+	});
 
 	readonly canRemoveBlock = computed((): boolean => {
 		if (this.isDisabled()) return false;

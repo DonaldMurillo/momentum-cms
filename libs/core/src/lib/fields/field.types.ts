@@ -26,6 +26,10 @@ export interface FieldAdminConfig {
 	placeholder?: string;
 	/** For blocks fields: editor rendering mode. 'visual' enables the WYSIWYG block editor. */
 	editor?: 'visual' | 'form';
+	/** Render this group field as a collapsible accordion section */
+	collapsible?: boolean;
+	/** Whether the collapsible section starts expanded (default: false) */
+	defaultOpen?: boolean;
 }
 
 // Field-level access control

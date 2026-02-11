@@ -1,3 +1,13 @@
+/**
+ * Analytics Dashboard — General Overview
+ *
+ * High-level system health view: total events, API metrics, active sessions,
+ * device/browser breakdown, content operations, and a paginated event feed.
+ * Covers all event categories (content, API, page, custom).
+ *
+ * For deep-dive page-level traffic analysis (per-URL visitors, per-page
+ * referrer sources), see the Content Performance page at 'analytics/content'.
+ */
 import {
 	Component,
 	ChangeDetectionStrategy,
@@ -36,6 +46,7 @@ import {
 	type AnalyticsSummaryData,
 	type AnalyticsEventData,
 } from './analytics.service';
+import { BlockAnalyticsWidgetComponent } from './widgets/block-analytics-widget.component';
 
 type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning';
 
@@ -53,7 +64,17 @@ interface DateRangeOption {
  */
 @Component({
 	selector: 'mcms-analytics-dashboard',
-	imports: [Card, CardHeader, CardTitle, CardDescription, CardContent, Badge, Skeleton, NgIcon],
+	imports: [
+		Card,
+		CardHeader,
+		CardTitle,
+		CardDescription,
+		CardContent,
+		Badge,
+		Skeleton,
+		NgIcon,
+		BlockAnalyticsWidgetComponent,
+	],
 	providers: [
 		provideIcons({
 			heroChartBarSquare,
@@ -282,13 +303,27 @@ interface DateRangeOption {
 						<table class="w-full text-sm" role="table">
 							<thead>
 								<tr class="border-b border-border bg-muted/50">
-									<th class="px-4 py-3 text-left font-medium text-muted-foreground">Time</th>
-									<th class="px-4 py-3 text-left font-medium text-muted-foreground">Category</th>
-									<th class="px-4 py-3 text-left font-medium text-muted-foreground">Event</th>
-									<th class="px-4 py-3 text-left font-medium text-muted-foreground">URL</th>
-									<th class="px-4 py-3 text-left font-medium text-muted-foreground">Collection</th>
-									<th class="px-4 py-3 text-left font-medium text-muted-foreground">Device</th>
-									<th class="px-4 py-3 text-left font-medium text-muted-foreground">Source</th>
+									<th scope="col" class="px-4 py-3 text-left font-medium text-muted-foreground">
+										Time
+									</th>
+									<th scope="col" class="px-4 py-3 text-left font-medium text-muted-foreground">
+										Category
+									</th>
+									<th scope="col" class="px-4 py-3 text-left font-medium text-muted-foreground">
+										Event
+									</th>
+									<th scope="col" class="px-4 py-3 text-left font-medium text-muted-foreground">
+										URL
+									</th>
+									<th scope="col" class="px-4 py-3 text-left font-medium text-muted-foreground">
+										Collection
+									</th>
+									<th scope="col" class="px-4 py-3 text-left font-medium text-muted-foreground">
+										Device
+									</th>
+									<th scope="col" class="px-4 py-3 text-left font-medium text-muted-foreground">
+										Source
+									</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -343,9 +378,7 @@ interface DateRangeOption {
 				@if (totalPages() > 1) {
 					<div class="flex items-center justify-between mt-4">
 						<p class="text-sm text-muted-foreground">
-							Page {{ currentPage() }} of {{ totalPages() }} ({{
-								analytics.events()?.total ?? 0
-							}}
+							Page {{ currentPage() }} of {{ totalPages() }} ({{ analytics.events()?.total ?? 0 }}
 							total)
 						</p>
 						<div class="flex gap-2">
@@ -499,6 +532,11 @@ interface DateRangeOption {
 				</div>
 			</section>
 		}
+
+		<!-- Block Engagement -->
+		<section class="mt-10">
+			<mcms-block-analytics-widget />
+		</section>
 	`,
 })
 export class AnalyticsDashboardPage implements OnInit {
