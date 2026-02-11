@@ -22,6 +22,7 @@ import type { Routes, Route } from '@angular/router';
 import type { Type } from '@angular/core';
 import type {
 	CollectionConfig,
+	GlobalConfig,
 	MomentumConfig,
 	PluginAdminRouteDescriptor,
 } from '@momentum-cms/core';
@@ -65,6 +66,8 @@ export interface MomentumAdminOptions {
 	basePath: string;
 	/** Collection configurations */
 	collections: CollectionConfig[];
+	/** Global configurations (singleton documents) */
+	globals?: GlobalConfig[];
 	/** Optional branding customization */
 	branding?: MomentumAdminBranding;
 	/** Whether to include auth routes (login, setup). Defaults to true */
@@ -75,6 +78,7 @@ export interface MomentumAdminOptions {
 
 export interface MomentumAdminRouteData {
 	collections: CollectionConfig[];
+	globals?: GlobalConfig[];
 	branding?: MomentumAdminBranding;
 	pluginRoutes?: AdminPluginRoute[];
 }
@@ -117,6 +121,7 @@ export function momentumAdminRoutes(
 ): Routes {
 	let basePath: string;
 	let collections: CollectionConfig[];
+	let globals: GlobalConfig[] | undefined;
 	let branding: MomentumAdminBranding | undefined;
 	let includeAuthRoutes: boolean;
 	let pluginRoutes: AdminPluginRoute[] | undefined;
@@ -126,6 +131,7 @@ export function momentumAdminRoutes(
 		const config = configOrOptions;
 		basePath = (config.admin?.basePath ?? '/admin').replace(/^\//, '');
 		collections = config.collections;
+		globals = config.globals;
 		branding = config.admin?.branding;
 		includeAuthRoutes = true;
 		pluginRoutes = (config.plugins ?? [])
@@ -134,6 +140,7 @@ export function momentumAdminRoutes(
 	} else {
 		basePath = configOrOptions.basePath.replace(/^\//, '');
 		collections = configOrOptions.collections;
+		globals = configOrOptions.globals;
 		branding = configOrOptions.branding;
 		includeAuthRoutes = configOrOptions.includeAuthRoutes ?? true;
 		pluginRoutes = configOrOptions.pluginRoutes?.map(toAdminPluginRoute);
@@ -141,6 +148,7 @@ export function momentumAdminRoutes(
 
 	const routeData: MomentumAdminRouteData = {
 		collections,
+		globals,
 		branding,
 		pluginRoutes,
 	};
@@ -229,6 +237,13 @@ export function momentumAdminRoutes(
 				loadComponent: (): Promise<Type<unknown>> =>
 					import('../pages/collection-edit/collection-edit.page').then((m) => m.CollectionEditPage),
 				canActivate: [collectionAccessGuard],
+				canDeactivate: [unsavedChangesGuard],
+			},
+			// Global edit
+			{
+				path: 'globals/:slug',
+				loadComponent: (): Promise<Type<unknown>> =>
+					import('../pages/global-edit/global-edit.page').then((m) => m.GlobalEditPage),
 				canDeactivate: [unsavedChangesGuard],
 			},
 			// Plugin-registered routes

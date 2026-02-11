@@ -2,7 +2,7 @@
  * Type-safe route data utilities
  */
 
-import type { CollectionConfig } from '@momentum-cms/core';
+import type { CollectionConfig, GlobalConfig } from '@momentum-cms/core';
 import type { MomentumAdminBranding, AdminPluginRoute } from '../routes/momentum-admin-routes';
 import type { Data } from '@angular/router';
 
@@ -60,6 +60,21 @@ export function getBrandingFromRouteData(
 		return branding;
 	}
 	return undefined;
+}
+
+/**
+ * Extracts globals from route data with type safety
+ */
+export function getGlobalsFromRouteData(data: Data | undefined): GlobalConfig[] {
+	if (!data) return [];
+	const globals = data['globals'];
+	if (Array.isArray(globals)) {
+		// Same shape check as collections — slug + fields
+		return globals.filter(
+			(g) => typeof g === 'object' && g !== null && 'slug' in g && 'fields' in g,
+		);
+	}
+	return [];
 }
 
 /**

@@ -141,6 +141,12 @@ export function initializeMomentum(
 			await config.db.adapter.initialize(config.collections);
 		}
 
+		// 2b. Initialize globals table if globals are configured
+		if (config.db.adapter.initializeGlobals && config.globals && config.globals.length > 0) {
+			log.info(`Initializing globals table for ${config.globals.length} global(s)...`);
+			await config.db.adapter.initializeGlobals(config.globals);
+		}
+
 		// 3. Initialize Momentum API singleton
 		log.info('Initializing API...');
 		const api = initializeMomentumAPI(config);

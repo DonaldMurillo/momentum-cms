@@ -293,6 +293,27 @@ export interface VersionOperations<T = Record<string, unknown>> {
 }
 
 // ============================================
+// Global Operations
+// ============================================
+
+/**
+ * Operations available on a global (singleton document).
+ * Globals have exactly one document — no create/delete, no pagination.
+ */
+export interface GlobalOperations<T = Record<string, unknown>> {
+	/**
+	 * Read the global document.
+	 * Auto-creates with default field values if it doesn't exist yet.
+	 */
+	findOne(options?: { depth?: number }): Promise<T>;
+
+	/**
+	 * Update the global document.
+	 */
+	update(data: Partial<T>): Promise<T>;
+}
+
+// ============================================
 // Momentum API Interface
 // ============================================
 
@@ -324,6 +345,14 @@ export interface MomentumAPI {
 	 * @returns Collection operations interface
 	 */
 	collection<T = Record<string, unknown>>(slug: string): CollectionOperations<T>;
+
+	/**
+	 * Get operations for a global (singleton document).
+	 *
+	 * @param slug - The global slug
+	 * @returns Global operations interface
+	 */
+	global<T = Record<string, unknown>>(slug: string): GlobalOperations<T>;
 
 	/**
 	 * Get the current Momentum configuration.
@@ -376,6 +405,16 @@ export class AccessDeniedError extends Error {
 	constructor(operation: string, collection: string) {
 		super(`Access denied for ${operation} on collection "${collection}"`);
 		this.name = 'AccessDeniedError';
+	}
+}
+
+/**
+ * Error thrown when a global is not found in the configuration.
+ */
+export class GlobalNotFoundError extends Error {
+	constructor(slug: string) {
+		super(`Global "${slug}" not found`);
+		this.name = 'GlobalNotFoundError';
 	}
 }
 

@@ -68,6 +68,13 @@ export function defineGlobal(config: GlobalConfig): GlobalConfig {
 		throw new Error(`Global "${config.slug}" must have at least one field`);
 	}
 
+	// Validate slug format (kebab-case) — same rules as collections
+	if (!/^[a-z][a-z0-9-]*$/.test(config.slug)) {
+		throw new Error(
+			`Global slug "${config.slug}" must be kebab-case (lowercase letters, numbers, and hyphens, starting with a letter)`,
+		);
+	}
+
 	return config;
 }
 

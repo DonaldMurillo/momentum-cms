@@ -6,6 +6,7 @@ import {
 	createMomentumHandlers,
 	getCollectionPermissions,
 	getMomentumAPI,
+	GlobalNotFoundError,
 	handleUpload,
 	handleFileGet,
 	getUploadConfig,
@@ -240,6 +241,58 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		const result = await executeGraphQL(graphqlSchema, { query: queryParam }, { user });
 
 		res.status(result.status).json(result.body);
+	});
+
+	// ============================================
+	// Globals Routes
+	// Must be defined BEFORE generic /:collection routes
+	// ============================================
+
+	// Route: GET /globals/:slug - Read a global document
+	router.get('/globals/:slug', async (req: Request, res: Response) => {
+		try {
+			const api = getMomentumAPI();
+			const user = extractUserFromRequest(req);
+			const contextApi = user ? api.setContext({ user }) : api;
+
+			const depthParam = req.query['depth'];
+			const depth = typeof depthParam === 'string' ? parseInt(depthParam, 10) || 0 : 0;
+			const slug = req.params['slug'];
+			const doc = await contextApi.global(slug).findOne({ depth });
+			res.json({ doc });
+		} catch (error) {
+			if (error instanceof GlobalNotFoundError) {
+				res.status(404).json({ error: sanitizeErrorMessage(error, 'Global not found') });
+			} else if (error instanceof Error && error.name === 'AccessDeniedError') {
+				res.status(403).json({ error: 'Access denied' });
+			} else {
+				res.status(500).json({ error: sanitizeErrorMessage(error, 'Failed to read global') });
+			}
+		}
+	});
+
+	// Route: PATCH /globals/:slug - Update a global document
+	router.patch('/globals/:slug', async (req: Request, res: Response) => {
+		try {
+			const api = getMomentumAPI();
+			const user = extractUserFromRequest(req);
+			const contextApi = user ? api.setContext({ user }) : api;
+
+			const slug = req.params['slug'];
+			const data = getBody(req);
+			const doc = await contextApi.global(slug).update(data);
+			res.json({ doc });
+		} catch (error) {
+			if (error instanceof GlobalNotFoundError) {
+				res.status(404).json({ error: sanitizeErrorMessage(error, 'Global not found') });
+			} else if (error instanceof Error && error.name === 'AccessDeniedError') {
+				res.status(403).json({ error: 'Access denied' });
+			} else if (error instanceof Error && error.name === 'ValidationError') {
+				res.status(400).json({ error: sanitizeErrorMessage(error, 'Validation failed') });
+			} else {
+				res.status(500).json({ error: sanitizeErrorMessage(error, 'Failed to update global') });
+			}
+		}
 	});
 
 	// ============================================

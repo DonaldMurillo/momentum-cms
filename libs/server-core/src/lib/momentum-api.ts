@@ -9,6 +9,7 @@ import type {
 	MomentumConfig,
 	DatabaseAdapter,
 	CollectionConfig,
+	GlobalConfig,
 	Field,
 	AccessArgs,
 	HookArgs,
@@ -28,6 +29,7 @@ import type {
 	MomentumAPI,
 	MomentumAPIContext,
 	CollectionOperations,
+	GlobalOperations,
 	FindOptions,
 	FindResult,
 	DeleteResult,
@@ -40,6 +42,7 @@ import {
 	CollectionNotFoundError,
 	DocumentNotFoundError,
 	AccessDeniedError,
+	GlobalNotFoundError,
 	ValidationError,
 } from './momentum-api.types';
 
@@ -135,6 +138,22 @@ class MomentumAPIImpl implements MomentumAPI {
 		return new CollectionOperationsImpl<T>(
 			slug,
 			collectionConfig,
+			this.adapter,
+			this.context,
+			this.config.collections,
+		);
+	}
+
+	global<T = Record<string, unknown>>(slug: string): GlobalOperations<T> {
+		const globals = this.config.globals ?? [];
+		const globalConfig = globals.find((g) => g.slug === slug);
+		if (!globalConfig) {
+			throw new GlobalNotFoundError(slug);
+		}
+
+		return new GlobalOperationsImpl<T>(
+			slug,
+			globalConfig,
 			this.adapter,
 			this.context,
 			this.config.collections,
@@ -934,11 +953,278 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 	}
 }
 
+// ============================================
+// Global Operations Implementation
+// ============================================
+
+/**
+ * Implementation of global operations (singleton documents).
+ * Reuses the same hook/access/validation patterns as collections.
+ */
+class GlobalOperationsImpl<T> implements GlobalOperations<T> {
+	private readonly log = createLogger('GlobalOps');
+
+	constructor(
+		private readonly slug: string,
+		private readonly globalConfig: GlobalConfig,
+		private readonly adapter: DatabaseAdapter,
+		private readonly context: MomentumAPIContext,
+		private readonly allCollections: CollectionConfig[] = [],
+	) {}
+
+	async findOne(options?: { depth?: number }): Promise<T> {
+		// Check read access
+		await this.checkAccess('read');
+
+		// Run beforeRead hooks
+		await this.runBeforeReadHooks();
+
+		// Fetch from adapter
+		let data: Record<string, unknown> | null = null;
+		if (this.adapter.findGlobal) {
+			data = await this.adapter.findGlobal(this.slug);
+		}
+
+		// Auto-create with empty data if not found
+		if (!data) {
+			this.log.info(`Global "${this.slug}" not found, auto-creating with defaults`);
+			const defaults: Record<string, unknown> = {};
+			if (this.adapter.updateGlobal) {
+				data = await this.adapter.updateGlobal(this.slug, defaults);
+			} else {
+				data = { slug: this.slug, data: defaults };
+			}
+		}
+
+		// Run afterRead hooks
+		let processedData = data;
+		const hooks = this.globalConfig.hooks?.afterRead;
+		if (hooks && hooks.length > 0) {
+			for (const hook of hooks) {
+				const hookArgs: HookArgs = {
+					req: this.buildRequestContext(),
+					doc: processedData,
+				};
+				const result = await Promise.resolve(hook(hookArgs));
+				if (result && typeof result === 'object') {
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Hook returns object
+					processedData = result as Record<string, unknown>;
+				}
+			}
+		}
+
+		// Filter readable fields
+		if (hasFieldAccessControl(this.globalConfig.fields)) {
+			processedData = await filterReadableFields(
+				this.globalConfig.fields,
+				processedData,
+				this.buildRequestContext(),
+			);
+		}
+
+		// Run field-level afterRead hooks
+		if (hasFieldHooks(this.globalConfig.fields)) {
+			processedData = await runFieldHooks(
+				'afterRead',
+				this.globalConfig.fields,
+				processedData,
+				this.buildRequestContext(),
+				'read',
+			);
+		}
+
+		// Populate relationships if depth > 0
+		const MAX_RELATIONSHIP_DEPTH = 10;
+		const depth = Math.min(options?.depth ?? 0, MAX_RELATIONSHIP_DEPTH);
+		if (depth > 0) {
+			processedData = await populateRelationships(processedData, this.globalConfig.fields, {
+				depth,
+				collections: this.allCollections,
+				adapter: this.adapter,
+				req: this.buildRequestContext(),
+			});
+		}
+
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>, safe cast
+		return processedData as T;
+	}
+
+	async update(data: Partial<T>): Promise<T> {
+		// Check update access
+		await this.checkAccess('update');
+
+		if (!this.adapter.updateGlobal) {
+			throw new Error('Database adapter does not support globals');
+		}
+
+		// Get original data for hooks
+		const originalData = this.adapter.findGlobal ? await this.adapter.findGlobal(this.slug) : null;
+
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Partial<T> is compatible with Record<string, unknown>
+		let processedData = data as Record<string, unknown>;
+
+		// Filter fields the user cannot update (field-level access)
+		if (hasFieldAccessControl(this.globalConfig.fields)) {
+			processedData = await filterUpdatableFields(
+				this.globalConfig.fields,
+				processedData,
+				this.buildRequestContext(),
+			);
+		}
+
+		// Run field-level beforeValidate hooks
+		if (hasFieldHooks(this.globalConfig.fields)) {
+			processedData = await runFieldHooks(
+				'beforeValidate',
+				this.globalConfig.fields,
+				processedData,
+				this.buildRequestContext(),
+				'update',
+			);
+		}
+
+		// Run collection-level beforeValidate hooks
+		processedData = await this.runHooks('beforeValidate', processedData, originalData);
+
+		// Validate fields (partial validation for updates)
+		const errors = this.validateData(processedData);
+		if (errors.length > 0) {
+			throw new ValidationError(errors);
+		}
+
+		// Run field-level beforeChange hooks
+		if (hasFieldHooks(this.globalConfig.fields)) {
+			processedData = await runFieldHooks(
+				'beforeChange',
+				this.globalConfig.fields,
+				processedData,
+				this.buildRequestContext(),
+				'update',
+			);
+		}
+
+		// Run collection-level beforeChange hooks
+		processedData = await this.runHooks('beforeChange', processedData, originalData);
+
+		// Merge with existing data so partial updates preserve unchanged fields
+		const existingFields = originalData ? { ...originalData } : {};
+		delete existingFields['slug'];
+		delete existingFields['createdAt'];
+		delete existingFields['updatedAt'];
+		delete existingFields['data'];
+		const mergedData = { ...existingFields, ...processedData };
+
+		// Execute upsert
+		const result = await this.adapter.updateGlobal(this.slug, mergedData);
+
+		// Run collection-level afterChange hooks
+		await this.runHooks('afterChange', result, originalData);
+
+		// Run field-level afterChange hooks
+		if (hasFieldHooks(this.globalConfig.fields)) {
+			await runFieldHooks(
+				'afterChange',
+				this.globalConfig.fields,
+				result,
+				this.buildRequestContext(),
+				'update',
+			);
+		}
+
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>, safe cast
+		return result as T;
+	}
+
+	// ============================================
+	// Private Helpers
+	// ============================================
+
+	private async checkAccess(operation: 'read' | 'update'): Promise<void> {
+		const accessFn = this.globalConfig.access?.[operation];
+		if (!accessFn) return; // No access function = allow all
+
+		const accessArgs: AccessArgs = {
+			req: this.buildRequestContext(),
+		};
+
+		const allowed = await Promise.resolve(accessFn(accessArgs));
+		if (!allowed) {
+			throw new AccessDeniedError(operation, this.slug);
+		}
+	}
+
+	private buildRequestContext(): RequestContext {
+		return {
+			user: this.context.user,
+		};
+	}
+
+	private validateData(data: Record<string, unknown>): FieldValidationError[] {
+		const errors: FieldValidationError[] = [];
+		const dataFields = flattenDataFields(this.globalConfig.fields);
+
+		for (const field of dataFields) {
+			const value = data[field.name];
+
+			// Run built-in constraint validators
+			if (value !== undefined && value !== null) {
+				const constraintErrors = validateFieldConstraints(field, value);
+				for (const err of constraintErrors) {
+					errors.push({ field: err.field, message: err.message });
+				}
+			}
+		}
+
+		return errors;
+	}
+
+	private async runHooks(
+		hookType: 'beforeValidate' | 'beforeChange' | 'afterChange',
+		data: Record<string, unknown>,
+		originalDoc?: Record<string, unknown> | null,
+	): Promise<Record<string, unknown>> {
+		const hooks = this.globalConfig.hooks?.[hookType];
+		if (!hooks || hooks.length === 0) return data;
+
+		let processedData = { ...data };
+
+		for (const hook of hooks) {
+			const hookArgs: HookArgs = {
+				req: this.buildRequestContext(),
+				data: processedData,
+				operation: 'update',
+				originalDoc: originalDoc ?? undefined,
+			};
+
+			const result = await Promise.resolve(hook(hookArgs));
+			if (result && typeof result === 'object') {
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Hook returns object
+				processedData = result as Record<string, unknown>;
+			}
+		}
+
+		return processedData;
+	}
+
+	private async runBeforeReadHooks(): Promise<void> {
+		const hooks = this.globalConfig.hooks?.beforeRead;
+		if (!hooks || hooks.length === 0) return;
+
+		for (const hook of hooks) {
+			const hookArgs: HookArgs = {
+				req: this.buildRequestContext(),
+			};
+			await Promise.resolve(hook(hookArgs));
+		}
+	}
+}
+
 // Re-export types for convenience
 export type {
 	MomentumAPI,
 	MomentumAPIContext,
 	CollectionOperations,
+	GlobalOperations,
 	FindOptions,
 	FindResult,
 	DeleteResult,
@@ -952,6 +1238,7 @@ export {
 	CollectionNotFoundError,
 	DocumentNotFoundError,
 	AccessDeniedError,
+	GlobalNotFoundError,
 	ValidationError,
 } from './momentum-api.types';
 

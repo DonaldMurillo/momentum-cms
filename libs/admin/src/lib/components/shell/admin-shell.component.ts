@@ -9,10 +9,11 @@ import {
 import { isPlatformBrowser } from '@angular/common';
 import { RouterOutlet, ActivatedRoute, Router } from '@angular/router';
 import { A11yModule } from '@angular/cdk/a11y';
-import type { CollectionConfig } from '@momentum-cms/core';
+import type { CollectionConfig, GlobalConfig } from '@momentum-cms/core';
 import { SidebarService, SidebarTrigger, ToastContainer } from '@momentum-cms/ui';
 import {
 	getCollectionsFromRouteData,
+	getGlobalsFromRouteData,
 	getBrandingFromRouteData,
 	getPluginRoutesFromRouteData,
 } from '../../utils/route-data';
@@ -118,6 +119,7 @@ import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
 		<mcms-admin-sidebar
 			[branding]="sidebarBranding()"
 			[collections]="collections()"
+			[globals]="globals()"
 			[pluginRoutes]="pluginRoutes()"
 			[user]="sidebarUser()"
 			basePath="/admin"
@@ -191,6 +193,11 @@ export class AdminShellComponent implements OnInit {
 
 		// Filter to only accessible collections
 		return all.filter((c) => accessible.includes(c.slug));
+	});
+
+	/** Globals from route data */
+	readonly globals = computed((): GlobalConfig[] => {
+		return getGlobalsFromRouteData(this.route.snapshot.data);
 	});
 
 	/** Plugin routes from route data */

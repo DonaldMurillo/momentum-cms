@@ -119,6 +119,18 @@ test.describe('Admin Sidebar Navigation', () => {
 		await expect(usersLink).toBeVisible();
 	});
 
+	test('should have global links in sidebar', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		const sidebarNav = authenticatedPage.getByLabel('Main navigation');
+
+		// Globals section with Site Settings link
+		const settingsLink = sidebarNav.getByRole('link', { name: 'Site Settings' });
+		await expect(settingsLink).toBeVisible();
+		await expect(settingsLink).toHaveAttribute('href', '/admin/globals/site-settings');
+	});
+
 	test('should navigate using sidebar links', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');

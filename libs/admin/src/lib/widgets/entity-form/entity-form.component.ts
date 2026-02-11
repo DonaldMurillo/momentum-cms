@@ -89,7 +89,9 @@ import { VersionHistoryWidget } from '../version-history/version-history.compone
 				<div class="flex items-start justify-between gap-4">
 					<div>
 						<h1 class="text-2xl font-semibold tracking-tight">
-							@if (mode() === 'create') {
+							@if (isGlobal()) {
+								{{ collectionLabelSingular() }}
+							} @else if (mode() === 'create') {
 								Create {{ collectionLabelSingular() }}
 							} @else if (mode() === 'edit') {
 								Edit {{ collectionLabelSingular() }}
@@ -98,7 +100,9 @@ import { VersionHistoryWidget } from '../version-history/version-history.compone
 							}
 						</h1>
 						<p class="mt-1 text-muted-foreground">
-							@if (mode() === 'create') {
+							@if (isGlobal()) {
+								Manage {{ collectionLabelSingular().toLowerCase() }} settings.
+							} @else if (mode() === 'create') {
 								Add a new {{ collectionLabelSingular().toLowerCase() }} to your collection.
 							} @else if (mode() === 'edit') {
 								Update the {{ collectionLabelSingular().toLowerCase() }} details below.
@@ -221,6 +225,12 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	/** When true, prevents router navigation after save/cancel (used in entity sheet) */
 	readonly suppressNavigation = input(false);
 
+	/** When true, uses the global API instead of collection API (singleton mode) */
+	readonly isGlobal = input(false);
+
+	/** The global slug (used when isGlobal is true) */
+	readonly globalSlug = input<string | undefined>(undefined);
+
 	/** Outputs */
 	readonly saved = output<T>();
 	readonly cancelled = output<void>();
@@ -280,6 +290,10 @@ export class EntityFormWidget<T extends Entity = Entity> {
 
 	/** Page title for breadcrumb */
 	readonly pageTitle = computed(() => {
+		if (this.isGlobal()) {
+			return this.collectionLabelSingular();
+		}
+
 		const currentMode = this.mode();
 		if (currentMode === 'create') {
 			return `Create ${this.collectionLabelSingular()}`;
@@ -332,6 +346,8 @@ export class EntityFormWidget<T extends Entity = Entity> {
 			const col = this.collection();
 			const id = this.entityId();
 			const currentMode = this.mode();
+			const globalMode = this.isGlobal();
+			const gSlug = this.globalSlug();
 
 			if (col) {
 				// Create the signal forms tree once per collection
@@ -354,7 +370,10 @@ export class EntityFormWidget<T extends Entity = Entity> {
 					this.entityForm.set(f);
 				}
 
-				if (currentMode === 'create' || !id) {
+				if (globalMode && gSlug) {
+					// Global mode: always load the singleton
+					this.loadGlobal(gSlug);
+				} else if (currentMode === 'create' || !id) {
 					this.formModel.set(createInitialFormData(col));
 					const ef = this.entityForm();
 					if (ef) ef().reset();
@@ -402,6 +421,35 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	}
 
 	/**
+	 * Load global singleton document.
+	 */
+	private async loadGlobal(slug: string): Promise<void> {
+		this.isLoading.set(true);
+		this.formError.set(null);
+
+		try {
+			const data = await this.api.global<T>(slug).findOne();
+			if (data) {
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+				this.originalData.set(data as T);
+				// Merge API data with initial field defaults so all field keys exist in the model.
+				// Auto-created globals only have metadata (slug, timestamps) — without merging,
+				// signal-forms can't update fields that don't exist in the model.
+				const initial = createInitialFormData(this.collection());
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+				this.formModel.set({ ...initial, ...(data as Record<string, unknown>) });
+				const ef = this.entityForm();
+				if (ef) ef().reset();
+			}
+		} catch (err) {
+			this.formError.set('Failed to load data');
+			this.saveError.emit(err instanceof Error ? err : new Error('Failed to load data'));
+		} finally {
+			this.isLoading.set(false);
+		}
+	}
+
+	/**
 	 * Handle form submission using Angular Signal Forms submit().
 	 * submit() marks all fields as touched, then only calls the callback if valid.
 	 */
@@ -421,7 +469,12 @@ export class EntityFormWidget<T extends Entity = Entity> {
 				const data = this.formModel();
 				let result: T;
 
-				if (this.mode() === 'create') {
+				if (this.isGlobal()) {
+					// Global mode: always update (singleton)
+					const gSlug = this.globalSlug() ?? slug;
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+					result = await this.api.global<T>(gSlug).update(data as Partial<T>);
+				} else if (this.mode() === 'create') {
 					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 					result = await this.api.collection<T>(slug).create(data as Partial<T>);
 				} else {
@@ -436,7 +489,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 				ef().reset();
 				this.saved.emit(result);
 
-				if (!this.suppressNavigation()) {
+				if (!this.suppressNavigation() && !this.isGlobal()) {
 					const listPath = `${this.basePath()}/${slug}`;
 					this.router.navigate([listPath]);
 				}

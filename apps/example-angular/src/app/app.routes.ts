@@ -2,6 +2,7 @@ import { Route } from '@angular/router';
 import { momentumAdminRoutes } from '@momentum-cms/admin';
 import { KitchenSinkPage } from '@momentum-cms/ui';
 import { collections } from '../collections';
+import { globals } from '../globals';
 
 export const appRoutes: Route[] = [
 	// Landing page
@@ -24,6 +25,7 @@ export const appRoutes: Route[] = [
 	...momentumAdminRoutes({
 		basePath: '/admin',
 		collections,
+		globals,
 		branding: {
 			title: 'Momentum CMS',
 		},

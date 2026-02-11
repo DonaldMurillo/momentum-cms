@@ -1,6 +1,7 @@
 import { defineMomentumConfig } from '@momentum-cms/core';
 import { postgresAdapter } from '@momentum-cms/db-drizzle';
 import { Posts, Users } from './collections';
+import { SiteSettings } from './globals';
 
 /**
  * Momentum CMS Configuration
@@ -16,6 +17,7 @@ export default defineMomentumConfig({
 		}),
 	},
 	collections: [Posts, Users],
+	globals: [SiteSettings],
 	admin: {
 		basePath: '/admin',
 		branding: {

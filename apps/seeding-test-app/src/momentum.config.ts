@@ -16,6 +16,7 @@ import {
 	FieldTestItems,
 	Tags,
 } from './collections';
+import { SiteSettings } from './globals';
 import { join } from 'node:path';
 
 /**
@@ -121,6 +122,7 @@ export default defineMomentumConfig({
 		FieldTestItems,
 		Tags,
 	],
+	globals: [SiteSettings],
 	storage: {
 		adapter: localStorageAdapter({
 			directory: join(process.cwd(), 'data', 'uploads'),

@@ -1,4 +1,4 @@
-import type { CollectionConfig } from './collections';
+import type { CollectionConfig, GlobalConfig } from './collections';
 import type { SeedingConfig, SeedingOptions } from './seeding';
 import type {
 	DocumentVersion,
@@ -154,6 +154,33 @@ export interface DatabaseAdapter {
 	 * @returns The value returned by the callback
 	 */
 	transaction?<T>(callback: (txAdapter: DatabaseAdapter) => Promise<T>): Promise<T>;
+
+	// ============================================
+	// Globals Operations (optional, for singleton documents)
+	// ============================================
+
+	/**
+	 * Initialize the globals table.
+	 * Called once when the server starts if globals are configured.
+	 * @param globals - The global configurations
+	 */
+	initializeGlobals?(globals: GlobalConfig[]): Promise<void>;
+
+	/**
+	 * Find a global document by slug.
+	 * @param slug - The global slug
+	 * @returns The global data or null if not found
+	 */
+	findGlobal?(slug: string): Promise<Record<string, unknown> | null>;
+
+	/**
+	 * Update (or create) a global document.
+	 * Uses upsert semantics: creates if missing, updates if exists.
+	 * @param slug - The global slug
+	 * @param data - The global data to store
+	 * @returns The full global record after update
+	 */
+	updateGlobal?(slug: string, data: Record<string, unknown>): Promise<Record<string, unknown>>;
 }
 
 /**
@@ -291,6 +318,11 @@ export interface MomentumConfig {
 	collections: CollectionConfig[];
 
 	/**
+	 * Global definitions (singleton documents like site settings).
+	 */
+	globals?: GlobalConfig[];
+
+	/**
 	 * Admin panel configuration.
 	 */
 	admin?: AdminPanelConfig;
@@ -418,4 +450,11 @@ export function getDbAdapter(config: MomentumConfig): DatabaseAdapter {
  */
 export function getCollections(config: MomentumConfig): CollectionConfig[] {
 	return config.collections;
+}
+
+/**
+ * Gets globals from the config.
+ */
+export function getGlobals(config: MomentumConfig): GlobalConfig[] {
+	return config.globals ?? [];
 }
