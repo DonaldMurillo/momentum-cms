@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { defineCollection, defineGlobal } from '../../lib/collections';
+import { defineCollection, defineGlobal, getSoftDeleteField } from '../../lib/collections';
 import { text, email, password, richText, relationship, checkbox } from '../../lib/fields';
 
 describe('defineCollection()', () => {
@@ -448,5 +448,51 @@ describe('defineGlobal()', () => {
 			expect(SiteSettings.access?.read).toBe(readFn);
 			expect(SiteSettings.access?.update).toBe(updateFn);
 		});
+	});
+});
+
+describe('getSoftDeleteField()', () => {
+	it('should return null when softDelete is not set', () => {
+		const collection = defineCollection({
+			slug: 'posts',
+			fields: [text('title')],
+		});
+		expect(getSoftDeleteField(collection)).toBeNull();
+	});
+
+	it('should return null when softDelete is false', () => {
+		const collection = defineCollection({
+			slug: 'posts',
+			fields: [text('title')],
+			softDelete: false,
+		});
+		expect(getSoftDeleteField(collection)).toBeNull();
+	});
+
+	it('should return "deletedAt" when softDelete is true', () => {
+		const collection = defineCollection({
+			slug: 'posts',
+			fields: [text('title')],
+			softDelete: true,
+		});
+		expect(getSoftDeleteField(collection)).toBe('deletedAt');
+	});
+
+	it('should return "deletedAt" when softDelete config has no field override', () => {
+		const collection = defineCollection({
+			slug: 'posts',
+			fields: [text('title')],
+			softDelete: { retentionDays: 30 },
+		});
+		expect(getSoftDeleteField(collection)).toBe('deletedAt');
+	});
+
+	it('should return custom field name when specified', () => {
+		const collection = defineCollection({
+			slug: 'posts',
+			fields: [text('title')],
+			softDelete: { field: 'archivedAt' },
+		});
+		expect(getSoftDeleteField(collection)).toBe('archivedAt');
 	});
 });

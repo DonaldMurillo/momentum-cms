@@ -38,6 +38,11 @@ export interface AccessConfig {
 	admin?: AccessFunction;
 	unlock?: AccessFunction; // For auth-enabled collections
 
+	/** Control who can restore soft-deleted documents (falls back to update access) */
+	restore?: AccessFunction;
+	/** Control who can permanently delete soft-deleted documents (falls back to delete access) */
+	forceDelete?: AccessFunction;
+
 	// Version-related access control
 	/** Control who can read version history */
 	readVersions?: AccessFunction;
@@ -55,7 +60,7 @@ export interface HookArgs {
 	req: RequestContext;
 	data?: Record<string, unknown>;
 	doc?: Record<string, unknown>;
-	operation?: 'create' | 'update' | 'delete';
+	operation?: 'create' | 'update' | 'delete' | 'softDelete' | 'restore';
 	originalDoc?: Record<string, unknown>;
 }
 
@@ -71,6 +76,8 @@ export interface HooksConfig {
 	afterRead?: HookFunction[];
 	beforeDelete?: HookFunction[];
 	afterDelete?: HookFunction[];
+	beforeRestore?: HookFunction[];
+	afterRestore?: HookFunction[];
 }
 
 // ============================================
@@ -154,6 +161,18 @@ export interface AuthConfig {
 }
 
 // ============================================
+// Soft Delete
+// ============================================
+
+export interface SoftDeleteConfig {
+	/** Column name for the deletion timestamp. @default 'deletedAt' */
+	field?: string;
+
+	/** Auto-purge soft-deleted records after this many days. Undefined means never purge. */
+	retentionDays?: number;
+}
+
+// ============================================
 // Timestamps
 // ============================================
 
@@ -199,6 +218,9 @@ export interface CollectionConfig {
 
 	/** Timestamps configuration */
 	timestamps?: boolean | TimestampsConfig;
+
+	/** Enable soft deletes (sets deletedAt instead of removing row) */
+	softDelete?: boolean | SoftDeleteConfig;
 
 	/** Custom database table/collection name */
 	dbName?: string;
@@ -249,7 +271,7 @@ export interface WebhookPayload {
 	/** The collection slug. */
 	collection: string;
 	/** The operation type. */
-	operation: 'create' | 'update' | 'delete';
+	operation: 'create' | 'update' | 'delete' | 'softDelete' | 'restore';
 	/** Timestamp of the event. */
 	timestamp: string;
 	/** The document data (after the operation). */

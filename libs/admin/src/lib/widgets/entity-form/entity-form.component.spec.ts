@@ -236,7 +236,7 @@ describe('EntityFormWidget', () => {
 			createFixture({ entityId: '123', mode: 'edit' });
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			expect(req.request.method).toBe('GET');
 			req.flush({ doc: mockEntity });
 
@@ -250,7 +250,7 @@ describe('EntityFormWidget', () => {
 			createFixture({ entityId: '123', mode: 'edit' });
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -266,7 +266,7 @@ describe('EntityFormWidget', () => {
 
 			const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
-			const getReq = httpMock.expectOne('/api/posts/123');
+			const getReq = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			getReq.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -276,7 +276,7 @@ describe('EntityFormWidget', () => {
 
 			const submitPromise = component.onSubmit();
 
-			const updateReq = httpMock.expectOne('/api/posts/123');
+			const updateReq = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			expect(updateReq.request.method).toBe('PATCH');
 			expect(updateReq.request.body).toEqual(expect.objectContaining({ title: 'Updated Title' }));
 			updateReq.flush({ doc: { ...mockEntity, title: 'Updated Title' } });
@@ -290,7 +290,7 @@ describe('EntityFormWidget', () => {
 			createFixture({ entityId: '999', mode: 'edit' });
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/999');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/999');
 			req.flush({ doc: null });
 
 			await fixture.whenStable();
@@ -304,7 +304,7 @@ describe('EntityFormWidget', () => {
 			createFixture({ entityId: '123', mode: 'view' });
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -322,7 +322,7 @@ describe('EntityFormWidget', () => {
 			createFixture({ entityId: '123', mode: 'view' });
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -339,7 +339,7 @@ describe('EntityFormWidget', () => {
 			createFixture({ entityId: '123', mode: 'view' });
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();

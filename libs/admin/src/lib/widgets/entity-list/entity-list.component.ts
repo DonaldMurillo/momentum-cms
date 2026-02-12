@@ -13,7 +13,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import type { CollectionConfig, Field } from '@momentum-cms/core';
-import { humanizeFieldName } from '@momentum-cms/core';
+import { humanizeFieldName, getSoftDeleteField } from '@momentum-cms/core';
 import {
 	DataTable,
 	Button,
@@ -79,7 +79,9 @@ import {
 
 			<header class="mb-8 flex items-center justify-between">
 				<div>
-					<h1 class="text-2xl font-semibold tracking-tight">{{ collectionLabel() }}</h1>
+					<h1 class="text-2xl font-semibold tracking-tight">
+						{{ viewingTrash() ? 'Trash' : collectionLabel() }}
+					</h1>
 					@if (totalItems() > 0) {
 						<p class="mt-1 text-muted-foreground">
 							{{ totalItems() }}
@@ -87,11 +89,23 @@ import {
 						</p>
 					}
 				</div>
-				@if (canCreate()) {
-					<button mcms-button variant="primary" (click)="onCreateClick()">
-						Create {{ collectionLabelSingular() }}
-					</button>
-				}
+				<div class="flex items-center gap-2">
+					@if (hasSoftDelete()) {
+						<button
+							mcms-button
+							[variant]="viewingTrash() ? 'outline' : 'ghost'"
+							size="sm"
+							(click)="toggleTrashView()"
+						>
+							{{ viewingTrash() ? 'View Active' : 'View Trash' }}
+						</button>
+					}
+					@if (canCreate() && !viewingTrash()) {
+						<button mcms-button variant="primary" (click)="onCreateClick()">
+							Create {{ collectionLabelSingular() }}
+						</button>
+					}
+				</div>
 			</header>
 		}
 
@@ -234,6 +248,10 @@ export class EntityListWidget<T extends Entity = Entity> {
 	readonly sort = signal<DataTableSort<T> | undefined>(undefined);
 	readonly selectedEntities = signal<T[]>([]);
 	readonly searchQuery = model('');
+	readonly viewingTrash = signal(false);
+
+	/** Whether the collection has soft delete enabled */
+	readonly hasSoftDelete = computed(() => getSoftDeleteField(this.collection()) !== null);
 
 	/** Computed collection label */
 	readonly collectionLabel = computed(() => {
@@ -276,20 +294,32 @@ export class EntityListWidget<T extends Entity = Entity> {
 			if (columns.length >= 5) break;
 		}
 
-		// Add createdAt if timestamps enabled
-		const hasCreatedAt =
-			col.timestamps === true ||
-			(typeof col.timestamps === 'object' && col.timestamps.createdAt !== false);
-		if (hasCreatedAt && columns.length < 6) {
+		// Add deletedAt column when viewing trash
+		if (this.viewingTrash() && this.hasSoftDelete()) {
+			const softDeleteField = getSoftDeleteField(col) ?? 'deletedAt';
 			columns.push({
-				// Entity type has createdAt field when timestamps enabled
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-				field: 'createdAt' as keyof T & string,
-				header: 'Created',
+				field: softDeleteField as keyof T & string,
+				header: 'Deleted',
 				sortable: true,
 				type: 'datetime',
-				width: '150px',
+				width: '170px',
 			});
+		} else {
+			// Add createdAt if timestamps enabled (only in active view)
+			const hasCreatedAt =
+				col.timestamps === true ||
+				(typeof col.timestamps === 'object' && col.timestamps.createdAt !== false);
+			if (hasCreatedAt && columns.length < 6) {
+				columns.push({
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+					field: 'createdAt' as keyof T & string,
+					header: 'Created',
+					sortable: true,
+					type: 'datetime',
+					width: '150px',
+				});
+			}
 		}
 
 		return columns;
@@ -338,10 +368,11 @@ export class EntityListWidget<T extends Entity = Entity> {
 			});
 		}
 
-		// Load data when collection or pagination changes
+		// Load data when collection, pagination, or trash view changes
 		effect(() => {
 			const col = this.collection();
 			const page = this.currentPage();
+			const trash = this.viewingTrash();
 			let sortState = this.sort();
 			let search = this.searchQuery();
 
@@ -351,6 +382,7 @@ export class EntityListWidget<T extends Entity = Entity> {
 					this.searchQuery.set('');
 					this.sort.set(undefined);
 					this.currentPage.set(1);
+					this.viewingTrash.set(false);
 					search = '';
 					sortState = undefined;
 					// Clear URL params
@@ -362,7 +394,7 @@ export class EntityListWidget<T extends Entity = Entity> {
 				}
 				this.previousCollectionSlug = col.slug;
 
-				this.loadData(col.slug, page, sortState, search);
+				this.loadData(col.slug, page, sortState, search, trash);
 			}
 		});
 	}
@@ -375,6 +407,7 @@ export class EntityListWidget<T extends Entity = Entity> {
 		page: number,
 		sortState?: DataTableSort<T>,
 		search?: string,
+		onlyDeleted?: boolean,
 	): Promise<void> {
 		this.loading.set(true);
 		this.error.set(null);
@@ -385,6 +418,10 @@ export class EntityListWidget<T extends Entity = Entity> {
 				limit: this.pageSize(),
 				depth: 1,
 			};
+
+			if (onlyDeleted) {
+				options['onlyDeleted'] = true;
+			}
 
 			if (sortState) {
 				options['sort'] =
@@ -726,8 +763,23 @@ export class EntityListWidget<T extends Entity = Entity> {
 	reload(): void {
 		const col = this.collection();
 		if (col) {
-			this.loadData(col.slug, this.currentPage(), this.sort(), this.searchQuery());
+			this.loadData(
+				col.slug,
+				this.currentPage(),
+				this.sort(),
+				this.searchQuery(),
+				this.viewingTrash(),
+			);
 		}
+	}
+
+	/**
+	 * Toggle between active and trash views.
+	 */
+	toggleTrashView(): void {
+		this.viewingTrash.update((v) => !v);
+		this.currentPage.set(1);
+		this.selectedEntities.set([]);
 	}
 
 	/**

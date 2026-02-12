@@ -1113,6 +1113,19 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 	// Route: GET /:collection - Find all documents
 	// Route: GET /:collection/:id - Find document by ID
+	// Route: POST /:collection/:id/restore - Restore a soft-deleted document
+	router.post('/:collection/:id/restore', async (req: Request, res: Response) => {
+		const request: MomentumRequest = {
+			method: 'POST',
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			user: extractUserFromRequest(req),
+		};
+
+		const response = await handlers.handleRestore(request);
+		res.status(response.status ?? 200).json(response);
+	});
+
 	router.get('/:collection/:id?', async (req: Request, res: Response) => {
 		const sortParam = req.query['sort'];
 		const request: MomentumRequest = {
@@ -1125,6 +1138,8 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				sort: typeof sortParam === 'string' ? sortParam : undefined,
 				depth: req.query['depth'] ? Number(req.query['depth']) : undefined,
 				where: parseWhereParam(req.query['where']),
+				withDeleted: req.query['withDeleted'] === 'true',
+				onlyDeleted: req.query['onlyDeleted'] === 'true',
 			},
 			user: extractUserFromRequest(req),
 		};
@@ -1176,6 +1191,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 	// Route: DELETE /:collection/:id - Delete document
 	router.delete('/:collection/:id', async (req: Request, res: Response) => {
+		const force = req.query['force'] === 'true';
 		const request: MomentumRequest = {
 			method: 'DELETE',
 			collectionSlug: req.params['collection'],
@@ -1183,7 +1199,9 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			user: extractUserFromRequest(req),
 		};
 
-		const response = await handlers.routeRequest(request);
+		const response = force
+			? await handlers.handleForceDelete(request)
+			: await handlers.routeRequest(request);
 		res.status(response.status ?? 200).json(response);
 	});
 

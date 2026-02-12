@@ -13,7 +13,11 @@ import type {
 	VersionQueryOptions,
 	VersionCountOptions,
 } from '@momentum-cms/core';
-import { flattenDataFields, ReferentialIntegrityError } from '@momentum-cms/core';
+import {
+	flattenDataFields,
+	ReferentialIntegrityError,
+	getSoftDeleteField,
+} from '@momentum-cms/core';
 import { createLogger } from '@momentum-cms/logger';
 
 /**
@@ -138,6 +142,13 @@ function createTableSql(collection: CollectionConfig): string {
 		columns.push('"scheduledPublishAt" TIMESTAMPTZ');
 	}
 
+	// Add soft-delete column
+	const softDeleteCol = getSoftDeleteField(collection);
+	if (softDeleteCol) {
+		validateColumnName(softDeleteCol);
+		columns.push(`"${softDeleteCol}" TIMESTAMPTZ`);
+	}
+
 	// Flatten through layout fields (tabs, collapsible, row) to get only data fields
 	const dataFields = flattenDataFields(collection.fields);
 	for (const field of dataFields) {
@@ -170,6 +181,17 @@ function validateCollectionSlug(slug: string): void {
 		throw new Error(
 			`Invalid collection slug: "${slug}". Slugs must start with a letter or underscore and contain only alphanumeric characters, underscores, and hyphens.`,
 		);
+	}
+}
+
+/**
+ * Validates that a column name is safe for use in SQL.
+ * Prevents SQL injection via column name interpolation.
+ */
+function validateColumnName(name: string): void {
+	const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+	if (!validColumnName.test(name)) {
+		throw new Error(`Invalid column name: "${name}"`);
 	}
 }
 
@@ -505,11 +527,21 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 					if (reservedParams.has(key)) {
 						continue;
 					}
-					if (value !== undefined && value !== null) {
-						// Validate column name to prevent SQL injection
-						if (!validColumnName.test(key)) {
-							throw new Error(`Invalid column name: ${key}`);
-						}
+					if (value === undefined) continue;
+					// Validate column name to prevent SQL injection
+					if (!validColumnName.test(key)) {
+						throw new Error(`Invalid column name: ${key}`);
+					}
+					if (value === null) {
+						whereClauses.push(`"${key}" IS NULL`);
+					} else if (
+						typeof value === 'object' &&
+						value !== null &&
+						'$ne' in value &&
+						value['$ne'] === null
+					) {
+						whereClauses.push(`"${key}" IS NOT NULL`);
+					} else {
 						whereClauses.push(`"${key}" = $${paramIndex}`);
 						whereValues.push(value);
 						paramIndex++;
@@ -677,6 +709,36 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 					rethrowIfFkViolation(error, collection);
 					throw error;
 				}
+			},
+
+			async softDelete(collection: string, id: string, field = 'deletedAt'): Promise<boolean> {
+				validateCollectionSlug(collection);
+				validateColumnName(field);
+				const now = new Date().toISOString();
+				const rowCount = await h.execute(
+					`UPDATE "${collection}" SET "${field}" = $1, "updatedAt" = $2 WHERE "id" = $3`,
+					[now, now, id],
+				);
+				return rowCount > 0;
+			},
+
+			async restore(
+				collection: string,
+				id: string,
+				field = 'deletedAt',
+			): Promise<Record<string, unknown>> {
+				validateCollectionSlug(collection);
+				validateColumnName(field);
+				const now = new Date().toISOString();
+				await h.execute(
+					`UPDATE "${collection}" SET "${field}" = NULL, "updatedAt" = $1 WHERE "id" = $2`,
+					[now, id],
+				);
+				const restored = await h.queryOne(`SELECT * FROM "${collection}" WHERE "id" = $1`, [id]);
+				if (!restored) {
+					throw new Error('Failed to fetch restored document');
+				}
+				return restored;
 			},
 
 			// ==========================================
@@ -1022,6 +1084,17 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 					);
 					await pool.query(
 						`ALTER TABLE "${collection.slug}" ADD COLUMN IF NOT EXISTS "scheduledPublishAt" TIMESTAMPTZ`,
+					);
+				}
+
+				// Ensure soft delete column and index exist
+				const sdField = getSoftDeleteField(collection);
+				if (sdField) {
+					await pool.query(
+						`ALTER TABLE "${collection.slug}" ADD COLUMN IF NOT EXISTS "${sdField}" TIMESTAMPTZ`,
+					);
+					await pool.query(
+						`CREATE INDEX IF NOT EXISTS "idx_${collection.slug}_${sdField}" ON "${collection.slug}"("${sdField}")`,
 					);
 				}
 

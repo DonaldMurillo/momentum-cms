@@ -52,6 +52,10 @@ export interface FindOptions {
 	page?: number;
 	/** Depth for relationship population */
 	depth?: number;
+	/** Include soft-deleted documents in results (only for collections with softDelete enabled). @default false */
+	withDeleted?: boolean;
+	/** Only return soft-deleted documents (only for collections with softDelete enabled). @default false */
+	onlyDeleted?: boolean;
 }
 
 /**
@@ -115,7 +119,7 @@ export interface CollectionOperations<T = Record<string, unknown>> {
 	/**
 	 * Find a single document by ID.
 	 */
-	findById(id: string, options?: { depth?: number }): Promise<T | null>;
+	findById(id: string, options?: { depth?: number; withDeleted?: boolean }): Promise<T | null>;
 
 	/**
 	 * Create a new document.
@@ -129,8 +133,22 @@ export interface CollectionOperations<T = Record<string, unknown>> {
 
 	/**
 	 * Delete a document.
+	 * For collections with softDelete enabled, this sets deletedAt instead of removing the row.
 	 */
 	delete(id: string): Promise<DeleteResult>;
+
+	/**
+	 * Permanently delete a document, bypassing soft delete.
+	 * For collections without softDelete, this is identical to delete().
+	 */
+	forceDelete(id: string): Promise<DeleteResult>;
+
+	/**
+	 * Restore a soft-deleted document.
+	 * Only available for collections with softDelete enabled.
+	 * Throws if the document is not soft-deleted or softDelete is not enabled.
+	 */
+	restore(id: string): Promise<T>;
 
 	/**
 	 * Full-text search across collection fields.
@@ -148,7 +166,7 @@ export interface CollectionOperations<T = Record<string, unknown>> {
 	/**
 	 * Count documents matching the query.
 	 */
-	count(where?: WhereClause): Promise<number>;
+	count(where?: WhereClause, options?: { withDeleted?: boolean }): Promise<number>;
 
 	/**
 	 * Create multiple documents in a single transaction.

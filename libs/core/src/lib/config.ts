@@ -31,6 +31,24 @@ export interface DatabaseAdapter {
 	): Promise<Record<string, unknown>>;
 	delete(collection: string, id: string): Promise<boolean>;
 	/**
+	 * Soft delete a document by setting its deletedAt timestamp.
+	 * @param collection - The collection slug
+	 * @param id - The document ID
+	 * @param field - The name of the deletedAt column (default: 'deletedAt')
+	 * @returns Whether the update was successful
+	 */
+	softDelete?(collection: string, id: string, field?: string): Promise<boolean>;
+
+	/**
+	 * Restore a soft-deleted document by clearing its deletedAt timestamp.
+	 * @param collection - The collection slug
+	 * @param id - The document ID
+	 * @param field - The name of the deletedAt column (default: 'deletedAt')
+	 * @returns The restored document
+	 */
+	restore?(collection: string, id: string, field?: string): Promise<Record<string, unknown>>;
+
+	/**
 	 * Initialize database schema based on collections.
 	 * Called once when the server starts.
 	 */

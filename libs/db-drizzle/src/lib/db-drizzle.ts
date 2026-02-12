@@ -13,7 +13,7 @@ import type {
 	VersionCountOptions,
 	CreateVersionOptions,
 } from '@momentum-cms/core';
-import { flattenDataFields } from '@momentum-cms/core';
+import { flattenDataFields, getSoftDeleteField } from '@momentum-cms/core';
 
 /**
  * Type guard to check if a value is a record object.
@@ -65,6 +65,17 @@ function validateCollectionSlug(slug: string): void {
 		throw new Error(
 			`Invalid collection slug: "${slug}". Slugs must start with a letter or underscore and contain only alphanumeric characters, underscores, and hyphens.`,
 		);
+	}
+}
+
+/**
+ * Validates that a column name is safe for use in SQL.
+ * Prevents SQL injection via column name interpolation.
+ */
+function validateColumnName(name: string): void {
+	const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+	if (!validColumnName.test(name)) {
+		throw new Error(`Invalid column name: "${name}"`);
 	}
 }
 
@@ -141,6 +152,13 @@ function createTableSql(collection: CollectionConfig): string {
 	// Add _status column for versioned collections with drafts enabled
 	if (hasVersionDrafts(collection)) {
 		columns.push('"_status" TEXT NOT NULL DEFAULT \'draft\'');
+	}
+
+	// Add soft-delete column
+	const softDeleteCol = getSoftDeleteField(collection);
+	if (softDeleteCol) {
+		validateColumnName(softDeleteCol);
+		columns.push(`"${softDeleteCol}" TEXT`);
 	}
 
 	const dataFields = flattenDataFields(collection.fields);
@@ -349,10 +367,20 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 
 		for (const [key, value] of Object.entries(query)) {
 			if (reservedParams.has(key)) continue;
-			if (value !== undefined && value !== null) {
-				if (!validColumnName.test(key)) {
-					throw new Error(`Invalid column name: ${key}`);
-				}
+			if (value === undefined) continue;
+			if (!validColumnName.test(key)) {
+				throw new Error(`Invalid column name: ${key}`);
+			}
+			if (value === null) {
+				whereClauses.push(`"${key}" IS NULL`);
+			} else if (
+				typeof value === 'object' &&
+				value !== null &&
+				'$ne' in value &&
+				value['$ne'] === null
+			) {
+				whereClauses.push(`"${key}" IS NOT NULL`);
+			} else {
 				whereClauses.push(`"${key}" = ?`);
 				whereValues.push(value);
 			}
@@ -441,6 +469,34 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		validateCollectionSlug(collection);
 		const result = sqlite.prepare(`DELETE FROM "${collection}" WHERE id = ?`).run(id);
 		return result.changes > 0;
+	}
+
+	function softDeleteSync(collection: string, id: string, field = 'deletedAt'): boolean {
+		validateCollectionSlug(collection);
+		validateColumnName(field);
+		const now = new Date().toISOString();
+		const result = sqlite
+			.prepare(`UPDATE "${collection}" SET "${field}" = ?, "updatedAt" = ? WHERE "id" = ?`)
+			.run(now, now, id);
+		return result.changes > 0;
+	}
+
+	function restoreSync(
+		collection: string,
+		id: string,
+		field = 'deletedAt',
+	): Record<string, unknown> {
+		validateCollectionSlug(collection);
+		validateColumnName(field);
+		const now = new Date().toISOString();
+		sqlite
+			.prepare(`UPDATE "${collection}" SET "${field}" = NULL, "updatedAt" = ? WHERE "id" = ?`)
+			.run(now, id);
+		const row: unknown = sqlite.prepare(`SELECT * FROM "${collection}" WHERE "id" = ?`).get(id);
+		if (!isRecord(row)) {
+			throw new Error('Failed to fetch restored document');
+		}
+		return row;
 	}
 
 	function createVersionSync(
@@ -677,6 +733,19 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 				sqlite.exec(createTableSql(collection));
 				const versionTableSql = createVersionTableSql(collection);
 				if (versionTableSql) sqlite.exec(versionTableSql);
+
+				// Ensure soft delete column and index exist for existing tables
+				const sdField = getSoftDeleteField(collection);
+				if (sdField) {
+					try {
+						sqlite.exec(`ALTER TABLE "${collection.slug}" ADD COLUMN "${sdField}" TEXT`);
+					} catch {
+						// Column already exists — ignore
+					}
+					sqlite.exec(
+						`CREATE INDEX IF NOT EXISTS "idx_${collection.slug}_${sdField}" ON "${collection.slug}"("${sdField}")`,
+					);
+				}
 			}
 		},
 
@@ -694,6 +763,12 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		},
 		async delete(collection, id) {
 			return writeQueue.enqueue(() => deleteSync(collection, id));
+		},
+		async softDelete(collection, id, field) {
+			return writeQueue.enqueue(() => softDeleteSync(collection, id, field));
+		},
+		async restore(collection, id, field) {
+			return writeQueue.enqueue(() => restoreSync(collection, id, field));
 		},
 
 		async createVersion(collection, parentId, data, options) {
@@ -797,6 +872,12 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 						},
 						async delete(c, id) {
 							return deleteSync(c, id);
+						},
+						async softDelete(c, id, f) {
+							return softDeleteSync(c, id, f);
+						},
+						async restore(c, id, f) {
+							return restoreSync(c, id, f);
 						},
 						async createVersion(c, pid, d, o) {
 							return createVersionSync(c, pid, d, o);

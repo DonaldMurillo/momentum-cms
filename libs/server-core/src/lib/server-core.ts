@@ -69,6 +69,8 @@ export interface MomentumHandlers {
 	handleCreate(request: MomentumRequest): Promise<MomentumResponse>;
 	handleUpdate(request: MomentumRequest): Promise<MomentumResponse>;
 	handleDelete(request: MomentumRequest): Promise<MomentumResponse>;
+	handleForceDelete(request: MomentumRequest): Promise<MomentumResponse>;
+	handleRestore(request: MomentumRequest): Promise<MomentumResponse>;
 	handleSearch(request: MomentumRequest): Promise<MomentumResponse>;
 	routeRequest(request: MomentumRequest): Promise<MomentumResponse>;
 }
@@ -103,12 +105,16 @@ export function createMomentumHandlers(config: MomentumConfig): MomentumHandlers
 			const api = getContextualAPI(request);
 			const depth =
 				typeof request.query?.['depth'] === 'number' ? request.query['depth'] : undefined;
+			const withDeleted = request.query?.['withDeleted'] === true;
+			const onlyDeleted = request.query?.['onlyDeleted'] === true;
 			const result = await api.collection<Record<string, unknown>>(request.collectionSlug).find({
 				limit: request.query?.limit,
 				page: request.query?.page,
 				sort: request.query?.sort,
 				where: request.query?.where,
 				depth,
+				withDeleted,
+				onlyDeleted,
 			});
 
 			return {
@@ -129,9 +135,10 @@ export function createMomentumHandlers(config: MomentumConfig): MomentumHandlers
 			const api = getContextualAPI(request);
 			const depth =
 				typeof request.query?.['depth'] === 'number' ? request.query['depth'] : undefined;
+			const withDeleted = request.query?.['withDeleted'] === true;
 			const doc = await api
 				.collection<Record<string, unknown>>(request.collectionSlug)
-				.findById(request.id, depth !== undefined ? { depth } : undefined);
+				.findById(request.id, { depth, withDeleted });
 
 			if (!doc) {
 				return { error: 'Document not found', status: 404 };
@@ -188,6 +195,38 @@ export function createMomentumHandlers(config: MomentumConfig): MomentumHandlers
 		}
 	}
 
+	async function handleForceDelete(request: MomentumRequest): Promise<MomentumResponse> {
+		if (!request.id) {
+			return { error: 'ID is required', status: 400 };
+		}
+
+		try {
+			const api = getContextualAPI(request);
+			const result = await api.collection(request.collectionSlug).forceDelete(request.id);
+
+			return { deleted: result.deleted, id: result.id };
+		} catch (error) {
+			return handleError(error);
+		}
+	}
+
+	async function handleRestore(request: MomentumRequest): Promise<MomentumResponse> {
+		if (!request.id) {
+			return { error: 'ID is required', status: 400 };
+		}
+
+		try {
+			const api = getContextualAPI(request);
+			const doc = await api
+				.collection<Record<string, unknown>>(request.collectionSlug)
+				.restore(request.id);
+
+			return { doc };
+		} catch (error) {
+			return handleError(error);
+		}
+	}
+
 	async function handleSearch(request: MomentumRequest): Promise<MomentumResponse> {
 		try {
 			const api = getContextualAPI(request);
@@ -236,6 +275,8 @@ export function createMomentumHandlers(config: MomentumConfig): MomentumHandlers
 		handleCreate,
 		handleUpdate,
 		handleDelete,
+		handleForceDelete,
+		handleRestore,
 		handleSearch,
 		routeRequest,
 	};
