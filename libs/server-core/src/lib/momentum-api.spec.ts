@@ -401,4 +401,133 @@ describe('MomentumAPI', () => {
 			expect(result).toHaveProperty('readAt');
 		});
 	});
+
+	describe('Soft Delete', () => {
+		const softDeleteCollection: CollectionConfig = {
+			slug: 'pages',
+			fields: [{ name: 'title', type: 'text', required: true }],
+			softDelete: true,
+		};
+
+		let softDeleteConfig: MomentumConfig;
+
+		beforeEach(() => {
+			softDeleteConfig = {
+				collections: [softDeleteCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+		});
+
+		it('should inject deletedAt: null into find query for soft-delete collections', async () => {
+			resetMomentumAPI();
+			const api = initializeMomentumAPI(softDeleteConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('pages').find();
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'pages',
+				expect.objectContaining({ deletedAt: null }),
+			);
+		});
+
+		it('should not inject deletedAt filter when withDeleted is true', async () => {
+			resetMomentumAPI();
+			const api = initializeMomentumAPI(softDeleteConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('pages').find({ withDeleted: true });
+
+			const callArgs = vi.mocked(mockAdapter.find).mock.calls[0]?.[1];
+			expect(callArgs).not.toHaveProperty('deletedAt');
+		});
+
+		it('should inject $ne null filter when onlyDeleted is true', async () => {
+			resetMomentumAPI();
+			const api = initializeMomentumAPI(softDeleteConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('pages').find({ onlyDeleted: true });
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'pages',
+				expect.objectContaining({ deletedAt: { $ne: null } }),
+			);
+		});
+
+		it('should filter soft-deleted docs from findById by default', async () => {
+			resetMomentumAPI();
+			const api = initializeMomentumAPI(softDeleteConfig);
+			vi.mocked(mockAdapter.findById).mockResolvedValue({
+				id: '1',
+				title: 'Page',
+				deletedAt: '2024-06-01T00:00:00Z',
+			});
+
+			const result = await api.collection('pages').findById('1');
+
+			expect(result).toBeNull();
+		});
+
+		it('should return soft-deleted docs from findById when withDeleted is true', async () => {
+			resetMomentumAPI();
+			const api = initializeMomentumAPI(softDeleteConfig);
+			const deletedDoc = { id: '1', title: 'Page', deletedAt: '2024-06-01T00:00:00Z' };
+			vi.mocked(mockAdapter.findById).mockResolvedValue(deletedDoc);
+
+			const result = await api.collection('pages').findById('1', { withDeleted: true });
+
+			expect(result).toEqual(deletedDoc);
+		});
+
+		it('should call adapter.softDelete when deleting from soft-delete collection', async () => {
+			resetMomentumAPI();
+			mockAdapter.softDelete = vi.fn().mockResolvedValue(true);
+			const api = initializeMomentumAPI(softDeleteConfig);
+			vi.mocked(mockAdapter.findById).mockResolvedValue({ id: '1', title: 'Page' });
+
+			await api.collection('pages').delete('1');
+
+			expect(mockAdapter.softDelete).toHaveBeenCalledWith('pages', '1', 'deletedAt');
+			expect(mockAdapter.delete).not.toHaveBeenCalled();
+		});
+
+		it('should call adapter.delete for forceDelete', async () => {
+			resetMomentumAPI();
+			mockAdapter.softDelete = vi.fn();
+			const api = initializeMomentumAPI(softDeleteConfig);
+			vi.mocked(mockAdapter.findById).mockResolvedValue({ id: '1', title: 'Page' });
+			vi.mocked(mockAdapter.delete).mockResolvedValue(true);
+
+			await api.collection('pages').forceDelete('1');
+
+			expect(mockAdapter.delete).toHaveBeenCalledWith('pages', '1');
+			expect(mockAdapter.softDelete).not.toHaveBeenCalled();
+		});
+
+		it('should restore a soft-deleted document', async () => {
+			resetMomentumAPI();
+			const restoredDoc = { id: '1', title: 'Page', deletedAt: null };
+			mockAdapter.restore = vi.fn().mockResolvedValue(restoredDoc);
+			vi.mocked(mockAdapter.findById).mockResolvedValue({
+				id: '1',
+				title: 'Page',
+				deletedAt: '2024-06-01T00:00:00Z',
+			});
+			const api = initializeMomentumAPI(softDeleteConfig);
+
+			const result = await api.collection('pages').restore('1');
+
+			expect(mockAdapter.restore).toHaveBeenCalledWith('pages', '1', 'deletedAt');
+			expect(result).toEqual(restoredDoc);
+		});
+
+		it('should throw when restoring from non-soft-delete collection', async () => {
+			resetMomentumAPI();
+			const api = initializeMomentumAPI(config);
+
+			await expect(api.collection('posts').restore('1')).rejects.toThrow();
+		});
+	});
 });

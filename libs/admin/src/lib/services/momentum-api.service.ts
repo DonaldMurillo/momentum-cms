@@ -70,6 +70,10 @@ export interface FindOptions {
 	depth?: number;
 	/** Enable TransferState caching for SSR hydration (default: true) */
 	transfer?: boolean;
+	/** Include soft-deleted documents in results. @default false */
+	withDeleted?: boolean;
+	/** Only return soft-deleted documents. @default false */
+	onlyDeleted?: boolean;
 }
 
 /**
@@ -79,6 +83,8 @@ export interface FindByIdOptions {
 	depth?: number;
 	/** Enable TransferState caching for SSR hydration (default: true) */
 	transfer?: boolean;
+	/** Include soft-deleted documents. @default false */
+	withDeleted?: boolean;
 }
 
 /**
@@ -165,11 +171,13 @@ export interface MomentumAPIServer {
  */
 export interface CollectionOperationsServer<T = Record<string, unknown>> {
 	find(options?: FindOptions): Promise<FindResult<T>>;
-	findById(id: string, options?: { depth?: number }): Promise<T | null>;
+	findById(id: string, options?: { depth?: number; withDeleted?: boolean }): Promise<T | null>;
 	create(data: Partial<T>): Promise<T>;
 	update(id: string, data: Partial<T>): Promise<T>;
 	delete(id: string): Promise<DeleteResult>;
-	count(where?: Record<string, unknown>): Promise<number>;
+	forceDelete(id: string): Promise<DeleteResult>;
+	restore(id: string): Promise<T>;
+	count(where?: Record<string, unknown>, options?: { withDeleted?: boolean }): Promise<number>;
 	batchCreate(items: Partial<T>[]): Promise<T[]>;
 	batchUpdate(items: { id: string; data: Partial<T> }[]): Promise<T[]>;
 	batchDelete(ids: string[]): Promise<DeleteResult[]>;
@@ -222,6 +230,8 @@ export interface MomentumCollectionAPI<T = Record<string, unknown>> {
 	create$(data: Partial<T>): Observable<T>;
 	update$(id: string, data: Partial<T>): Observable<T>;
 	delete$(id: string): Observable<DeleteResult>;
+	forceDelete$(id: string): Observable<DeleteResult>;
+	restore$(id: string): Observable<T>;
 
 	// Batch Observable methods
 	batchCreate$(items: Partial<T>[]): Observable<T[]>;
@@ -234,6 +244,8 @@ export interface MomentumCollectionAPI<T = Record<string, unknown>> {
 	create(data: Partial<T>): Promise<T>;
 	update(id: string, data: Partial<T>): Promise<T>;
 	delete(id: string): Promise<DeleteResult>;
+	forceDelete(id: string): Promise<DeleteResult>;
+	restore(id: string): Promise<T>;
 
 	// Batch Promise methods
 	batchCreate(items: Partial<T>[]): Promise<T[]>;
@@ -269,6 +281,8 @@ export interface TypedFindByIdOptions {
 	depth?: number;
 	/** Enable TransferState caching for SSR hydration */
 	transfer?: boolean;
+	/** Include soft-deleted documents. @default false */
+	withDeleted?: boolean;
 }
 
 /**
@@ -624,6 +638,30 @@ class ServerCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		});
 	}
 
+	forceDelete$(id: string): Observable<DeleteResult> {
+		return new Observable((subscriber) => {
+			this.ops
+				.forceDelete(id)
+				.then((result) => {
+					subscriber.next(result);
+					subscriber.complete();
+				})
+				.catch((err: unknown) => subscriber.error(err));
+		});
+	}
+
+	restore$(id: string): Observable<T> {
+		return new Observable((subscriber) => {
+			this.ops
+				.restore(id)
+				.then((result) => {
+					subscriber.next(result);
+					subscriber.complete();
+				})
+				.catch((err: unknown) => subscriber.error(err));
+		});
+	}
+
 	batchCreate$(items: Partial<T>[]): Observable<T[]> {
 		return new Observable((subscriber) => {
 			this.ops
@@ -695,6 +733,14 @@ class ServerCollectionAPI<T> implements MomentumCollectionAPI<T> {
 
 	delete(id: string): Promise<DeleteResult> {
 		return this.ops.delete(id);
+	}
+
+	forceDelete(id: string): Promise<DeleteResult> {
+		return this.ops.forceDelete(id);
+	}
+
+	restore(id: string): Promise<T> {
+		return this.ops.restore(id);
 	}
 
 	batchCreate(items: Partial<T>[]): Promise<T[]> {
@@ -878,9 +924,17 @@ class BrowserCollectionAPI<T> implements MomentumCollectionAPI<T> {
 			}
 		}
 
+		let params = new HttpParams();
+		if (options?.depth !== undefined) {
+			params = params.set('depth', String(options.depth));
+		}
+		if (options?.withDeleted) {
+			params = params.set('withDeleted', 'true');
+		}
+
 		return (
 			this.http
-				.get<ApiResponse<T>>(`${this.endpoint}/${id}`)
+				.get<ApiResponse<T>>(`${this.endpoint}/${id}`, { params })
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- ApiResponse.doc is unknown
 				.pipe(map((response) => (response.doc as T) ?? null))
 		);
@@ -908,6 +962,23 @@ class BrowserCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		return this.http
 			.delete<ApiResponse<T>>(`${this.endpoint}/${id}`)
 			.pipe(map((response) => ({ id: response.id ?? id, deleted: response.deleted ?? false })));
+	}
+
+	forceDelete$(id: string): Observable<DeleteResult> {
+		return this.http
+			.delete<ApiResponse<T>>(`${this.endpoint}/${id}`, {
+				params: new HttpParams().set('force', 'true'),
+			})
+			.pipe(map((response) => ({ id: response.id ?? id, deleted: response.deleted ?? false })));
+	}
+
+	restore$(id: string): Observable<T> {
+		return (
+			this.http
+				.post<ApiResponse<T>>(`${this.endpoint}/${id}/restore`, {})
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- ApiResponse.doc is unknown
+				.pipe(map((response) => response.doc as T))
+		);
 	}
 
 	batchCreate$(items: Partial<T>[]): Observable<T[]> {
@@ -957,6 +1028,14 @@ class BrowserCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		return firstValueFrom(this.delete$(id));
 	}
 
+	forceDelete(id: string): Promise<DeleteResult> {
+		return firstValueFrom(this.forceDelete$(id));
+	}
+
+	restore(id: string): Promise<T> {
+		return firstValueFrom(this.restore$(id));
+	}
+
 	batchCreate(items: Partial<T>[]): Promise<T[]> {
 		return firstValueFrom(this.batchCreate$(items));
 	}
@@ -1004,6 +1083,12 @@ class BrowserCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		}
 		if (options?.depth !== undefined) {
 			params = params.set('depth', String(options.depth));
+		}
+		if (options?.withDeleted) {
+			params = params.set('withDeleted', 'true');
+		}
+		if (options?.onlyDeleted) {
+			params = params.set('onlyDeleted', 'true');
 		}
 
 		return params;

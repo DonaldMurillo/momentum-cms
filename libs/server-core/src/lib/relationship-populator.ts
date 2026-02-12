@@ -16,7 +16,7 @@ import type {
 	PolymorphicRelationshipValue,
 	RequestContext,
 } from '@momentum-cms/core';
-import { flattenDataFields } from '@momentum-cms/core';
+import { flattenDataFields, getSoftDeleteField } from '@momentum-cms/core';
 import { filterReadableFields, hasFieldAccessControl } from './field-access';
 
 export interface PopulateOptions {
@@ -153,6 +153,10 @@ async function populateSingleRelationship(
 		const relatedDoc = await options.adapter.findById(value.relationTo, value.value);
 		if (!relatedDoc) return value;
 
+		// Skip soft-deleted related documents
+		const softDeleteField = getSoftDeleteField(collectionConfig);
+		if (softDeleteField && relatedDoc[softDeleteField]) return value;
+
 		// Apply field-level read filtering
 		const filteredDoc = await applyFieldReadFiltering(relatedDoc, collectionConfig, options.req);
 
@@ -179,6 +183,10 @@ async function populateSingleRelationship(
 
 		const relatedDoc = await options.adapter.findById(slug, value);
 		if (!relatedDoc) return value;
+
+		// Skip soft-deleted related documents
+		const softDeleteField = getSoftDeleteField(collectionConfig);
+		if (softDeleteField && relatedDoc[softDeleteField]) return value;
 
 		// Apply field-level read filtering
 		const filteredDoc = await applyFieldReadFiltering(relatedDoc, collectionConfig, options.req);

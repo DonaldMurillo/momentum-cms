@@ -513,4 +513,167 @@ describe('EntityListWidget', () => {
 			testHttpMock.verify();
 		});
 	});
+
+	describe('Soft Delete / Trash View', () => {
+		const softDeleteCollection: CollectionConfig = {
+			slug: 'posts',
+			fields: [
+				{ name: 'title', type: 'text', label: 'Title' },
+				{ name: 'content', type: 'textarea', label: 'Content' },
+			],
+			labels: { singular: 'Post', plural: 'Posts' },
+			timestamps: true,
+			softDelete: true,
+		};
+
+		async function setCollectionAndFlushSoftDelete(): Promise<void> {
+			fixture.componentRef.setInput('collection', softDeleteCollection);
+			fixture.detectChanges();
+			await fixture.whenStable();
+
+			const req = httpMock.expectOne((r) => r.url.includes('/api/posts'));
+			req.flush({ docs: mockPosts, totalDocs: 2, totalPages: 1, page: 1, limit: 10 });
+
+			fixture.detectChanges();
+			await fixture.whenStable();
+		}
+
+		it('should set hasSoftDelete to true for soft-delete collections', async () => {
+			await setCollectionAndFlushSoftDelete();
+			expect(component.hasSoftDelete()).toBe(true);
+		});
+
+		it('should set hasSoftDelete to false for regular collections', async () => {
+			await setCollectionAndFlush();
+			expect(component.hasSoftDelete()).toBe(false);
+		});
+
+		it('should toggle viewingTrash signal', async () => {
+			await setCollectionAndFlushSoftDelete();
+			expect(component.viewingTrash()).toBe(false);
+
+			component.toggleTrashView();
+			fixture.detectChanges();
+			await fixture.whenStable();
+			expect(component.viewingTrash()).toBe(true);
+
+			// Flush request triggered by viewingTrash change
+			const req = httpMock.expectOne((r) => r.url.includes('/api/posts'));
+			req.flush({ docs: [], totalDocs: 0, totalPages: 0, page: 1, limit: 10 });
+			fixture.detectChanges();
+			await fixture.whenStable();
+
+			component.toggleTrashView();
+			fixture.detectChanges();
+			await fixture.whenStable();
+			expect(component.viewingTrash()).toBe(false);
+
+			// Flush request triggered by viewingTrash change back
+			const req2 = httpMock.expectOne((r) => r.url.includes('/api/posts'));
+			req2.flush({ docs: mockPosts, totalDocs: 2, totalPages: 1, page: 1, limit: 10 });
+		});
+
+		it('should reset page to 1 and clear selection on trash toggle', async () => {
+			await setCollectionAndFlushSoftDelete();
+			component.currentPage.set(3);
+			component.selectedEntities.set([mockPosts[0]]);
+
+			component.toggleTrashView();
+			fixture.detectChanges();
+			await fixture.whenStable();
+
+			expect(component.currentPage()).toBe(1);
+			expect(component.selectedEntities()).toEqual([]);
+
+			// Flush request triggered by toggle
+			const req = httpMock.expectOne((r) => r.url.includes('/api/posts'));
+			req.flush({ docs: [], totalDocs: 0 });
+		});
+
+		it('should send onlyDeleted param when viewing trash', async () => {
+			await setCollectionAndFlushSoftDelete();
+
+			component.toggleTrashView();
+			fixture.detectChanges();
+			await fixture.whenStable();
+
+			const req = httpMock.expectOne((r) => r.url.includes('/api/posts'));
+			expect(req.request.params.get('onlyDeleted')).toBe('true');
+			req.flush({ docs: [], totalDocs: 0 });
+		});
+
+		it('should add deletedAt column when viewing trash', async () => {
+			await setCollectionAndFlushSoftDelete();
+
+			component.toggleTrashView();
+			fixture.detectChanges();
+			await fixture.whenStable();
+
+			const columns = component.tableColumns();
+			const deletedAtCol = columns.find((c) => c.field === 'deletedAt');
+			expect(deletedAtCol).toBeTruthy();
+			expect(deletedAtCol!.header).toBe('Deleted');
+			expect(deletedAtCol!.type).toBe('datetime');
+
+			// Flush request triggered by toggle
+			const req = httpMock.expectOne((r) => r.url.includes('/api/posts'));
+			req.flush({ docs: [], totalDocs: 0 });
+		});
+
+		it('should not show createdAt column in trash view', async () => {
+			await setCollectionAndFlushSoftDelete();
+
+			component.toggleTrashView();
+			fixture.detectChanges();
+			await fixture.whenStable();
+
+			const columns = component.tableColumns();
+			const createdAtCol = columns.find((c) => c.field === 'createdAt');
+			expect(createdAtCol).toBeUndefined();
+
+			// Flush request triggered by toggle
+			const req = httpMock.expectOne((r) => r.url.includes('/api/posts'));
+			req.flush({ docs: [], totalDocs: 0 });
+		});
+
+		it('should show "Trash" as header title when viewing trash', async () => {
+			await setCollectionAndFlushSoftDelete();
+			fixture.componentRef.setInput('showHeader', true);
+
+			component.toggleTrashView();
+			fixture.detectChanges();
+			await fixture.whenStable();
+
+			const heading = fixture.nativeElement.querySelector('h1');
+			expect(heading?.textContent?.trim()).toBe('Trash');
+
+			// Flush request triggered by toggle
+			const req = httpMock.expectOne((r) => r.url.includes('/api/posts'));
+			req.flush({ docs: [], totalDocs: 0 });
+		});
+
+		it('should show View Trash button for soft-delete collections', async () => {
+			fixture.componentRef.setInput('showHeader', true);
+			await setCollectionAndFlushSoftDelete();
+			fixture.detectChanges();
+
+			const buttons = fixture.nativeElement.querySelectorAll('button');
+			const trashBtn = Array.from<Element>(buttons).find(
+				(btn) => btn.textContent?.trim() === 'View Trash',
+			);
+			expect(trashBtn).toBeTruthy();
+		});
+
+		it('should not show View Trash button for regular collections', async () => {
+			fixture.componentRef.setInput('showHeader', true);
+			await setCollectionAndFlush();
+			fixture.detectChanges();
+
+			const buttons = fixture.nativeElement.querySelectorAll('button');
+			const trashBtn = Array.from<Element>(buttons).find(
+				(btn) => btn.textContent?.trim() === 'View Trash',
+			);
+			expect(trashBtn).toBeUndefined();
+		});
+	});
 });

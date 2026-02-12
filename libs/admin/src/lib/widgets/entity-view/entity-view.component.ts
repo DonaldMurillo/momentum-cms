@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import type { CollectionConfig, Field, DocumentStatus } from '@momentum-cms/core';
-import { humanizeFieldName } from '@momentum-cms/core';
+import { humanizeFieldName, getSoftDeleteField } from '@momentum-cms/core';
 import {
 	Card,
 	CardContent,
@@ -85,6 +85,12 @@ import { PublishControlsWidget } from '../publish-controls/publish-controls.comp
 				</mcms-breadcrumbs>
 			}
 
+			@if (isDeleted()) {
+				<mcms-alert variant="destructive" class="mb-6">
+					This {{ collectionLabelSingular().toLowerCase() }} has been deleted.
+				</mcms-alert>
+			}
+
 			<!-- Page Header -->
 			<div class="mb-8 flex items-start justify-between">
 				<div>
@@ -117,11 +123,24 @@ import { PublishControlsWidget } from '../publish-controls/publish-controls.comp
 							>Open Page ↗</a
 						>
 					}
-					@if (canEdit()) {
-						<button mcms-button variant="outline" (click)="onEditClick()">Edit</button>
-					}
-					@if (canDelete()) {
-						<button mcms-button variant="destructive" (click)="onDeleteClick()">Delete</button>
+					@if (isDeleted()) {
+						@if (canEdit()) {
+							<button mcms-button variant="outline" (click)="onRestoreClick()">Restore</button>
+						}
+						@if (canDelete()) {
+							<button mcms-button variant="destructive" (click)="onForceDeleteClick()">
+								Permanently Delete
+							</button>
+						}
+					} @else {
+						@if (canEdit()) {
+							<button mcms-button variant="outline" (click)="onEditClick()">Edit</button>
+						}
+						@if (canDelete()) {
+							<button mcms-button variant="destructive" (click)="onDeleteClick()">
+								{{ hasSoftDelete() ? 'Move to Trash' : 'Delete' }}
+							</button>
+						}
 					}
 					@for (action of actions(); track action.id) {
 						<button
@@ -320,6 +339,17 @@ export class EntityViewWidget<T extends Entity = Entity> {
 		return this.collectionAccess.canDelete(this.collection().slug);
 	});
 
+	/** Whether collection has soft delete enabled */
+	readonly hasSoftDelete = computed(() => !!this.collection().softDelete);
+
+	/** Whether the current entity is soft-deleted */
+	readonly isDeleted = computed(() => {
+		const e = this.entity();
+		if (!e || !this.hasSoftDelete()) return false;
+		const field = getSoftDeleteField(this.collection());
+		return field ? !!e[field] : false;
+	});
+
 	/** Whether collection has versioning enabled */
 	readonly hasVersioning = computed(() => {
 		const col = this.collection();
@@ -371,7 +401,9 @@ export class EntityViewWidget<T extends Entity = Entity> {
 		this.loadError.set(null);
 
 		try {
-			const entity = await this.api.collection<T>(slug).findById(id, { depth: 1 });
+			const entity = await this.api
+				.collection<T>(slug)
+				.findById(id, { depth: 1, withDeleted: this.hasSoftDelete() });
 			if (entity) {
 				this.entity.set(entity);
 				this.resolveRelationships(entity);
@@ -514,6 +546,42 @@ export class EntityViewWidget<T extends Entity = Entity> {
 		if (confirmed) {
 			try {
 				await this.api.collection(this.collection().slug).delete(String(e.id));
+				this.delete_.emit(e);
+				this.navigateBack();
+			} catch {
+				// Error handled by crudToastInterceptor
+			}
+		}
+	}
+
+	async onRestoreClick(): Promise<void> {
+		const e = this.entity();
+		if (!e) return;
+
+		try {
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T extends Entity, safe cast for API call
+			const restored = (await this.api
+				.collection(this.collection().slug)
+				.restore(String(e.id))) as T;
+			this.entity.set(restored);
+		} catch {
+			// Error handled by crudToastInterceptor
+		}
+	}
+
+	async onForceDeleteClick(): Promise<void> {
+		const e = this.entity();
+		if (!e) return;
+
+		const entityTitle = this.entityTitle();
+		const confirmed = await this.feedback.confirmDelete(
+			this.collectionLabelSingular(),
+			entityTitle !== `${this.collectionLabelSingular()} ${e.id}` ? entityTitle : undefined,
+		);
+
+		if (confirmed) {
+			try {
+				await this.api.collection(this.collection().slug).forceDelete(String(e.id));
 				this.delete_.emit(e);
 				this.navigateBack();
 			} catch {

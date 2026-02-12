@@ -20,7 +20,7 @@
  * ```
  */
 
-import type { CollectionConfig, GlobalConfig } from './collection.types';
+import type { CollectionConfig, GlobalConfig, SoftDeleteConfig } from './collection.types';
 
 /**
  * Define a collection configuration
@@ -76,6 +76,20 @@ export function defineGlobal(config: GlobalConfig): GlobalConfig {
 	}
 
 	return config;
+}
+
+/**
+ * Get the soft delete field name for a collection.
+ * Returns the field name (default 'deletedAt') if soft delete is enabled, or null if not.
+ *
+ * @param config - The collection configuration
+ * @returns The deletedAt field name, or null if soft delete is not enabled
+ */
+export function getSoftDeleteField(config: CollectionConfig): string | null {
+	if (!config.softDelete) return null;
+	if (config.softDelete === true) return 'deletedAt';
+	const sdConfig: SoftDeleteConfig = config.softDelete;
+	return sdConfig.field ?? 'deletedAt';
 }
 
 /**

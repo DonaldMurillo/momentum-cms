@@ -83,8 +83,8 @@ export interface CollectionEvent {
 	collection: string;
 	/** The event type */
 	event: CollectionEventType;
-	/** The operation (create/update/delete) */
-	operation?: 'create' | 'update' | 'delete';
+	/** The operation (create/update/delete/softDelete/restore) */
+	operation?: 'create' | 'update' | 'delete' | 'softDelete' | 'restore';
 	/** The document data (after operation) */
 	doc?: Record<string, unknown>;
 	/** The document data before the operation */

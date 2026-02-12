@@ -16,7 +16,11 @@ import type {
 	RequestContext,
 } from '@momentum-cms/core';
 import { createLogger } from '@momentum-cms/logger';
-import { flattenDataFields, validateFieldConstraints } from '@momentum-cms/core';
+import {
+	flattenDataFields,
+	validateFieldConstraints,
+	getSoftDeleteField,
+} from '@momentum-cms/core';
 import {
 	hasFieldAccessControl,
 	filterCreatableFields,
@@ -227,8 +231,17 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Prepare query options (strip depth and where — they need special handling)
 		const limit = options.limit ?? 10;
 		const page = options.page ?? 1;
-		const { depth: _depth, where, ...queryOptions } = options;
+		const { depth: _depth, where, withDeleted: _wd, onlyDeleted: _od, ...queryOptions } = options;
 		const whereParams = flattenWhereClause(where);
+
+		// Inject soft-delete filter
+		const softDeleteField = getSoftDeleteField(this.collectionConfig);
+		if (softDeleteField && !options.withDeleted && !options.onlyDeleted) {
+			whereParams[softDeleteField] = null;
+		} else if (softDeleteField && options.onlyDeleted) {
+			whereParams[softDeleteField] = { $ne: null };
+		}
+
 		const query: Record<string, unknown> = {
 			...queryOptions,
 			...whereParams,
@@ -292,7 +305,10 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		};
 	}
 
-	async findById(id: string, options?: { depth?: number }): Promise<T | null> {
+	async findById(
+		id: string,
+		options?: { depth?: number; withDeleted?: boolean },
+	): Promise<T | null> {
 		// Check read access
 		await this.checkAccess('read', id);
 
@@ -304,6 +320,17 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		const doc = (await this.adapter.findById(this.slug, id)) as T | null;
 
 		if (!doc) {
+			return null;
+		}
+
+		// Filter out soft-deleted documents unless explicitly requested
+		const softDeleteField = getSoftDeleteField(this.collectionConfig);
+		if (
+			softDeleteField &&
+			!options?.withDeleted &&
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
+			(doc as Record<string, unknown>)[softDeleteField]
+		) {
 			return null;
 		}
 
@@ -339,6 +366,13 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Partial<T> is compatible with Record<string, unknown>
 		let processedData = data as Record<string, unknown>;
+
+		// Strip the soft-delete field from create data to prevent injection
+		const softDeleteField = getSoftDeleteField(this.collectionConfig);
+		if (softDeleteField && softDeleteField in processedData) {
+			const { [softDeleteField]: _stripped, ...rest } = processedData;
+			processedData = rest;
+		}
 
 		// Filter fields the user cannot create (field-level access)
 		if (hasFieldAccessControl(this.collectionConfig.fields)) {
@@ -420,6 +454,13 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Partial<T> is compatible with Record<string, unknown>
 		let processedData = data as Record<string, unknown>;
 
+		// Strip the soft-delete field from update data to prevent access control bypass
+		const softDeleteField = getSoftDeleteField(this.collectionConfig);
+		if (softDeleteField && softDeleteField in processedData) {
+			const { [softDeleteField]: _stripped, ...rest } = processedData;
+			processedData = rest;
+		}
+
 		// Filter fields the user cannot update (field-level access)
 		if (hasFieldAccessControl(this.collectionConfig.fields)) {
 			processedData = await filterUpdatableFields(
@@ -496,16 +537,109 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			throw new DocumentNotFoundError(this.slug, id);
 		}
 
-		// Run beforeDelete hooks
+		const softDeleteField = getSoftDeleteField(this.collectionConfig);
+
+		if (softDeleteField) {
+			// Soft delete: set deletedAt timestamp
+			await this.runDeleteHooks('beforeDelete', doc, 'softDelete');
+
+			if (this.adapter.softDelete) {
+				await this.adapter.softDelete(this.slug, id, softDeleteField);
+			} else {
+				await this.adapter.update(this.slug, id, {
+					[softDeleteField]: new Date().toISOString(),
+				});
+			}
+
+			await this.runDeleteHooks('afterDelete', doc, 'softDelete');
+			return { id, deleted: true };
+		}
+
+		// Hard delete (original behavior)
 		await this.runDeleteHooks('beforeDelete', doc);
-
-		// Execute delete
 		const deleted = await this.adapter.delete(this.slug, id);
-
-		// Run afterDelete hooks
 		await this.runDeleteHooks('afterDelete', doc);
 
 		return { id, deleted };
+	}
+
+	async forceDelete(id: string): Promise<DeleteResult> {
+		// Check forceDelete access (fall back to delete access)
+		const forceDeleteAccessFn = this.collectionConfig.access?.forceDelete;
+		if (forceDeleteAccessFn) {
+			const accessArgs: AccessArgs = {
+				req: this.buildRequestContext(),
+				id,
+			};
+			const allowed = await Promise.resolve(forceDeleteAccessFn(accessArgs));
+			if (!allowed) {
+				throw new AccessDeniedError('forceDelete', this.slug);
+			}
+		} else {
+			await this.checkAccess('delete', id);
+		}
+
+		// Get document first (for hooks)
+		const doc = await this.adapter.findById(this.slug, id);
+		if (!doc) {
+			throw new DocumentNotFoundError(this.slug, id);
+		}
+
+		// Always hard delete
+		await this.runDeleteHooks('beforeDelete', doc);
+		const deleted = await this.adapter.delete(this.slug, id);
+		await this.runDeleteHooks('afterDelete', doc);
+
+		return { id, deleted };
+	}
+
+	async restore(id: string): Promise<T> {
+		const softDeleteField = getSoftDeleteField(this.collectionConfig);
+		if (!softDeleteField) {
+			throw new Error(`Collection "${this.slug}" does not have soft delete enabled`);
+		}
+
+		// Check restore access (fall back to update access)
+		const restoreAccessFn = this.collectionConfig.access?.restore;
+		if (restoreAccessFn) {
+			const accessArgs: AccessArgs = {
+				req: this.buildRequestContext(),
+				id,
+			};
+			const allowed = await Promise.resolve(restoreAccessFn(accessArgs));
+			if (!allowed) {
+				throw new AccessDeniedError('restore', this.slug);
+			}
+		} else {
+			await this.checkAccess('update', id);
+		}
+
+		// Get the document (must exist, even if soft-deleted)
+		const doc = await this.adapter.findById(this.slug, id);
+		if (!doc) {
+			throw new DocumentNotFoundError(this.slug, id);
+		}
+
+		if (!doc[softDeleteField]) {
+			throw new Error('Document is not soft-deleted');
+		}
+
+		// Run beforeRestore hooks
+		await this.runRestoreHooks('beforeRestore', doc);
+
+		// Restore the document
+		let restored: Record<string, unknown>;
+		if (this.adapter.restore) {
+			restored = await this.adapter.restore(this.slug, id, softDeleteField);
+		} else {
+			restored = await this.adapter.update(this.slug, id, { [softDeleteField]: null });
+		}
+
+		// Run afterRestore hooks
+		await this.runRestoreHooks('afterRestore', restored);
+
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>, safe cast to T
+		return restored as T;
 	}
 
 	async search(
@@ -538,13 +672,24 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			};
 		}
 
+		// Build soft-delete filter for search results
+		const softDeleteField = getSoftDeleteField(this.collectionConfig);
+		const softDeleteFilter: Record<string, unknown> = {};
+		if (softDeleteField) {
+			softDeleteFilter[softDeleteField] = null;
+		}
+
 		// Use the adapter's search method if available, otherwise fall back to find
 		let docs: Record<string, unknown>[];
 		if (this.adapter.search) {
 			docs = await this.adapter.search(this.slug, query, searchFields, { limit, page });
+			// Filter out soft-deleted documents from search results
+			if (softDeleteField) {
+				docs = docs.filter((doc) => !doc[softDeleteField]);
+			}
 		} else {
-			// Fallback: basic find (no full-text search)
-			docs = await this.adapter.find(this.slug, { limit, page });
+			// Fallback: basic find with soft-delete filter
+			docs = await this.adapter.find(this.slug, { ...softDeleteFilter, limit, page });
 		}
 
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
@@ -566,13 +711,20 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		};
 	}
 
-	async count(where?: WhereClause): Promise<number> {
+	async count(where?: WhereClause, options?: { withDeleted?: boolean }): Promise<number> {
 		// Check read access
 		await this.checkAccess('read');
 
 		// Use find with where clause and count results
 		// Pass limit: 0 to signal we want all matching docs for counting
 		const whereParams = flattenWhereClause(where);
+
+		// Inject soft-delete filter
+		const softDeleteField = getSoftDeleteField(this.collectionConfig);
+		if (softDeleteField && !options?.withDeleted) {
+			whereParams[softDeleteField] = null;
+		}
+
 		const query: Record<string, unknown> = { ...whereParams, limit: 0 };
 		const docs = await this.adapter.find(this.slug, query);
 		return docs.length;
@@ -936,6 +1088,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 	private async runDeleteHooks(
 		hookType: 'beforeDelete' | 'afterDelete',
 		doc: Record<string, unknown>,
+		operation: 'delete' | 'softDelete' = 'delete',
 	): Promise<void> {
 		const hooks = this.collectionConfig.hooks?.[hookType];
 		if (!hooks || hooks.length === 0) {
@@ -946,7 +1099,26 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			const hookArgs: HookArgs = {
 				req: this.buildRequestContext(),
 				doc,
-				operation: 'delete',
+				operation,
+			};
+			await Promise.resolve(hook(hookArgs));
+		}
+	}
+
+	private async runRestoreHooks(
+		hookType: 'beforeRestore' | 'afterRestore',
+		doc: Record<string, unknown>,
+	): Promise<void> {
+		const hooks = this.collectionConfig.hooks?.[hookType];
+		if (!hooks || hooks.length === 0) {
+			return;
+		}
+
+		for (const hook of hooks) {
+			const hookArgs: HookArgs = {
+				req: this.buildRequestContext(),
+				doc,
+				operation: 'restore',
 			};
 			await Promise.resolve(hook(hookArgs));
 		}

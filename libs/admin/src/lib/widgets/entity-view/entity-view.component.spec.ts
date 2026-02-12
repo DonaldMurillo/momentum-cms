@@ -100,7 +100,7 @@ describe('EntityViewWidget', () => {
 			createFixture();
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -112,7 +112,7 @@ describe('EntityViewWidget', () => {
 			createFixture({ entityId: '123' });
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			expect(req.request.method).toBe('GET');
 			req.flush({ doc: mockEntity });
 
@@ -127,7 +127,7 @@ describe('EntityViewWidget', () => {
 
 			expect(component.isLoading()).toBe(true);
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -139,7 +139,7 @@ describe('EntityViewWidget', () => {
 			createFixture({ entityId: '999' });
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/999');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/999');
 			req.flush({ doc: null });
 
 			await fixture.whenStable();
@@ -152,7 +152,7 @@ describe('EntityViewWidget', () => {
 			createFixture();
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.error(new ProgressEvent('error'), { status: 500, statusText: 'Server Error' });
 
 			await fixture.whenStable();
@@ -167,7 +167,7 @@ describe('EntityViewWidget', () => {
 			createFixture();
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -182,7 +182,7 @@ describe('EntityViewWidget', () => {
 			createFixture({ entityId: '456' });
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/456');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/456');
 			req.flush({ doc: entityNoTitle });
 
 			await fixture.whenStable();
@@ -194,7 +194,7 @@ describe('EntityViewWidget', () => {
 			createFixture();
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -216,7 +216,7 @@ describe('EntityViewWidget', () => {
 			createFixture({ collection: collectionWithHiddenField });
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -229,7 +229,7 @@ describe('EntityViewWidget', () => {
 			createFixture();
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -246,7 +246,7 @@ describe('EntityViewWidget', () => {
 			createFixture({ collection: collectionNoTimestamps });
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -260,7 +260,7 @@ describe('EntityViewWidget', () => {
 			createFixture();
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -276,7 +276,7 @@ describe('EntityViewWidget', () => {
 			createFixture();
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -292,7 +292,7 @@ describe('EntityViewWidget', () => {
 			createFixture();
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -310,7 +310,7 @@ describe('EntityViewWidget', () => {
 			createFixture();
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -325,7 +325,7 @@ describe('EntityViewWidget', () => {
 			createFixture();
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -338,7 +338,7 @@ describe('EntityViewWidget', () => {
 			createFixture();
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -352,7 +352,7 @@ describe('EntityViewWidget', () => {
 			createFixture();
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -368,7 +368,7 @@ describe('EntityViewWidget', () => {
 			createFixture();
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -386,7 +386,7 @@ describe('EntityViewWidget', () => {
 			component.edit.subscribe(editSpy);
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -404,7 +404,7 @@ describe('EntityViewWidget', () => {
 			component.delete_.subscribe(deleteSpy);
 			fixture.detectChanges();
 
-			const getReq = httpMock.expectOne('/api/posts/123');
+			const getReq = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			getReq.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -415,7 +415,7 @@ describe('EntityViewWidget', () => {
 			// Allow confirmDelete promise to resolve before HTTP request is made
 			await Promise.resolve();
 
-			const deleteReq = httpMock.expectOne('/api/posts/123');
+			const deleteReq = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			expect(deleteReq.request.method).toBe('DELETE');
 			deleteReq.flush({});
 
@@ -437,7 +437,7 @@ describe('EntityViewWidget', () => {
 
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -458,7 +458,7 @@ describe('EntityViewWidget', () => {
 			createFixture();
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -474,7 +474,7 @@ describe('EntityViewWidget', () => {
 			createFixture({ basePath: '/dashboard/content' });
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -488,7 +488,7 @@ describe('EntityViewWidget', () => {
 			createFixture();
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -503,7 +503,7 @@ describe('EntityViewWidget', () => {
 			createFixture();
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/posts/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
 			req.flush({ doc: mockEntity });
 
 			await fixture.whenStable();
@@ -521,13 +521,161 @@ describe('EntityViewWidget', () => {
 			createFixture({ collection: collectionNoLabels });
 			fixture.detectChanges();
 
-			const req = httpMock.expectOne('/api/items/123');
+			const req = httpMock.expectOne((r) => r.url === '/api/items/123');
 			req.flush({ doc: { id: '123', name: 'Test' } });
 
 			await fixture.whenStable();
 
 			expect(component.collectionLabel()).toBe('Items');
 			expect(component.collectionLabelSingular()).toBe('Items');
+		});
+	});
+
+	describe('Soft Delete', () => {
+		const softDeleteCollection: CollectionConfig = {
+			slug: 'posts',
+			fields: [
+				{ name: 'title', type: 'text', label: 'Title' },
+				{ name: 'content', type: 'textarea', label: 'Content' },
+			],
+			labels: { singular: 'Post', plural: 'Posts' },
+			timestamps: true,
+			softDelete: true,
+		};
+
+		const deletedEntity = {
+			id: '123',
+			title: 'Deleted Post',
+			content: 'Deleted content',
+			deletedAt: '2024-06-01T12:00:00Z',
+			createdAt: '2024-01-01T00:00:00Z',
+			updatedAt: '2024-06-01T12:00:00Z',
+		};
+
+		it('should set hasSoftDelete to true for soft-delete collections', async () => {
+			createFixture({ collection: softDeleteCollection });
+			fixture.detectChanges();
+
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
+			req.flush({ doc: mockEntity });
+			await fixture.whenStable();
+
+			expect(component.hasSoftDelete()).toBe(true);
+		});
+
+		it('should set hasSoftDelete to false for regular collections', async () => {
+			createFixture();
+			fixture.detectChanges();
+
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
+			req.flush({ doc: mockEntity });
+			await fixture.whenStable();
+
+			expect(component.hasSoftDelete()).toBe(false);
+		});
+
+		it('should detect soft-deleted entity via isDeleted signal', async () => {
+			createFixture({ collection: softDeleteCollection });
+			fixture.detectChanges();
+
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
+			req.flush({ doc: deletedEntity });
+			await fixture.whenStable();
+
+			expect(component.isDeleted()).toBe(true);
+		});
+
+		it('should not flag active entity as deleted', async () => {
+			createFixture({ collection: softDeleteCollection });
+			fixture.detectChanges();
+
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
+			req.flush({ doc: mockEntity });
+			await fixture.whenStable();
+
+			expect(component.isDeleted()).toBe(false);
+		});
+
+		it('should pass withDeleted query param when collection has softDelete', async () => {
+			createFixture({ collection: softDeleteCollection });
+			fixture.detectChanges();
+
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
+			expect(req.request.params.get('withDeleted')).toBe('true');
+			req.flush({ doc: deletedEntity });
+			await fixture.whenStable();
+		});
+
+		it('should not pass withDeleted when collection has no softDelete', async () => {
+			createFixture();
+			fixture.detectChanges();
+
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
+			expect(req.request.params.has('withDeleted')).toBe(false);
+			req.flush({ doc: mockEntity });
+			await fixture.whenStable();
+		});
+
+		it('should render soft-deleted banner when entity is deleted', async () => {
+			createFixture({ collection: softDeleteCollection });
+			fixture.detectChanges();
+
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
+			req.flush({ doc: deletedEntity });
+			await fixture.whenStable();
+			fixture.detectChanges();
+
+			const banner = fixture.nativeElement.querySelector('mcms-alert');
+			expect(banner).toBeTruthy();
+			expect(banner.textContent).toContain('deleted');
+		});
+
+		it('should show Restore button for deleted entities when user can edit', async () => {
+			createFixture({ collection: softDeleteCollection });
+			fixture.detectChanges();
+
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
+			req.flush({ doc: deletedEntity });
+			await fixture.whenStable();
+			fixture.detectChanges();
+
+			const buttons = fixture.nativeElement.querySelectorAll('button');
+			const restoreBtn = Array.from<Element>(buttons).find(
+				(btn) => btn.textContent?.trim() === 'Restore',
+			);
+			expect(restoreBtn).toBeTruthy();
+		});
+
+		it('should show Permanently Delete button for deleted entities', async () => {
+			createFixture({ collection: softDeleteCollection });
+			fixture.detectChanges();
+
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
+			req.flush({ doc: deletedEntity });
+			await fixture.whenStable();
+			fixture.detectChanges();
+
+			const buttons = fixture.nativeElement.querySelectorAll('button');
+			const forceDeleteBtn = Array.from<Element>(buttons).find(
+				(btn) => btn.textContent?.trim() === 'Permanently Delete',
+			);
+			expect(forceDeleteBtn).toBeTruthy();
+		});
+
+		it('should show "Move to Trash" instead of "Delete" for active soft-delete entities', async () => {
+			createFixture({ collection: softDeleteCollection });
+			fixture.detectChanges();
+
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
+			req.flush({ doc: mockEntity });
+			await fixture.whenStable();
+			fixture.detectChanges();
+
+			const buttons = fixture.nativeElement.querySelectorAll('button');
+			const trashBtn = Array.from<Element>(buttons).find(
+				(btn) => btn.textContent?.trim() === 'Move to Trash',
+			);
+			expect(trashBtn).toBeTruthy();
 		});
 	});
 });
