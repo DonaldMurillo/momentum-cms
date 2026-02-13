@@ -52,8 +52,12 @@ import { FieldRenderer } from '../entity-form/field-renderers/field-renderer.com
 		<!-- Header: always visible -->
 		<div
 			class="flex items-center gap-2 px-3 py-2 bg-muted/30"
+			role="toolbar"
+			tabindex="-1"
+			[attr.aria-label]="blockLabel() + ' controls'"
 			data-testid="block-header"
 			(click)="$event.stopPropagation()"
+			(keydown.enter)="$event.stopPropagation()"
 		>
 			<!-- Collapse toggle -->
 			<button

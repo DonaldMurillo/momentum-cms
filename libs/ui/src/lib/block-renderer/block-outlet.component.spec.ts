@@ -3,24 +3,27 @@ import { Component, input, signal } from '@angular/core';
 import { BlockOutletComponent } from './block-outlet.component';
 import { BLOCK_COMPONENT_REGISTRY, BLOCK_FALLBACK_COMPONENT } from './block-renderer.types';
 
-@Component({ selector: 'test-hero', template: '<h1>{{ data()["heading"] }}</h1>' })
+@Component({ selector: 'mcms-test-hero', template: '<h1>{{ data()["heading"] }}</h1>' })
 class MockHeroComponent {
 	readonly data = input.required<Record<string, unknown>>();
 }
 
-@Component({ selector: 'test-text', template: '<p>{{ data()["body"] }}</p>' })
+@Component({ selector: 'mcms-test-text', template: '<p>{{ data()["body"] }}</p>' })
 class MockTextComponent {
 	readonly data = input.required<Record<string, unknown>>();
 }
 
-@Component({ selector: 'test-fallback', template: '<div class="fallback">Unknown block</div>' })
+@Component({
+	selector: 'mcms-test-fallback',
+	template: '<div class="fallback">Unknown block</div>',
+})
 class MockFallbackComponent {
 	readonly data = input.required<Record<string, unknown>>();
 }
 
 /** Test host to avoid parentElement sibling leaking between tests */
 @Component({
-	selector: 'test-host',
+	selector: 'mcms-test-host',
 	imports: [BlockOutletComponent],
 	template: `
 		<div class="host">
@@ -85,7 +88,7 @@ describe('BlockOutletComponent', () => {
 		hostFixture.detectChanges();
 		await hostFixture.whenStable();
 
-		expect(getHostEl().querySelector('test-hero')).toBeTruthy();
+		expect(getHostEl().querySelector('mcms-test-hero')).toBeTruthy();
 		expect(getHostEl().querySelector('h1')?.textContent).toContain('Hello World');
 	});
 
@@ -96,7 +99,7 @@ describe('BlockOutletComponent', () => {
 		hostFixture.detectChanges();
 		await hostFixture.whenStable();
 
-		expect(getHostEl().querySelector('test-text')).toBeTruthy();
+		expect(getHostEl().querySelector('mcms-test-text')).toBeTruthy();
 		expect(getHostEl().querySelector('p')?.textContent).toContain('Some body text');
 	});
 
@@ -107,9 +110,9 @@ describe('BlockOutletComponent', () => {
 		hostFixture.detectChanges();
 		await hostFixture.whenStable();
 
-		expect(getHostEl().querySelector('test-hero')).toBeNull();
-		expect(getHostEl().querySelector('test-text')).toBeNull();
-		expect(getHostEl().querySelector('test-fallback')).toBeNull();
+		expect(getHostEl().querySelector('mcms-test-hero')).toBeNull();
+		expect(getHostEl().querySelector('mcms-test-text')).toBeNull();
+		expect(getHostEl().querySelector('mcms-test-fallback')).toBeNull();
 	});
 
 	it('should use fallback component for unregistered block type when fallback is provided', async () => {
@@ -119,7 +122,7 @@ describe('BlockOutletComponent', () => {
 		hostFixture.detectChanges();
 		await hostFixture.whenStable();
 
-		expect(getHostEl().querySelector('test-fallback')).toBeTruthy();
+		expect(getHostEl().querySelector('mcms-test-fallback')).toBeTruthy();
 		expect(getHostEl().textContent).toContain('Unknown block');
 	});
 
@@ -130,15 +133,15 @@ describe('BlockOutletComponent', () => {
 		hostFixture.detectChanges();
 		await hostFixture.whenStable();
 
-		expect(getHostEl().querySelector('test-hero')).toBeTruthy();
+		expect(getHostEl().querySelector('mcms-test-hero')).toBeTruthy();
 
 		host.blockType.set('text');
 		host.blockData.set({ body: 'Second' });
 		hostFixture.detectChanges();
 		await hostFixture.whenStable();
 
-		expect(getHostEl().querySelector('test-hero')).toBeNull();
-		expect(getHostEl().querySelector('test-text')).toBeTruthy();
+		expect(getHostEl().querySelector('mcms-test-hero')).toBeNull();
+		expect(getHostEl().querySelector('mcms-test-text')).toBeTruthy();
 	});
 
 	it('should update data when blockData changes', async () => {

@@ -563,7 +563,7 @@ test.describe('Accessibility: Keyboard navigation', () => {
 
 		// Navigate to a collection list that has sortable columns
 		await page.goto('/admin/collections/articles');
-		await page.waitForLoadState('networkidle');
+		await page.waitForLoadState('load');
 
 		// Wait for data table rows to render (ensures data is loaded and Angular hydrated)
 		const gridRows = page.locator('[role="grid"] [role="row"] [role="gridcell"]');

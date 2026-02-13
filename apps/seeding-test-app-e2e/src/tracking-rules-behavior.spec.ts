@@ -61,7 +61,7 @@ test.describe('Tracking Rules Behavior', { tag: ['@analytics', '@smoke'] }, () =
 		await expect(refreshButton).toBeVisible({ timeout: 15000 });
 
 		// Wait for rule engine to initialize (fetches rules, attaches listeners)
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('load');
 
 		// Click the button — the rule engine should capture this
 		await refreshButton.click();
@@ -124,7 +124,7 @@ test.describe('Tracking Rules Behavior', { tag: ['@analytics', '@smoke'] }, () =
 
 		const refreshButton = authenticatedPage.getByRole('button', { name: 'Refresh' });
 		await expect(refreshButton).toBeVisible({ timeout: 15000 });
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('load');
 
 		// Click the button
 		await refreshButton.click();
@@ -177,7 +177,7 @@ test.describe('Tracking Rules Behavior', { tag: ['@analytics', '@smoke'] }, () =
 
 		const refreshButton = authenticatedPage.getByRole('button', { name: 'Refresh' });
 		await expect(refreshButton).toBeVisible({ timeout: 15000 });
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('load');
 
 		// Click the button
 		await refreshButton.click();
@@ -233,7 +233,7 @@ test.describe('Tracking Rules Behavior', { tag: ['@analytics', '@smoke'] }, () =
 
 		const refreshButton = authenticatedPage.getByRole('button', { name: 'Refresh' });
 		await expect(refreshButton).toBeVisible({ timeout: 15000 });
-		await authenticatedPage.waitForLoadState('networkidle');
+		await authenticatedPage.waitForLoadState('load');
 
 		// Click the button
 		await refreshButton.click();
