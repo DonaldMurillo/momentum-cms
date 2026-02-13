@@ -46,8 +46,10 @@ test.describe('Authentication Flow', () => {
 			});
 
 			// After hydration, route guards evaluate asynchronously (API call to check users).
-			// Wait for all network activity to complete before checking URL.
-			await page.waitForLoadState('load');
+			// Wait for route guard to complete: setup form renders or page redirects to login.
+			await expect(
+				page.getByLabel(/full name/i).or(page.getByRole('heading', { name: /sign in|log in/i })),
+			).toBeVisible({ timeout: 10000 });
 
 			// If users already exist, router redirected to /login — test is N/A
 			if (!page.url().includes('/setup')) return;
@@ -66,7 +68,10 @@ test.describe('Authentication Flow', () => {
 				const appRoot = document.querySelector('app-root');
 				return appRoot && appRoot.hasAttribute('ng-version');
 			});
-			await page.waitForLoadState('load');
+			// Wait for route guard to complete: setup form renders or page redirects to login.
+			await expect(
+				page.getByLabel(/full name/i).or(page.getByRole('heading', { name: /sign in|log in/i })),
+			).toBeVisible({ timeout: 10000 });
 
 			// If users already exist, router redirected to /login — test is N/A
 			if (!page.url().includes('/setup')) return;
@@ -106,7 +111,10 @@ test.describe('Authentication Flow', () => {
 				const appRoot = document.querySelector('app-root');
 				return appRoot && appRoot.hasAttribute('ng-version');
 			});
-			await page.waitForLoadState('load');
+			// Wait for route guard to complete: setup form renders or page redirects to login.
+			await expect(
+				page.getByLabel(/full name/i).or(page.getByRole('heading', { name: /sign in|log in/i })),
+			).toBeVisible({ timeout: 10000 });
 
 			// If users already exist, router redirected to /login — test is N/A
 			if (!page.url().includes('/setup')) return;
@@ -142,7 +150,10 @@ test.describe('Authentication Flow', () => {
 				const appRoot = document.querySelector('app-root');
 				return appRoot && appRoot.hasAttribute('ng-version');
 			});
-			await page.waitForLoadState('load');
+			// Wait for route guard to complete: setup form renders or page redirects to login.
+			await expect(
+				page.getByLabel(/full name/i).or(page.getByRole('heading', { name: /sign in|log in/i })),
+			).toBeVisible({ timeout: 10000 });
 
 			// If users already exist, router redirected to /login — test is N/A
 			if (!page.url().includes('/setup')) return;
