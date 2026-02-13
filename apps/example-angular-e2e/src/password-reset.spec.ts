@@ -1,6 +1,6 @@
 import { test, expect, TEST_CREDENTIALS } from './fixtures';
 import {
-	checkMailpitHealth,
+	isMailpitAvailable,
 	getEmails,
 	getEmailById,
 	waitForEmail,
@@ -25,12 +25,14 @@ const TEST_USER = {
 };
 
 test.describe('Password Reset Flow', () => {
+	let mailpitRunning = false;
+
 	test.beforeAll(async () => {
-		// Verify Mailpit is running before tests start
-		await checkMailpitHealth();
+		mailpitRunning = await isMailpitAvailable();
 	});
 
 	test.beforeEach(async () => {
+		test.skip(!mailpitRunning, 'Mailpit is not running - skipping password reset tests');
 		// No clearMailpit() — tests use waitForEmail filtering by recipient.
 		// Clearing would cause parallel interference across workers.
 	});

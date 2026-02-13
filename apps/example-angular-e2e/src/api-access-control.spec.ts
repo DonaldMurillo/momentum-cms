@@ -179,8 +179,7 @@ test.describe('API Access Control - Setup', () => {
 			sessions.editor = existingSession;
 		} else {
 			// User doesn't exist or password doesn't match - create via Better Auth
-			// Note: auth-user is a managed collection, so user records are created by
-			// Better Auth directly (not via the Momentum API).
+			// User records are created via Better Auth (not via the Momentum API).
 			console.log('[Test] Creating editor user via Better Auth...');
 			const signUpSession = await trySignUp(
 				request,
@@ -214,8 +213,7 @@ test.describe('API Access Control - Setup', () => {
 			sessions.viewer = existingSession;
 		} else {
 			// User doesn't exist or password doesn't match - create via Better Auth
-			// Note: auth-user is a managed collection, so user records are created by
-			// Better Auth directly (not via the Momentum API).
+			// User records are created via Better Auth (not via the Momentum API).
 			console.log('[Test] Creating viewer user via Better Auth...');
 			const signUpSession = await trySignUp(
 				request,
@@ -458,17 +456,16 @@ test.describe('API Access Control - Users Collection', () => {
 		expect(emails).toContain(TEST_USERS.admin.email);
 	});
 
-	test('admin: cannot update managed auth-user collection (read-only)', async ({ request }) => {
+	test('admin: can update auth-user collection', async ({ request }) => {
 		test.skip(!sessions.admin, 'Admin session not available');
-		// auth-user is a managed collection (owned by Better Auth) — write operations return 403
 		const listResult = await authenticatedRequest(request, sessions.admin, 'GET', '/api/auth-user');
 		expect(listResult.status).toBe(200);
 
-		const users = (listResult.body as { docs: { id: string; email: string }[] }).docs;
+		const users = (listResult.body as { docs: { id: string; email: string; name: string }[] }).docs;
 		const editor = users.find((u) => u.email === TEST_USERS.editor.email);
 
 		if (editor) {
-			const { status, body } = await authenticatedRequest(
+			const { status } = await authenticatedRequest(
 				request,
 				sessions.admin,
 				'PATCH',
@@ -477,8 +474,12 @@ test.describe('API Access Control - Users Collection', () => {
 					name: 'Updated Editor Name',
 				},
 			);
-			expect(status).toBe(403);
-			expect((body as { error: string }).error).toBe('Managed collection is read-only');
+			expect(status).toBe(200);
+
+			// Restore original name
+			await authenticatedRequest(request, sessions.admin, 'PATCH', `/api/auth-user/${editor.id}`, {
+				name: editor.name,
+			});
 		}
 	});
 
@@ -579,13 +580,12 @@ test.describe('API Access Control - /api/access Endpoint', () => {
 		expect(posts?.canUpdate).toBe(true);
 		expect(posts?.canDelete).toBe(true);
 
-		// auth-user is managed (read-only) — write permissions forced to false
+		// auth-user: admin has full CRUD access
 		expect(users?.canAccess).toBe(true);
-		expect(users?.canCreate).toBe(false);
+		expect(users?.canCreate).toBe(true);
 		expect(users?.canRead).toBe(true);
-		expect(users?.canUpdate).toBe(false);
-		expect(users?.canDelete).toBe(false);
-		expect(users?.managed).toBe(true);
+		expect(users?.canUpdate).toBe(true);
+		expect(users?.canDelete).toBe(true);
 	});
 
 	test('returns correct permissions for editor', async ({ request }) => {

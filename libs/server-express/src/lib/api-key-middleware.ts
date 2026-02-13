@@ -87,15 +87,18 @@ export function createApiKeyResolverMiddleware(
 	};
 }
 
+/** Role hierarchy for permission checks. Lower index = higher privilege. */
+const ROLE_HIERARCHY = ['admin', 'editor', 'user', 'viewer'];
+
 /**
  * Creates Express router for API key management endpoints.
  *
- * All endpoints require authentication (admin role).
+ * All endpoints require authentication. Admin sees all keys, non-admin sees own.
  *
  * Endpoints:
- * - GET    /api-keys       - List all API keys
+ * - GET    /api-keys       - List API keys (admin: all, others: own)
  * - POST   /api-keys       - Create a new API key
- * - DELETE  /api-keys/:id   - Delete an API key
+ * - DELETE  /api-keys/:id   - Delete an API key (admin: any, others: own)
  *
  * @example
  * ```typescript
@@ -105,7 +108,7 @@ export function createApiKeyResolverMiddleware(
 export function createApiKeyRoutes(config: ApiKeyMiddlewareConfig): Router {
 	const router = createRouter();
 
-	// List all API keys (admin only)
+	// List API keys (admin sees all, others see own)
 	router.get('/api-keys', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Express request augmentation
 		const user = req.user as { id: string; role?: string } | undefined;
@@ -115,31 +118,24 @@ export function createApiKeyRoutes(config: ApiKeyMiddlewareConfig): Router {
 			return;
 		}
 
-		if (user.role !== 'admin') {
-			res.status(403).json({ error: 'Admin access required' });
-			return;
-		}
-
 		try {
-			const keys = await config.store.listAll();
+			const keys =
+				user.role === 'admin'
+					? await config.store.listAll()
+					: await config.store.listByUser(user.id);
 			res.json({ keys });
 		} catch {
 			res.status(500).json({ error: 'Failed to list API keys' });
 		}
 	});
 
-	// Create a new API key (admin only)
+	// Create a new API key (any authenticated user)
 	router.post('/api-keys', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Express request augmentation
 		const user = req.user as { id: string; role?: string } | undefined;
 
 		if (!user) {
 			res.status(401).json({ error: 'Unauthorized' });
-			return;
-		}
-
-		if (user.role !== 'admin') {
-			res.status(403).json({ error: 'Admin access required' });
 			return;
 		}
 
@@ -158,12 +154,22 @@ export function createApiKeyRoutes(config: ApiKeyMiddlewareConfig): Router {
 			return;
 		}
 
+		// Non-admin users cannot create keys with a higher role than their own
+		const userRoleIndex = ROLE_HIERARCHY.indexOf(user.role ?? 'viewer');
+		const requestedRoleIndex = ROLE_HIERARCHY.indexOf(role);
+		if (user.role !== 'admin' && requestedRoleIndex < userRoleIndex) {
+			res
+				.status(403)
+				.json({ error: `Cannot create a key with higher privileges than your own role` });
+			return;
+		}
+
 		try {
 			const key = generateApiKey();
 			const id = generateApiKeyId();
 			const now = new Date().toISOString();
 
-			await config.store.create({
+			const createdId = await config.store.create({
 				id,
 				name: body.name.trim(),
 				keyHash: hashApiKey(key),
@@ -176,8 +182,9 @@ export function createApiKeyRoutes(config: ApiKeyMiddlewareConfig): Router {
 			});
 
 			// Return the full key only at creation time
+			// Use createdId (adapter may generate its own ID)
 			res.status(201).json({
-				id,
+				id: createdId,
 				name: body.name.trim(),
 				key,
 				keyPrefix: getKeyPrefix(key),
@@ -190,7 +197,7 @@ export function createApiKeyRoutes(config: ApiKeyMiddlewareConfig): Router {
 		}
 	});
 
-	// Delete an API key (admin only)
+	// Delete an API key (admin: any, others: own only)
 	router.delete(
 		'/api-keys/:id',
 		async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -202,13 +209,23 @@ export function createApiKeyRoutes(config: ApiKeyMiddlewareConfig): Router {
 				return;
 			}
 
+			const keyId = req.params['id'];
+
+			// Non-admin users can only delete their own keys
 			if (user.role !== 'admin') {
-				res.status(403).json({ error: 'Admin access required' });
-				return;
+				const existingKey = await config.store.findById(keyId);
+				if (!existingKey) {
+					res.status(404).json({ error: 'API key not found' });
+					return;
+				}
+				if (existingKey.createdBy !== user.id) {
+					res.status(403).json({ error: 'You can only delete your own API keys' });
+					return;
+				}
 			}
 
 			try {
-				const deleted = await config.store.deleteById(req.params['id']);
+				const deleted = await config.store.deleteById(keyId);
 				if (deleted) {
 					res.json({ deleted: true });
 				} else {

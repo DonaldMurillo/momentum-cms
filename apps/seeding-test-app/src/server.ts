@@ -17,8 +17,6 @@ import {
 	momentumApiMiddleware,
 	initializeMomentum,
 	createHealthMiddleware,
-	createApiKeyResolverMiddleware,
-	createApiKeyRoutes,
 	createOpenAPIMiddleware,
 	createDeferredSessionResolver,
 	getPluginProviders,
@@ -27,11 +25,9 @@ import {
 	getMomentumAPI,
 	registerWebhookHooks,
 	startPublishScheduler,
-	createPostgresApiKeyStore,
 } from '@momentum-cms/server-core';
 import { provideMomentumAPI } from '@momentum-cms/admin';
 import type { CollectionEvent } from '@momentum-cms/plugins/core';
-import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
 import momentumConfig, { events, analytics, analyticsAdapter, authPlugin } from './momentum.config';
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
@@ -42,12 +38,6 @@ const angularApp = new AngularNodeAppEngine();
 
 // Parse JSON request bodies (required for auth endpoints)
 app.use(express.json());
-
-/**
- * Get the pg pool from the adapter for API key store
- */
-// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- PostgresAdapter implements PostgresAdapterWithRaw
-const pool = (momentumConfig.db.adapter as PostgresAdapterWithRaw).getPool();
 
 /**
  * Register webhook hooks for all collections with webhook configs
@@ -209,47 +199,14 @@ app.use(
 );
 
 /**
- * API Key support
- * Create API key store and wire up resolver + management routes
- */
-const apiKeyStore = createPostgresApiKeyStore({
-	query: async <T extends Record<string, unknown>>(
-		sql: string,
-		params?: unknown[],
-	): Promise<T[]> => {
-		const result = await pool.query(sql, params);
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- pg result rows
-		return result.rows as T[];
-	},
-	queryOne: async <T extends Record<string, unknown>>(
-		sql: string,
-		params?: unknown[],
-	): Promise<T | null> => {
-		const result = await pool.query(sql, params);
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- pg result rows
-		return (result.rows[0] as T) ?? null;
-	},
-	execute: async (sql: string, params?: unknown[]): Promise<number> => {
-		const result = await pool.query(sql, params);
-		return result.rowCount ?? 0;
-	},
-});
-
-// API key resolver - checks X-API-Key header before session auth
-app.use(createApiKeyResolverMiddleware({ store: apiKeyStore }));
-
-/**
  * Session resolver middleware
  * Resolves user session from auth cookies and attaches to req.user
  * Role comes directly from Better Auth user table (single source of truth)
+ *
+ * API key resolver + management routes are auto-registered by initializeMomentum()
+ * as plugin middleware (mounted at /api/auth/api-keys via momentumApiMiddleware).
  */
 app.use(createDeferredSessionResolver(authPlugin));
-
-/**
- * API key management endpoints (admin only)
- * GET /api/api-keys, POST /api/api-keys, DELETE /api/api-keys/:id
- */
-app.use('/api', createApiKeyRoutes({ store: apiKeyStore }));
 
 /**
  * OpenAPI / Swagger documentation

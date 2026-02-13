@@ -86,13 +86,12 @@ test.describe('Collection List Page - Users', () => {
 		await expect(heading).toBeVisible();
 	});
 
-	test('should NOT show Create button for managed collection', async ({ authenticatedPage }) => {
+	test('should show Create User button for admin', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/auth-user');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		// auth-user is a managed collection (owned by Better Auth) — no create button
 		const createButton = authenticatedPage.getByRole('button', { name: /Create User/i });
-		await expect(createButton).toHaveCount(0);
+		await expect(createButton).toBeVisible({ timeout: 10000 });
 	});
 
 	test('should load user data in table via sidebar navigation', async ({ authenticatedPage }) => {
@@ -139,13 +138,54 @@ test.describe('Collection List Page - Auth API Keys', () => {
 		await expect(heading).toBeVisible();
 	});
 
-	test('should NOT show Create button for managed collection', async ({ authenticatedPage }) => {
+	test('should NOT show Create button (create access denied)', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/auth-api-keys');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		// auth-api-keys is a managed collection — no create button
-		const createButton = authenticatedPage.getByRole('button', { name: /Create/i });
+		// auth-api-keys has create: () => false — keys must be created via Generate API Key action
+		const createButton = authenticatedPage.getByRole('link', { name: /Create/i });
 		await expect(createButton).toHaveCount(0);
+	});
+
+	test('should show Generate API Key button', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/auth-api-keys');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		const generateButton = authenticatedPage.getByTestId('header-action-generate-key');
+		await expect(generateButton).toBeVisible({ timeout: 10000 });
+		await expect(generateButton).toHaveText('Generate API Key');
+	});
+
+	test('should generate an API key via dialog', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/auth-api-keys');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		// Click the Generate API Key button
+		const generateButton = authenticatedPage.getByTestId('header-action-generate-key');
+		await expect(generateButton).toBeVisible({ timeout: 10000 });
+		await generateButton.click();
+
+		// Dialog should appear
+		const dialog = authenticatedPage.getByRole('dialog');
+		await expect(dialog).toBeVisible({ timeout: 5000 });
+
+		// Fill in the key name
+		const nameInput = dialog.getByLabel('Key Name');
+		await nameInput.fill('E2E Test Key');
+
+		// Submit
+		const submitButton = dialog.getByRole('button', { name: 'Generate' });
+		await expect(submitButton).toBeEnabled({ timeout: 10000 });
+		await submitButton.click();
+
+		// Should show the generated key
+		await expect(dialog.getByText(/^mcms_[0-9a-f]+/)).toBeVisible({ timeout: 10000 });
+		await expect(dialog.getByText('This key will only be shown once')).toBeVisible();
+
+		// Close the dialog
+		const doneButton = dialog.getByRole('button', { name: 'Done' });
+		await doneButton.click();
+		await expect(dialog).toBeHidden();
 	});
 });
 

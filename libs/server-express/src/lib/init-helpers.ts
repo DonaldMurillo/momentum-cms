@@ -4,6 +4,7 @@ import {
 	initializeMomentumAPI,
 	runSeeding,
 	shouldRunSeeding,
+	createAdapterApiKeyStore,
 	type SeedingResult,
 	type MomentumAuthLike,
 } from '@momentum-cms/server-core';
@@ -13,6 +14,7 @@ import { initializeMomentumLogger, createLogger } from '@momentum-cms/logger';
 import { PluginRunner } from '@momentum-cms/plugins/core';
 import { createAuthMiddleware } from './auth-middleware';
 import { createSetupMiddleware } from './setup-middleware';
+import { createApiKeyResolverMiddleware, createApiKeyRoutes } from './api-key-middleware';
 import { setPluginMiddleware, setPluginProviders } from './plugin-middleware-registry';
 
 /**
@@ -159,11 +161,26 @@ export function initializeMomentum(
 							db: pluginConfig.db,
 							auth: authInstance,
 						});
+						// API key store backed by the generic database adapter
+						const apiKeyStore = createAdapterApiKeyStore(config.db.adapter);
+
+						// Order matters: API key routes at /auth/api-keys must be mounted BEFORE
+						// the Better Auth catch-all at /auth/* to avoid being consumed by it.
 						pluginMiddleware.push(
+							{
+								path: '/',
+								handler: createApiKeyResolverMiddleware({ store: apiKeyStore }),
+								position: 'before-api',
+							},
+							{
+								path: '/auth',
+								handler: createApiKeyRoutes({ store: apiKeyStore }),
+								position: 'before-api',
+							},
 							{ path: '/', handler: authMw, position: 'before-api' },
 							{ path: '/', handler: setupMw, position: 'before-api' },
 						);
-						log.info('Auth and setup middleware registered');
+						log.info('Auth, setup, and API key middleware registered');
 					} catch {
 						// Plugin not ready, skip
 					}

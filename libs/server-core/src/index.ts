@@ -99,6 +99,7 @@ export {
 	getKeyPrefix,
 	isValidApiKeyFormat,
 	generateApiKeyId,
+	createAdapterApiKeyStore,
 	createPostgresApiKeyStore,
 	API_KEYS_TABLE_SQL_POSTGRES,
 	API_KEYS_TABLE_SQL_SQLITE,

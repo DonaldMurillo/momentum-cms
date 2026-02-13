@@ -25,10 +25,14 @@ describe('Auth Collections', () => {
 			]);
 		});
 
-		it('should have all collections marked as managed', () => {
-			for (const collection of BASE_AUTH_COLLECTIONS) {
-				expect(collection.managed).toBe(true);
-			}
+		it('should have internal collections marked as managed', () => {
+			const managedSlugs = BASE_AUTH_COLLECTIONS.filter((c) => c.managed).map((c) => c.slug);
+			expect(managedSlugs).toEqual(['auth-session', 'auth-account', 'auth-verification']);
+		});
+
+		it('should NOT have auth-user and auth-api-keys marked as managed', () => {
+			expect(AuthUserCollection.managed).toBeUndefined();
+			expect(AuthApiKeysCollection.managed).toBeUndefined();
 		});
 	});
 
@@ -38,8 +42,7 @@ describe('Auth Collections', () => {
 			expect(AuthUserCollection.dbName).toBe('user');
 		});
 
-		it('should be managed with timestamps', () => {
-			expect(AuthUserCollection.managed).toBe(true);
+		it('should have timestamps enabled', () => {
 			expect(AuthUserCollection.timestamps).toBe(true);
 		});
 
@@ -197,6 +200,13 @@ describe('Auth Collections', () => {
 			expect(fieldNames).toContain('lastUsedAt');
 		});
 
+		it('should hide keyHash and createdBy fields in admin UI', () => {
+			const keyHashField = AuthApiKeysCollection.fields.find((f) => f.name === 'keyHash');
+			const createdByField = AuthApiKeysCollection.fields.find((f) => f.name === 'createdBy');
+			expect(keyHashField?.admin?.hidden).toBe(true);
+			expect(createdByField?.admin?.hidden).toBe(true);
+		});
+
 		it('should have a unique keyHash index', () => {
 			const uniqueIndexes = AuthApiKeysCollection.indexes?.filter((i) => i.unique);
 			expect(uniqueIndexes).toEqual([{ columns: ['keyHash'], unique: true }]);
@@ -207,18 +217,45 @@ describe('Auth Collections', () => {
 			expect(AuthApiKeysCollection.access?.update?.({ req: adminReq })).toBe(false);
 		});
 
-		it('should allow admin to read, create, and delete', () => {
+		it('should deny create for everyone (keys must be created via Better Auth)', () => {
 			const adminReq = { user: { id: '1', role: 'admin' } };
-			expect(AuthApiKeysCollection.access?.read?.({ req: adminReq })).toBe(true);
-			expect(AuthApiKeysCollection.access?.create?.({ req: adminReq })).toBe(true);
-			expect(AuthApiKeysCollection.access?.delete?.({ req: adminReq })).toBe(true);
+			const userReq = { user: { id: '2', role: 'user' } };
+			expect(AuthApiKeysCollection.access?.create?.({ req: adminReq })).toBe(false);
+			expect(AuthApiKeysCollection.access?.create?.({ req: userReq })).toBe(false);
 		});
 
-		it('should deny non-admin access', () => {
+		it('should allow any authenticated user to read and delete', () => {
+			const adminReq = { user: { id: '1', role: 'admin' } };
 			const userReq = { user: { id: '2', role: 'user' } };
-			expect(AuthApiKeysCollection.access?.read?.({ req: userReq })).toBe(false);
-			expect(AuthApiKeysCollection.access?.create?.({ req: userReq })).toBe(false);
-			expect(AuthApiKeysCollection.access?.delete?.({ req: userReq })).toBe(false);
+			expect(AuthApiKeysCollection.access?.read?.({ req: adminReq })).toBe(true);
+			expect(AuthApiKeysCollection.access?.delete?.({ req: adminReq })).toBe(true);
+			expect(AuthApiKeysCollection.access?.read?.({ req: userReq })).toBe(true);
+			expect(AuthApiKeysCollection.access?.delete?.({ req: userReq })).toBe(true);
+		});
+
+		it('should deny unauthenticated read and delete', () => {
+			const noUserReq = { user: undefined };
+			expect(AuthApiKeysCollection.access?.read?.({ req: noUserReq })).toBe(false);
+			expect(AuthApiKeysCollection.access?.delete?.({ req: noUserReq })).toBe(false);
+		});
+
+		it('should have defaultWhere that scopes by user', () => {
+			const adminReq = { user: { id: '1', role: 'admin' } };
+			const userReq = { user: { id: '2', role: 'user' } };
+			const noUserReq = {};
+			expect(AuthApiKeysCollection.defaultWhere?.(adminReq)).toBeUndefined();
+			expect(AuthApiKeysCollection.defaultWhere?.(userReq)).toEqual({ createdBy: '2' });
+			expect(AuthApiKeysCollection.defaultWhere?.(noUserReq)).toEqual({ createdBy: '__none__' });
+		});
+
+		it('should have a generate-key header action with endpoint', () => {
+			const actions = AuthApiKeysCollection.admin?.headerActions;
+			expect(actions).toHaveLength(1);
+			expect(actions?.[0]).toEqual({
+				id: 'generate-key',
+				label: 'Generate API Key',
+				endpoint: '/api/auth/api-keys',
+			});
 		});
 	});
 });

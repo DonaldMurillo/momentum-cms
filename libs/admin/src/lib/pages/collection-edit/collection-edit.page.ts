@@ -9,6 +9,7 @@ import {
 import { ActivatedRoute } from '@angular/router';
 import type { CollectionConfig } from '@momentum-cms/core';
 import { Button, DialogService } from '@momentum-cms/ui';
+import { CollectionAccessService } from '../../services/collection-access.service';
 import { getCollectionsFromRouteData } from '../../utils/route-data';
 import { EntityFormWidget } from '../../widgets/entity-form/entity-form.component';
 import type { EntityFormMode } from '../../widgets/entity-form/entity-form.types';
@@ -107,6 +108,7 @@ import type { HasUnsavedChanges } from '../../guards/unsaved-changes.guard';
 export class CollectionEditPage implements HasUnsavedChanges {
 	private readonly route = inject(ActivatedRoute);
 	private readonly dialogService = inject(DialogService);
+	private readonly collectionAccess = inject(CollectionAccessService);
 
 	readonly basePath = '/admin/collections';
 
@@ -126,7 +128,10 @@ export class CollectionEditPage implements HasUnsavedChanges {
 	});
 
 	readonly mode = computed((): EntityFormMode => {
-		return this.entityId() ? 'edit' : 'create';
+		if (!this.entityId()) return 'create';
+		const slug = this.collection()?.slug;
+		if (slug && !this.collectionAccess.canUpdate(slug)) return 'view';
+		return 'edit';
 	});
 
 	readonly collection = computed((): CollectionConfig | undefined => {

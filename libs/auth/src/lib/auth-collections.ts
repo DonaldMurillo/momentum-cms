@@ -1,10 +1,11 @@
 /**
  * Base Auth Collections for Momentum CMS
  *
- * Defines Better Auth tables as managed Momentum collections.
- * These collections participate in schema generation and can optionally
- * appear in the admin UI, but do NOT expose CRUD API routes (Better Auth
- * owns the data operations).
+ * Defines Better Auth tables as Momentum collections.
+ * Visible collections (auth-user, auth-api-keys) are fully interactive in the
+ * admin UI with access restricted to admin role. Internal collections (session,
+ * account, verification) are managed and hidden — Better Auth owns those data
+ * operations.
  *
  * Column types are chosen to match Better Auth's expected schema exactly.
  */
@@ -26,7 +27,6 @@ import type { CollectionConfig } from '@momentum-cms/core';
 export const AuthUserCollection: CollectionConfig = defineCollection({
 	slug: 'auth-user',
 	dbName: 'user',
-	managed: true,
 	timestamps: true,
 	labels: { singular: 'User', plural: 'Users' },
 	fields: [
@@ -160,13 +160,12 @@ export const AuthVerificationCollection: CollectionConfig = defineCollection({
 export const AuthApiKeysCollection: CollectionConfig = defineCollection({
 	slug: 'auth-api-keys',
 	dbName: '_api_keys',
-	managed: true,
 	timestamps: true,
 	fields: [
 		text('name', { required: true }),
-		text('keyHash', { required: true }),
+		text('keyHash', { required: true, admin: { hidden: true } }),
 		text('keyPrefix', { required: true }),
-		text('createdBy', { required: true }),
+		text('createdBy', { required: true, admin: { hidden: true } }),
 		select('role', {
 			options: [
 				{ label: 'User', value: 'user' },
@@ -183,13 +182,21 @@ export const AuthApiKeysCollection: CollectionConfig = defineCollection({
 		useAsTitle: 'name',
 		defaultColumns: ['name', 'keyPrefix', 'role', 'createdAt', 'lastUsedAt'],
 		description: 'API keys for programmatic access',
+		headerActions: [
+			{ id: 'generate-key', label: 'Generate API Key', endpoint: '/api/auth/api-keys' },
+		],
 	},
 	access: {
-		admin: ({ req }) => req.user?.role === 'admin',
-		read: ({ req }) => req.user?.role === 'admin',
-		create: ({ req }) => req.user?.role === 'admin',
+		admin: ({ req }) => !!req.user,
+		read: ({ req }) => !!req.user,
+		create: () => false, // API keys must be created through Better Auth (keyHash/keyPrefix generation)
 		update: () => false,
-		delete: ({ req }) => req.user?.role === 'admin',
+		delete: ({ req }) => !!req.user,
+	},
+	defaultWhere: (req) => {
+		if (!req.user) return { createdBy: '__none__' };
+		if (req.user.role === 'admin') return undefined;
+		return { createdBy: req.user.id };
 	},
 });
 

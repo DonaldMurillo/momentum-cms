@@ -242,6 +242,14 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			whereParams[softDeleteField] = { $ne: null };
 		}
 
+		// Inject defaultWhere constraints (e.g., user-scoped filtering)
+		if (this.collectionConfig.defaultWhere) {
+			const constraints = this.collectionConfig.defaultWhere(this.buildRequestContext());
+			if (constraints) {
+				Object.assign(whereParams, constraints);
+			}
+		}
+
 		const query: Record<string, unknown> = {
 			...queryOptions,
 			...whereParams,
@@ -332,6 +340,20 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			(doc as Record<string, unknown>)[softDeleteField]
 		) {
 			return null;
+		}
+
+		// Filter by defaultWhere constraints (e.g., user-scoped filtering)
+		if (this.collectionConfig.defaultWhere) {
+			const constraints = this.collectionConfig.defaultWhere(this.buildRequestContext());
+			if (constraints) {
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
+				const record = doc as Record<string, unknown>;
+				for (const [key, value] of Object.entries(constraints)) {
+					if (record[key] !== value) {
+						return null;
+					}
+				}
+			}
 		}
 
 		// Run afterRead hooks

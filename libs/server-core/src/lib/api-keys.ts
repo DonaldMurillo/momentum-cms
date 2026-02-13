@@ -1,4 +1,5 @@
 import { randomBytes, createHash } from 'node:crypto';
+import type { DatabaseAdapter } from '@momentum-cms/core';
 
 /**
  * API key prefix for easy identification.
@@ -92,14 +93,16 @@ export function generateApiKeyId(): string {
  * Uses raw SQL queries through the database adapter.
  */
 export interface ApiKeyStore {
-	/** Create a new API key record */
-	create(record: Omit<ApiKeyRecord, 'lastUsedAt'>): Promise<void>;
+	/** Create a new API key record, returns the created record ID */
+	create(record: Omit<ApiKeyRecord, 'lastUsedAt'>): Promise<string>;
 	/** Find an API key by its hash */
 	findByHash(keyHash: string): Promise<ApiKeyRecord | null>;
 	/** List all API keys (without sensitive data) */
 	listAll(): Promise<Omit<ApiKeyRecord, 'keyHash'>[]>;
 	/** List API keys created by a specific user */
 	listByUser(userId: string): Promise<Omit<ApiKeyRecord, 'keyHash'>[]>;
+	/** Find an API key by ID (without keyHash) */
+	findById(id: string): Promise<Omit<ApiKeyRecord, 'keyHash'> | null>;
 	/** Delete an API key by ID */
 	deleteById(id: string): Promise<boolean>;
 	/** Update last used timestamp */
@@ -150,6 +153,79 @@ export const API_KEYS_TABLE_SQL_SQLITE = `
 `;
 
 /**
+ * Create an API key store backed by a generic DatabaseAdapter.
+ * Works with any adapter (SQLite, Postgres, etc.) using collection CRUD methods.
+ */
+export function createAdapterApiKeyStore(adapter: DatabaseAdapter): ApiKeyStore {
+	const COLLECTION = 'auth-api-keys';
+
+	return {
+		async create(record): Promise<string> {
+			const doc = await adapter.create(COLLECTION, {
+				name: record.name,
+				keyHash: record.keyHash,
+				keyPrefix: record.keyPrefix,
+				createdBy: record.createdBy,
+				role: record.role,
+				expiresAt: record.expiresAt,
+			});
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- adapter always returns id
+			return doc['id'] as string;
+		},
+
+		async findByHash(keyHash): Promise<ApiKeyRecord | null> {
+			const results = await adapter.find(COLLECTION, { keyHash, limit: 1 });
+			if (results.length === 0) return null;
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- adapter returns generic records
+			return results[0] as unknown as ApiKeyRecord;
+		},
+
+		async findById(id): Promise<Omit<ApiKeyRecord, 'keyHash'> | null> {
+			const doc = await adapter.findById(COLLECTION, id);
+			if (!doc) return null;
+			const { keyHash: _kh, ...rest } = doc;
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- adapter returns generic records
+			return rest as unknown as Omit<ApiKeyRecord, 'keyHash'>;
+		},
+
+		async listAll(): Promise<Omit<ApiKeyRecord, 'keyHash'>[]> {
+			const results = await adapter.find(COLLECTION, {
+				limit: 1000,
+				sort: 'createdAt',
+				order: 'desc',
+			});
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- adapter returns generic records
+			return results.map(({ keyHash: _kh, ...rest }) => rest) as unknown as Omit<
+				ApiKeyRecord,
+				'keyHash'
+			>[];
+		},
+
+		async listByUser(userId): Promise<Omit<ApiKeyRecord, 'keyHash'>[]> {
+			const results = await adapter.find(COLLECTION, {
+				createdBy: userId,
+				limit: 1000,
+				sort: 'createdAt',
+				order: 'desc',
+			});
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- adapter returns generic records
+			return results.map(({ keyHash: _kh, ...rest }) => rest) as unknown as Omit<
+				ApiKeyRecord,
+				'keyHash'
+			>[];
+		},
+
+		async deleteById(id): Promise<boolean> {
+			return adapter.delete(COLLECTION, id);
+		},
+
+		async updateLastUsed(id, timestamp): Promise<void> {
+			await adapter.update(COLLECTION, id, { lastUsedAt: timestamp });
+		},
+	};
+}
+
+/**
  * Create an API key store backed by PostgreSQL.
  */
 export function createPostgresApiKeyStore(query: {
@@ -160,7 +236,7 @@ export function createPostgresApiKeyStore(query: {
 	execute: (sql: string, params?: unknown[]) => Promise<number>;
 }): ApiKeyStore {
 	return {
-		async create(record): Promise<void> {
+		async create(record): Promise<string> {
 			await query.execute(
 				`INSERT INTO "_api_keys" ("id", "name", "keyHash", "keyPrefix", "createdBy", "role", "expiresAt", "createdAt", "updatedAt")
 				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
@@ -176,14 +252,23 @@ export function createPostgresApiKeyStore(query: {
 					record.updatedAt,
 				],
 			);
+			return record.id;
 		},
 
 		async findByHash(keyHash): Promise<ApiKeyRecord | null> {
 			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- DB row to typed record
+			return (await query.queryOne(`SELECT * FROM "_api_keys" WHERE "keyHash" = $1`, [
+				keyHash,
+			])) as ApiKeyRecord | null;
+		},
+
+		async findById(id): Promise<Omit<ApiKeyRecord, 'keyHash'> | null> {
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- DB row to typed record
 			return (await query.queryOne(
-				`SELECT * FROM "_api_keys" WHERE "keyHash" = $1`,
-				[keyHash],
-			)) as ApiKeyRecord | null;
+				`SELECT "id", "name", "keyPrefix", "createdBy", "role", "expiresAt", "lastUsedAt", "createdAt", "updatedAt"
+				 FROM "_api_keys" WHERE "id" = $1`,
+				[id],
+			)) as Omit<ApiKeyRecord, 'keyHash'> | null;
 		},
 
 		async listAll(): Promise<Omit<ApiKeyRecord, 'keyHash'>[]> {
@@ -204,18 +289,15 @@ export function createPostgresApiKeyStore(query: {
 		},
 
 		async deleteById(id): Promise<boolean> {
-			const rows = await query.execute(
-				`DELETE FROM "_api_keys" WHERE "id" = $1`,
-				[id],
-			);
+			const rows = await query.execute(`DELETE FROM "_api_keys" WHERE "id" = $1`, [id]);
 			return rows > 0;
 		},
 
 		async updateLastUsed(id, timestamp): Promise<void> {
-			await query.execute(
-				`UPDATE "_api_keys" SET "lastUsedAt" = $1 WHERE "id" = $2`,
-				[timestamp, id],
-			);
+			await query.execute(`UPDATE "_api_keys" SET "lastUsedAt" = $1 WHERE "id" = $2`, [
+				timestamp,
+				id,
+			]);
 		},
 	};
 }

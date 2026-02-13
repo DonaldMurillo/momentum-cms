@@ -111,6 +111,14 @@ export interface AdminConfig {
 
 	/** Enable preview mode */
 	preview?: boolean | ((doc: Record<string, unknown>) => string);
+
+	/** Custom action buttons displayed in the collection list header (alongside Create button) */
+	headerActions?: Array<{
+		id: string;
+		label: string;
+		/** HTTP endpoint path for the action (e.g., '/api/auth/api-keys') */
+		endpoint?: string;
+	}>;
 }
 
 // ============================================
@@ -258,6 +266,12 @@ export interface CollectionConfig {
 		disableQueries?: boolean;
 		disableMutations?: boolean;
 	};
+
+	/**
+	 * Default query constraints applied to all find/findById operations.
+	 * Returns WHERE conditions to inject, or undefined for no filtering.
+	 */
+	defaultWhere?: (req: RequestContext) => Record<string, unknown> | undefined;
 
 	/** Custom endpoints */
 	endpoints?: EndpointConfig[];

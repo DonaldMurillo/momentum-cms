@@ -227,9 +227,27 @@ test.describe('Collection Create Form - Posts', () => {
 	});
 });
 
-// Note: The old Users collection was replaced by auth-user (managed by auth plugin).
-// auth-user is read-only — no create/edit forms are available via the admin UI.
-// Create form tests for auth-user are intentionally omitted.
+test.describe('Collection Edit Form - Auth User', () => {
+	test('should display create form with expected fields', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/auth-user/new');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		// Wait for form to render
+		await expect(authenticatedPage.getByRole('heading', { name: /Create User/i })).toBeVisible({
+			timeout: 10000,
+		});
+
+		// Verify expected fields are present
+		await expect(authenticatedPage.locator('input#field-name')).toBeVisible();
+		await expect(authenticatedPage.locator('input#field-email')).toBeVisible();
+
+		// Create and Cancel buttons should be present
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
+		await expect(authenticatedPage.getByRole('button', { name: 'Cancel' })).toBeVisible();
+	});
+});
 
 test.describe('Collection Edit Form - Cancel Navigation', () => {
 	test('should navigate back to list when clicking Cancel on Posts', async ({
@@ -244,5 +262,20 @@ test.describe('Collection Edit Form - Cancel Navigation', () => {
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/posts$/);
 	});
 
-	// Note: Cancel test for Users removed — auth-user is managed (no create form).
+	test('should navigate back to list when clicking Cancel on Users', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin/collections/auth-user/new');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		// Wait for Angular hydration so event handlers are bound
+		await expect(
+			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
+		).toBeVisible();
+
+		const cancelButton = authenticatedPage.getByRole('button', { name: 'Cancel' });
+		await cancelButton.click();
+
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/auth-user$/);
+	});
 });
