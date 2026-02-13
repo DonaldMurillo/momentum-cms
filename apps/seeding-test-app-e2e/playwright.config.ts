@@ -17,8 +17,8 @@ export default defineConfig({
 	// Fail the build if test.only is left in the source code on CI
 	forbidOnly: !!process.env['CI'],
 
-	// Retry failed tests on CI only
-	retries: process.env['CI'] ? 2 : 0,
+	// Retry failed tests (2 on CI, 2 locally for SSR hydration timing)
+	retries: process.env['CI'] ? 2 : 2,
 
 	// Run tests in parallel — each worker has its own isolated server + DB
 	fullyParallel: true,

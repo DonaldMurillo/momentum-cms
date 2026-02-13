@@ -5,6 +5,7 @@ import {
 	signal,
 	computed,
 	output,
+	afterNextRender,
 } from '@angular/core';
 import { Input, Button, McmsFormField } from '@momentum-cms/ui';
 import { MomentumAuthService } from '../../services/auth.service';
@@ -66,11 +67,16 @@ import { MomentumAuthService } from '../../services/auth.service';
 						[(value)]="email"
 						placeholder="Enter your email address"
 						autocomplete="email"
-						[disabled]="isSubmitting()"
+						[disabled]="!hydrated() || isSubmitting()"
 					/>
 				</mcms-form-field>
 
-				<button mcms-button type="submit" class="w-full" [disabled]="isSubmitting() || !isValid()">
+				<button
+					mcms-button
+					type="submit"
+					class="w-full"
+					[disabled]="!hydrated() || isSubmitting() || !isValid()"
+				>
 					@if (isSubmitting()) {
 						<svg
 							class="inline-block h-4 w-4 animate-spin"
@@ -120,6 +126,15 @@ export class ForgotPasswordFormComponent {
 
 	/** Emitted when user wants to go back to login */
 	readonly backToLogin = output<void>();
+
+	/** Whether the component has been hydrated (SSR → client transition complete) */
+	readonly hydrated = signal(false);
+
+	constructor() {
+		afterNextRender(() => {
+			this.hydrated.set(true);
+		});
+	}
 
 	// Form state
 	readonly email = signal('');
