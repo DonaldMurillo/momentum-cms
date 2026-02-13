@@ -17,6 +17,7 @@ import {
 	checkbox,
 	date,
 	select,
+	relationship,
 } from '@momentum-cms/core';
 import type { CollectionConfig } from '@momentum-cms/core';
 
@@ -165,7 +166,11 @@ export const AuthApiKeysCollection: CollectionConfig = defineCollection({
 		text('name', { required: true }),
 		text('keyHash', { required: true, admin: { hidden: true } }),
 		text('keyPrefix', { required: true }),
-		text('createdBy', { required: true, admin: { hidden: true } }),
+		relationship('createdBy', {
+			required: true,
+			collection: () => AuthUserCollection,
+			label: 'Created By',
+		}),
 		select('role', {
 			options: [
 				{ label: 'User', value: 'user' },
@@ -180,7 +185,7 @@ export const AuthApiKeysCollection: CollectionConfig = defineCollection({
 	admin: {
 		group: 'Authentication',
 		useAsTitle: 'name',
-		defaultColumns: ['name', 'keyPrefix', 'role', 'createdAt', 'lastUsedAt'],
+		defaultColumns: ['name', 'keyPrefix', 'role', 'createdBy', 'createdAt', 'lastUsedAt'],
 		description: 'API keys for programmatic access',
 		headerActions: [
 			{ id: 'generate-key', label: 'Generate API Key', endpoint: '/api/auth/api-keys' },

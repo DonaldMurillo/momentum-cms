@@ -200,11 +200,15 @@ describe('Auth Collections', () => {
 			expect(fieldNames).toContain('lastUsedAt');
 		});
 
-		it('should hide keyHash and createdBy fields in admin UI', () => {
+		it('should hide keyHash in admin UI', () => {
 			const keyHashField = AuthApiKeysCollection.fields.find((f) => f.name === 'keyHash');
-			const createdByField = AuthApiKeysCollection.fields.find((f) => f.name === 'createdBy');
 			expect(keyHashField?.admin?.hidden).toBe(true);
-			expect(createdByField?.admin?.hidden).toBe(true);
+		});
+
+		it('should have createdBy as a relationship to auth-user', () => {
+			const createdByField = AuthApiKeysCollection.fields.find((f) => f.name === 'createdBy');
+			expect(createdByField?.type).toBe('relationship');
+			expect(createdByField?.required).toBe(true);
 		});
 
 		it('should have a unique keyHash index', () => {
