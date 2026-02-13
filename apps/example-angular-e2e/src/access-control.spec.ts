@@ -136,46 +136,27 @@ test.describe('Authenticated Access Control', () => {
 });
 
 test.describe('Frontend Access Control', () => {
-	// Skip: With SSR, Angular guards run during route activation but SSR pre-renders
-	// the page. After hydration, the guard doesn't re-run because the route is already
-	// active. Access control is verified by API tests (Backend Access Control tests above).
-	test.skip('unauthenticated user redirected to login from protected route', async ({ page }) => {
+	test('unauthenticated user redirected to login from protected route', async ({ page }) => {
 		// Clear any cookies
 		await page.context().clearCookies();
 
 		// Try to access a protected collection route
 		await page.goto('/admin/collections/posts');
 
-		// Wait for SSR page to load
-		await page.waitForLoadState('networkidle');
-
-		// Wait for Angular to hydrate (SSR renders page first, then client redirects)
-		await page.waitForFunction(() => {
-			const appRoot = document.querySelector('app-root');
-			return appRoot && appRoot.hasAttribute('ng-version');
-		});
-
-		// Wait for client-side redirect after hydration
-		await page.waitForURL(/\/(login|setup)/, { timeout: 10000 });
+		// Wait for SSR page to load, then Angular hydrates and auth guard redirects
+		await page.waitForURL(/\/(login|setup)/, { timeout: 15000 });
 
 		// Should be redirected to login or setup (depending on whether users exist)
 		const url = page.url();
 		expect(url.includes('/login') || url.includes('/setup')).toBeTruthy();
 	});
 
-	// Skip: Same SSR limitation as above - guards don't re-run after hydration.
-	// Access control is verified by API tests (Backend Access Control tests above).
-	test.skip('unauthenticated user redirected to login from dashboard', async ({ page }) => {
+	test('unauthenticated user redirected to login from dashboard', async ({ page }) => {
 		await page.context().clearCookies();
 		await page.goto('/admin');
-		await page.waitForLoadState('networkidle');
 
-		// Wait for Angular hydration and client-side redirect
-		await page.waitForFunction(() => {
-			const appRoot = document.querySelector('app-root');
-			return appRoot && appRoot.hasAttribute('ng-version');
-		});
-		await page.waitForURL(/\/(login|setup)/, { timeout: 10000 });
+		// Wait for SSR page to load, then Angular hydrates and auth guard redirects
+		await page.waitForURL(/\/(login|setup)/, { timeout: 15000 });
 
 		const url = page.url();
 		expect(url.includes('/login') || url.includes('/setup')).toBeTruthy();

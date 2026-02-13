@@ -129,13 +129,16 @@ export function momentumAdminRoutes(
 	let includeAuthRoutes: boolean;
 	let pluginRoutes: AdminPluginRoute[] | undefined;
 
+	let plugins: MomentumPlugin[];
+
 	// Distinguish MomentumConfig (has `db`) from MomentumAdminOptions (has `basePath` as required string)
 	if ('db' in configOrOptions) {
 		const config = configOrOptions;
 		basePath = (config.admin?.basePath ?? '/admin').replace(/^\//, '');
+		plugins = config.plugins ?? [];
 
 		// Merge static config collections with plugin-declared collections (e.g. auth collections)
-		const pluginCollections = (config.plugins ?? []).flatMap((p) => p.collections ?? []);
+		const pluginCollections = plugins.flatMap((p) => p.collections ?? []);
 		const configSlugs = new Set(config.collections.map((c) => c.slug));
 		const uniquePluginCollections = pluginCollections.filter((c) => !configSlugs.has(c.slug));
 		collections = [...config.collections, ...uniquePluginCollections];
@@ -143,15 +146,13 @@ export function momentumAdminRoutes(
 		globals = config.globals;
 		branding = config.admin?.branding;
 		includeAuthRoutes = true;
-		pluginRoutes = (config.plugins ?? [])
-			.flatMap((p) => p.adminRoutes ?? [])
-			.map(toAdminPluginRoute);
+		pluginRoutes = plugins.flatMap((p) => p.adminRoutes ?? []).map(toAdminPluginRoute);
 	} else {
 		basePath = configOrOptions.basePath.replace(/^\//, '');
+		plugins = configOrOptions.plugins ?? [];
 
 		// Merge plugin-declared collections (e.g. auth collections) with explicit collections
-		const optPlugins = configOrOptions.plugins ?? [];
-		const pluginCollections = optPlugins.flatMap((p) => p.collections ?? []);
+		const pluginCollections = plugins.flatMap((p) => p.collections ?? []);
 		const optSlugs = new Set(configOrOptions.collections.map((c) => c.slug));
 		const uniquePluginCollections = pluginCollections.filter((c) => !optSlugs.has(c.slug));
 		collections = [...configOrOptions.collections, ...uniquePluginCollections];
@@ -162,10 +163,17 @@ export function momentumAdminRoutes(
 
 		// Merge explicit plugin routes with plugin-declared admin routes
 		const explicitRoutes = configOrOptions.pluginRoutes?.map(toAdminPluginRoute) ?? [];
-		const pluginDeclaredRoutes = optPlugins
+		const pluginDeclaredRoutes = plugins
 			.flatMap((p) => p.adminRoutes ?? [])
 			.map(toAdminPluginRoute);
 		pluginRoutes = [...explicitRoutes, ...pluginDeclaredRoutes];
+	}
+
+	// Apply plugin collection transforms (e.g. analytics field injection)
+	for (const plugin of plugins) {
+		if (plugin.modifyCollections) {
+			plugin.modifyCollections(collections);
+		}
 	}
 
 	const routeData: MomentumAdminRouteData = {

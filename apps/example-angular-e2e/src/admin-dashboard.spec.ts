@@ -198,22 +198,13 @@ test.describe('Admin Sidebar Navigation', () => {
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/auth-user/);
 	});
 
-	// Skip: This test requires auth.user() to be populated after SSR hydration,
-	// which has timing issues. The sign out functionality is tested in auth.spec.ts
-	test.skip('should display sign out button', async ({ authenticatedPage }) => {
+	test('should display sign out button', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		// Wait for Angular to hydrate
-		await authenticatedPage.waitForFunction(() => {
-			const appRoot = document.querySelector('app-root');
-			return appRoot && appRoot.hasAttribute('ng-version');
-		});
-
-		// Wait for auth service to load user via /api/auth/get-session
-		// The sign out button only renders when auth.user() returns a user
-		// Increase timeout to allow for API call completion
-		const signOutButton = authenticatedPage.getByRole('button', { name: /sign out|logout/i });
-		await expect(signOutButton).toBeVisible({ timeout: 20000 });
+		// Auth service loads user via /api/auth/get-session after hydration.
+		// The sign out button renders inside a dropdown trigger when auth.user() is populated.
+		const userMenuButton = authenticatedPage.getByRole('button', { name: /user menu/i });
+		await expect(userMenuButton).toBeVisible({ timeout: 15000 });
 	});
 });

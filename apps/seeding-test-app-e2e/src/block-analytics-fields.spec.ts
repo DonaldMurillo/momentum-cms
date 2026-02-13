@@ -53,13 +53,6 @@ async function createTestPage(
 
 test.describe('Block Analytics Fields', { tag: ['@analytics', '@crud'] }, () => {
 	test.beforeEach(async ({ request }) => {
-		// Skip: Analytics plugin injects _analytics fields server-side during onInit,
-		// but these modified collections are not yet exposed to the browser-side admin UI.
-		// Requires PluginRunner to expose modified collections after runInit() completes.
-		test.skip(
-			true,
-			'Block analytics fields require server-side collection injection (architectural fix pending)',
-		);
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },
 			data: {

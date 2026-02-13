@@ -182,6 +182,12 @@ export interface MomentumPlugin {
 	 *  Read at config time — no async needed. */
 	adminRoutes?: PluginAdminRouteDescriptor[];
 
+	/** Synchronously transform the merged collections at config time.
+	 *  Called by `momentumAdminRoutes()` so the admin UI reflects plugin modifications
+	 *  (e.g., injected fields). Also called during server-side `initializeMomentum()`.
+	 *  Must be idempotent — may be called more than once. */
+	modifyCollections?(collections: CollectionConfig[]): void;
+
 	/** Called before API initialization. Inject hooks here. */
 	onInit?(context: PluginContext): void | Promise<void>;
 
