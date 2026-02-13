@@ -32,16 +32,16 @@ export interface SeedEntityOptions {
 	skipAccessControl?: boolean;
 
 	/**
-	 * Sync with Better Auth when creating this seed.
-	 * When true, the seed executor will call auth.api.signUpEmail() to create
-	 * a Better Auth user with a hashed password, then link the Momentum user
-	 * via the authId field.
+	 * Use Better Auth signup API to create this user with proper password hashing.
+	 * When true, the seed executor will call auth.api.signUpEmail() instead of
+	 * directly inserting into the database, ensuring passwords are properly hashed
+	 * and account/session tables are populated.
 	 *
 	 * Requires `auth` to be passed to `initializeMomentum` options.
 	 * Only applies to new seeds (not on 'skip' or 'update').
 	 * @default false
 	 */
-	syncAuth?: boolean;
+	useAuthSignup?: boolean;
 }
 
 /**
@@ -193,9 +193,10 @@ export interface AdminSeedData {
 }
 
 /**
- * Auth-aware user seed data structure.
- * Creates both a Better Auth user (with hashed password) and a Momentum users collection entry.
- * Use with the `authUser()` helper in seeding defaults.
+ * Auth user seed data structure.
+ * Seeds directly into the Better Auth user table (auth-user collection).
+ * When used with the `authUser()` helper, the seed executor calls
+ * Better Auth's signUpEmail API to ensure proper password hashing.
  */
 export interface AuthUserSeedData {
 	[key: string]: unknown;
@@ -217,16 +218,16 @@ export interface AuthUserSeedData {
 	password: string;
 
 	/**
-	 * User's role in the Momentum users collection.
+	 * User's role.
 	 * @default 'user'
 	 */
 	role?: string;
 
 	/**
-	 * Whether the user is active.
+	 * Whether email is verified.
 	 * @default true
 	 */
-	active?: boolean;
+	emailVerified?: boolean;
 }
 
 /**
@@ -297,14 +298,14 @@ export interface DefaultEntityHelpers {
 	collection: <TDoc>(slug: string) => CollectionSeedBuilder<TDoc>;
 
 	/**
-	 * Create an auth-aware user seed entity.
-	 * Creates a Better Auth user (with hashed password) and a Momentum users collection entry.
-	 * The seed executor will call auth.api.signUpEmail() and link via authId.
+	 * Create an auth user seed entity with password support.
+	 * Seeds into the Better Auth user table using signUpEmail API
+	 * to ensure proper password hashing and account creation.
 	 *
 	 * @param seedId - Unique identifier for this seed
 	 * @param data - User data including password
 	 * @param options - Optional seed options
-	 * @returns Seed entity definition with syncAuth enabled
+	 * @returns Seed entity definition with useAuthSignup enabled
 	 *
 	 * @example
 	 * ```typescript

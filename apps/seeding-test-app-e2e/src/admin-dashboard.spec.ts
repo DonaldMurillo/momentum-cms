@@ -6,7 +6,8 @@ import { test, expect } from './fixtures';
  * These tests require authentication and use the auth fixture
  * to ensure the user is logged in before each test.
  *
- * The seeding-test-app has: Categories, Articles, Users collections.
+ * The seeding-test-app has: Categories, Articles, and other collections.
+ * Auth collections (Users, API Keys) are injected by the auth plugin.
  */
 
 test.describe('Admin Dashboard', () => {
@@ -27,7 +28,7 @@ test.describe('Admin Dashboard', () => {
 		await expect(subtitle).toBeVisible();
 	});
 
-	test('should display collection cards for Categories, Articles, and Users', async ({
+	test('should display collection cards for Categories and Articles', async ({
 		authenticatedPage,
 	}) => {
 		await authenticatedPage.goto('/admin');
@@ -36,7 +37,6 @@ test.describe('Admin Dashboard', () => {
 		// Check collection cards are visible by their labels
 		await expect(authenticatedPage.getByRole('heading', { name: 'Categories' })).toBeVisible();
 		await expect(authenticatedPage.getByRole('heading', { name: 'Articles' })).toBeVisible();
-		await expect(authenticatedPage.getByRole('heading', { name: 'Users' })).toBeVisible();
 	});
 
 	test('should navigate to Articles collection when clicking View all', async ({
@@ -56,20 +56,74 @@ test.describe('Admin Dashboard', () => {
 		await expect(authenticatedPage.getByRole('heading', { name: 'Articles' })).toBeVisible();
 	});
 
-	test('should navigate to Users collection when clicking View all', async ({
+	test('should navigate to Users collection (auth-user) when clicking View all', async ({
 		authenticatedPage,
 	}) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// Find the Users card and click its "View all" link
+		// Users collection is now auth-user (managed by auth plugin)
 		const usersCard = authenticatedPage.locator('mcms-collection-card', {
 			has: authenticatedPage.getByRole('heading', { name: 'Users' }),
 		});
 		await usersCard.getByRole('link', { name: 'View all' }).click();
 
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users/);
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/auth-user/);
 		await expect(authenticatedPage.getByRole('heading', { name: 'Users' })).toBeVisible();
+	});
+
+	test('should show numeric count badge on Users card, not error', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		const usersCard = authenticatedPage.locator('mcms-collection-card', {
+			has: authenticatedPage.getByRole('heading', { name: 'Users' }),
+		});
+		const badge = usersCard.locator('mcms-badge');
+
+		// Use auto-retrying assertion — badge may briefly show "Error" before count loads
+		await expect(badge).toHaveText(/^\d+$/, { timeout: 15000 });
+	});
+
+	test('should display Auth API Keys card on dashboard', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		const apiKeysCard = authenticatedPage.locator('mcms-collection-card', {
+			has: authenticatedPage.getByRole('heading', { name: 'Auth Api Keys' }),
+		});
+		await expect(apiKeysCard).toBeVisible({ timeout: 15000 });
+
+		// Use auto-retrying assertion — badge may briefly show "Error" before count loads
+		const badge = apiKeysCard.locator('mcms-badge');
+		await expect(badge).toHaveText(/^\d+$/, { timeout: 15000 });
+	});
+
+	test('should NOT display hidden auth collections as dashboard cards', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		// Hidden auth collections (auth-session, auth-account, auth-verification)
+		// should NOT appear as collection cards on the dashboard
+		const sessionCard = authenticatedPage.locator('mcms-collection-card', {
+			has: authenticatedPage.getByRole('heading', { name: 'Auth Session', level: 3 }),
+		});
+		await expect(sessionCard).toHaveCount(0);
+
+		const accountCard = authenticatedPage.locator('mcms-collection-card', {
+			has: authenticatedPage.getByRole('heading', { name: 'Auth Account', level: 3 }),
+		});
+		await expect(accountCard).toHaveCount(0);
+
+		const verificationCard = authenticatedPage.locator('mcms-collection-card', {
+			has: authenticatedPage.getByRole('heading', { name: 'Auth Verification', level: 3 }),
+		});
+		await expect(verificationCard).toHaveCount(0);
 	});
 });
 
@@ -100,15 +154,55 @@ test.describe('Admin Sidebar Navigation', () => {
 		// Use sidebar label to avoid conflicts with breadcrumbs
 		const sidebar = authenticatedPage.getByLabel('Main navigation');
 
-		// Seeding test app collections: Categories, Articles, Users
-		const categoriesLink = sidebar.getByRole('link', { name: 'Categories' });
-		await expect(categoriesLink).toBeVisible();
+		// Static collections: Categories, Articles
+		await expect(sidebar.getByRole('link', { name: 'Categories' })).toBeVisible();
+		await expect(sidebar.getByRole('link', { name: 'Articles' })).toBeVisible();
+	});
 
-		const articlesLink = sidebar.getByRole('link', { name: 'Articles' });
-		await expect(articlesLink).toBeVisible();
+	test('should display Authentication section with auth plugin collections', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		const usersLink = sidebar.getByRole('link', { name: 'Users' });
-		await expect(usersLink).toBeVisible();
+		const sidebar = authenticatedPage.getByLabel('Main navigation');
+
+		// Authentication section header (group name from auth collections)
+		await expect(sidebar.getByText('Authentication')).toBeVisible();
+
+		// Auth-user collection (labels.plural: 'Users') should be visible
+		await expect(sidebar.getByRole('link', { name: 'Users' })).toBeVisible();
+
+		// Auth-api-keys collection (humanized slug: 'Auth Api Keys') should be visible
+		await expect(sidebar.getByRole('link', { name: 'Auth Api Keys' })).toBeVisible();
+	});
+
+	test('should NOT display hidden auth collections in sidebar', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		const sidebar = authenticatedPage.getByLabel('Main navigation');
+
+		// Hidden collections (auth-session, auth-account, auth-verification)
+		// should NOT appear in the sidebar
+		await expect(sidebar.getByRole('link', { name: 'Auth Session' })).not.toBeVisible();
+		await expect(sidebar.getByRole('link', { name: 'Auth Account' })).not.toBeVisible();
+		await expect(sidebar.getByRole('link', { name: 'Auth Verification' })).not.toBeVisible();
+	});
+
+	test('should navigate to Users via Authentication sidebar link', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		const sidebar = authenticatedPage.getByLabel('Main navigation');
+
+		// Click Users in the Authentication section
+		await sidebar.getByRole('link', { name: 'Users' }).click();
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/auth-user/, {
+			timeout: 10000,
+		});
 	});
 
 	test('should navigate using sidebar links', async ({ authenticatedPage }) => {
@@ -120,7 +214,9 @@ test.describe('Admin Sidebar Navigation', () => {
 
 		// Click Articles in sidebar
 		await sidebar.getByRole('link', { name: 'Articles' }).click();
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/articles/, { timeout: 10000 });
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/articles/, {
+			timeout: 10000,
+		});
 
 		// Click Dashboard in sidebar (re-query navigation after page change)
 		const dashboardLink = authenticatedPage
@@ -138,12 +234,14 @@ test.describe('Admin Sidebar Navigation', () => {
 		// Wait for navigation to dashboard
 		await expect(authenticatedPage).toHaveURL(/\/admin\/?$/, { timeout: 10000 });
 
-		// Click Users in sidebar
+		// Click Users in sidebar (now auth-user collection from auth plugin)
 		await authenticatedPage
 			.getByLabel('Main navigation')
 			.getByRole('link', { name: 'Users' })
 			.click();
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users/, { timeout: 10000 });
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/auth-user/, {
+			timeout: 10000,
+		});
 	});
 
 	test('should display user info in sidebar', async ({ authenticatedPage }) => {

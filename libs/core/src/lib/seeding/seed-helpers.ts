@@ -72,15 +72,15 @@ export function createSeedHelpers(): DefaultEntityHelpers {
 		): SeedEntity<AuthUserSeedData> {
 			return {
 				seedId,
-				collection: 'users', // Momentum users collection
+				collection: 'user', // Better Auth user table (auth-user collection with dbName: 'user')
 				data: {
 					role: 'user',
-					active: true,
+					emailVerified: true,
 					...data,
 				},
 				options: {
 					...options,
-					syncAuth: true,
+					useAuthSignup: true,
 				},
 			};
 		},

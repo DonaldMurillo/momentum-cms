@@ -1,7 +1,7 @@
-import type { Router, Request, Response, NextFunction } from 'express';
+import type { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import { Router as createRouter } from 'express';
 import { toNodeHandler } from 'better-auth/node';
-import type { MomentumAuth, OAuthProvidersConfig } from '@momentum-cms/auth';
+import type { MomentumAuth, MomentumAuthPlugin, OAuthProvidersConfig } from '@momentum-cms/auth';
 import { getEnabledOAuthProviders } from '@momentum-cms/auth';
 
 /**
@@ -109,42 +109,23 @@ export function createProtectMiddleware(
 }
 
 /**
- * Configuration for session resolver middleware.
- */
-export interface SessionResolverConfig {
-	/**
-	 * Optional function to look up user role from external source (e.g., Momentum users collection).
-	 * Called with the user's email, should return the role string or undefined.
-	 */
-	getRoleByEmail?: (email: string) => Promise<string | undefined>;
-}
-
-/**
  * Middleware to resolve session for all requests (including SSR).
  *
  * Unlike createProtectMiddleware, this does NOT block unauthenticated requests.
  * It simply validates the session if cookies are present and attaches the user
  * to the request for use by Angular SSR.
  *
+ * Role is read directly from the Better Auth user table (single source of truth).
+ *
  * @example
  * ```typescript
  * import { createSessionResolverMiddleware } from '@momentum-cms/server-express';
  *
- * // Basic usage - resolve session for all requests
  * app.use(createSessionResolverMiddleware(auth));
- *
- * // With role lookup from Momentum users collection
- * app.use(createSessionResolverMiddleware(auth, {
- *   getRoleByEmail: async (email) => {
- *     const result = await api.collection('users').find({ where: { email: { equals: email } } });
- *     return result.docs[0]?.role;
- *   }
- * }));
  * ```
  */
 export function createSessionResolverMiddleware(
 	auth: MomentumAuth,
-	config?: SessionResolverConfig,
 ): (req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void> {
 	return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
 		try {
@@ -153,31 +134,8 @@ export function createSessionResolverMiddleware(
 			});
 
 			if (session) {
-				// Build user object from session
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Better Auth user structure
-				const authUser = session.user as {
-					id: string;
-					email?: string;
-					name?: string;
-					role?: string;
-				};
-
-				// Look up role from external source if configured
-				// Falls back to the role from the Better Auth session if lookup returns undefined
-				let role: string | undefined = authUser.role;
-				if (config?.getRoleByEmail && authUser.email) {
-					try {
-						const externalRole = await config.getRoleByEmail(authUser.email);
-						if (externalRole !== undefined) {
-							role = externalRole;
-						}
-					} catch {
-						// Role lookup failed, keep the auth session role
-					}
-				}
-
-				// Attach user with role to request
-				req.user = { ...authUser, role };
+				// Attach user and session to request — role comes from Better Auth user table
+				req.user = session.user;
 				req.authSession = session.session;
 			}
 		} catch {
@@ -185,14 +143,48 @@ export function createSessionResolverMiddleware(
 			// This is fine for SSR, client will handle unauthenticated state
 		}
 
-		// Built-in current-user endpoint: returns req.user with correctly-resolved role
-		// Better Auth's get-session returns the default role, not the Momentum-resolved role.
-		// This endpoint exposes the enriched req.user that the session resolver built.
+		// Built-in current-user endpoint: returns req.user
 		if (req.method === 'GET' && req.path === '/api/me') {
 			res.json({ user: req.user ?? null });
 			return;
 		}
 
 		next();
+	};
+}
+
+/**
+ * Creates a deferred session resolver middleware for an auth plugin.
+ *
+ * This can be called at module scope before the auth plugin is initialized.
+ * The middleware passes through (calls next()) until the auth instance is ready,
+ * then resolves sessions normally.
+ *
+ * @example
+ * ```typescript
+ * import { createDeferredSessionResolver } from '@momentum-cms/server-express';
+ * import { momentumAuth } from '@momentum-cms/auth';
+ *
+ * const authPlugin = momentumAuth({ ... });
+ * app.use(createDeferredSessionResolver(authPlugin));
+ * ```
+ */
+export function createDeferredSessionResolver(plugin: MomentumAuthPlugin): RequestHandler {
+	let resolvedMiddleware:
+		| ((req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>)
+		| null = null;
+
+	return (req: Request, res: Response, next: NextFunction): void => {
+		const auth = plugin.tryGetAuth();
+		if (!auth) {
+			// Auth not ready yet — skip session resolution (server still initializing)
+			next();
+			return;
+		}
+		if (!resolvedMiddleware) {
+			resolvedMiddleware = createSessionResolverMiddleware(auth);
+		}
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Express request augmentation
+		resolvedMiddleware(req as AuthenticatedRequest, res, next).catch(next);
 	};
 }

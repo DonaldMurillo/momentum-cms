@@ -158,7 +158,16 @@ function createTableSql(collection: CollectionConfig): string {
 	}
 
 	// FK constraints are added in a separate pass in initialize() after all tables exist
-	return `CREATE TABLE IF NOT EXISTS "${collection.slug}" (${columns.join(', ')})`;
+	const tableName = collection.dbName ?? collection.slug;
+	return `CREATE TABLE IF NOT EXISTS "${tableName}" (${columns.join(', ')})`;
+}
+
+/**
+ * Resolves the actual database table name for a collection.
+ * Uses dbName if specified, falls back to slug.
+ */
+function getTableName(collection: CollectionConfig): string {
+	return collection.dbName ?? collection.slug;
 }
 
 /**
@@ -202,7 +211,8 @@ function validateColumnName(name: string): void {
 function createVersionTableSql(collection: CollectionConfig): string | null {
 	if (!collection.versions) return null;
 
-	const tableName = `${collection.slug}_versions`;
+	const baseTable = getTableName(collection);
+	const tableName = `${baseTable}_versions`;
 	return `
 		CREATE TABLE IF NOT EXISTS "${tableName}" (
 			"id" VARCHAR(36) PRIMARY KEY,
@@ -213,7 +223,7 @@ function createVersionTableSql(collection: CollectionConfig): string | null {
 			"publishedAt" TIMESTAMPTZ,
 			"createdAt" TIMESTAMPTZ NOT NULL,
 			"updatedAt" TIMESTAMPTZ NOT NULL,
-			CONSTRAINT "fk_${tableName}_parent" FOREIGN KEY ("parent") REFERENCES "${collection.slug}"("id") ON DELETE CASCADE
+			CONSTRAINT "fk_${tableName}_parent" FOREIGN KEY ("parent") REFERENCES "${baseTable}"("id") ON DELETE CASCADE
 		);
 		CREATE INDEX IF NOT EXISTS "idx_${tableName}_parent" ON "${tableName}"("parent");
 		CREATE INDEX IF NOT EXISTS "idx_${tableName}_createdAt" ON "${tableName}"("createdAt");
@@ -251,92 +261,8 @@ function parseJsonToRecord(jsonString: string): Record<string, unknown> {
 	}
 }
 
-/**
- * SQL statements to create Better Auth required tables.
- * These tables must exist before Better Auth can function.
- */
-const AUTH_TABLES_SQL = `
-	CREATE TABLE IF NOT EXISTS "user" (
-		"id" VARCHAR(36) PRIMARY KEY NOT NULL,
-		"name" TEXT NOT NULL,
-		"email" VARCHAR(255) NOT NULL UNIQUE,
-		"emailVerified" BOOLEAN NOT NULL DEFAULT false,
-		"image" TEXT,
-		"role" VARCHAR(50) NOT NULL DEFAULT 'user',
-		"createdAt" TIMESTAMPTZ NOT NULL,
-		"updatedAt" TIMESTAMPTZ NOT NULL
-	);
-
-	CREATE TABLE IF NOT EXISTS "session" (
-		"id" VARCHAR(36) PRIMARY KEY NOT NULL,
-		"userId" VARCHAR(36) NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-		"token" TEXT NOT NULL UNIQUE,
-		"expiresAt" TIMESTAMPTZ NOT NULL,
-		"ipAddress" TEXT,
-		"userAgent" TEXT,
-		"createdAt" TIMESTAMPTZ NOT NULL,
-		"updatedAt" TIMESTAMPTZ NOT NULL
-	);
-
-	CREATE TABLE IF NOT EXISTS "account" (
-		"id" VARCHAR(36) PRIMARY KEY NOT NULL,
-		"userId" VARCHAR(36) NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-		"accountId" TEXT NOT NULL,
-		"providerId" TEXT NOT NULL,
-		"accessToken" TEXT,
-		"refreshToken" TEXT,
-		"accessTokenExpiresAt" TIMESTAMPTZ,
-		"refreshTokenExpiresAt" TIMESTAMPTZ,
-		"scope" TEXT,
-		"idToken" TEXT,
-		"password" TEXT,
-		"createdAt" TIMESTAMPTZ NOT NULL,
-		"updatedAt" TIMESTAMPTZ NOT NULL
-	);
-
-	CREATE TABLE IF NOT EXISTS "verification" (
-		"id" VARCHAR(36) PRIMARY KEY NOT NULL,
-		"identifier" TEXT NOT NULL,
-		"value" TEXT NOT NULL,
-		"expiresAt" TIMESTAMPTZ NOT NULL,
-		"createdAt" TIMESTAMPTZ NOT NULL,
-		"updatedAt" TIMESTAMPTZ NOT NULL
-	);
-
-	-- Two-factor authentication support (Better Auth twoFactor plugin)
-	ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "twoFactorEnabled" BOOLEAN DEFAULT false;
-
-	CREATE TABLE IF NOT EXISTS "twoFactor" (
-		"id" VARCHAR(36) PRIMARY KEY NOT NULL,
-		"secret" TEXT NOT NULL,
-		"backupCodes" TEXT NOT NULL,
-		"userId" VARCHAR(36) NOT NULL REFERENCES "user"("id") ON DELETE CASCADE
-	);
-
-	CREATE INDEX IF NOT EXISTS "idx_session_userId" ON "session"("userId");
-	CREATE INDEX IF NOT EXISTS "idx_session_token" ON "session"("token");
-	CREATE INDEX IF NOT EXISTS "idx_account_userId" ON "account"("userId");
-	CREATE INDEX IF NOT EXISTS "idx_user_email" ON "user"("email");
-	CREATE INDEX IF NOT EXISTS "idx_twofactor_secret" ON "twoFactor"("secret");
-	CREATE INDEX IF NOT EXISTS "idx_twofactor_userId" ON "twoFactor"("userId");
-
-	-- API keys table
-	CREATE TABLE IF NOT EXISTS "_api_keys" (
-		"id" VARCHAR(36) PRIMARY KEY NOT NULL,
-		"name" VARCHAR(255) NOT NULL,
-		"keyHash" VARCHAR(64) NOT NULL UNIQUE,
-		"keyPrefix" VARCHAR(20) NOT NULL,
-		"createdBy" VARCHAR(36) NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
-		"role" VARCHAR(50) NOT NULL DEFAULT 'user',
-		"expiresAt" TIMESTAMPTZ,
-		"lastUsedAt" TIMESTAMPTZ,
-		"createdAt" TIMESTAMPTZ NOT NULL,
-		"updatedAt" TIMESTAMPTZ NOT NULL
-	);
-
-	CREATE INDEX IF NOT EXISTS "idx_api_keys_keyHash" ON "_api_keys"("keyHash");
-	CREATE INDEX IF NOT EXISTS "idx_api_keys_createdBy" ON "_api_keys"("createdBy");
-`;
+// AUTH_TABLES_SQL removed — auth tables are now defined as managed collections
+// and created through the normal createTableSql() path via the auth plugin.
 
 /**
  * SQL statements to create seed tracking table.
@@ -467,6 +393,17 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 		max: options.max ?? 10,
 	});
 
+	/** Maps collection slugs to actual DB table names (populated during initialize). */
+	const tableNameMap = new Map<string, string>();
+
+	/**
+	 * Resolves a collection slug to its actual database table name.
+	 * Falls back to the slug itself if no mapping exists.
+	 */
+	function resolveTableName(slug: string): string {
+		return tableNameMap.get(slug) ?? slug;
+	}
+
 	/**
 	 * Create query helpers scoped to a database connection.
 	 * Used for both pool-level and client-level (transactional) queries.
@@ -552,10 +489,13 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 
 				// limit: 0 means "no limit" (return all rows for count queries)
 				if (limitValue === 0) {
-					return h.query(`SELECT * FROM "${collection}" ${whereClause}`, whereValues);
+					return h.query(
+						`SELECT * FROM "${resolveTableName(collection)}" ${whereClause}`,
+						whereValues,
+					);
 				}
 				return h.query(
-					`SELECT * FROM "${collection}" ${whereClause} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+					`SELECT * FROM "${resolveTableName(collection)}" ${whereClause} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
 					[...whereValues, limitValue, offset],
 				);
 			},
@@ -594,7 +534,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 
 				const sql = `
 					SELECT *, ts_rank(${tsvectorExpr}, ${tsqueryExpr}) AS _search_rank
-					FROM "${collection}"
+					FROM "${resolveTableName(collection)}"
 					WHERE ${tsvectorExpr} @@ ${tsqueryExpr} OR ${ilikeClauses}
 					ORDER BY _search_rank DESC
 					LIMIT $${fields.length + 2} OFFSET $${fields.length + 3}
@@ -611,7 +551,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 
 			async findById(collection: string, id: string): Promise<Record<string, unknown> | null> {
 				validateCollectionSlug(collection);
-				return h.queryOne(`SELECT * FROM "${collection}" WHERE id = $1`, [id]);
+				return h.queryOne(`SELECT * FROM "${resolveTableName(collection)}" WHERE id = $1`, [id]);
 			},
 
 			async create(
@@ -646,7 +586,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 
 				const quotedColumns = columns.map((c) => `"${c}"`).join(', ');
 				await h.execute(
-					`INSERT INTO "${collection}" (${quotedColumns}) VALUES (${placeholders})`,
+					`INSERT INTO "${resolveTableName(collection)}" (${quotedColumns}) VALUES (${placeholders})`,
 					values,
 				);
 
@@ -685,13 +625,13 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				values.push(id);
 
 				await h.execute(
-					`UPDATE "${collection}" SET ${setClauses.join(', ')} WHERE id = $${paramIndex}`,
+					`UPDATE "${resolveTableName(collection)}" SET ${setClauses.join(', ')} WHERE id = $${paramIndex}`,
 					values,
 				);
 
 				// Fetch and return the updated document
 				const updated = await h.queryOne<Record<string, unknown>>(
-					`SELECT * FROM "${collection}" WHERE id = $1`,
+					`SELECT * FROM "${resolveTableName(collection)}" WHERE id = $1`,
 					[id],
 				);
 				if (!updated) {
@@ -703,7 +643,10 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 			async delete(collection: string, id: string): Promise<boolean> {
 				validateCollectionSlug(collection);
 				try {
-					const rowCount = await h.execute(`DELETE FROM "${collection}" WHERE id = $1`, [id]);
+					const rowCount = await h.execute(
+						`DELETE FROM "${resolveTableName(collection)}" WHERE id = $1`,
+						[id],
+					);
 					return rowCount > 0;
 				} catch (error: unknown) {
 					rethrowIfFkViolation(error, collection);
@@ -716,7 +659,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				validateColumnName(field);
 				const now = new Date().toISOString();
 				const rowCount = await h.execute(
-					`UPDATE "${collection}" SET "${field}" = $1, "updatedAt" = $2 WHERE "id" = $3`,
+					`UPDATE "${resolveTableName(collection)}" SET "${field}" = $1, "updatedAt" = $2 WHERE "id" = $3`,
 					[now, now, id],
 				);
 				return rowCount > 0;
@@ -731,10 +674,13 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				validateColumnName(field);
 				const now = new Date().toISOString();
 				await h.execute(
-					`UPDATE "${collection}" SET "${field}" = NULL, "updatedAt" = $1 WHERE "id" = $2`,
+					`UPDATE "${resolveTableName(collection)}" SET "${field}" = NULL, "updatedAt" = $1 WHERE "id" = $2`,
 					[now, id],
 				);
-				const restored = await h.queryOne(`SELECT * FROM "${collection}" WHERE "id" = $1`, [id]);
+				const restored = await h.queryOne(
+					`SELECT * FROM "${resolveTableName(collection)}" WHERE "id" = $1`,
+					[id],
+				);
 				if (!restored) {
 					throw new Error('Failed to fetch restored document');
 				}
@@ -759,7 +705,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				const publishedAt = status === 'published' ? now : null;
 
 				const versionData = JSON.stringify(data);
-				const tableName = `${collection}_versions`;
+				const tableName = `${resolveTableName(collection)}_versions`;
 
 				await h.execute(
 					`INSERT INTO "${tableName}" ("id", "parent", "version", "_status", "autosave", "publishedAt", "createdAt", "updatedAt")
@@ -785,7 +731,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				options?: VersionQueryOptions,
 			): Promise<DocumentVersion[]> {
 				validateCollectionSlug(collection);
-				const tableName = `${collection}_versions`;
+				const tableName = `${resolveTableName(collection)}_versions`;
 				const limit = options?.limit ?? 10;
 				const page = options?.page ?? 1;
 				const offset = (page - 1) * limit;
@@ -830,7 +776,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				versionId: string,
 			): Promise<DocumentVersion | null> {
 				validateCollectionSlug(collection);
-				const tableName = `${collection}_versions`;
+				const tableName = `${resolveTableName(collection)}_versions`;
 				const row = await h.queryOne<Record<string, unknown>>(
 					`SELECT * FROM "${tableName}" WHERE "id" = $1`,
 					[versionId],
@@ -855,7 +801,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				versionId: string,
 			): Promise<Record<string, unknown>> {
 				validateCollectionSlug(collection);
-				const tableName = `${collection}_versions`;
+				const tableName = `${resolveTableName(collection)}_versions`;
 
 				// Get the version
 				const version = await h.queryOne<Record<string, unknown>>(
@@ -901,7 +847,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				values.push(parentId);
 
 				await h.execute(
-					`UPDATE "${collection}" SET ${setClauses.join(', ')} WHERE "id" = $${paramIndex}`,
+					`UPDATE "${resolveTableName(collection)}" SET ${setClauses.join(', ')} WHERE "id" = $${paramIndex}`,
 					values,
 				);
 
@@ -915,7 +861,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 
 				// Return the updated document
 				const updated = await h.queryOne<Record<string, unknown>>(
-					`SELECT * FROM "${collection}" WHERE "id" = $1`,
+					`SELECT * FROM "${resolveTableName(collection)}" WHERE "id" = $1`,
 					[parentId],
 				);
 
@@ -932,7 +878,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				keepLatest?: number,
 			): Promise<number> {
 				validateCollectionSlug(collection);
-				const tableName = `${collection}_versions`;
+				const tableName = `${resolveTableName(collection)}_versions`;
 
 				if (keepLatest && keepLatest > 0) {
 					// Get IDs to keep
@@ -962,7 +908,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				options?: VersionCountOptions,
 			): Promise<number> {
 				validateCollectionSlug(collection);
-				const tableName = `${collection}_versions`;
+				const tableName = `${resolveTableName(collection)}_versions`;
 
 				const whereClauses: string[] = ['"parent" = $1'];
 				const params: unknown[] = [parentId];
@@ -988,7 +934,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				validateCollectionSlug(collection);
 				const now = new Date().toISOString();
 				await h.execute(
-					`UPDATE "${collection}" SET "_status" = $1, "updatedAt" = $2 WHERE "id" = $3`,
+					`UPDATE "${resolveTableName(collection)}" SET "_status" = $1, "updatedAt" = $2 WHERE "id" = $3`,
 					[status, now, id],
 				);
 			},
@@ -1001,7 +947,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				validateCollectionSlug(collection);
 				const now = new Date().toISOString();
 				await h.execute(
-					`UPDATE "${collection}" SET "scheduledPublishAt" = $1, "updatedAt" = $2 WHERE "id" = $3`,
+					`UPDATE "${resolveTableName(collection)}" SET "scheduledPublishAt" = $1, "updatedAt" = $2 WHERE "id" = $3`,
 					[publishAt, now, id],
 				);
 			},
@@ -1012,7 +958,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 			): Promise<Array<{ id: string; scheduledPublishAt: string }>> {
 				validateCollectionSlug(collection);
 				const rows = await h.query(
-					`SELECT "id", "scheduledPublishAt" FROM "${collection}" WHERE "scheduledPublishAt" IS NOT NULL AND "scheduledPublishAt" <= $1`,
+					`SELECT "id", "scheduledPublishAt" FROM "${resolveTableName(collection)}" WHERE "scheduledPublishAt" IS NOT NULL AND "scheduledPublishAt" <= $1`,
 					[before],
 				);
 				return rows.map((row) => ({
@@ -1057,14 +1003,18 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 			// Ensure database exists (auto-create if needed)
 			await ensureDatabaseExists(options.connectionString);
 
-			// Create Better Auth tables first
-			await pool.query(AUTH_TABLES_SQL);
+			// Build slug → tableName mapping for CRUD methods
+			for (const collection of collections) {
+				const tbl = getTableName(collection);
+				tableNameMap.set(collection.slug, tbl);
+			}
 
 			// Create seed tracking table for idempotent seeding
 			await pool.query(SEED_TRACKING_TABLE_SQL);
 
 			// Then create collection tables and version tables
 			for (const collection of collections) {
+				const tbl = getTableName(collection);
 				const createSql = createTableSql(collection);
 				await pool.query(createSql);
 
@@ -1073,17 +1023,17 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				for (const field of dataFields) {
 					const colType = getColumnType(field);
 					await pool.query(
-						`ALTER TABLE "${collection.slug}" ADD COLUMN IF NOT EXISTS "${field.name}" ${colType}`,
+						`ALTER TABLE "${tbl}" ADD COLUMN IF NOT EXISTS "${field.name}" ${colType}`,
 					);
 				}
 
 				// Ensure versioning columns exist (handles tables created before versioning was enabled)
 				if (hasVersionDrafts(collection)) {
 					await pool.query(
-						`ALTER TABLE "${collection.slug}" ADD COLUMN IF NOT EXISTS "_status" VARCHAR(20) DEFAULT 'draft'`,
+						`ALTER TABLE "${tbl}" ADD COLUMN IF NOT EXISTS "_status" VARCHAR(20) DEFAULT 'draft'`,
 					);
 					await pool.query(
-						`ALTER TABLE "${collection.slug}" ADD COLUMN IF NOT EXISTS "scheduledPublishAt" TIMESTAMPTZ`,
+						`ALTER TABLE "${tbl}" ADD COLUMN IF NOT EXISTS "scheduledPublishAt" TIMESTAMPTZ`,
 					);
 				}
 
@@ -1091,11 +1041,26 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				const sdField = getSoftDeleteField(collection);
 				if (sdField) {
 					await pool.query(
-						`ALTER TABLE "${collection.slug}" ADD COLUMN IF NOT EXISTS "${sdField}" TIMESTAMPTZ`,
+						`ALTER TABLE "${tbl}" ADD COLUMN IF NOT EXISTS "${sdField}" TIMESTAMPTZ`,
 					);
 					await pool.query(
-						`CREATE INDEX IF NOT EXISTS "idx_${collection.slug}_${sdField}" ON "${collection.slug}"("${sdField}")`,
+						`CREATE INDEX IF NOT EXISTS "idx_${tbl}_${sdField}" ON "${tbl}"("${sdField}")`,
 					);
+				}
+
+				// Create explicit indexes from collection.indexes
+				if (collection.indexes) {
+					for (const idx of collection.indexes) {
+						for (const col of idx.columns) {
+							validateColumnName(col);
+						}
+						const idxName = idx.name ?? `idx_${tbl}_${idx.columns.join('_')}`;
+						const uniqueStr = idx.unique ? 'UNIQUE ' : '';
+						const colList = idx.columns.map((c) => `"${c}"`).join(', ');
+						await pool.query(
+							`CREATE ${uniqueStr}INDEX IF NOT EXISTS "${idxName}" ON "${tbl}"(${colList})`,
+						);
+					}
 				}
 
 				// Create versions table for versioned collections
@@ -1108,15 +1073,17 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 			// Second pass: Add FK constraints for relationship fields
 			// Done after all tables are created so target tables exist
 			for (const collection of collections) {
+				const tbl = getTableName(collection);
 				validateCollectionSlug(collection.slug);
 				const dataFields = flattenDataFields(collection.fields);
 				for (const field of dataFields) {
 					if (field.type === 'relationship' && !field.hasMany && !field.relationTo) {
 						const targetSlug = resolveRelationshipSlug(field);
 						if (targetSlug) {
+							const targetTable = resolveTableName(targetSlug);
 							validateCollectionSlug(targetSlug);
 							validateCollectionSlug(field.name);
-							const constraintName = `fk_${collection.slug}_${field.name}`;
+							const constraintName = `fk_${tbl}_${field.name}`;
 							const isRequired = !!field.required;
 							const onDeleteSql = mapOnDelete(field.onDelete, isRequired);
 
@@ -1124,11 +1091,11 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 							// Required (NOT NULL) columns can't be set to NULL, so delete the rows instead.
 							if (isRequired) {
 								await pool.query(
-									`DELETE FROM "${collection.slug}" WHERE "${field.name}" IS NOT NULL AND "${field.name}" NOT IN (SELECT "id" FROM "${targetSlug}")`,
+									`DELETE FROM "${tbl}" WHERE "${field.name}" IS NOT NULL AND "${field.name}" NOT IN (SELECT "id" FROM "${targetTable}")`,
 								);
 							} else {
 								await pool.query(
-									`UPDATE "${collection.slug}" SET "${field.name}" = NULL WHERE "${field.name}" IS NOT NULL AND "${field.name}" NOT IN (SELECT "id" FROM "${targetSlug}")`,
+									`UPDATE "${tbl}" SET "${field.name}" = NULL WHERE "${field.name}" IS NOT NULL AND "${field.name}" NOT IN (SELECT "id" FROM "${targetTable}")`,
 								);
 							}
 
@@ -1136,10 +1103,10 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 							await pool.query(`
 								DO $$ BEGIN
 									IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = '${constraintName}') THEN
-										ALTER TABLE "${collection.slug}"
+										ALTER TABLE "${tbl}"
 											ADD CONSTRAINT "${constraintName}"
 											FOREIGN KEY ("${field.name}")
-											REFERENCES "${targetSlug}"("id")
+											REFERENCES "${targetTable}"("id")
 											${onDeleteSql};
 									END IF;
 								END $$;

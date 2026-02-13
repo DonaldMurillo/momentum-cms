@@ -171,6 +171,13 @@ export interface MomentumPlugin {
 	/** Unique plugin name */
 	name: string;
 
+	/** Static collections declared by this plugin.
+	 *  Read at config time by `momentumAdminRoutes(config)` to include
+	 *  plugin collections in the admin UI route data.
+	 *  Plugins should still push collections in `onInit` for server-side
+	 *  schema generation and API registration. */
+	collections?: CollectionConfig[];
+
 	/** Static admin routes declared by this plugin.
 	 *  Read at config time — no async needed. */
 	adminRoutes?: PluginAdminRouteDescriptor[];

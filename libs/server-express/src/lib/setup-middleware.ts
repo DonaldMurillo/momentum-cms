@@ -3,8 +3,7 @@ import { Router as createRouter } from 'express';
 import type { Pool } from 'pg';
 import type { Database } from 'better-sqlite3';
 import type { MomentumAuth } from '@momentum-cms/auth';
-import { MIN_PASSWORD_LENGTH, type DatabaseAdapter } from '@momentum-cms/core';
-import { createLogger } from '@momentum-cms/logger';
+import { MIN_PASSWORD_LENGTH } from '@momentum-cms/core';
 
 /**
  * Response type for the setup status endpoint.
@@ -171,8 +170,6 @@ export interface SetupMiddlewareConfig {
 	db: DatabaseConfig;
 	/** The Better Auth instance for user creation */
 	auth: MomentumAuth;
-	/** Optional: Momentum database adapter for syncing users to collection */
-	adapter?: DatabaseAdapter;
 }
 
 /**
@@ -224,7 +221,6 @@ export function createSetupMiddleware(
 		: config.db;
 
 	const { auth } = config;
-	const adapter = isLegacyConfig(config) ? undefined : config.adapter;
 	const router = createRouter();
 
 	/**
@@ -326,24 +322,6 @@ export function createSetupMiddleware(
 				updateUserRoleSqlite(dbConfig.database, result.user.id, 'admin');
 			} else {
 				await updateUserRolePostgres(dbConfig.pool, result.user.id, 'admin');
-			}
-
-			// Sync the user to Momentum's users collection (1-1 sync)
-			if (adapter) {
-				try {
-					await adapter.create('users', {
-						name,
-						email,
-						authId: result.user.id,
-						role: 'admin',
-						active: true,
-					});
-				} catch (syncError) {
-					// Log but don't fail - user was created in Better Auth
-					createLogger('Setup').warn(
-						`Failed to sync user to Momentum collection: ${syncError instanceof Error ? syncError.message : String(syncError)}`,
-					);
-				}
 			}
 
 			// Fetch the updated user

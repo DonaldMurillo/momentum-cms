@@ -1,249 +1,171 @@
 /**
  * Collection Access Service Unit Tests
  *
- * Tests the core collection access logic in isolation.
- * Full integration testing is done via E2E tests.
+ * Tests the real CollectionAccessService using TestBed and HttpTestingController.
  */
-import { describe, it, expect, beforeEach } from 'vitest';
-import { signal, computed } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { CollectionAccessService } from '../../lib/services/collection-access.service';
 
-// Test the core access logic in isolation without Angular DI
-describe('CollectionAccessService Logic', () => {
-	// Simulated service state
-	interface CollectionPermissions {
-		slug: string;
-		canAccess: boolean;
-		canCreate: boolean;
-		canRead: boolean;
-		canUpdate: boolean;
-		canDelete: boolean;
-	}
+describe('CollectionAccessService', () => {
+	let service: CollectionAccessService;
+	let httpMock: HttpTestingController;
 
-	const createMockService = (): {
-		_permissions: ReturnType<typeof signal<CollectionPermissions[]>>;
-		loading: ReturnType<typeof signal<boolean>>;
-		initialized: ReturnType<typeof signal<boolean>>;
-		error: ReturnType<typeof signal<string | null>>;
-		permissions: ReturnType<typeof computed<CollectionPermissions[]>>;
-		accessibleCollections: ReturnType<typeof computed<string[]>>;
-		canAccess: (slug: string) => boolean;
-		canCreate: (slug: string) => boolean;
-		canRead: (slug: string) => boolean;
-		canUpdate: (slug: string) => boolean;
-		canDelete: (slug: string) => boolean;
-		getPermissions: (slug: string) => CollectionPermissions | undefined;
-		reset: () => void;
-	} => {
-		const _permissions = signal<CollectionPermissions[]>([]);
-		const loading = signal(true);
-		const initialized = signal(false);
-		const error = signal<string | null>(null);
+	beforeEach(() => {
+		TestBed.configureTestingModule({
+			providers: [CollectionAccessService, provideHttpClient(), provideHttpClientTesting()],
+		});
 
-		const permissions = computed(() => _permissions());
-		const accessibleCollections = computed(() =>
-			_permissions()
-				.filter((p) => p.canAccess)
-				.map((p) => p.slug),
-		);
+		service = TestBed.inject(CollectionAccessService);
+		httpMock = TestBed.inject(HttpTestingController);
+	});
 
-		const getPermissions = (slug: string): CollectionPermissions | undefined =>
-			_permissions().find((p) => p.slug === slug);
-
-		const canAccess = (slug: string): boolean => getPermissions(slug)?.canAccess ?? false;
-		const canCreate = (slug: string): boolean => getPermissions(slug)?.canCreate ?? false;
-		const canRead = (slug: string): boolean => getPermissions(slug)?.canRead ?? false;
-		const canUpdate = (slug: string): boolean => getPermissions(slug)?.canUpdate ?? false;
-		const canDelete = (slug: string): boolean => getPermissions(slug)?.canDelete ?? false;
-
-		const reset = (): void => {
-			_permissions.set([]);
-			initialized.set(false);
-			error.set(null);
-		};
-
-		return {
-			_permissions,
-			loading,
-			initialized,
-			error,
-			permissions,
-			accessibleCollections,
-			canAccess,
-			canCreate,
-			canRead,
-			canUpdate,
-			canDelete,
-			getPermissions,
-			reset,
-		};
-	};
+	afterEach(() => {
+		httpMock.verify();
+	});
 
 	describe('initial state', () => {
 		it('should start with loading=true', () => {
-			const service = createMockService();
 			expect(service.loading()).toBe(true);
 		});
 
 		it('should start with initialized=false', () => {
-			const service = createMockService();
 			expect(service.initialized()).toBe(false);
 		});
 
 		it('should start with empty permissions', () => {
-			const service = createMockService();
 			expect(service.permissions()).toEqual([]);
 		});
 
 		it('should start with no error', () => {
-			const service = createMockService();
 			expect(service.error()).toBeNull();
 		});
 	});
 
-	describe('permissions loading', () => {
-		it('should update signals after loading permissions', () => {
-			const service = createMockService();
+	describe('loadAccess()', () => {
+		it('should fetch permissions from /api/access and update signals', async () => {
+			const loadPromise = service.loadAccess();
 
-			const mockPermissions: CollectionPermissions[] = [
-				{
-					slug: 'posts',
-					canAccess: true,
-					canCreate: true,
-					canRead: true,
-					canUpdate: true,
-					canDelete: false,
-				},
-				{
-					slug: 'users',
-					canAccess: false,
-					canCreate: false,
-					canRead: false,
-					canUpdate: false,
-					canDelete: false,
-				},
-			];
+			const req = httpMock.expectOne('/api/access');
+			expect(req.request.method).toBe('GET');
+			req.flush({
+				collections: [
+					{
+						slug: 'posts',
+						canAccess: true,
+						canCreate: true,
+						canRead: true,
+						canUpdate: true,
+						canDelete: false,
+					},
+					{
+						slug: 'users',
+						canAccess: false,
+						canCreate: false,
+						canRead: false,
+						canUpdate: false,
+						canDelete: false,
+					},
+				],
+			});
 
-			// Simulate successful load
-			service._permissions.set(mockPermissions);
-			service.initialized.set(true);
-			service.loading.set(false);
+			await loadPromise;
 
-			expect(service.permissions()).toEqual(mockPermissions);
 			expect(service.initialized()).toBe(true);
 			expect(service.loading()).toBe(false);
+			expect(service.permissions()).toHaveLength(2);
 		});
 
-		it('should compute accessibleCollections correctly', () => {
-			const service = createMockService();
+		it('should compute accessibleCollections from response', async () => {
+			const loadPromise = service.loadAccess();
 
-			service._permissions.set([
-				{
-					slug: 'posts',
-					canAccess: true,
-					canCreate: true,
-					canRead: true,
-					canUpdate: true,
-					canDelete: false,
-				},
-				{
-					slug: 'users',
-					canAccess: false,
-					canCreate: false,
-					canRead: false,
-					canUpdate: false,
-					canDelete: false,
-				},
-				{
-					slug: 'articles',
-					canAccess: true,
-					canCreate: true,
-					canRead: true,
-					canUpdate: true,
-					canDelete: true,
-				},
-			]);
+			const req = httpMock.expectOne('/api/access');
+			req.flush({
+				collections: [
+					{
+						slug: 'posts',
+						canAccess: true,
+						canCreate: true,
+						canRead: true,
+						canUpdate: true,
+						canDelete: true,
+					},
+					{
+						slug: 'users',
+						canAccess: false,
+						canCreate: false,
+						canRead: false,
+						canUpdate: false,
+						canDelete: false,
+					},
+					{
+						slug: 'articles',
+						canAccess: true,
+						canCreate: true,
+						canRead: true,
+						canUpdate: true,
+						canDelete: true,
+					},
+				],
+			});
+
+			await loadPromise;
 
 			expect(service.accessibleCollections()).toEqual(['posts', 'articles']);
 		});
 
-		it('should handle error state', () => {
-			const service = createMockService();
+		it('should handle error and set empty permissions', async () => {
+			const loadPromise = service.loadAccess();
 
-			// Simulate error
-			service.error.set('Failed to load permissions');
-			service._permissions.set([]);
-			service.loading.set(false);
+			const req = httpMock.expectOne('/api/access');
+			req.error(new ErrorEvent('Network error'));
 
-			expect(service.error()).toBe('Failed to load permissions');
+			await loadPromise;
+
+			expect(service.error()).toBe('Failed to load collection permissions');
 			expect(service.permissions()).toEqual([]);
+			expect(service.loading()).toBe(false);
+		});
+
+		it('should deduplicate concurrent calls', async () => {
+			const promise1 = service.loadAccess();
+			const promise2 = service.loadAccess();
+
+			// Only one HTTP request should be made
+			const req = httpMock.expectOne('/api/access');
+			req.flush({ collections: [] });
+
+			await Promise.all([promise1, promise2]);
+			expect(service.initialized()).toBe(true);
 		});
 	});
 
-	describe('canAccess()', () => {
-		it('should return true for accessible collection', () => {
-			const service = createMockService();
-			service._permissions.set([
-				{
-					slug: 'posts',
-					canAccess: true,
-					canCreate: true,
-					canRead: true,
-					canUpdate: true,
-					canDelete: true,
-				},
-			]);
+	describe('permission checks', () => {
+		beforeEach(async () => {
+			const loadPromise = service.loadAccess();
+			const req = httpMock.expectOne('/api/access');
+			req.flush({
+				collections: [
+					{
+						slug: 'posts',
+						canAccess: true,
+						canCreate: true,
+						canRead: true,
+						canUpdate: true,
+						canDelete: false,
+					},
+				],
+			});
+			await loadPromise;
+		});
 
+		it('canAccess() should return true for accessible collection', () => {
 			expect(service.canAccess('posts')).toBe(true);
 		});
 
-		it('should return false for inaccessible collection', () => {
-			const service = createMockService();
-			service._permissions.set([
-				{
-					slug: 'users',
-					canAccess: false,
-					canCreate: false,
-					canRead: false,
-					canUpdate: false,
-					canDelete: false,
-				},
-			]);
-
-			expect(service.canAccess('users')).toBe(false);
-		});
-
-		it('should return false for unknown collection', () => {
-			const service = createMockService();
-			service._permissions.set([
-				{
-					slug: 'posts',
-					canAccess: true,
-					canCreate: true,
-					canRead: true,
-					canUpdate: true,
-					canDelete: true,
-				},
-			]);
-
+		it('canAccess() should return false for unknown collection', () => {
 			expect(service.canAccess('unknown')).toBe(false);
-		});
-	});
-
-	describe('individual permission checks', () => {
-		let service: ReturnType<typeof createMockService>;
-
-		beforeEach(() => {
-			service = createMockService();
-			service._permissions.set([
-				{
-					slug: 'posts',
-					canAccess: true,
-					canCreate: true,
-					canRead: true,
-					canUpdate: true,
-					canDelete: false,
-				},
-			]);
 		});
 
 		it('canCreate() should return correct value', () => {
@@ -261,58 +183,45 @@ describe('CollectionAccessService Logic', () => {
 		it('canDelete() should return correct value', () => {
 			expect(service.canDelete('posts')).toBe(false);
 		});
-	});
 
-	describe('getPermissions()', () => {
-		it('should return full permissions for known collection', () => {
-			const service = createMockService();
-			const expectedPerms: CollectionPermissions = {
+		it('getPermissions() should return full permissions for known collection', () => {
+			const perms = service.getPermissions('posts');
+			expect(perms).toEqual({
 				slug: 'posts',
 				canAccess: true,
 				canCreate: true,
 				canRead: true,
 				canUpdate: true,
 				canDelete: false,
-			};
-			service._permissions.set([expectedPerms]);
-
-			expect(service.getPermissions('posts')).toEqual(expectedPerms);
+			});
 		});
 
-		it('should return undefined for unknown collection', () => {
-			const service = createMockService();
-			service._permissions.set([
-				{
-					slug: 'posts',
-					canAccess: true,
-					canCreate: true,
-					canRead: true,
-					canUpdate: true,
-					canDelete: true,
-				},
-			]);
-
+		it('getPermissions() should return undefined for unknown collection', () => {
 			expect(service.getPermissions('unknown')).toBeUndefined();
 		});
 	});
 
 	describe('reset()', () => {
-		it('should clear all state', () => {
-			const service = createMockService();
+		it('should clear all state', async () => {
+			// First load some data
+			const loadPromise = service.loadAccess();
+			const req = httpMock.expectOne('/api/access');
+			req.flush({
+				collections: [
+					{
+						slug: 'posts',
+						canAccess: true,
+						canCreate: true,
+						canRead: true,
+						canUpdate: true,
+						canDelete: true,
+					},
+				],
+			});
+			await loadPromise;
 
-			// Set some state
-			service._permissions.set([
-				{
-					slug: 'posts',
-					canAccess: true,
-					canCreate: true,
-					canRead: true,
-					canUpdate: true,
-					canDelete: true,
-				},
-			]);
-			service.initialized.set(true);
-			service.error.set('some error');
+			expect(service.initialized()).toBe(true);
+			expect(service.permissions()).toHaveLength(1);
 
 			// Reset
 			service.reset();

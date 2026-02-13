@@ -146,7 +146,7 @@ describe('momentumAdminRoutes()', () => {
 
 			const adminRoute = findAdminShellRoute(routes);
 			const routeData = adminRoute?.data;
-			expect(routeData?.['collections']).toBe(mockCollections);
+			expect(routeData?.['collections']).toStrictEqual(mockCollections);
 		});
 
 		it('should pass branding to route data when provided', () => {

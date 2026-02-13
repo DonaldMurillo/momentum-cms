@@ -5,7 +5,6 @@ import { Pages } from './pages.collection';
 import { Settings } from './settings.collection';
 import { Events } from './events.collection';
 import { MediaCollection } from '@momentum-cms/core';
-import { Users } from './users.collection';
 import { HookTestItems } from './hook-test-items.collection';
 import { FieldTestItems } from './field-test-items.collection';
 import { Tags } from './tags.collection';
@@ -19,7 +18,6 @@ export const collections: CollectionConfig[] = [
 	Settings,
 	Events,
 	MediaCollection,
-	Users,
 	HookTestItems,
 	FieldTestItems,
 	Tags,
@@ -33,7 +31,6 @@ export {
 	Settings,
 	Events,
 	MediaCollection,
-	Users,
 	HookTestItems,
 	FieldTestItems,
 	Tags,

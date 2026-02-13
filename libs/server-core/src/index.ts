@@ -64,21 +64,13 @@ export {
 	type AccessResponse,
 } from './lib/collection-access';
 
-// User Sync Hooks
-export {
-	createUserSyncHook,
-	createUserDeleteSyncHook,
-	type UserSyncConfig,
-	type MomentumAuthLike,
-	type BetterAuthAPI,
-} from './lib/user-sync-hooks';
-
 // Seeding
 export {
 	runSeeding,
 	shouldRunSeeding,
 	calculateChecksum,
 	createSeedTracker,
+	type MomentumAuthLike,
 	type SeedingResult,
 	type SeedingRunOptions,
 	type SeedTracker,

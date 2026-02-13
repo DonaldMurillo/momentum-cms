@@ -25,8 +25,19 @@ import {
 	MIN_PASSWORD_LENGTH,
 } from '@momentum-cms/core';
 import { createLogger } from '@momentum-cms/logger';
-import type { MomentumAuthLike } from '../user-sync-hooks';
 import { createSeedTracker, type SeedTracker } from './seed-tracker';
+
+/**
+ * Minimal auth interface for seed executor.
+ * Avoids depending on the full auth package.
+ */
+export interface MomentumAuthLike {
+	api: {
+		signUpEmail: (options: {
+			body: { name: string; email: string; password: string };
+		}) => Promise<{ user?: { id: string } | null } | null>;
+	};
+}
 
 /**
  * Result of a seeding run.
@@ -176,17 +187,18 @@ async function processSeedEntity<T = Record<string, unknown>>(
 	// Create new document
 	let dataToInsert = { ...dataRecord };
 
-	// Handle auth sync for user seeds
-	if (options.syncAuth) {
+	// Handle auth signup for user seeds (creates user via Better Auth API for proper password hashing)
+	if (options.useAuthSignup) {
 		if (auth) {
 			const password = dataToInsert['password'];
 			const email = dataToInsert['email'];
 			const name = dataToInsert['name'];
+			const role = dataToInsert['role'];
 
 			if (typeof password === 'string' && typeof email === 'string' && typeof name === 'string') {
 				if (password.length < MIN_PASSWORD_LENGTH) {
 					throw new Error(
-						`Auth sync failed for seed "${entity.seedId}": Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
+						`Auth signup failed for seed "${entity.seedId}": Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
 					);
 				}
 
@@ -199,22 +211,54 @@ async function processSeedEntity<T = Record<string, unknown>>(
 						throw new Error('Better Auth signUpEmail returned no user');
 					}
 
-					// Strip password and add authId
+					// Better Auth created the user in the user table.
+					// Now update role if needed (Better Auth defaults to 'user').
+					// The seed tracker will track by the auth user ID.
+					const userId = result.user.id;
+
+					// Strip password from data and update role via direct DB insert
 					const { password: _pw, ...rest } = dataToInsert;
-					dataToInsert = { ...rest, authId: result.user.id };
+					dataToInsert = { ...rest };
+
+					// If a non-default role was specified, we need to update it
+					// The adapter.update will handle this after the initial create by auth
+					if (role && role !== 'user') {
+						await adapter.update(entity.collection, userId, { role });
+					}
+
+					// Return the seeded document using the auth-created user ID
+					const doc = await adapter.findById(entity.collection, userId);
+					if (!doc) {
+						throw new Error(`Failed to find auth-created user with ID "${userId}"`);
+					}
+
+					await tracker.create({
+						seedId: entity.seedId,
+						collection: entity.collection,
+						documentId: userId,
+						checksum,
+					});
+
+					return {
+						id: userId,
+						seedId: entity.seedId,
+						collection: entity.collection,
+						data: doc as T,
+						action: 'created',
+					};
 				} catch (error) {
 					const message = error instanceof Error ? error.message : String(error);
 					if (message.toLowerCase().includes('email') && message.toLowerCase().includes('exist')) {
 						throw new Error(
-							`Auth sync failed for seed "${entity.seedId}": User with email '${email}' already exists in Better Auth`,
+							`Auth signup failed for seed "${entity.seedId}": User with email '${email}' already exists in Better Auth`,
 						);
 					}
-					throw new Error(`Auth sync failed for seed "${entity.seedId}": ${message}`);
+					throw new Error(`Auth signup failed for seed "${entity.seedId}": ${message}`);
 				}
 			}
 		} else if (!globalOptions.quiet) {
 			createLogger('Seeding').warn(
-				`Seed "${entity.seedId}" has syncAuth: true but no auth instance was provided. Creating without auth sync.`,
+				`Seed "${entity.seedId}" has useAuthSignup: true but no auth instance was provided. Creating without auth signup.`,
 			);
 		}
 	}

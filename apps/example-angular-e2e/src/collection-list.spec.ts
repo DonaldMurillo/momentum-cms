@@ -71,7 +71,7 @@ test.describe('Collection List Page - Posts', () => {
 
 test.describe('Collection List Page - Users', () => {
 	test('should display collection heading', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/users');
+		await authenticatedPage.goto('/admin/collections/auth-user');
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		const heading = authenticatedPage.getByRole('heading', { name: 'Users' });
@@ -79,31 +79,73 @@ test.describe('Collection List Page - Users', () => {
 	});
 
 	test('should display collection heading as page title', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/users');
+		await authenticatedPage.goto('/admin/collections/auth-user');
 		await authenticatedPage.waitForLoadState('networkidle');
 
 		const heading = authenticatedPage.locator('main').getByRole('heading', { name: 'Users' });
 		await expect(heading).toBeVisible();
 	});
 
-	test('should have Create User button', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/users');
+	test('should NOT show Create button for managed collection', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/auth-user');
 		await authenticatedPage.waitForLoadState('networkidle');
 
+		// auth-user is a managed collection (owned by Better Auth) — no create button
 		const createButton = authenticatedPage.getByRole('button', { name: /Create User/i });
-		await expect(createButton).toBeVisible();
+		await expect(createButton).toHaveCount(0);
 	});
 
-	test('should navigate to create form when clicking Create User', async ({
-		authenticatedPage,
-	}) => {
-		await authenticatedPage.goto('/admin/collections/users');
+	test('should load user data in table via sidebar navigation', async ({ authenticatedPage }) => {
+		// Navigate via sidebar (client-side navigation) to avoid SSR hydration issues
+		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		const createButton = authenticatedPage.getByRole('button', { name: /Create User/i });
-		await createButton.click();
+		const nav = authenticatedPage.getByLabel('Main navigation');
+		await nav.getByRole('link', { name: 'Users' }).click();
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/auth-user/, {
+			timeout: 10000,
+		});
 
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users\/new/);
+		// Wait for table to render with actual data
+		await expect(authenticatedPage.locator('mcms-table')).toBeVisible({ timeout: 15000 });
+		await expect(authenticatedPage.locator('mcms-table-cell').first()).toBeVisible({
+			timeout: 10000,
+		});
+
+		// Verify the admin user email appears in the table
+		const adminEmailCell = authenticatedPage
+			.locator('mcms-table-cell')
+			.filter({ hasText: 'admin@test.com' });
+		await expect(adminEmailCell.first()).toBeVisible({ timeout: 10000 });
+
+		// Verify count subtitle shows a number
+		const subtitle = authenticatedPage.getByText(/\d+ Users?/i);
+		await expect(subtitle).toBeVisible({ timeout: 15000 });
+	});
+});
+
+test.describe('Collection List Page - Auth API Keys', () => {
+	test('should navigate via sidebar and display heading', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		const nav = authenticatedPage.getByLabel('Main navigation');
+		await nav.getByRole('link', { name: 'Auth Api Keys' }).click();
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/auth-api-keys/, {
+			timeout: 10000,
+		});
+
+		const heading = authenticatedPage.getByRole('heading', { name: 'Auth Api Keys' });
+		await expect(heading).toBeVisible();
+	});
+
+	test('should NOT show Create button for managed collection', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/collections/auth-api-keys');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		// auth-api-keys is a managed collection — no create button
+		const createButton = authenticatedPage.getByRole('button', { name: /Create/i });
+		await expect(createButton).toHaveCount(0);
 	});
 });
 
@@ -131,7 +173,7 @@ test.describe('Collection List Page - Navigation', () => {
 		// Navigate to Users via sidebar
 		await nav.getByRole('link', { name: 'Users' }).click();
 
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users/);
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/auth-user/);
 		await expect(authenticatedPage.getByRole('heading', { name: 'Users' })).toBeVisible();
 
 		// Navigate back to Posts via sidebar

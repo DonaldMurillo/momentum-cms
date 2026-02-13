@@ -8,8 +8,11 @@ import {
 	type MomentumAuthLike,
 } from '@momentum-cms/server-core';
 import type { MomentumConfig, ResolvedMomentumConfig } from '@momentum-cms/core';
+import type { MomentumAuthPlugin } from '@momentum-cms/auth';
 import { initializeMomentumLogger, createLogger } from '@momentum-cms/logger';
 import { PluginRunner } from '@momentum-cms/plugins/core';
+import { createAuthMiddleware } from './auth-middleware';
+import { createSetupMiddleware } from './setup-middleware';
 import { setPluginMiddleware, setPluginProviders } from './plugin-middleware-registry';
 
 /**
@@ -106,7 +109,7 @@ export function initializeMomentum(
 	config: MomentumConfig | ResolvedMomentumConfig,
 	options: InitializeMomentumOptions = {},
 ): MomentumInitResult {
-	const { auth } = options;
+	let { auth } = options;
 
 	// Initialize logger from config (must be first)
 	const loggingConfig = 'logging' in config && config.logging ? config.logging : undefined;
@@ -129,11 +132,48 @@ export function initializeMomentum(
 		if (plugins.length > 0) {
 			log.info(`Initializing ${plugins.length} plugin(s)...`);
 			await pluginRunner.runInit();
-
-			// Store plugin middleware/providers for auto-mounting
-			setPluginMiddleware(pluginRunner.getMiddleware());
 			setPluginProviders(pluginRunner.getProviders());
 		}
+
+		// Collect middleware registered by plugins during onInit (mutable — may be extended below)
+		const pluginMiddleware = pluginRunner.getMiddleware();
+
+		// Auto-detect auth plugin and register Express middleware.
+		// The auth plugin is framework-agnostic — server-express handles middleware creation.
+		if (!auth) {
+			for (const plugin of plugins) {
+				if ('getAuth' in plugin && typeof plugin.getAuth === 'function') {
+					try {
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Plugin type narrowing
+						const authPlugin = plugin as MomentumAuthPlugin;
+						const authInstance = authPlugin.getAuth();
+						auth = authInstance;
+						log.info('Auto-detected auth instance from plugin');
+
+						// Register auth + setup middleware from the server-express side
+						const pluginConfig = authPlugin.getPluginConfig();
+						const authMw = createAuthMiddleware(authInstance, {
+							socialProviders: pluginConfig.socialProviders,
+						});
+						const setupMw = createSetupMiddleware({
+							db: pluginConfig.db,
+							auth: authInstance,
+						});
+						pluginMiddleware.push(
+							{ path: '/', handler: authMw, position: 'before-api' },
+							{ path: '/', handler: setupMw, position: 'before-api' },
+						);
+						log.info('Auth and setup middleware registered');
+					} catch {
+						// Plugin not ready, skip
+					}
+					break;
+				}
+			}
+		}
+
+		// Store all collected middleware for auto-mounting by momentumApiMiddleware()
+		setPluginMiddleware(pluginMiddleware);
 
 		// 2. Initialize database schema if adapter supports it
 		if (config.db.adapter.initialize) {

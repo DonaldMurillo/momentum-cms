@@ -40,16 +40,15 @@ test.describe('Admin Dashboard', () => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		// Cards show document count badges (e.g., "3 docs")
-		// Verify the cards have badge elements
+		// Dashboard shows cards for all accessible collections (posts + auth collections)
 		const cards = authenticatedPage.locator('mcms-collection-card');
-		await expect(cards).toHaveCount(2);
+		const count = await cards.count();
+		expect(count).toBeGreaterThanOrEqual(2);
 
-		// Each card should have a badge with a count
-		for (const card of await cards.all()) {
-			const badge = card.locator('mcms-badge');
-			await expect(badge).toBeVisible();
-		}
+		// Verify at least the Posts card has a badge with a count
+		const postsCard = cards.filter({ hasText: 'Posts' });
+		const badge = postsCard.locator('mcms-badge');
+		await expect(badge).toBeVisible();
 	});
 
 	test('should navigate to Posts collection when clicking View all', async ({
@@ -80,8 +79,50 @@ test.describe('Admin Dashboard', () => {
 			.filter({ hasText: 'Users' });
 		await usersCard.getByRole('link', { name: /View all/i }).click();
 
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users/);
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/auth-user/);
 		await expect(authenticatedPage.getByRole('heading', { name: 'Users' })).toBeVisible();
+	});
+
+	test('should show numeric count badge on Users card, not error', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		const usersCard = authenticatedPage
+			.locator('mcms-collection-card')
+			.filter({ hasText: 'Users' });
+		const badge = usersCard.locator('mcms-badge');
+		await expect(badge).toBeVisible({ timeout: 15000 });
+
+		// Badge should contain a number, not "Error"
+		const badgeText = await badge.textContent();
+		expect(badgeText?.trim()).not.toBe('Error');
+		expect(badgeText?.trim()).toMatch(/^\d+$/);
+	});
+
+	test('should NOT display hidden auth collections as dashboard cards', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		// Hidden auth collections (auth-session, auth-account, auth-verification)
+		// should NOT appear as collection cards on the dashboard
+		const sessionCard = authenticatedPage.locator('mcms-collection-card', {
+			has: authenticatedPage.getByRole('heading', { name: 'Auth Session', level: 3 }),
+		});
+		await expect(sessionCard).toHaveCount(0);
+
+		const accountCard = authenticatedPage.locator('mcms-collection-card', {
+			has: authenticatedPage.getByRole('heading', { name: 'Auth Account', level: 3 }),
+		});
+		await expect(accountCard).toHaveCount(0);
+
+		const verificationCard = authenticatedPage.locator('mcms-collection-card', {
+			has: authenticatedPage.getByRole('heading', { name: 'Auth Verification', level: 3 }),
+		});
+		await expect(verificationCard).toHaveCount(0);
 	});
 });
 
@@ -148,7 +189,7 @@ test.describe('Admin Sidebar Navigation', () => {
 
 		// Click Users in sidebar
 		await sidebarNav.getByRole('link', { name: 'Users' }).click();
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users/);
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/auth-user/);
 	});
 
 	// Skip: This test requires auth.user() to be populated after SSR hydration,

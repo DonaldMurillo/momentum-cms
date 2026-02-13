@@ -192,6 +192,17 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		return {};
 	}
 
+	/**
+	 * Check if a collection slug refers to a managed collection.
+	 * Managed collections are read-only via the API (owned by a plugin like Better Auth).
+	 * GET requests are allowed; write operations (POST/PATCH/PUT/DELETE) return 403.
+	 */
+	function isManagedCollection(slug: string | undefined): boolean {
+		if (!slug) return false;
+		const col = config.collections.find((c) => c.slug === slug);
+		return col?.managed === true;
+	}
+
 	// Route: GET /access - Get collection permissions for current user
 	// Must be defined BEFORE /:collection routes to avoid matching "access" as a collection slug
 	router.get('/access', async (req: Request, res: Response) => {
@@ -814,6 +825,8 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	}
 
 	for (const collection of config.collections) {
+		// Skip managed collections — they don't have CRUD routes or custom endpoints
+		if (collection.managed) continue;
 		if (!collection.endpoints || collection.endpoints.length === 0) {
 			continue;
 		}
@@ -885,6 +898,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	// Route: POST /:collection/batch - Batch create/update/delete
 	const MAX_BATCH_SIZE = 100;
 	router.post('/:collection/batch', async (req: Request, res: Response) => {
+		if (isManagedCollection(req.params['collection'])) {
+			res.status(403).json({ error: 'Managed collection is read-only' });
+			return;
+		}
 		try {
 			const user = extractUserFromRequest(req);
 			const api = getMomentumAPI();
@@ -1030,6 +1047,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 	// Route: POST /:collection/import - Import documents into collection
 	router.post('/:collection/import', async (req: Request, res: Response) => {
+		if (isManagedCollection(req.params['collection'])) {
+			res.status(403).json({ error: 'Managed collection is read-only' });
+			return;
+		}
 		try {
 			const user = extractUserFromRequest(req);
 			if (!user) {
@@ -1115,6 +1136,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	// Route: GET /:collection/:id - Find document by ID
 	// Route: POST /:collection/:id/restore - Restore a soft-deleted document
 	router.post('/:collection/:id/restore', async (req: Request, res: Response) => {
+		if (isManagedCollection(req.params['collection'])) {
+			res.status(403).json({ error: 'Managed collection is read-only' });
+			return;
+		}
 		const request: MomentumRequest = {
 			method: 'POST',
 			collectionSlug: req.params['collection'],
@@ -1150,6 +1175,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 	// Route: POST /:collection - Create document
 	router.post('/:collection', async (req: Request, res: Response) => {
+		if (isManagedCollection(req.params['collection'])) {
+			res.status(403).json({ error: 'Managed collection is read-only' });
+			return;
+		}
 		const request: MomentumRequest = {
 			method: 'POST',
 			collectionSlug: req.params['collection'],
@@ -1163,6 +1192,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 	// Route: PATCH /:collection/:id - Update document
 	router.patch('/:collection/:id', async (req: Request, res: Response) => {
+		if (isManagedCollection(req.params['collection'])) {
+			res.status(403).json({ error: 'Managed collection is read-only' });
+			return;
+		}
 		const request: MomentumRequest = {
 			method: 'PATCH',
 			collectionSlug: req.params['collection'],
@@ -1177,6 +1210,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 	// Route: PUT /:collection/:id - Replace document
 	router.put('/:collection/:id', async (req: Request, res: Response) => {
+		if (isManagedCollection(req.params['collection'])) {
+			res.status(403).json({ error: 'Managed collection is read-only' });
+			return;
+		}
 		const request: MomentumRequest = {
 			method: 'PUT',
 			collectionSlug: req.params['collection'],
@@ -1191,6 +1228,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 	// Route: DELETE /:collection/:id - Delete document
 	router.delete('/:collection/:id', async (req: Request, res: Response) => {
+		if (isManagedCollection(req.params['collection'])) {
+			res.status(403).json({ error: 'Managed collection is read-only' });
+			return;
+		}
 		const force = req.query['force'] === 'true';
 		const request: MomentumRequest = {
 			method: 'DELETE',

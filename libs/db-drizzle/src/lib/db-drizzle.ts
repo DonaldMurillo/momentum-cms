@@ -168,7 +168,16 @@ function createTableSql(collection: CollectionConfig): string {
 		columns.push(`"${field.name}" ${colType}${notNull}`);
 	}
 
-	return `CREATE TABLE IF NOT EXISTS "${collection.slug}" (${columns.join(', ')})`;
+	const tableName = collection.dbName ?? collection.slug;
+	return `CREATE TABLE IF NOT EXISTS "${tableName}" (${columns.join(', ')})`;
+}
+
+/**
+ * Resolves the actual database table name for a collection.
+ * Uses dbName if specified, falls back to slug.
+ */
+function getTableName(collection: CollectionConfig): string {
+	return collection.dbName ?? collection.slug;
 }
 
 /**
@@ -190,7 +199,8 @@ function createVersionTableSql(collection: CollectionConfig): string | null {
 		return null;
 	}
 
-	const tableName = `${collection.slug}_versions`;
+	const baseTable = getTableName(collection);
+	const tableName = `${baseTable}_versions`;
 	return `
 		CREATE TABLE IF NOT EXISTS "${tableName}" (
 			"id" TEXT PRIMARY KEY NOT NULL,
@@ -201,7 +211,7 @@ function createVersionTableSql(collection: CollectionConfig): string | null {
 			"publishedAt" TEXT,
 			"createdAt" TEXT NOT NULL,
 			"updatedAt" TEXT NOT NULL,
-			FOREIGN KEY ("parent") REFERENCES "${collection.slug}"("id") ON DELETE CASCADE
+			FOREIGN KEY ("parent") REFERENCES "${baseTable}"("id") ON DELETE CASCADE
 		);
 
 		CREATE INDEX IF NOT EXISTS "idx_${tableName}_parent" ON "${tableName}"("parent");
@@ -225,94 +235,8 @@ function ensureDirectoryExists(filePath: string): void {
 	}
 }
 
-/**
- * SQL statements to create Better Auth required tables.
- */
-const AUTH_TABLES_SQL = `
-	CREATE TABLE IF NOT EXISTS "user" (
-		"id" TEXT PRIMARY KEY NOT NULL,
-		"name" TEXT NOT NULL,
-		"email" TEXT NOT NULL UNIQUE,
-		"emailVerified" INTEGER NOT NULL DEFAULT 0,
-		"image" TEXT,
-		"role" TEXT NOT NULL DEFAULT 'user',
-		"twoFactorEnabled" INTEGER DEFAULT 0,
-		"createdAt" TEXT NOT NULL,
-		"updatedAt" TEXT NOT NULL
-	);
-
-	CREATE TABLE IF NOT EXISTS "session" (
-		"id" TEXT PRIMARY KEY NOT NULL,
-		"userId" TEXT NOT NULL,
-		"token" TEXT NOT NULL UNIQUE,
-		"expiresAt" TEXT NOT NULL,
-		"ipAddress" TEXT,
-		"userAgent" TEXT,
-		"createdAt" TEXT NOT NULL,
-		"updatedAt" TEXT NOT NULL,
-		FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE
-	);
-
-	CREATE TABLE IF NOT EXISTS "account" (
-		"id" TEXT PRIMARY KEY NOT NULL,
-		"userId" TEXT NOT NULL,
-		"accountId" TEXT NOT NULL,
-		"providerId" TEXT NOT NULL,
-		"accessToken" TEXT,
-		"refreshToken" TEXT,
-		"accessTokenExpiresAt" TEXT,
-		"refreshTokenExpiresAt" TEXT,
-		"scope" TEXT,
-		"idToken" TEXT,
-		"password" TEXT,
-		"createdAt" TEXT NOT NULL,
-		"updatedAt" TEXT NOT NULL,
-		FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE
-	);
-
-	CREATE TABLE IF NOT EXISTS "verification" (
-		"id" TEXT PRIMARY KEY NOT NULL,
-		"identifier" TEXT NOT NULL,
-		"value" TEXT NOT NULL,
-		"expiresAt" TEXT NOT NULL,
-		"createdAt" TEXT NOT NULL,
-		"updatedAt" TEXT NOT NULL
-	);
-
-	-- Two-factor authentication support (Better Auth twoFactor plugin)
-	CREATE TABLE IF NOT EXISTS "twoFactor" (
-		"id" TEXT PRIMARY KEY NOT NULL,
-		"secret" TEXT NOT NULL,
-		"backupCodes" TEXT NOT NULL,
-		"userId" TEXT NOT NULL,
-		FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE
-	);
-
-	CREATE INDEX IF NOT EXISTS "idx_session_userId" ON "session"("userId");
-	CREATE INDEX IF NOT EXISTS "idx_session_token" ON "session"("token");
-	CREATE INDEX IF NOT EXISTS "idx_account_userId" ON "account"("userId");
-	CREATE INDEX IF NOT EXISTS "idx_user_email" ON "user"("email");
-	CREATE INDEX IF NOT EXISTS "idx_twofactor_secret" ON "twoFactor"("secret");
-	CREATE INDEX IF NOT EXISTS "idx_twofactor_userId" ON "twoFactor"("userId");
-
-	-- API keys table
-	CREATE TABLE IF NOT EXISTS "_api_keys" (
-		"id" TEXT PRIMARY KEY NOT NULL,
-		"name" TEXT NOT NULL,
-		"keyHash" TEXT NOT NULL UNIQUE,
-		"keyPrefix" TEXT NOT NULL,
-		"createdBy" TEXT NOT NULL,
-		"role" TEXT NOT NULL DEFAULT 'user',
-		"expiresAt" TEXT,
-		"lastUsedAt" TEXT,
-		"createdAt" TEXT NOT NULL,
-		"updatedAt" TEXT NOT NULL,
-		FOREIGN KEY ("createdBy") REFERENCES "user"("id") ON DELETE CASCADE
-	);
-
-	CREATE INDEX IF NOT EXISTS "idx_api_keys_keyHash" ON "_api_keys"("keyHash");
-	CREATE INDEX IF NOT EXISTS "idx_api_keys_createdBy" ON "_api_keys"("createdBy");
-`;
+// AUTH_TABLES_SQL removed — auth tables are now defined as managed collections
+// and created through the normal createTableSql() path via the auth plugin.
 
 /**
  * SQL statements to create seed tracking table.
@@ -349,6 +273,17 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 	sqlite.pragma('journal_mode = WAL');
 
 	const writeQueue = new AsyncQueue();
+
+	/** Maps collection slugs to actual DB table names (populated during initialize). */
+	const tableNameMap = new Map<string, string>();
+
+	/**
+	 * Resolves a collection slug to its actual database table name.
+	 * Falls back to the slug itself if no mapping exists.
+	 */
+	function resolveTableName(slug: string): string {
+		return tableNameMap.get(slug) ?? slug;
+	}
 
 	// ============================================
 	// Sync implementations shared by normal and transactional adapters
@@ -390,10 +325,10 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		// limit: 0 means "no limit" (return all rows for count queries)
 		let rows: unknown[];
 		if (limitValue === 0) {
-			const sql = `SELECT * FROM "${collection}" ${whereClause}`;
+			const sql = `SELECT * FROM "${resolveTableName(collection)}" ${whereClause}`;
 			rows = sqlite.prepare(sql).all(...whereValues);
 		} else {
-			const sql = `SELECT * FROM "${collection}" ${whereClause} LIMIT ? OFFSET ?`;
+			const sql = `SELECT * FROM "${resolveTableName(collection)}" ${whereClause} LIMIT ? OFFSET ?`;
 			rows = sqlite.prepare(sql).all(...whereValues, limitValue, offset);
 		}
 		return rows.filter(
@@ -403,7 +338,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 
 	function findByIdSync(collection: string, id: string): Record<string, unknown> | null {
 		validateCollectionSlug(collection);
-		const row: unknown = sqlite.prepare(`SELECT * FROM "${collection}" WHERE id = ?`).get(id);
+		const row: unknown = sqlite
+			.prepare(`SELECT * FROM "${resolveTableName(collection)}" WHERE id = ?`)
+			.get(id);
 		return isRecord(row) ? row : null;
 	}
 
@@ -425,7 +362,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 
 		const quotedColumns = columns.map((c) => `"${c}"`).join(', ');
 		sqlite
-			.prepare(`INSERT INTO "${collection}" (${quotedColumns}) VALUES (${placeholders})`)
+			.prepare(
+				`INSERT INTO "${resolveTableName(collection)}" (${quotedColumns}) VALUES (${placeholders})`,
+			)
 			.run(...values);
 
 		return doc;
@@ -455,10 +394,12 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		values.push(id);
 
 		sqlite
-			.prepare(`UPDATE "${collection}" SET ${setClauses.join(', ')} WHERE id = ?`)
+			.prepare(`UPDATE "${resolveTableName(collection)}" SET ${setClauses.join(', ')} WHERE id = ?`)
 			.run(...values);
 
-		const updated: unknown = sqlite.prepare(`SELECT * FROM "${collection}" WHERE id = ?`).get(id);
+		const updated: unknown = sqlite
+			.prepare(`SELECT * FROM "${resolveTableName(collection)}" WHERE id = ?`)
+			.get(id);
 		if (!isRecord(updated)) {
 			throw new Error('Failed to fetch updated document');
 		}
@@ -467,7 +408,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 
 	function deleteSync(collection: string, id: string): boolean {
 		validateCollectionSlug(collection);
-		const result = sqlite.prepare(`DELETE FROM "${collection}" WHERE id = ?`).run(id);
+		const result = sqlite
+			.prepare(`DELETE FROM "${resolveTableName(collection)}" WHERE id = ?`)
+			.run(id);
 		return result.changes > 0;
 	}
 
@@ -476,7 +419,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		validateColumnName(field);
 		const now = new Date().toISOString();
 		const result = sqlite
-			.prepare(`UPDATE "${collection}" SET "${field}" = ?, "updatedAt" = ? WHERE "id" = ?`)
+			.prepare(
+				`UPDATE "${resolveTableName(collection)}" SET "${field}" = ?, "updatedAt" = ? WHERE "id" = ?`,
+			)
 			.run(now, now, id);
 		return result.changes > 0;
 	}
@@ -490,9 +435,13 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		validateColumnName(field);
 		const now = new Date().toISOString();
 		sqlite
-			.prepare(`UPDATE "${collection}" SET "${field}" = NULL, "updatedAt" = ? WHERE "id" = ?`)
+			.prepare(
+				`UPDATE "${resolveTableName(collection)}" SET "${field}" = NULL, "updatedAt" = ? WHERE "id" = ?`,
+			)
 			.run(now, id);
-		const row: unknown = sqlite.prepare(`SELECT * FROM "${collection}" WHERE "id" = ?`).get(id);
+		const row: unknown = sqlite
+			.prepare(`SELECT * FROM "${resolveTableName(collection)}" WHERE "id" = ?`)
+			.get(id);
 		if (!isRecord(row)) {
 			throw new Error('Failed to fetch restored document');
 		}
@@ -508,7 +457,7 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		validateCollectionSlug(collection);
 		const id = randomUUID();
 		const now = new Date().toISOString();
-		const tableName = `${collection}_versions`;
+		const tableName = `${resolveTableName(collection)}_versions`;
 		const status: DocumentStatus = options?.status ?? 'draft';
 		const autosave = options?.autosave ? 1 : 0;
 
@@ -548,7 +497,7 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		options?: VersionQueryOptions,
 	): DocumentVersion[] {
 		validateCollectionSlug(collection);
-		const tableName = `${collection}_versions`;
+		const tableName = `${resolveTableName(collection)}_versions`;
 		const limit = options?.limit ?? 10;
 		const page = options?.page ?? 1;
 		const offset = (page - 1) * limit;
@@ -581,7 +530,7 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 
 	function findVersionByIdSync(collection: string, versionId: string): DocumentVersion | null {
 		validateCollectionSlug(collection);
-		const tableName = `${collection}_versions`;
+		const tableName = `${resolveTableName(collection)}_versions`;
 		const row: unknown = sqlite
 			.prepare(`SELECT * FROM "${tableName}" WHERE "id" = ?`)
 			.get(versionId);
@@ -602,13 +551,15 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 
 	function restoreVersionSync(collection: string, versionId: string): Record<string, unknown> {
 		validateCollectionSlug(collection);
-		const tableName = `${collection}_versions`;
+		const tableName = `${resolveTableName(collection)}_versions`;
 
 		const versionRow: unknown = sqlite
 			.prepare(`SELECT * FROM "${tableName}" WHERE "id" = ?`)
 			.get(versionId);
 		if (!isRecord(versionRow)) {
-			throw new Error(`Version "${versionId}" not found in collection "${collection}"`);
+			throw new Error(
+				`Version "${versionId}" not found in collection "${resolveTableName(collection)}"`,
+			);
 		}
 
 		const parentId = String(versionRow['parent']);
@@ -637,7 +588,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		values.push(parentId);
 
 		sqlite
-			.prepare(`UPDATE "${collection}" SET ${setClauses.join(', ')} WHERE "id" = ?`)
+			.prepare(
+				`UPDATE "${resolveTableName(collection)}" SET ${setClauses.join(', ')} WHERE "id" = ?`,
+			)
 			.run(...values);
 
 		const newVersionId = randomUUID();
@@ -649,7 +602,7 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 			.run(newVersionId, parentId, String(versionRow['version']), originalStatus, now, now);
 
 		const updated: unknown = sqlite
-			.prepare(`SELECT * FROM "${collection}" WHERE "id" = ?`)
+			.prepare(`SELECT * FROM "${resolveTableName(collection)}" WHERE "id" = ?`)
 			.get(parentId);
 		if (!isRecord(updated)) {
 			throw new Error('Failed to fetch restored document');
@@ -659,7 +612,7 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 
 	function deleteVersionsSync(collection: string, parentId: string, keepLatest?: number): number {
 		validateCollectionSlug(collection);
-		const tableName = `${collection}_versions`;
+		const tableName = `${resolveTableName(collection)}_versions`;
 
 		if (keepLatest === undefined || keepLatest <= 0) {
 			const result = sqlite.prepare(`DELETE FROM "${tableName}" WHERE "parent" = ?`).run(parentId);
@@ -689,7 +642,7 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		options?: VersionCountOptions,
 	): number {
 		validateCollectionSlug(collection);
-		const tableName = `${collection}_versions`;
+		const tableName = `${resolveTableName(collection)}_versions`;
 
 		const whereClauses: string[] = ['"parent" = ?'];
 		const whereValues: unknown[] = [parentId];
@@ -713,7 +666,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		validateCollectionSlug(collection);
 		const now = new Date().toISOString();
 		sqlite
-			.prepare(`UPDATE "${collection}" SET "_status" = ?, "updatedAt" = ? WHERE "id" = ?`)
+			.prepare(
+				`UPDATE "${resolveTableName(collection)}" SET "_status" = ?, "updatedAt" = ? WHERE "id" = ?`,
+			)
 			.run(status, now, id);
 	}
 
@@ -727,9 +682,15 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		},
 
 		async initialize(collections: CollectionConfig[]): Promise<void> {
-			sqlite.exec(AUTH_TABLES_SQL);
+			// Build slug → tableName mapping for CRUD methods
+			for (const collection of collections) {
+				const tbl = getTableName(collection);
+				tableNameMap.set(collection.slug, tbl);
+			}
+
 			sqlite.exec(SEED_TRACKING_TABLE_SQL);
 			for (const collection of collections) {
+				const tbl = getTableName(collection);
 				sqlite.exec(createTableSql(collection));
 				const versionTableSql = createVersionTableSql(collection);
 				if (versionTableSql) sqlite.exec(versionTableSql);
@@ -738,13 +699,28 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 				const sdField = getSoftDeleteField(collection);
 				if (sdField) {
 					try {
-						sqlite.exec(`ALTER TABLE "${collection.slug}" ADD COLUMN "${sdField}" TEXT`);
+						sqlite.exec(`ALTER TABLE "${tbl}" ADD COLUMN "${sdField}" TEXT`);
 					} catch {
 						// Column already exists — ignore
 					}
 					sqlite.exec(
-						`CREATE INDEX IF NOT EXISTS "idx_${collection.slug}_${sdField}" ON "${collection.slug}"("${sdField}")`,
+						`CREATE INDEX IF NOT EXISTS "idx_${tbl}_${sdField}" ON "${tbl}"("${sdField}")`,
 					);
+				}
+
+				// Create explicit indexes from collection.indexes
+				if (collection.indexes) {
+					for (const idx of collection.indexes) {
+						for (const col of idx.columns) {
+							validateColumnName(col);
+						}
+						const idxName = idx.name ?? `idx_${tbl}_${idx.columns.join('_')}`;
+						const uniqueStr = idx.unique ? 'UNIQUE ' : '';
+						const colList = idx.columns.map((c) => `"${c}"`).join(', ');
+						sqlite.exec(
+							`CREATE ${uniqueStr}INDEX IF NOT EXISTS "${idxName}" ON "${tbl}"(${colList})`,
+						);
+					}
 				}
 			}
 		},

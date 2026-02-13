@@ -192,6 +192,84 @@ describe('createSeedHelpers', () => {
 		});
 	});
 
+	describe('authUser()', () => {
+		it('should create authUser seed targeting the user table', () => {
+			const helpers = createSeedHelpers();
+			const result = helpers.authUser('auth-1', {
+				name: 'Auth User',
+				email: 'auth@example.com',
+				password: 'password123',
+			});
+
+			expect(result.seedId).toBe('auth-1');
+			expect(result.collection).toBe('user');
+			expect(result.data.name).toBe('Auth User');
+			expect(result.data.email).toBe('auth@example.com');
+			expect(result.data.password).toBe('password123');
+		});
+
+		it('should set emailVerified to true by default', () => {
+			const helpers = createSeedHelpers();
+			const result = helpers.authUser('auth-1', {
+				name: 'Auth User',
+				email: 'auth@example.com',
+				password: 'pass',
+			});
+
+			expect(result.data.emailVerified).toBe(true);
+		});
+
+		it('should set role to user by default', () => {
+			const helpers = createSeedHelpers();
+			const result = helpers.authUser('auth-1', {
+				name: 'Auth User',
+				email: 'auth@example.com',
+				password: 'pass',
+			});
+
+			expect(result.data.role).toBe('user');
+		});
+
+		it('should enable useAuthSignup in options', () => {
+			const helpers = createSeedHelpers();
+			const result = helpers.authUser('auth-1', {
+				name: 'Auth User',
+				email: 'auth@example.com',
+				password: 'pass',
+			});
+
+			expect(result.options?.useAuthSignup).toBe(true);
+		});
+
+		it('should allow overriding defaults', () => {
+			const helpers = createSeedHelpers();
+			const result = helpers.authUser('auth-1', {
+				name: 'Admin Auth',
+				email: 'admin@example.com',
+				password: 'pass',
+				role: 'admin',
+				emailVerified: false,
+			});
+
+			expect(result.data.role).toBe('admin');
+			expect(result.data.emailVerified).toBe(false);
+		});
+
+		it('should merge custom options with useAuthSignup', () => {
+			const helpers = createSeedHelpers();
+			const result = helpers.authUser(
+				'auth-1',
+				{ name: 'Auth', email: 'auth@example.com', password: 'pass' },
+				{ onConflict: 'skip' },
+			);
+
+			expect(result.options).toEqual({
+				onConflict: 'skip',
+				useAuthSignup: true,
+			});
+		});
+	});
+
 	describe('defaults function integration', () => {
 		it('should work as expected in defaults callback', () => {
 			const helpers = createSeedHelpers();

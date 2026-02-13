@@ -1,0 +1,206 @@
+/**
+ * Base Auth Collections for Momentum CMS
+ *
+ * Defines Better Auth tables as managed Momentum collections.
+ * These collections participate in schema generation and can optionally
+ * appear in the admin UI, but do NOT expose CRUD API routes (Better Auth
+ * owns the data operations).
+ *
+ * Column types are chosen to match Better Auth's expected schema exactly.
+ */
+
+import {
+	defineCollection,
+	text,
+	email as emailField,
+	checkbox,
+	date,
+	select,
+} from '@momentum-cms/core';
+import type { CollectionConfig } from '@momentum-cms/core';
+
+// ============================================
+// auth-user — Better Auth "user" table
+// ============================================
+
+export const AuthUserCollection: CollectionConfig = defineCollection({
+	slug: 'auth-user',
+	dbName: 'user',
+	managed: true,
+	timestamps: true,
+	labels: { singular: 'User', plural: 'Users' },
+	fields: [
+		text('name', { required: true }),
+		emailField('email', { required: true }),
+		checkbox('emailVerified'),
+		text('image'),
+		select('role', {
+			options: [
+				{ label: 'User', value: 'user' },
+				{ label: 'Admin', value: 'admin' },
+			],
+			defaultValue: 'user',
+		}),
+	],
+	indexes: [{ columns: ['email'], unique: true }],
+	admin: {
+		group: 'Authentication',
+		useAsTitle: 'email',
+		defaultColumns: ['name', 'email', 'role', 'createdAt'],
+		description: 'Users authenticated via Better Auth',
+	},
+	access: {
+		admin: ({ req }) => req.user?.role === 'admin',
+		read: ({ req }) => req.user?.role === 'admin',
+		create: ({ req }) => req.user?.role === 'admin',
+		update: ({ req }) => req.user?.role === 'admin',
+		delete: ({ req }) => req.user?.role === 'admin',
+	},
+});
+
+// ============================================
+// auth-session — Better Auth "session" table
+// ============================================
+
+export const AuthSessionCollection: CollectionConfig = defineCollection({
+	slug: 'auth-session',
+	dbName: 'session',
+	managed: true,
+	timestamps: true,
+	fields: [
+		text('userId', { required: true }),
+		text('token', { required: true }),
+		date('expiresAt', { required: true }),
+		text('ipAddress'),
+		text('userAgent'),
+	],
+	indexes: [{ columns: ['userId'] }, { columns: ['token'], unique: true }],
+	admin: {
+		group: 'Authentication',
+		hidden: true,
+		description: 'Active user sessions',
+	},
+	access: {
+		admin: ({ req }) => req.user?.role === 'admin',
+		read: ({ req }) => req.user?.role === 'admin',
+		create: () => false,
+		update: () => false,
+		delete: ({ req }) => req.user?.role === 'admin',
+	},
+});
+
+// ============================================
+// auth-account — Better Auth "account" table
+// ============================================
+
+export const AuthAccountCollection: CollectionConfig = defineCollection({
+	slug: 'auth-account',
+	dbName: 'account',
+	managed: true,
+	timestamps: true,
+	fields: [
+		text('userId', { required: true }),
+		text('accountId', { required: true }),
+		text('providerId', { required: true }),
+		text('accessToken'),
+		text('refreshToken'),
+		date('accessTokenExpiresAt'),
+		date('refreshTokenExpiresAt'),
+		text('scope'),
+		text('idToken'),
+		text('password'),
+	],
+	indexes: [{ columns: ['userId'] }],
+	admin: {
+		group: 'Authentication',
+		hidden: true,
+		description: 'OAuth and credential accounts',
+	},
+	access: {
+		admin: ({ req }) => req.user?.role === 'admin',
+		read: () => false, // Never expose OAuth tokens/password hashes via API — Better Auth owns this data
+		create: () => false,
+		update: () => false,
+		delete: () => false,
+	},
+});
+
+// ============================================
+// auth-verification — Better Auth "verification" table
+// ============================================
+
+export const AuthVerificationCollection: CollectionConfig = defineCollection({
+	slug: 'auth-verification',
+	dbName: 'verification',
+	managed: true,
+	timestamps: true,
+	fields: [
+		text('identifier', { required: true }),
+		text('value', { required: true }),
+		date('expiresAt', { required: true }),
+	],
+	admin: {
+		group: 'Authentication',
+		hidden: true,
+		description: 'Email verification and password reset tokens',
+	},
+	access: {
+		admin: ({ req }) => req.user?.role === 'admin',
+		read: () => false,
+		create: () => false,
+		update: () => false,
+		delete: () => false,
+	},
+});
+
+// ============================================
+// auth-api-keys — Better Auth "_api_keys" table
+// ============================================
+
+export const AuthApiKeysCollection: CollectionConfig = defineCollection({
+	slug: 'auth-api-keys',
+	dbName: '_api_keys',
+	managed: true,
+	timestamps: true,
+	fields: [
+		text('name', { required: true }),
+		text('keyHash', { required: true }),
+		text('keyPrefix', { required: true }),
+		text('createdBy', { required: true }),
+		select('role', {
+			options: [
+				{ label: 'User', value: 'user' },
+				{ label: 'Admin', value: 'admin' },
+			],
+			defaultValue: 'user',
+		}),
+		date('expiresAt'),
+		date('lastUsedAt'),
+	],
+	indexes: [{ columns: ['keyHash'], unique: true }, { columns: ['createdBy'] }],
+	admin: {
+		group: 'Authentication',
+		useAsTitle: 'name',
+		defaultColumns: ['name', 'keyPrefix', 'role', 'createdAt', 'lastUsedAt'],
+		description: 'API keys for programmatic access',
+	},
+	access: {
+		admin: ({ req }) => req.user?.role === 'admin',
+		read: ({ req }) => req.user?.role === 'admin',
+		create: ({ req }) => req.user?.role === 'admin',
+		update: () => false,
+		delete: ({ req }) => req.user?.role === 'admin',
+	},
+});
+
+/**
+ * All base auth collections.
+ * These are injected into the Momentum config by the auth plugin's onInit.
+ */
+export const BASE_AUTH_COLLECTIONS: CollectionConfig[] = [
+	AuthUserCollection,
+	AuthSessionCollection,
+	AuthAccountCollection,
+	AuthVerificationCollection,
+	AuthApiKeysCollection,
+];

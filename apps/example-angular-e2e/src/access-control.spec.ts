@@ -23,8 +23,8 @@ test.describe('Backend Access Control', () => {
 			expect(response.status()).toBe(200);
 		});
 
-		test('GET /api/users should deny unauthenticated read', async ({ request }) => {
-			const response = await request.get('/api/users');
+		test('GET /api/auth-user should deny unauthenticated read', async ({ request }) => {
+			const response = await request.get('/api/auth-user');
 			// Users collection has read: admin only
 			expect(response.status()).toBe(403);
 		});
@@ -62,16 +62,15 @@ test.describe('Backend Access Control', () => {
 
 			// Find posts and users collections
 			const posts = data.collections.find((c: { slug: string }) => c.slug === 'posts');
-			const users = data.collections.find((c: { slug: string }) => c.slug === 'users');
+			const users = data.collections.find((c: { slug: string }) => c.slug === 'auth-user');
 
 			// Unauthenticated users shouldn't have admin access to any collection
-			if (posts) {
-				expect(posts.canAccess).toBe(false); // admin requires auth
-				expect(posts.canRead).toBe(true); // public read
-			}
-			if (users) {
-				expect(users.canAccess).toBe(false); // admin only
-			}
+			expect(posts, 'posts collection should exist in /api/access response').toBeDefined();
+			expect(posts.canAccess).toBe(false); // admin requires auth
+			expect(posts.canRead).toBe(true); // public read
+
+			expect(users, 'auth-user collection should exist in /api/access response').toBeDefined();
+			expect(users.canAccess).toBe(false); // admin only
 		});
 	});
 });
@@ -126,14 +125,12 @@ test.describe('Authenticated Access Control', () => {
 			const posts = data.collections.find((c: { slug: string }) => c.slug === 'posts');
 
 			// Admin user should have full access to posts
-			expect(posts).toBeDefined();
-			if (posts) {
-				expect(posts.canAccess).toBe(true);
-				expect(posts.canCreate).toBe(true);
-				expect(posts.canRead).toBe(true);
-				expect(posts.canUpdate).toBe(true);
-				// canDelete depends on role - admin can delete, regular users cannot
-			}
+			expect(posts, 'posts collection should exist in /api/access response').toBeDefined();
+			expect(posts.canAccess).toBe(true);
+			expect(posts.canCreate).toBe(true);
+			expect(posts.canRead).toBe(true);
+			expect(posts.canUpdate).toBe(true);
+			// canDelete depends on role - admin can delete, regular users cannot
 		});
 	});
 });
@@ -269,7 +266,7 @@ test.describe('Role-Based Access Control', () => {
 		test('admin user can access users collection via API', async ({ authenticatedPage }) => {
 			// The test user is admin (created by global setup)
 			// Use the page's request context which automatically includes cookies
-			const response = await authenticatedPage.request.get('/api/users');
+			const response = await authenticatedPage.request.get('/api/auth-user');
 
 			// Admin should be able to read users
 			expect(response.status()).toBe(200);

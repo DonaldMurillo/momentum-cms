@@ -1,8 +1,10 @@
 import { defineMomentumConfig } from '@momentum-cms/core';
 import { postgresAdapter } from '@momentum-cms/db-drizzle';
+import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
 import { localStorageAdapter } from '@momentum-cms/storage';
 import { eventBusPlugin } from '@momentum-cms/plugins/core';
 import { analyticsPlugin, MemoryAnalyticsAdapter } from '@momentum-cms/plugins/analytics';
+import { momentumAuth, authTwoFactor } from '@momentum-cms/auth';
 import {
 	Categories,
 	Articles,
@@ -11,7 +13,6 @@ import {
 	Settings,
 	Events,
 	MediaCollection,
-	Users,
 	HookTestItems,
 	FieldTestItems,
 	Tags,
@@ -35,6 +36,35 @@ export const analytics = analyticsPlugin({
 	excludeCollections: ['_seed_tracking'],
 	adminDashboard: true,
 	trackingRules: { cacheTtl: 0 }, // No cache for E2E testing
+});
+
+/**
+ * Database adapter — shared between Momentum and the auth plugin.
+ */
+const dbAdapter = postgresAdapter({
+	connectionString:
+		process.env['DATABASE_URL'] ??
+		'postgresql://postgres:postgres@localhost:5432/momentum_seeding_test',
+});
+
+// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- PostgresAdapter implements PostgresAdapterWithRaw
+const pool = (dbAdapter as PostgresAdapterWithRaw).getPool();
+
+const authBaseURL =
+	process.env['BETTER_AUTH_URL'] || `http://localhost:${process.env['PORT'] || 4001}`;
+
+/**
+ * Auth plugin — manages Better Auth integration, user tables, and middleware.
+ * Includes 2FA sub-plugin for testing.
+ */
+export const authPlugin = momentumAuth({
+	db: { type: 'postgres', pool },
+	baseURL: authBaseURL,
+	trustedOrigins: ['http://localhost:4200', authBaseURL],
+	email: {
+		appName: 'Seeding Test App',
+	},
+	plugins: [authTwoFactor()],
 });
 
 /**
@@ -100,16 +130,10 @@ interface SettingsDoc {
  * - Logger, event bus plugin, analytics plugin (server + client ingest)
  *
  * Note: Admin user is seeded as the first user for consistent test state.
- * User password hashing is handled by Better Auth hooks in server.ts.
+ * User password hashing is handled by Better Auth signup API via authUser() seed helper.
  */
 export default defineMomentumConfig({
-	db: {
-		adapter: postgresAdapter({
-			connectionString:
-				process.env['DATABASE_URL'] ??
-				'postgresql://postgres:postgres@localhost:5432/momentum_seeding_test',
-		}),
-	},
+	db: { adapter: dbAdapter },
 	collections: [
 		Categories,
 		Articles,
@@ -118,7 +142,6 @@ export default defineMomentumConfig({
 		Settings,
 		Events,
 		MediaCollection,
-		Users,
 		HookTestItems,
 		FieldTestItems,
 		Tags,
@@ -148,16 +171,15 @@ export default defineMomentumConfig({
 		level: 'debug',
 		format: 'pretty',
 	},
-	plugins: [events, analytics],
+	plugins: [events, analytics, authPlugin],
 	seeding: {
 		defaults: ({ authUser, collection }) => [
-			// Seed admin user first for E2E tests (synced with Better Auth)
+			// Seed admin user first for E2E tests (created via Better Auth signup API)
 			authUser('user-admin', {
 				name: 'Test Admin',
 				email: 'admin@test.com',
 				password: 'TestPassword123!',
 				role: 'admin',
-				active: true,
 			}),
 			// Seed categories for testing
 			collection<CategoryDoc>('categories').create('cat-tech', {

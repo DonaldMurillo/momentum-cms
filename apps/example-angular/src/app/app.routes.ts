@@ -1,6 +1,7 @@
 import { Route } from '@angular/router';
 import { momentumAdminRoutes } from '@momentum-cms/admin';
 import { KitchenSinkPage } from '@momentum-cms/ui';
+import { BASE_AUTH_COLLECTIONS } from '@momentum-cms/auth/collections';
 import { collections } from '../collections';
 import { globals } from '../globals';
 
@@ -24,7 +25,7 @@ export const appRoutes: Route[] = [
 	// Mount admin UI at /admin
 	...momentumAdminRoutes({
 		basePath: '/admin',
-		collections,
+		collections: [...collections, ...BASE_AUTH_COLLECTIONS],
 		globals,
 		branding: {
 			title: 'Momentum CMS',
