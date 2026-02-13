@@ -6,7 +6,7 @@ Better Auth integration for Momentum CMS. Plugin-based architecture that manages
 
 ```
 momentumAuth(config)          ← Plugin factory (auth-plugin.ts)
-  ├── BASE_AUTH_COLLECTIONS   ← 5 managed collections (auth-collections.ts)
+  ├── BASE_AUTH_COLLECTIONS   ← 5 auth collections (auth-collections.ts)
   ├── createMomentumAuth()    ← Better Auth instance (auth.ts)
   └── sub-plugins[]           ← Composable extensions (plugins/)
         ├── authTwoFactor()
@@ -41,9 +41,9 @@ Auth collections use `auth-` prefixed slugs to avoid conflicts with user-defined
 | `auth-session`      | `session`      | No (hidden)                 | Admin read, no write                                |
 | `auth-account`      | `account`      | No (hidden)                 | No read (contains OAuth tokens/passwords), no write |
 | `auth-verification` | `verification` | No (hidden)                 | No access                                           |
-| `auth-api-keys`     | `_api_keys`    | Yes (group: Authentication) | Admin only                                          |
+| `auth-api-keys`     | `_api_keys`    | Yes (group: Authentication) | Any authenticated user (scoped by `defaultWhere`)   |
 
-All auth collections are `managed: true` — the API blocks write operations (POST/PATCH/DELETE return 403). Better Auth owns the data.
+Internal collections (`auth-session`, `auth-account`, `auth-verification`) are `managed: true` — the API blocks write operations (POST/PATCH/DELETE return 403). Better Auth owns the data. `auth-user` and `auth-api-keys` are NOT managed: `auth-user` allows admin CRUD, `auth-api-keys` blocks writes via access control and routes deletion through the dedicated `/api/auth/api-keys/:id` endpoint with ownership checks.
 
 ## Critical: Session and Role Handling
 

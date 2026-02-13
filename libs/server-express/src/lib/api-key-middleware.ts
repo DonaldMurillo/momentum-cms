@@ -87,7 +87,8 @@ export function createApiKeyResolverMiddleware(
 	};
 }
 
-/** Role hierarchy for permission checks. Lower index = higher privilege. */
+/** Role hierarchy for permission checks. Lower index = higher privilege.
+ * Canonical source: AUTH_ROLES in @momentum-cms/auth/collections */
 const ROLE_HIERARCHY = ['admin', 'editor', 'user', 'viewer'];
 
 /**
@@ -164,6 +165,17 @@ export function createApiKeyRoutes(config: ApiKeyMiddlewareConfig): Router {
 			return;
 		}
 
+		// Validate expiresAt if provided — invalid dates bypass expiration checks
+		let expiresAt: string | null = null;
+		if (body.expiresAt != null) {
+			const parsed = new Date(body.expiresAt);
+			if (isNaN(parsed.getTime())) {
+				res.status(400).json({ error: 'Invalid expiresAt date format. Use ISO 8601.' });
+				return;
+			}
+			expiresAt = parsed.toISOString();
+		}
+
 		try {
 			const key = generateApiKey();
 			const id = generateApiKeyId();
@@ -176,7 +188,7 @@ export function createApiKeyRoutes(config: ApiKeyMiddlewareConfig): Router {
 				keyPrefix: getKeyPrefix(key),
 				createdBy: user.id,
 				role,
-				expiresAt: body.expiresAt ?? null,
+				expiresAt,
 				createdAt: now,
 				updatedAt: now,
 			});
@@ -189,7 +201,7 @@ export function createApiKeyRoutes(config: ApiKeyMiddlewareConfig): Router {
 				key,
 				keyPrefix: getKeyPrefix(key),
 				role,
-				expiresAt: body.expiresAt ?? null,
+				expiresAt,
 				createdAt: now,
 			});
 		} catch {

@@ -205,6 +205,14 @@ describe('Auth Collections', () => {
 			expect(keyHashField?.admin?.hidden).toBe(true);
 		});
 
+		it('should deny keyHash read via field-level access', () => {
+			const keyHashField = AuthApiKeysCollection.fields.find((f) => f.name === 'keyHash');
+			expect(keyHashField?.access?.read).toBeDefined();
+			expect(keyHashField?.access?.read?.({ req: { user: { id: '1', role: 'admin' } } })).toBe(
+				false,
+			);
+		});
+
 		it('should have createdBy as a relationship to auth-user', () => {
 			const createdByField = AuthApiKeysCollection.fields.find((f) => f.name === 'createdBy');
 			expect(createdByField?.type).toBe('relationship');
@@ -228,19 +236,23 @@ describe('Auth Collections', () => {
 			expect(AuthApiKeysCollection.access?.create?.({ req: userReq })).toBe(false);
 		});
 
-		it('should allow any authenticated user to read and delete', () => {
+		it('should allow any authenticated user to read', () => {
 			const adminReq = { user: { id: '1', role: 'admin' } };
 			const userReq = { user: { id: '2', role: 'user' } };
 			expect(AuthApiKeysCollection.access?.read?.({ req: adminReq })).toBe(true);
-			expect(AuthApiKeysCollection.access?.delete?.({ req: adminReq })).toBe(true);
 			expect(AuthApiKeysCollection.access?.read?.({ req: userReq })).toBe(true);
-			expect(AuthApiKeysCollection.access?.delete?.({ req: userReq })).toBe(true);
 		});
 
-		it('should deny unauthenticated read and delete', () => {
+		it('should deny delete for everyone (deletion only via dedicated route)', () => {
+			const adminReq = { user: { id: '1', role: 'admin' } };
+			const userReq = { user: { id: '2', role: 'user' } };
+			expect(AuthApiKeysCollection.access?.delete?.({ req: adminReq })).toBe(false);
+			expect(AuthApiKeysCollection.access?.delete?.({ req: userReq })).toBe(false);
+		});
+
+		it('should deny unauthenticated read', () => {
 			const noUserReq = { user: undefined };
 			expect(AuthApiKeysCollection.access?.read?.({ req: noUserReq })).toBe(false);
-			expect(AuthApiKeysCollection.access?.delete?.({ req: noUserReq })).toBe(false);
 		});
 
 		it('should have defaultWhere that scopes by user', () => {

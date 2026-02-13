@@ -19,7 +19,18 @@ import {
 	select,
 	relationship,
 } from '@momentum-cms/core';
-import type { CollectionConfig } from '@momentum-cms/core';
+import type { CollectionConfig, SelectOption } from '@momentum-cms/core';
+
+/**
+ * Canonical list of auth roles, ordered by privilege (highest first).
+ * Used by both server middleware and admin UI for role validation and display.
+ */
+export const AUTH_ROLES: SelectOption[] = [
+	{ label: 'Admin', value: 'admin' },
+	{ label: 'Editor', value: 'editor' },
+	{ label: 'User', value: 'user' },
+	{ label: 'Viewer', value: 'viewer' },
+];
 
 // ============================================
 // auth-user — Better Auth "user" table
@@ -164,7 +175,7 @@ export const AuthApiKeysCollection: CollectionConfig = defineCollection({
 	timestamps: true,
 	fields: [
 		text('name', { required: true }),
-		text('keyHash', { required: true, admin: { hidden: true } }),
+		text('keyHash', { required: true, admin: { hidden: true }, access: { read: () => false } }),
 		text('keyPrefix', { required: true }),
 		relationship('createdBy', {
 			required: true,
@@ -194,9 +205,9 @@ export const AuthApiKeysCollection: CollectionConfig = defineCollection({
 	access: {
 		admin: ({ req }) => !!req.user,
 		read: ({ req }) => !!req.user,
-		create: () => false, // API keys must be created through Better Auth (keyHash/keyPrefix generation)
+		create: () => false, // API keys must be created through dedicated /api/auth/api-keys endpoint
 		update: () => false,
-		delete: ({ req }) => !!req.user,
+		delete: () => false, // Deletion only via dedicated /api/auth/api-keys/:id (has ownership checks)
 	},
 	defaultWhere: (req) => {
 		if (!req.user) return { createdBy: '__none__' };

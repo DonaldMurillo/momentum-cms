@@ -35,7 +35,8 @@ interface ApiKeyCreateResponse {
 	createdAt: string;
 }
 
-/** Role hierarchy: lower index = higher privilege. */
+/** Role hierarchy: lower index = higher privilege.
+ * Keep in sync with AUTH_ROLES in @momentum-cms/auth/collections */
 const ROLE_HIERARCHY: SelectOption[] = [
 	{ label: 'Admin', value: 'admin' },
 	{ label: 'Editor', value: 'editor' },
@@ -95,11 +96,17 @@ const ROLE_HIERARCHY: SelectOption[] = [
 									variant="outline"
 									size="sm"
 									data-testid="copy-api-key"
+									[attr.aria-label]="
+										copied() ? 'API key copied to clipboard' : 'Copy API key to clipboard'
+									"
 									(click)="copyKey()"
 								>
 									{{ copied() ? 'Copied!' : 'Copy' }}
 								</button>
 							</div>
+							<span class="sr-only" aria-live="polite">
+								{{ copied() ? 'API key copied to clipboard' : '' }}
+							</span>
 						</div>
 						@if (generatedKeyPrefix()) {
 							<div class="text-sm text-muted-foreground">

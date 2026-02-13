@@ -409,3 +409,89 @@ test.describe('API Key Access Control', () => {
 		}
 	});
 });
+
+test.describe('API Key Security', () => {
+	let adminContext: APIRequestContext;
+	let createdKeyId: string;
+
+	test.beforeAll(async ({ playwright, workerBaseURL }) => {
+		adminContext = await playwright.request.newContext({
+			baseURL: workerBaseURL,
+			extraHTTPHeaders: { Origin: workerBaseURL },
+		});
+
+		const signInResponse = await adminContext.post('/api/auth/sign-in/email', {
+			data: {
+				email: TEST_CREDENTIALS.email,
+				password: TEST_CREDENTIALS.password,
+			},
+		});
+		expect(signInResponse.ok()).toBe(true);
+
+		// Create a key via dedicated route for use in delete tests
+		const createResponse = await adminContext.post('/api/auth/api-keys', {
+			data: { name: 'Security Test Key', role: 'user' },
+		});
+		expect(createResponse.status()).toBe(201);
+		const data = (await createResponse.json()) as { id: string };
+		createdKeyId = data.id;
+	});
+
+	test.afterAll(async () => {
+		await adminContext?.dispose();
+	});
+
+	test('generic CRUD delete is blocked (must use dedicated route)', async () => {
+		// Attempt to delete via generic CRUD route: DELETE /api/auth-api-keys/:id
+		// This should be denied because access.delete returns false for everyone
+		const response = await adminContext.delete(`/api/auth-api-keys/${createdKeyId}`);
+		expect(response.status()).toBe(403);
+
+		// Verify the key still exists via dedicated route
+		const listResponse = await adminContext.get('/api/auth/api-keys');
+		expect(listResponse.ok()).toBe(true);
+		const listData = (await listResponse.json()) as {
+			keys: Array<{ id: string }>;
+		};
+		expect(listData.keys.find((k) => k.id === createdKeyId)).toBeDefined();
+	});
+
+	test('generic CRUD list does not expose keyHash', async () => {
+		// Fetch API keys via generic CRUD route: GET /api/auth-api-keys
+		const response = await adminContext.get('/api/auth-api-keys');
+		expect(response.ok()).toBe(true);
+
+		const data = (await response.json()) as {
+			docs: Array<Record<string, unknown>>;
+		};
+		expect(data.docs.length).toBeGreaterThan(0);
+
+		// Verify no document contains keyHash (field-level access blocks it)
+		for (const doc of data.docs) {
+			expect(doc).not.toHaveProperty('keyHash');
+		}
+	});
+
+	test('dedicated route rejects invalid expiresAt date', async () => {
+		// POST with a non-date string for expiresAt
+		const response = await adminContext.post('/api/auth/api-keys', {
+			data: { name: 'Bad Expiry Key', role: 'user', expiresAt: 'never' },
+		});
+		expect(response.status()).toBe(400);
+
+		const data = (await response.json()) as { error: string };
+		expect(data.error).toContain('Invalid expiresAt date format');
+	});
+
+	test('dedicated route accepts valid expiresAt date', async () => {
+		const futureDate = new Date(Date.now() + 86400000).toISOString();
+		const response = await adminContext.post('/api/auth/api-keys', {
+			data: { name: 'Valid Expiry Key', role: 'user', expiresAt: futureDate },
+		});
+		expect(response.status()).toBe(201);
+
+		const data = (await response.json()) as { expiresAt: string | null };
+		expect(data.expiresAt).toBeDefined();
+		expect(data.expiresAt).not.toBeNull();
+	});
+});
