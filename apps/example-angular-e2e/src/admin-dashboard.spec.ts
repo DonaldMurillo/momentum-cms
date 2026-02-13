@@ -179,16 +179,22 @@ test.describe('Admin Sidebar Navigation', () => {
 		// Use specific aria-label to avoid ambiguity with breadcrumb nav
 		const sidebarNav = authenticatedPage.getByLabel('Main navigation');
 
-		// Click Posts in sidebar
-		await sidebarNav.getByRole('link', { name: 'Posts' }).click();
+		// Wait for sidebar links to be visible before clicking (collections load async)
+		const postsLink = sidebarNav.getByRole('link', { name: 'Posts' });
+		await expect(postsLink).toBeVisible({ timeout: 10000 });
+		await postsLink.click();
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/posts/);
 
 		// Click Dashboard in sidebar (page now has breadcrumb nav too)
-		await sidebarNav.getByRole('link', { name: 'Dashboard' }).click();
+		const dashboardLink = sidebarNav.getByRole('link', { name: 'Dashboard' });
+		await expect(dashboardLink).toBeVisible();
+		await dashboardLink.click();
 		await expect(authenticatedPage).toHaveURL(/\/admin$/);
 
 		// Click Users in sidebar
-		await sidebarNav.getByRole('link', { name: 'Users' }).click();
+		const usersLink = sidebarNav.getByRole('link', { name: 'Users' });
+		await expect(usersLink).toBeVisible();
+		await usersLink.click();
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/auth-user/);
 	});
 

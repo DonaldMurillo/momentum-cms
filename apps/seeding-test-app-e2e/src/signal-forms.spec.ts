@@ -191,8 +191,12 @@ test.describe('Signal Forms - Submit Behavior', () => {
 		// Click Create without filling required fields
 		await createButton.click();
 
-		// Should show a form-level error message
-		await expect(authenticatedPage.getByText(/Please fix the errors above/)).toBeVisible({
+		// Should show a form-level error message (scope to alert role to avoid matching live announcer)
+		await expect(
+			authenticatedPage
+				.locator('[role="alert"]')
+				.filter({ hasText: /Please fix the errors above/ }),
+		).toBeVisible({
 			timeout: 5000,
 		});
 

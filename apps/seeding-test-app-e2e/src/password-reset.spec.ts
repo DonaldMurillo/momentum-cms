@@ -63,9 +63,13 @@ test.describe('Password Reset Flow', () => {
 			await page.goto('/admin/forgot-password');
 			await page.waitForLoadState('domcontentloaded');
 
-			// Fill and submit the form
-			await page.getByLabel(/email/i).fill(TEST_USER.email);
-			await page.getByRole('button', { name: /send reset link/i }).click();
+			// Fill and submit the form (wait for hydration to enable button)
+			const emailInput = page.getByLabel(/email/i);
+			await expect(emailInput).toBeVisible({ timeout: 10000 });
+			await emailInput.fill(TEST_USER.email);
+			const sendButton = page.getByRole('button', { name: /send reset link/i });
+			await expect(sendButton).toBeEnabled({ timeout: 10000 });
+			await sendButton.click();
 
 			// Should show success message
 			await expect(page.getByText(/check your email/i)).toBeVisible({ timeout: 10000 });
@@ -76,9 +80,13 @@ test.describe('Password Reset Flow', () => {
 			await page.goto('/admin/forgot-password');
 			await page.waitForLoadState('domcontentloaded');
 
-			// Submit the form
-			await page.getByLabel(/email/i).fill(TEST_USER.email);
-			await page.getByRole('button', { name: /send reset link/i }).click();
+			// Submit the form (wait for hydration to enable button)
+			const emailInput = page.getByLabel(/email/i);
+			await expect(emailInput).toBeVisible({ timeout: 10000 });
+			await emailInput.fill(TEST_USER.email);
+			const sendButton = page.getByRole('button', { name: /send reset link/i });
+			await expect(sendButton).toBeEnabled({ timeout: 10000 });
+			await sendButton.click();
 
 			// Wait for success message
 			await expect(page.getByText(/check your email/i)).toBeVisible({ timeout: 10000 });
@@ -106,11 +114,15 @@ test.describe('Password Reset Flow', () => {
 		});
 
 		test('should display reset form with valid token', async ({ page }) => {
-			// First, request a password reset
+			// First, request a password reset (wait for hydration to enable button)
 			await page.goto('/admin/forgot-password');
 			await page.waitForLoadState('domcontentloaded');
-			await page.getByLabel(/email/i).fill(TEST_USER.email);
-			await page.getByRole('button', { name: /send reset link/i }).click();
+			const emailInput = page.getByLabel(/email/i);
+			await expect(emailInput).toBeVisible({ timeout: 10000 });
+			await emailInput.fill(TEST_USER.email);
+			const sendButton = page.getByRole('button', { name: /send reset link/i });
+			await expect(sendButton).toBeEnabled({ timeout: 10000 });
+			await sendButton.click();
 			await expect(page.getByText(/check your email/i)).toBeVisible({ timeout: 10000 });
 
 			// Get the reset URL from email
@@ -136,11 +148,15 @@ test.describe('Password Reset Flow', () => {
 	test.describe('Full Password Reset Flow', () => {
 		// This test modifies the user's password - run it last or reset after
 		test('should complete full password reset flow', async ({ page, context }) => {
-			// 1. Request password reset
+			// 1. Request password reset (wait for hydration to enable button)
 			await page.goto('/admin/forgot-password');
 			await page.waitForLoadState('domcontentloaded');
-			await page.getByLabel(/email/i).fill(TEST_USER.email);
-			await page.getByRole('button', { name: /send reset link/i }).click();
+			const emailInput = page.getByLabel(/email/i);
+			await expect(emailInput).toBeVisible({ timeout: 10000 });
+			await emailInput.fill(TEST_USER.email);
+			const sendButton = page.getByRole('button', { name: /send reset link/i });
+			await expect(sendButton).toBeEnabled({ timeout: 10000 });
+			await sendButton.click();
 			await expect(page.getByText(/check your email/i)).toBeVisible({ timeout: 10000 });
 
 			// 2. Get reset URL from email
@@ -155,9 +171,13 @@ test.describe('Password Reset Flow', () => {
 			await page.goto(resetUrl);
 			await page.waitForLoadState('domcontentloaded');
 
-			await page.getByLabel(/new password/i).fill(TEST_USER.newPassword);
+			const newPasswordInput = page.getByLabel(/new password/i);
+			await expect(newPasswordInput).toBeVisible({ timeout: 10000 });
+			await newPasswordInput.fill(TEST_USER.newPassword);
 			await page.getByLabel(/confirm password/i).fill(TEST_USER.newPassword);
-			await page.getByRole('button', { name: /reset password/i }).click();
+			const resetButton = page.getByRole('button', { name: /reset password/i });
+			await expect(resetButton).toBeEnabled({ timeout: 10000 });
+			await resetButton.click();
 
 			// 4. Should show success message
 			await expect(page.getByText(/password reset successful/i)).toBeVisible({ timeout: 10000 });
