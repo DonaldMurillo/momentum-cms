@@ -523,3 +523,79 @@ test.describe('API Key Security', () => {
 		expect(data.expiresAt).not.toBeNull();
 	});
 });
+
+test.describe('API Key Self-Replication Prevention', () => {
+	let adminContext: APIRequestContext;
+	let adminApiKey: string;
+
+	test.beforeAll(async ({ playwright, workerBaseURL }) => {
+		// Sign in as admin (session auth) and create an admin-role API key
+		adminContext = await playwright.request.newContext({
+			baseURL: workerBaseURL,
+			extraHTTPHeaders: { Origin: workerBaseURL },
+		});
+
+		const signInResponse = await adminContext.post('/api/auth/sign-in/email', {
+			data: {
+				email: TEST_CREDENTIALS.email,
+				password: TEST_CREDENTIALS.password,
+			},
+		});
+		expect(signInResponse.ok()).toBe(true);
+
+		const createResponse = await adminContext.post('/api/auth/api-keys', {
+			data: { name: 'Self-Replication Test Key', role: 'admin' },
+		});
+		expect(createResponse.status()).toBe(201);
+
+		const data = (await createResponse.json()) as { key: string };
+		adminApiKey = data.key;
+	});
+
+	test.afterAll(async () => {
+		await adminContext?.dispose();
+	});
+
+	test('API key cannot create another API key', async ({ playwright, workerBaseURL }) => {
+		// Use the API key (not session) to try to create another key
+		const keyContext = await playwright.request.newContext({
+			baseURL: workerBaseURL,
+			extraHTTPHeaders: { 'X-API-Key': adminApiKey },
+		});
+
+		try {
+			const response = await keyContext.post('/api/auth/api-keys', {
+				data: { name: 'Child Admin Key', role: 'admin' },
+			});
+			expect(response.status()).toBe(403);
+
+			const data = (await response.json()) as { error: string };
+			expect(data.error).toContain('API keys cannot create other API keys');
+		} finally {
+			await keyContext.dispose();
+		}
+	});
+
+	test('API key cannot create a lower-privilege key either', async ({
+		playwright,
+		workerBaseURL,
+	}) => {
+		// Even requesting a lower role should be blocked for API key auth
+		const keyContext = await playwright.request.newContext({
+			baseURL: workerBaseURL,
+			extraHTTPHeaders: { 'X-API-Key': adminApiKey },
+		});
+
+		try {
+			const response = await keyContext.post('/api/auth/api-keys', {
+				data: { name: 'Child Viewer Key', role: 'viewer' },
+			});
+			expect(response.status()).toBe(403);
+
+			const data = (await response.json()) as { error: string };
+			expect(data.error).toContain('API keys cannot create other API keys');
+		} finally {
+			await keyContext.dispose();
+		}
+	});
+});

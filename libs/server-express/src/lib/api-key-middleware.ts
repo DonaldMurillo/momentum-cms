@@ -140,6 +140,12 @@ export function createApiKeyRoutes(config: ApiKeyMiddlewareConfig): Router {
 			return;
 		}
 
+		// API keys cannot create other API keys — only session-authenticated users can
+		if (typeof user.id === 'string' && user.id.startsWith('apikey:')) {
+			res.status(403).json({ error: 'API keys cannot create other API keys' });
+			return;
+		}
+
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Request body typing
 		const body = req.body as { name?: string; role?: string; expiresAt?: string };
 
