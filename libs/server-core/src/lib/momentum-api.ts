@@ -343,17 +343,9 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		}
 
 		// Filter by defaultWhere constraints (e.g., user-scoped filtering)
-		if (this.collectionConfig.defaultWhere) {
-			const constraints = this.collectionConfig.defaultWhere(this.buildRequestContext());
-			if (constraints) {
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
-				const record = doc as Record<string, unknown>;
-				for (const [key, value] of Object.entries(constraints)) {
-					if (record[key] !== value) {
-						return null;
-					}
-				}
-			}
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
+		if (!this.matchesDefaultWhereConstraints(doc as Record<string, unknown>)) {
+			return null;
 		}
 
 		// Run afterRead hooks
@@ -473,6 +465,11 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			throw new DocumentNotFoundError(this.slug, id);
 		}
 
+		// Enforce defaultWhere constraints (e.g., user-scoped filtering)
+		if (!this.matchesDefaultWhereConstraints(originalDoc)) {
+			throw new DocumentNotFoundError(this.slug, id);
+		}
+
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Partial<T> is compatible with Record<string, unknown>
 		let processedData = data as Record<string, unknown>;
 
@@ -559,6 +556,11 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			throw new DocumentNotFoundError(this.slug, id);
 		}
 
+		// Enforce defaultWhere constraints (e.g., user-scoped filtering)
+		if (!this.matchesDefaultWhereConstraints(doc)) {
+			throw new DocumentNotFoundError(this.slug, id);
+		}
+
 		const softDeleteField = getSoftDeleteField(this.collectionConfig);
 
 		if (softDeleteField) {
@@ -604,6 +606,11 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Get document first (for hooks)
 		const doc = await this.adapter.findById(this.slug, id);
 		if (!doc) {
+			throw new DocumentNotFoundError(this.slug, id);
+		}
+
+		// Enforce defaultWhere constraints (e.g., user-scoped filtering)
+		if (!this.matchesDefaultWhereConstraints(doc)) {
 			throw new DocumentNotFoundError(this.slug, id);
 		}
 
@@ -867,6 +874,20 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 	// ============================================
 	// Private Helpers
 	// ============================================
+
+	/**
+	 * Checks whether a document satisfies the collection's defaultWhere constraints.
+	 * Returns false if the document is outside the current user's scope.
+	 */
+	private matchesDefaultWhereConstraints(doc: Record<string, unknown>): boolean {
+		if (!this.collectionConfig.defaultWhere) return true;
+		const constraints = this.collectionConfig.defaultWhere(this.buildRequestContext());
+		if (!constraints) return true;
+		for (const [key, value] of Object.entries(constraints)) {
+			if (doc[key] !== value) return false;
+		}
+		return true;
+	}
 
 	private async checkAccess(
 		operation: 'create' | 'read' | 'update' | 'delete',

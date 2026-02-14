@@ -47,10 +47,7 @@ export const AuthUserCollection: CollectionConfig = defineCollection({
 		checkbox('emailVerified'),
 		text('image'),
 		select('role', {
-			options: [
-				{ label: 'User', value: 'user' },
-				{ label: 'Admin', value: 'admin' },
-			],
+			options: AUTH_ROLES,
 			defaultValue: 'user',
 		}),
 	],
@@ -183,10 +180,7 @@ export const AuthApiKeysCollection: CollectionConfig = defineCollection({
 			label: 'Created By',
 		}),
 		select('role', {
-			options: [
-				{ label: 'User', value: 'user' },
-				{ label: 'Admin', value: 'admin' },
-			],
+			options: AUTH_ROLES,
 			defaultValue: 'user',
 		}),
 		date('expiresAt'),

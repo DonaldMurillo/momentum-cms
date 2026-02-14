@@ -268,8 +268,10 @@ export interface CollectionConfig {
 	};
 
 	/**
-	 * Default query constraints applied to all find/findById operations.
-	 * Returns WHERE conditions to inject, or undefined for no filtering.
+	 * Default query constraints applied to all CRUD operations (find, findById, update, delete).
+	 * For reads, constraints are injected into the query. For mutations, the document is checked
+	 * post-fetch and rejected with DocumentNotFoundError if it falls outside the user's scope.
+	 * Returns WHERE conditions to enforce, or undefined for no filtering.
 	 */
 	defaultWhere?: (req: RequestContext) => Record<string, unknown> | undefined;
 

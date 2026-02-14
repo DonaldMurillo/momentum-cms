@@ -75,6 +75,34 @@ test.describe('API Key Management', () => {
 		expect(response.status()).toBe(400);
 	});
 
+	test('all four AUTH_ROLES are accepted and stored correctly', async () => {
+		const roles = ['admin', 'editor', 'user', 'viewer'];
+
+		for (const role of roles) {
+			const response = await adminContext.post('/api/auth/api-keys', {
+				data: { name: `Role Test ${role}`, role },
+			});
+			expect(response.status()).toBe(201);
+
+			const data = (await response.json()) as { role: string };
+			expect(data.role).toBe(role);
+		}
+
+		// Verify all 4 roles appear correctly via the generic CRUD endpoint
+		const crudResponse = await adminContext.get('/api/auth-api-keys');
+		expect(crudResponse.ok()).toBe(true);
+
+		const crudData = (await crudResponse.json()) as {
+			docs: Array<{ name: string; role: string }>;
+		};
+
+		for (const role of roles) {
+			const match = crudData.docs.find((d) => d.name === `Role Test ${role}`);
+			expect(match).toBeDefined();
+			expect(match?.role).toBe(role);
+		}
+	});
+
 	test('list API keys returns created keys', async () => {
 		await adminContext.post('/api/auth/api-keys', {
 			data: { name: 'List Test Key', role: 'viewer' },

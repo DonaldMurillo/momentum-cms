@@ -16,6 +16,7 @@ import {
 	HookTestItems,
 	FieldTestItems,
 	Tags,
+	UserNotes,
 } from './collections';
 import { SiteSettings } from './globals';
 import { join } from 'node:path';
@@ -145,6 +146,7 @@ export default defineMomentumConfig({
 		HookTestItems,
 		FieldTestItems,
 		Tags,
+		UserNotes,
 	],
 	globals: [SiteSettings],
 	storage: {
