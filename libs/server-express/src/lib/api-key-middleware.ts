@@ -163,6 +163,10 @@ export function createApiKeyRoutes(config: ApiKeyMiddlewareConfig): Router {
 
 		// Non-admin users cannot create keys with a higher role than their own
 		const userRoleIndex = ROLE_HIERARCHY.indexOf(user.role ?? 'viewer');
+		if (user.role !== 'admin' && userRoleIndex === -1) {
+			res.status(403).json({ error: 'Unknown role — cannot determine privileges' });
+			return;
+		}
 		const requestedRoleIndex = ROLE_HIERARCHY.indexOf(role);
 		if (user.role !== 'admin' && requestedRoleIndex < userRoleIndex) {
 			res
