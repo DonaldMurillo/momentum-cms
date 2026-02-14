@@ -3,7 +3,7 @@
  *
  * NOTE: This file is intentionally duplicated between E2E apps since they
  * are separate Playwright projects that cannot share code via imports.
- * The canonical version is in seeding-test-app-e2e/src/fixtures/mailpit-helpers.ts.
+ * The canonical version is in example-angular-e2e/src/fixtures/mailpit-helpers.ts.
  */
 
 // Mailpit API endpoint

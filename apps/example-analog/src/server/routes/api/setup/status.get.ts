@@ -1,42 +1,31 @@
 import { defineEventHandler } from 'h3';
-import { initializeMomentumAPI, getMomentumAPI } from '@momentum-cms/server-core';
+import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
+import { ensureInitialized } from '../../../utils/momentum-init';
 import momentumConfig from '../../../../momentum.config';
-
-// Initialize Momentum API on first request
-let initialized = false;
 
 /**
  * GET /api/setup/status
- * Returns the setup status indicating if initial setup is needed.
+ *
+ * Returns whether the application needs initial setup (no users exist).
+ * Used by the admin frontend to redirect to the setup page on first visit.
+ * Queries the Better Auth "user" table directly (same as the Express setup middleware).
  */
 export default defineEventHandler(async () => {
-	// Initialize Momentum API if not already done
-	if (!initialized) {
-		await momentumConfig.db.adapter.initialize?.(momentumConfig.collections);
-		initializeMomentumAPI(momentumConfig);
-		initialized = true;
-	}
-
-	const api = getMomentumAPI();
-
-	// Use system context to check for users
-	const systemApi = api.setContext({
-		user: { id: 'system', email: 'system@localhost', role: 'admin' },
-	});
+	await ensureInitialized();
 
 	try {
-		// Check if any users exist
-		const usersCollection = systemApi.collection('users');
-		const result = await usersCollection.find({ limit: 1 });
-		const hasUsers = result.docs.length > 0;
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- PostgresAdapter implements PostgresAdapterWithRaw
+		const pool = (momentumConfig.db.adapter as PostgresAdapterWithRaw).getPool();
+		const result = await pool.query('SELECT COUNT(*) as count FROM "user"');
+		const count = Number(result.rows[0]?.count ?? 0);
+		const hasUsers = count > 0;
 
 		return {
 			needsSetup: !hasUsers,
 			hasUsers,
 		};
-	} catch (error) {
+	} catch {
 		// If checking fails, assume setup is needed for safety
-		console.error('[Setup] Error checking status:', error);
 		return {
 			needsSetup: true,
 			hasUsers: false,

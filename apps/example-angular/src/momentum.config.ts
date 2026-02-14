@@ -1,9 +1,14 @@
 import { defineMomentumConfig } from '@momentum-cms/core';
 import { postgresAdapter } from '@momentum-cms/db-drizzle';
-import { momentumAuth } from '@momentum-cms/auth';
 import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
-import { Posts } from './collections';
-import { SiteSettings } from './globals';
+import { momentumAuth } from '@momentum-cms/auth';
+import { localStorageAdapter } from '@momentum-cms/storage';
+import { eventBusPlugin } from '@momentum-cms/plugins/core';
+import { analyticsPlugin, MemoryAnalyticsAdapter } from '@momentum-cms/plugins/analytics';
+import { join } from 'node:path';
+import { collections } from '@momentum-cms/example-config/collections';
+import { globals } from '@momentum-cms/example-config/globals';
+import { exampleSeedingConfig } from '@momentum-cms/example-config';
 
 /**
  * Database adapter — shared between Momentum and the auth plugin.
@@ -32,16 +37,37 @@ export const authPlugin = momentumAuth({
 });
 
 /**
- * Momentum CMS Configuration
- *
- * This is the main entry point for configuring the CMS.
- * Similar to Payload CMS's payload.config.ts pattern.
+ * Plugin instances — exported for test endpoint wiring in server.ts.
  */
-export default defineMomentumConfig({
+export const analyticsAdapter = new MemoryAnalyticsAdapter();
+export const events = eventBusPlugin();
+export const analytics = analyticsPlugin({
+	adapter: analyticsAdapter,
+	trackCollections: true,
+	trackApi: true,
+	flushInterval: 1000, // 1s for fast E2E feedback
+	flushBatchSize: 10,
+	ingestRateLimit: 10, // Low for rate-limiting E2E test
+	excludeCollections: ['_seed_tracking'],
+	adminDashboard: true,
+	trackingRules: { cacheTtl: 0 }, // No cache for E2E testing
+});
+
+/**
+ * Momentum CMS configuration.
+ *
+ * Collections, globals, and seeding data are imported from @momentum-cms/example-config.
+ * DB adapter, auth, and plugins are configured here since they depend on runtime env vars.
+ */
+const config = defineMomentumConfig({
 	db: { adapter: dbAdapter },
-	collections: [Posts],
-	globals: [SiteSettings],
-	plugins: [authPlugin],
+	collections,
+	globals,
+	storage: {
+		adapter: localStorageAdapter({
+			directory: join(process.cwd(), 'data', 'uploads'),
+		}),
+	},
 	admin: {
 		basePath: '/admin',
 		branding: {
@@ -49,7 +75,7 @@ export default defineMomentumConfig({
 		},
 	},
 	server: {
-		port: 4000,
+		port: Number(process.env['PORT']) || 4000,
 		cors: {
 			// WARNING: Use specific origins in production (e.g. process.env['CORS_ORIGIN'])
 			origin: '*',
@@ -57,4 +83,12 @@ export default defineMomentumConfig({
 			headers: ['Content-Type', 'Authorization'],
 		},
 	},
+	logging: {
+		level: 'debug',
+		format: 'pretty',
+	},
+	plugins: [events, analytics, authPlugin],
+	seeding: exampleSeedingConfig,
 });
+
+export default config;

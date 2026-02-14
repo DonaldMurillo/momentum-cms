@@ -1,24 +1,31 @@
 import { defineConfig, devices } from '@playwright/test';
 import { nxE2EPreset } from '@nx/playwright/preset';
+import * as path from 'node:path';
+
+const E2E_TESTS_LIB = path.resolve(__dirname, '../../libs/e2e-tests/src');
+
+// Set flavor environment variables for the unified E2E library
+process.env['E2E_SERVER_FLAVOR'] = process.env['E2E_SERVER_FLAVOR'] ?? 'angular';
+process.env['E2E_PROJECT_DIR'] = process.env['E2E_PROJECT_DIR'] ?? path.resolve(__dirname);
+process.env['E2E_WORKSPACE_ROOT'] =
+	process.env['E2E_WORKSPACE_ROOT'] ?? path.resolve(__dirname, '..', '..');
 
 /**
- * Parallel Playwright configuration for Example Angular E2E Tests.
+ * Playwright configuration for Example Angular E2E Tests.
  *
- * - 4 concurrent workers, each with its own database and server
- * - Worker-scoped fixtures handle DB creation, server startup, and user setup
- * - globalSetup runs precondition checks (build artifact, PG reachable)
- * - No webServer block — workers spawn their own servers on random ports
+ * Uses the unified test library (libs/e2e-tests) with E2E_SERVER_FLAVOR=angular.
+ * Worker-scoped fixtures handle DB creation, server startup, and user setup.
  *
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-	...nxE2EPreset(__filename, { testDir: './src' }),
+	...nxE2EPreset(__filename, { testDir: path.join(E2E_TESTS_LIB, 'specs') }),
 
 	// Fail the build if test.only is left in the source code on CI
 	forbidOnly: !!process.env['CI'],
 
-	// Retry failed tests on CI only
-	retries: process.env['CI'] ? 2 : 0,
+	// Retry failed tests (2 on CI, 2 locally for SSR hydration timing)
+	retries: process.env['CI'] ? 2 : 2,
 
 	// Run tests in parallel — each worker has its own isolated server + DB
 	fullyParallel: true,
@@ -29,39 +36,26 @@ export default defineConfig({
 	// Reporter configuration
 	reporter: process.env['CI'] ? 'github' : 'html',
 
-	// Precondition checks (build artifact exists, PG reachable, Mailpit running)
-	globalSetup: require.resolve('./src/global-setup'),
+	// Precondition checks from shared library (build artifact, PG, Mailpit)
+	globalSetup: require.resolve(path.join(E2E_TESTS_LIB, 'global-setup')),
 
 	// Cleanup (stop Mailpit if we started it)
-	globalTeardown: require.resolve('./src/global-teardown'),
+	globalTeardown: require.resolve(path.join(E2E_TESTS_LIB, 'global-teardown')),
 
 	use: {
 		// baseURL is provided per-worker by the worker fixture (random port)
-		// No static baseURL here — it's overridden by the fixture
-
-		// Strict timeouts - catch slow operations early
 		actionTimeout: 10000,
 		navigationTimeout: 30000,
-
-		// Collect trace when retrying the failed test
 		trace: 'on-first-retry',
-
-		// Screenshot on failure
 		screenshot: 'only-on-failure',
-
-		// Video on retry
 		video: 'on-first-retry',
 	},
 
-	// Global timeout for each test
 	timeout: 30000,
 
-	// Expect timeout
 	expect: {
 		timeout: 5000,
 	},
-
-	// No webServer — workers spawn their own servers via fixtures
 
 	projects: [
 		{

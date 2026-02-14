@@ -37,6 +37,27 @@ export type GetQueryFn = (event: H3Event) => Record<string, string | string[]>;
 export type GetRouterParamsFn = (event: H3Event) => Record<string, string>;
 
 /**
+ * Parses the `where` query parameter.
+ * Handles both JSON string format (?where={"slug":{"equals":"home"}})
+ * and pre-parsed object format from h3/qs.
+ */
+function parseWhereParam(raw: unknown): Record<string, unknown> | undefined {
+	if (typeof raw === 'string') {
+		try {
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- JSON.parse returns unknown
+			return JSON.parse(raw) as Record<string, unknown>;
+		} catch {
+			return undefined;
+		}
+	}
+	if (typeof raw === 'object' && raw !== null) {
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- qs parsed object
+		return raw as Record<string, unknown>;
+	}
+	return undefined;
+}
+
+/**
  * Creates an h3 event handler for Momentum CMS API.
  *
  * Usage in Analog.js:
@@ -83,6 +104,10 @@ export function createMomentumHandler(config: MomentumConfig | ResolvedMomentumC
 			limit: queryParams['limit'] ? Number(queryParams['limit']) : undefined,
 			page: queryParams['page'] ? Number(queryParams['page']) : undefined,
 			sort: typeof sortParam === 'string' ? sortParam : undefined,
+			depth: queryParams['depth'] ? Number(queryParams['depth']) : undefined,
+			where: parseWhereParam(queryParams['where']),
+			withDeleted: queryParams['withDeleted'] === 'true',
+			onlyDeleted: queryParams['onlyDeleted'] === 'true',
 		};
 
 		// Parse body for POST/PATCH/PUT

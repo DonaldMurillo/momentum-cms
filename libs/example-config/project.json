@@ -1,0 +1,8 @@
+{
+	"name": "example-config",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/example-config/src",
+	"projectType": "library",
+	"tags": ["scope:app"],
+	"targets": {}
+}
