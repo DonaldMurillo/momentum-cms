@@ -1,4 +1,11 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
+import {
+	Component,
+	ChangeDetectionStrategy,
+	inject,
+	signal,
+	computed,
+	afterNextRender,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import {
 	Input,
@@ -64,7 +71,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 							[(value)]="name"
 							placeholder="Your name"
 							autocomplete="name"
-							[disabled]="isSubmitting()"
+							[disabled]="!hydrated() || isSubmitting()"
 						/>
 					</mcms-form-field>
 
@@ -77,7 +84,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 							[(value)]="email"
 							placeholder="admin@example.com"
 							autocomplete="email"
-							[disabled]="isSubmitting()"
+							[disabled]="!hydrated() || isSubmitting()"
 						/>
 					</mcms-form-field>
 
@@ -90,7 +97,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 							[(value)]="password"
 							placeholder="At least 8 characters"
 							autocomplete="new-password"
-							[disabled]="isSubmitting()"
+							[disabled]="!hydrated() || isSubmitting()"
 						/>
 					</mcms-form-field>
 
@@ -107,7 +114,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 							[(value)]="confirmPassword"
 							placeholder="Repeat your password"
 							autocomplete="new-password"
-							[disabled]="isSubmitting()"
+							[disabled]="!hydrated() || isSubmitting()"
 						/>
 					</mcms-form-field>
 
@@ -115,7 +122,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 						mcms-button
 						type="submit"
 						class="w-full"
-						[disabled]="isSubmitting() || !isValid()"
+						[disabled]="!hydrated() || isSubmitting() || !isValid()"
 					>
 						@if (isSubmitting()) {
 							<span class="animate-spin" aria-hidden="true">⏳</span>
@@ -136,6 +143,15 @@ import { MomentumAuthService } from '../../services/auth.service';
 export class SetupPage {
 	private readonly auth = inject(MomentumAuthService);
 	private readonly router = inject(Router);
+
+	/** Whether the component has been hydrated (SSR → client transition complete) */
+	readonly hydrated = signal(false);
+
+	constructor() {
+		afterNextRender(() => {
+			this.hydrated.set(true);
+		});
+	}
 
 	// Form state
 	readonly name = signal('');

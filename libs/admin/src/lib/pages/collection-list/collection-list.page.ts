@@ -2,13 +2,18 @@ import { Component, ChangeDetectionStrategy, inject, computed, viewChild } from 
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs/operators';
-import type { CollectionConfig } from '@momentum-cms/core';
+import type { AdminConfig, CollectionConfig } from '@momentum-cms/core';
+import { DialogService } from '@momentum-cms/ui';
 import { getCollectionsFromRouteData } from '../../utils/route-data';
 import { EntityListWidget } from '../../widgets/entity-list/entity-list.component';
 import type { Entity, EntityAction } from '../../widgets/widget.types';
 import type { EntityListBulkActionEvent } from '../../widgets/entity-list/entity-list.types';
 import { injectMomentumAPI } from '../../services/momentum-api.service';
 import { FeedbackService } from '../../widgets/feedback/feedback.service';
+import {
+	GenerateApiKeyDialog,
+	type GenerateApiKeyDialogData,
+} from '../../components/generate-api-key-dialog/generate-api-key-dialog.component';
 
 /**
  * Collection List Page Component
@@ -29,8 +34,10 @@ import { FeedbackService } from '../../widgets/feedback/feedback.service';
 				[basePath]="basePath"
 				[selectable]="true"
 				[bulkActions]="bulkActions()"
+				[headerActions]="headerActions()"
 				(entityClick)="onEntityClick($event)"
 				(bulkAction)="onBulkAction($event)"
+				(headerActionClick)="onHeaderAction($event)"
 			/>
 		} @else {
 			<div class="p-12 text-center text-muted-foreground">Collection not found</div>
@@ -42,6 +49,7 @@ export class CollectionListPage {
 	private readonly router = inject(Router);
 	private readonly api = injectMomentumAPI();
 	private readonly feedback = inject(FeedbackService);
+	private readonly dialog = inject(DialogService);
 
 	readonly entityList = viewChild<EntityListWidget>('entityList');
 
@@ -61,6 +69,10 @@ export class CollectionListPage {
 		return collections.find((c) => c.slug === currentSlug);
 	});
 
+	readonly headerActions = computed((): NonNullable<AdminConfig['headerActions']> => {
+		return this.collection()?.admin?.headerActions ?? [];
+	});
+
 	readonly bulkActions = computed((): EntityAction[] => [
 		{
 			id: 'delete',
@@ -74,6 +86,23 @@ export class CollectionListPage {
 		const col = this.collection();
 		if (col) {
 			this.router.navigate([this.basePath, col.slug, entity.id]);
+		}
+	}
+
+	onHeaderAction(action: NonNullable<AdminConfig['headerActions']>[number]): void {
+		if (action.id === 'generate-key' && action.endpoint) {
+			const ref = this.dialog.open<GenerateApiKeyDialog, GenerateApiKeyDialogData, boolean>(
+				GenerateApiKeyDialog,
+				{
+					width: '28rem',
+					data: { endpoint: action.endpoint },
+				},
+			);
+			ref.afterClosed.subscribe((created) => {
+				if (created) {
+					this.entityList()?.reload();
+				}
+			});
 		}
 	}
 

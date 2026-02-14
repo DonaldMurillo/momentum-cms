@@ -1,9 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
-import { PLATFORM_ID } from '@angular/core';
+import { PLATFORM_ID, signal, computed } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { PageComponent } from './page.component';
-import { BLOCK_COMPONENT_REGISTRY } from '@momentum-cms/ui';
+import { BLOCK_COMPONENT_REGISTRY, DialogService } from '@momentum-cms/ui';
+import { MomentumAuthService } from '@momentum-cms/admin';
 
 describe('PageComponent', () => {
 	let component: PageComponent;
@@ -40,6 +41,18 @@ describe('PageComponent', () => {
 				{
 					provide: BLOCK_COMPONENT_REGISTRY,
 					useValue: new Map(),
+				},
+				{
+					provide: MomentumAuthService,
+					useValue: {
+						loading: signal(false),
+						isAdmin: computed(() => false),
+						initialize: vi.fn().mockResolvedValue(undefined),
+					},
+				},
+				{
+					provide: DialogService,
+					useValue: { open: vi.fn() },
 				},
 			],
 		});

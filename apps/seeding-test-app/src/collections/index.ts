@@ -5,10 +5,10 @@ import { Pages } from './pages.collection';
 import { Settings } from './settings.collection';
 import { Events } from './events.collection';
 import { MediaCollection } from '@momentum-cms/core';
-import { Users } from './users.collection';
 import { HookTestItems } from './hook-test-items.collection';
 import { FieldTestItems } from './field-test-items.collection';
 import { Tags } from './tags.collection';
+import { UserNotes } from './user-notes.collection';
 import type { CollectionConfig } from '@momentum-cms/core';
 
 export const collections: CollectionConfig[] = [
@@ -19,10 +19,10 @@ export const collections: CollectionConfig[] = [
 	Settings,
 	Events,
 	MediaCollection,
-	Users,
 	HookTestItems,
 	FieldTestItems,
 	Tags,
+	UserNotes,
 ];
 
 export {
@@ -33,8 +33,8 @@ export {
 	Settings,
 	Events,
 	MediaCollection,
-	Users,
 	HookTestItems,
 	FieldTestItems,
 	Tags,
+	UserNotes,
 };

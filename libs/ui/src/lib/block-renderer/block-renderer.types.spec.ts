@@ -7,10 +7,10 @@ import {
 	provideBlockComponents,
 } from './block-renderer.types';
 
-@Component({ selector: 'test-comp', template: '' })
+@Component({ selector: 'mcms-test-comp', template: '' })
 class TestComponent {}
 
-@Component({ selector: 'test-comp-b', template: '' })
+@Component({ selector: 'mcms-test-comp-b', template: '' })
 class TestComponentB {}
 
 describe('block-renderer.types', () => {

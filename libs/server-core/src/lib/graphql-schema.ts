@@ -420,7 +420,7 @@ export function buildGraphQLSchema(collections: CollectionConfig[]): GraphQLSche
 		}
 
 		// --- Mutations ---
-		if (!col.graphQL?.disableMutations) {
+		if (!col.graphQL?.disableMutations && !col.managed) {
 			// create
 			mutationFields[`create${singular}`] = {
 				type: docType,

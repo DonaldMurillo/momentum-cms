@@ -171,9 +171,22 @@ export interface MomentumPlugin {
 	/** Unique plugin name */
 	name: string;
 
+	/** Static collections declared by this plugin.
+	 *  Read at config time by `momentumAdminRoutes(config)` to include
+	 *  plugin collections in the admin UI route data.
+	 *  Plugins should still push collections in `onInit` for server-side
+	 *  schema generation and API registration. */
+	collections?: CollectionConfig[];
+
 	/** Static admin routes declared by this plugin.
 	 *  Read at config time — no async needed. */
 	adminRoutes?: PluginAdminRouteDescriptor[];
+
+	/** Synchronously transform the merged collections at config time.
+	 *  Called by `momentumAdminRoutes()` so the admin UI reflects plugin modifications
+	 *  (e.g., injected fields). Also called during server-side `initializeMomentum()`.
+	 *  Must be idempotent — may be called more than once. */
+	modifyCollections?(collections: CollectionConfig[]): void;
 
 	/** Called before API initialization. Inject hooks here. */
 	onInit?(context: PluginContext): void | Promise<void>;

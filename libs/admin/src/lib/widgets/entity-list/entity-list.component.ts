@@ -100,6 +100,16 @@ import {
 							{{ viewingTrash() ? 'View Active' : 'View Trash' }}
 						</button>
 					}
+					@for (action of headerActions(); track action.id) {
+						<button
+							mcms-button
+							variant="outline"
+							[attr.data-testid]="'header-action-' + action.id"
+							(click)="headerActionClick.emit(action)"
+						>
+							{{ action.label }}
+						</button>
+					}
 					@if (canCreate() && !viewingTrash()) {
 						<button mcms-button variant="primary" (click)="onCreateClick()">
 							Create {{ collectionLabelSingular() }}
@@ -205,6 +215,15 @@ export class EntityListWidget<T extends Entity = Entity> {
 
 	/** Bulk actions for selected entities */
 	readonly bulkActions = input<EntityAction[]>([]);
+
+	/** Custom action buttons displayed in the collection list header */
+	readonly headerActions = input<
+		NonNullable<NonNullable<CollectionConfig['admin']>['headerActions']>
+	>([]);
+
+	/** Emitted when a header action button is clicked */
+	readonly headerActionClick =
+		output<NonNullable<NonNullable<CollectionConfig['admin']>['headerActions']>[number]>();
 
 	/** Whether the table is searchable */
 	readonly searchable = input(true);

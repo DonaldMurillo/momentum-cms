@@ -40,16 +40,15 @@ test.describe('Admin Dashboard', () => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		// Cards show document count badges (e.g., "3 docs")
-		// Verify the cards have badge elements
+		// Dashboard shows cards for all accessible collections (posts + auth collections)
 		const cards = authenticatedPage.locator('mcms-collection-card');
-		await expect(cards).toHaveCount(2);
+		const count = await cards.count();
+		expect(count).toBeGreaterThanOrEqual(2);
 
-		// Each card should have a badge with a count
-		for (const card of await cards.all()) {
-			const badge = card.locator('mcms-badge');
-			await expect(badge).toBeVisible();
-		}
+		// Verify at least the Posts card has a badge with a count
+		const postsCard = cards.filter({ hasText: 'Posts' });
+		const badge = postsCard.locator('mcms-badge');
+		await expect(badge).toBeVisible();
 	});
 
 	test('should navigate to Posts collection when clicking View all', async ({
@@ -80,8 +79,50 @@ test.describe('Admin Dashboard', () => {
 			.filter({ hasText: 'Users' });
 		await usersCard.getByRole('link', { name: /View all/i }).click();
 
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users/);
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/auth-user/);
 		await expect(authenticatedPage.getByRole('heading', { name: 'Users' })).toBeVisible();
+	});
+
+	test('should show numeric count badge on Users card, not error', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		const usersCard = authenticatedPage
+			.locator('mcms-collection-card')
+			.filter({ hasText: 'Users' });
+		const badge = usersCard.locator('mcms-badge');
+		await expect(badge).toBeVisible({ timeout: 15000 });
+
+		// Badge should contain a number, not "Error"
+		const badgeText = await badge.textContent();
+		expect(badgeText?.trim()).not.toBe('Error');
+		expect(badgeText?.trim()).toMatch(/^\d+$/);
+	});
+
+	test('should NOT display hidden auth collections as dashboard cards', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('networkidle');
+
+		// Hidden auth collections (auth-session, auth-account, auth-verification)
+		// should NOT appear as collection cards on the dashboard
+		const sessionCard = authenticatedPage.locator('mcms-collection-card', {
+			has: authenticatedPage.getByRole('heading', { name: 'Auth Session', level: 3 }),
+		});
+		await expect(sessionCard).toHaveCount(0);
+
+		const accountCard = authenticatedPage.locator('mcms-collection-card', {
+			has: authenticatedPage.getByRole('heading', { name: 'Auth Account', level: 3 }),
+		});
+		await expect(accountCard).toHaveCount(0);
+
+		const verificationCard = authenticatedPage.locator('mcms-collection-card', {
+			has: authenticatedPage.getByRole('heading', { name: 'Auth Verification', level: 3 }),
+		});
+		await expect(verificationCard).toHaveCount(0);
 	});
 });
 
@@ -138,35 +179,32 @@ test.describe('Admin Sidebar Navigation', () => {
 		// Use specific aria-label to avoid ambiguity with breadcrumb nav
 		const sidebarNav = authenticatedPage.getByLabel('Main navigation');
 
-		// Click Posts in sidebar
-		await sidebarNav.getByRole('link', { name: 'Posts' }).click();
+		// Wait for sidebar links to be visible before clicking (collections load async)
+		const postsLink = sidebarNav.getByRole('link', { name: 'Posts' });
+		await expect(postsLink).toBeVisible({ timeout: 10000 });
+		await postsLink.click();
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/posts/);
 
 		// Click Dashboard in sidebar (page now has breadcrumb nav too)
-		await sidebarNav.getByRole('link', { name: 'Dashboard' }).click();
+		const dashboardLink = sidebarNav.getByRole('link', { name: 'Dashboard' });
+		await expect(dashboardLink).toBeVisible();
+		await dashboardLink.click();
 		await expect(authenticatedPage).toHaveURL(/\/admin$/);
 
 		// Click Users in sidebar
-		await sidebarNav.getByRole('link', { name: 'Users' }).click();
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/users/);
+		const usersLink = sidebarNav.getByRole('link', { name: 'Users' });
+		await expect(usersLink).toBeVisible();
+		await usersLink.click();
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/auth-user/);
 	});
 
-	// Skip: This test requires auth.user() to be populated after SSR hydration,
-	// which has timing issues. The sign out functionality is tested in auth.spec.ts
-	test.skip('should display sign out button', async ({ authenticatedPage }) => {
+	test('should display sign out button', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');
 
-		// Wait for Angular to hydrate
-		await authenticatedPage.waitForFunction(() => {
-			const appRoot = document.querySelector('app-root');
-			return appRoot && appRoot.hasAttribute('ng-version');
-		});
-
-		// Wait for auth service to load user via /api/auth/get-session
-		// The sign out button only renders when auth.user() returns a user
-		// Increase timeout to allow for API call completion
-		const signOutButton = authenticatedPage.getByRole('button', { name: /sign out|logout/i });
-		await expect(signOutButton).toBeVisible({ timeout: 20000 });
+		// Auth service loads user via /api/auth/get-session after hydration.
+		// The sign out button renders inside a dropdown trigger when auth.user() is populated.
+		const userMenuButton = authenticatedPage.getByRole('button', { name: /user menu/i });
+		await expect(userMenuButton).toBeVisible({ timeout: 15000 });
 	});
 });

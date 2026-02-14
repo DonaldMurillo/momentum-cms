@@ -530,4 +530,162 @@ describe('MomentumAPI', () => {
 			await expect(api.collection('posts').restore('1')).rejects.toThrow();
 		});
 	});
+
+	describe('defaultWhere constraints', () => {
+		const scopedCollection: CollectionConfig = {
+			slug: 'notes',
+			fields: [
+				{ name: 'title', type: 'text', required: true },
+				{ name: 'ownerId', type: 'text' },
+			],
+			defaultWhere: (req) => (req.user ? { ownerId: req.user.id } : undefined),
+		};
+
+		let scopedConfig: MomentumConfig;
+
+		beforeEach(() => {
+			resetMomentumAPI();
+			scopedConfig = {
+				collections: [scopedCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+		});
+
+		it('should inject defaultWhere constraints into find queries', async () => {
+			const api = initializeMomentumAPI(scopedConfig);
+			const authApi = api.setContext({ user: { id: 'user-42' } });
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await authApi.collection('notes').find();
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'notes',
+				expect.objectContaining({ ownerId: 'user-42' }),
+			);
+		});
+
+		it('should reject findById when doc does not match defaultWhere (string constraint)', async () => {
+			const api = initializeMomentumAPI(scopedConfig);
+			const authApi = api.setContext({ user: { id: 'user-42' } });
+			// Doc belongs to a different user
+			vi.mocked(mockAdapter.findById).mockResolvedValue({
+				id: '1',
+				title: 'Secret',
+				ownerId: 'user-99',
+			});
+
+			const result = await authApi.collection('notes').findById('1');
+
+			expect(result).toBeNull();
+		});
+
+		it('should allow findById when doc matches defaultWhere (string constraint)', async () => {
+			const api = initializeMomentumAPI(scopedConfig);
+			const authApi = api.setContext({ user: { id: 'user-42' } });
+			vi.mocked(mockAdapter.findById).mockResolvedValue({
+				id: '1',
+				title: 'My Note',
+				ownerId: 'user-42',
+			});
+
+			const result = await authApi.collection('notes').findById('1');
+
+			expect(result).toBeDefined();
+			expect(result?.title).toBe('My Note');
+		});
+
+		it('should reject update when doc does not match defaultWhere', async () => {
+			const api = initializeMomentumAPI(scopedConfig);
+			const authApi = api.setContext({ user: { id: 'user-42' } });
+			vi.mocked(mockAdapter.findById).mockResolvedValue({
+				id: '1',
+				title: 'Not Mine',
+				ownerId: 'user-99',
+			});
+
+			await expect(authApi.collection('notes').update('1', { title: 'Hijacked' })).rejects.toThrow(
+				DocumentNotFoundError,
+			);
+		});
+
+		it('should reject delete when doc does not match defaultWhere', async () => {
+			const api = initializeMomentumAPI(scopedConfig);
+			const authApi = api.setContext({ user: { id: 'user-42' } });
+			vi.mocked(mockAdapter.findById).mockResolvedValue({
+				id: '1',
+				title: 'Not Mine',
+				ownerId: 'user-99',
+			});
+
+			await expect(authApi.collection('notes').delete('1')).rejects.toThrow(DocumentNotFoundError);
+		});
+
+		it('should match defaultWhere with array constraint values (deep equality)', async () => {
+			// This tests that non-primitive constraint values work correctly.
+			// Current code uses strict ===, which fails for arrays/objects.
+			const arrayConstraintCollection: CollectionConfig = {
+				slug: 'tagged-items',
+				fields: [
+					{ name: 'title', type: 'text', required: true },
+					{ name: 'tags', type: 'json' },
+				],
+				defaultWhere: () => ({ tags: ['public', 'featured'] }),
+			};
+
+			resetMomentumAPI();
+			const arrayConfig: MomentumConfig = {
+				collections: [arrayConstraintCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(arrayConfig);
+
+			// Doc has the exact same array value, but it's a different reference
+			vi.mocked(mockAdapter.findById).mockResolvedValue({
+				id: '1',
+				title: 'Tagged Item',
+				tags: ['public', 'featured'],
+			});
+
+			const result = await api.collection('tagged-items').findById('1');
+
+			// With strict ===, this would return null because ['a','b'] !== ['a','b']
+			// With deep equality, this should return the doc
+			expect(result).toBeDefined();
+			expect(result?.title).toBe('Tagged Item');
+		});
+
+		it('should match defaultWhere with object constraint values (deep equality)', async () => {
+			const objectConstraintCollection: CollectionConfig = {
+				slug: 'structured-items',
+				fields: [
+					{ name: 'title', type: 'text', required: true },
+					{ name: 'metadata', type: 'json' },
+				],
+				defaultWhere: () => ({ metadata: { scope: 'public', level: 1 } }),
+			};
+
+			resetMomentumAPI();
+			const objConfig: MomentumConfig = {
+				collections: [objectConstraintCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(objConfig);
+
+			vi.mocked(mockAdapter.findById).mockResolvedValue({
+				id: '1',
+				title: 'Structured Item',
+				metadata: { scope: 'public', level: 1 },
+			});
+
+			const result = await api.collection('structured-items').findById('1');
+
+			// With strict ===, different object references fail the check
+			// With deep equality, structurally identical objects should match
+			expect(result).toBeDefined();
+			expect(result?.title).toBe('Structured Item');
+		});
+	});
 });

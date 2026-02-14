@@ -9,9 +9,9 @@ import { test, expect } from './fixtures';
 
 test.describe('TransferState SSR Hydration', () => {
 	test('should transfer data from SSR without duplicate API calls', async ({ page }) => {
-		// Track API requests to /api/users
+		// Track API requests to /api/auth-user
 		const apiCalls: string[] = [];
-		await page.route('**/api/users**', (route) => {
+		await page.route('**/api/auth-user**', (route) => {
 			apiCalls.push(route.request().url());
 			route.continue();
 		});

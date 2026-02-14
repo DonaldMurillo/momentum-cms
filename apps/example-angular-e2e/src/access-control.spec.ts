@@ -23,8 +23,8 @@ test.describe('Backend Access Control', () => {
 			expect(response.status()).toBe(200);
 		});
 
-		test('GET /api/users should deny unauthenticated read', async ({ request }) => {
-			const response = await request.get('/api/users');
+		test('GET /api/auth-user should deny unauthenticated read', async ({ request }) => {
+			const response = await request.get('/api/auth-user');
 			// Users collection has read: admin only
 			expect(response.status()).toBe(403);
 		});
@@ -62,16 +62,15 @@ test.describe('Backend Access Control', () => {
 
 			// Find posts and users collections
 			const posts = data.collections.find((c: { slug: string }) => c.slug === 'posts');
-			const users = data.collections.find((c: { slug: string }) => c.slug === 'users');
+			const users = data.collections.find((c: { slug: string }) => c.slug === 'auth-user');
 
 			// Unauthenticated users shouldn't have admin access to any collection
-			if (posts) {
-				expect(posts.canAccess).toBe(false); // admin requires auth
-				expect(posts.canRead).toBe(true); // public read
-			}
-			if (users) {
-				expect(users.canAccess).toBe(false); // admin only
-			}
+			expect(posts, 'posts collection should exist in /api/access response').toBeDefined();
+			expect(posts.canAccess).toBe(false); // admin requires auth
+			expect(posts.canRead).toBe(true); // public read
+
+			expect(users, 'auth-user collection should exist in /api/access response').toBeDefined();
+			expect(users.canAccess).toBe(false); // admin only
 		});
 	});
 });
@@ -126,59 +125,38 @@ test.describe('Authenticated Access Control', () => {
 			const posts = data.collections.find((c: { slug: string }) => c.slug === 'posts');
 
 			// Admin user should have full access to posts
-			expect(posts).toBeDefined();
-			if (posts) {
-				expect(posts.canAccess).toBe(true);
-				expect(posts.canCreate).toBe(true);
-				expect(posts.canRead).toBe(true);
-				expect(posts.canUpdate).toBe(true);
-				// canDelete depends on role - admin can delete, regular users cannot
-			}
+			expect(posts, 'posts collection should exist in /api/access response').toBeDefined();
+			expect(posts.canAccess).toBe(true);
+			expect(posts.canCreate).toBe(true);
+			expect(posts.canRead).toBe(true);
+			expect(posts.canUpdate).toBe(true);
+			// canDelete depends on role - admin can delete, regular users cannot
 		});
 	});
 });
 
 test.describe('Frontend Access Control', () => {
-	// Skip: With SSR, Angular guards run during route activation but SSR pre-renders
-	// the page. After hydration, the guard doesn't re-run because the route is already
-	// active. Access control is verified by API tests (Backend Access Control tests above).
-	test.skip('unauthenticated user redirected to login from protected route', async ({ page }) => {
+	test('unauthenticated user redirected to login from protected route', async ({ page }) => {
 		// Clear any cookies
 		await page.context().clearCookies();
 
 		// Try to access a protected collection route
 		await page.goto('/admin/collections/posts');
 
-		// Wait for SSR page to load
-		await page.waitForLoadState('networkidle');
-
-		// Wait for Angular to hydrate (SSR renders page first, then client redirects)
-		await page.waitForFunction(() => {
-			const appRoot = document.querySelector('app-root');
-			return appRoot && appRoot.hasAttribute('ng-version');
-		});
-
-		// Wait for client-side redirect after hydration
-		await page.waitForURL(/\/(login|setup)/, { timeout: 10000 });
+		// Wait for SSR page to load, then Angular hydrates and auth guard redirects
+		await page.waitForURL(/\/(login|setup)/, { timeout: 15000 });
 
 		// Should be redirected to login or setup (depending on whether users exist)
 		const url = page.url();
 		expect(url.includes('/login') || url.includes('/setup')).toBeTruthy();
 	});
 
-	// Skip: Same SSR limitation as above - guards don't re-run after hydration.
-	// Access control is verified by API tests (Backend Access Control tests above).
-	test.skip('unauthenticated user redirected to login from dashboard', async ({ page }) => {
+	test('unauthenticated user redirected to login from dashboard', async ({ page }) => {
 		await page.context().clearCookies();
 		await page.goto('/admin');
-		await page.waitForLoadState('networkidle');
 
-		// Wait for Angular hydration and client-side redirect
-		await page.waitForFunction(() => {
-			const appRoot = document.querySelector('app-root');
-			return appRoot && appRoot.hasAttribute('ng-version');
-		});
-		await page.waitForURL(/\/(login|setup)/, { timeout: 10000 });
+		// Wait for SSR page to load, then Angular hydrates and auth guard redirects
+		await page.waitForURL(/\/(login|setup)/, { timeout: 15000 });
 
 		const url = page.url();
 		expect(url.includes('/login') || url.includes('/setup')).toBeTruthy();
@@ -269,7 +247,7 @@ test.describe('Role-Based Access Control', () => {
 		test('admin user can access users collection via API', async ({ authenticatedPage }) => {
 			// The test user is admin (created by global setup)
 			// Use the page's request context which automatically includes cookies
-			const response = await authenticatedPage.request.get('/api/users');
+			const response = await authenticatedPage.request.get('/api/auth-user');
 
 			// Admin should be able to read users
 			expect(response.status()).toBe(200);

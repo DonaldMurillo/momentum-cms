@@ -4,18 +4,18 @@ import { BlockRendererComponent } from './block-renderer.component';
 import { BLOCK_ADMIN_MODE, BLOCK_COMPONENT_REGISTRY } from './block-renderer.types';
 import { BlockAdminModeService, provideBlockAdminMode } from './block-admin-mode.service';
 
-@Component({ selector: 'test-hero', template: '<h1>{{ data()["heading"] }}</h1>' })
+@Component({ selector: 'mcms-test-hero', template: '<h1>{{ data()["heading"] }}</h1>' })
 class MockHeroComponent {
 	readonly data = input.required<Record<string, unknown>>();
 }
 
-@Component({ selector: 'test-text', template: '<p>{{ data()["body"] }}</p>' })
+@Component({ selector: 'mcms-test-text', template: '<p>{{ data()["body"] }}</p>' })
 class MockTextComponent {
 	readonly data = input.required<Record<string, unknown>>();
 }
 
 @Component({
-	selector: 'test-host',
+	selector: 'mcms-test-host',
 	imports: [BlockRendererComponent],
 	template: `<mcms-block-renderer [blocks]="blocks()" [typeField]="typeField()" />`,
 })
@@ -71,8 +71,8 @@ describe('BlockRendererComponent', () => {
 		fixture.detectChanges();
 		await fixture.whenStable();
 
-		expect(getRendererEl().querySelector('test-hero')).toBeTruthy();
-		expect(getRendererEl().querySelector('test-text')).toBeTruthy();
+		expect(getRendererEl().querySelector('mcms-test-hero')).toBeTruthy();
+		expect(getRendererEl().querySelector('mcms-test-text')).toBeTruthy();
 	});
 
 	it('should skip blocks with non-string blockType', async () => {
@@ -85,7 +85,7 @@ describe('BlockRendererComponent', () => {
 		await fixture.whenStable();
 
 		// Only one valid block should render, no outlet for invalid types
-		const heroes = getRendererEl().querySelectorAll('test-hero');
+		const heroes = getRendererEl().querySelectorAll('mcms-test-hero');
 		expect(heroes.length).toBe(1);
 	});
 
@@ -95,7 +95,7 @@ describe('BlockRendererComponent', () => {
 		fixture.detectChanges();
 		await fixture.whenStable();
 
-		expect(getRendererEl().querySelector('test-hero')).toBeTruthy();
+		expect(getRendererEl().querySelector('mcms-test-hero')).toBeTruthy();
 		expect(getRendererEl().querySelector('h1')?.textContent).toContain('Custom Key');
 	});
 
@@ -267,7 +267,7 @@ describe('BlockRendererComponent (admin mode via deprecated token)', () => {
 });
 
 @Component({
-	selector: 'test-host-admin',
+	selector: 'mcms-test-host-admin',
 	imports: [BlockRendererComponent],
 	template: `<mcms-block-renderer [blocks]="blocks()" (editBlock)="lastEditBlock.set($event)" />`,
 })

@@ -26,22 +26,28 @@ test.describe('OpenAPI Documentation', () => {
 		const response = await request.get('/api/docs/openapi.json');
 		const spec = await response.json();
 
-		// The seeding-test-app has these collections
-		const expectedCollections = [
-			'categories',
-			'articles',
-			'products',
-			'pages',
-			'settings',
-			'events',
-			'media',
-			'users',
+		// The seeding-test-app has these static collections plus auth plugin collections.
+		// Schema names use PascalCase: 'auth-user' → 'AuthUser', 'categories' → 'Categories'
+		const expectedSchemas = [
+			'Categories',
+			'Articles',
+			'Products',
+			'Pages',
+			'Settings',
+			'Events',
+			'Media',
+			'AuthUser',
 		];
 
-		for (const slug of expectedCollections) {
-			const schemaName = slug.charAt(0).toUpperCase() + slug.slice(1);
-			expect(spec.components.schemas[schemaName]).toBeDefined();
-			expect(spec.components.schemas[`${schemaName}Input`]).toBeDefined();
+		for (const schemaName of expectedSchemas) {
+			expect(
+				spec.components.schemas[schemaName],
+				`Schema '${schemaName}' should be defined`,
+			).toBeDefined();
+			expect(
+				spec.components.schemas[`${schemaName}Input`],
+				`Schema '${schemaName}Input' should be defined`,
+			).toBeDefined();
 		}
 	});
 

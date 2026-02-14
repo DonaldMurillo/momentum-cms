@@ -135,6 +135,12 @@ export function analyticsPlugin(config: AnalyticsConfig): AnalyticsPluginInstanc
 		analyticsConfig: config,
 		adminRoutes,
 
+		modifyCollections(collections) {
+			if (config.enabled !== false && config.blockTracking !== false) {
+				injectBlockAnalyticsFields(collections);
+			}
+		},
+
 		async onInit({ collections, logger, registerMiddleware }: PluginContext) {
 			if (config.enabled === false) {
 				logger.info('Analytics disabled');

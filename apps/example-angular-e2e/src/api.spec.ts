@@ -64,15 +64,15 @@ test.describe('API Endpoints - Posts Collection (Unauthenticated)', () => {
 });
 
 test.describe('API Endpoints - Users Collection (Unauthenticated)', () => {
-	test('GET /api/users should deny unauthenticated read', async ({ request }) => {
-		const response = await request.get('/api/users');
+	test('GET /api/auth-user should deny unauthenticated read', async ({ request }) => {
+		const response = await request.get('/api/auth-user');
 
 		// Access control: users read requires admin
 		expect(response.status()).toBe(403);
 	});
 
-	test('POST /api/users should deny unauthenticated create', async ({ request }) => {
-		const response = await request.post('/api/users', {
+	test('POST /api/auth-user should deny unauthenticated create', async ({ request }) => {
+		const response = await request.post('/api/auth-user', {
 			data: {
 				name: 'John Doe',
 				email: 'john@example.com',

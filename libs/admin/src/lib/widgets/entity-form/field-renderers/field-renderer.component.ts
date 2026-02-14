@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, forwardRef, input } from '@angular/core';
 import type { Field } from '@momentum-cms/core';
 import type { EntityFormMode } from '../entity-form.types';
 import { TextFieldRenderer } from './text-field.component';
@@ -40,7 +40,7 @@ import { VisualBlockEditorComponent } from '../../visual-block-editor/visual-blo
 		TabsFieldRenderer,
 		CollapsibleFieldRenderer,
 		RowFieldRenderer,
-		VisualBlockEditorComponent,
+		forwardRef(() => VisualBlockEditorComponent),
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },

@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, inject, computed } from '@angular/c
 import { ActivatedRoute } from '@angular/router';
 import type { CollectionConfig } from '@momentum-cms/core';
 import { getCollectionsFromRouteData } from '../../utils/route-data';
+import { CollectionAccessService } from '../../services/collection-access.service';
 import { CollectionCardWidget } from '../../widgets/collection-card/collection-card.component';
 
 /**
@@ -59,10 +60,26 @@ import { CollectionCardWidget } from '../../widgets/collection-card/collection-c
 })
 export class DashboardPage {
 	private readonly route = inject(ActivatedRoute);
+	private readonly collectionAccess = inject(CollectionAccessService);
 
 	readonly basePath = '/admin/collections';
 
-	readonly collections = computed((): CollectionConfig[] => {
+	/** All collections from route data (unfiltered) */
+	private readonly allCollections = computed((): CollectionConfig[] => {
 		return getCollectionsFromRouteData(this.route.parent?.snapshot.data);
+	});
+
+	/** Collections filtered by visibility and access permissions */
+	readonly collections = computed((): CollectionConfig[] => {
+		const all = this.allCollections();
+		const accessible = this.collectionAccess.accessibleCollections();
+
+		// If permissions not loaded yet, show all non-hidden (will be filtered after load)
+		if (!this.collectionAccess.initialized()) {
+			return all.filter((c) => !c.admin?.hidden);
+		}
+
+		// Filter to only accessible, non-hidden collections
+		return all.filter((c) => !c.admin?.hidden && accessible.includes(c.slug));
 	});
 }

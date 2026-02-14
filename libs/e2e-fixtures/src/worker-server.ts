@@ -86,6 +86,7 @@ async function waitForHealth(
 			lastError = err instanceof Error ? err.message : String(err);
 		}
 
+		// eslint-disable-next-line local/no-direct-browser-apis -- Node.js context, not Angular
 		await new Promise((r) => setTimeout(r, 1000));
 	}
 
@@ -138,52 +139,24 @@ async function signUpUser(
 }
 
 /**
- * Ensure a user exists in the Momentum users collection with the correct role.
- * Uses direct database access to bypass API access control.
+ * Ensure a user has the correct role in the Better Auth "user" table.
+ * The auth plugin manages the auth-user collection (dbName "user") directly,
+ * so we only need to set the role on the Better Auth table.
  */
 async function ensureMomentumUser(
 	pool: Pool,
 	credentials: TestUserCredentials,
-	authUserId?: string,
+	_authUserId?: string,
 ): Promise<void> {
-	// Also set the role on the Better Auth "user" table so the session always
-	// reflects the correct role (the session resolver's getRoleByEmail may not
-	// be ready immediately after server boot)
-	await pool.query('UPDATE "user" SET role = $1 WHERE email = $2', [
+	const result = await pool.query('UPDATE "user" SET role = $1 WHERE email = $2', [
 		credentials.role,
 		credentials.email,
 	]);
 
-	const existing = await pool.query('SELECT id, role FROM users WHERE email = $1', [
-		credentials.email,
-	]);
-
-	if (existing.rows.length > 0) {
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- pg row
-		const row = existing.rows[0] as { id: string; role: string };
-		if (row.role !== credentials.role) {
-			await pool.query('UPDATE users SET role = $1 WHERE id = $2', [credentials.role, row.id]);
-			console.log(`[Setup] Fixed ${credentials.email} role: ${row.role} → ${credentials.role}`);
-		}
+	if (result.rowCount && result.rowCount > 0) {
+		console.log(`[Setup] Set ${credentials.email} role to ${credentials.role}`);
 	} else {
-		// Look up Better Auth user ID if not provided
-		let resolvedAuthId = authUserId;
-		if (!resolvedAuthId) {
-			const authLookup = await pool.query('SELECT id FROM "user" WHERE email = $1', [
-				credentials.email,
-			]);
-			if (authLookup.rows.length > 0) {
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- pg row
-				resolvedAuthId = (authLookup.rows[0] as { id: string }).id;
-			}
-		}
-
-		await pool.query(
-			`INSERT INTO users (id, name, email, role, "authId", active, "createdAt", "updatedAt")
-			 VALUES (gen_random_uuid(), $1, $2, $3, $4, true, NOW(), NOW())`,
-			[credentials.name, credentials.email, credentials.role, resolvedAuthId ?? ''],
-		);
-		console.log(`[Setup] Created Momentum user: ${credentials.email} (${credentials.role})`);
+		console.warn(`[Setup] No user found for ${credentials.email} in "user" table`);
 	}
 }
 
@@ -207,7 +180,7 @@ async function setupUsers(
 		console.log(`[Setup] User ${user.email} (${user.role}) registered`);
 	}
 
-	// Sync Momentum users collection with correct roles
+	// Set correct roles on the Better Auth "user" table
 	const pool = new Pool({ connectionString: dbUrl });
 	try {
 		for (const user of allUsers) {
@@ -328,6 +301,7 @@ export function createWorkerFixture(config: WorkerServerConfig): ReturnType<type
 						serverProcess.kill('SIGTERM');
 						// Wait for graceful shutdown
 						await new Promise<void>((resolve) => {
+							// eslint-disable-next-line local/no-direct-browser-apis -- Node.js context, not Angular
 							const timeout = setTimeout(() => {
 								serverProcess?.kill('SIGKILL');
 								resolve();

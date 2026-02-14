@@ -6,6 +6,7 @@ import {
 	computed,
 	input,
 	output,
+	afterNextRender,
 } from '@angular/core';
 import { Input, Button, McmsFormField } from '@momentum-cms/ui';
 import { MomentumAuthService } from '../../services/auth.service';
@@ -77,7 +78,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 							[(value)]="password"
 							placeholder="Enter new password"
 							autocomplete="new-password"
-							[disabled]="isSubmitting()"
+							[disabled]="!hydrated() || isSubmitting()"
 						/>
 					</mcms-form-field>
 
@@ -94,7 +95,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 							[(value)]="confirmPassword"
 							placeholder="Confirm new password"
 							autocomplete="new-password"
-							[disabled]="isSubmitting()"
+							[disabled]="!hydrated() || isSubmitting()"
 						/>
 					</mcms-form-field>
 
@@ -102,7 +103,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 						mcms-button
 						type="submit"
 						class="w-full"
-						[disabled]="isSubmitting() || !isValid()"
+						[disabled]="!hydrated() || isSubmitting() || !isValid()"
 					>
 						@if (isSubmitting()) {
 							<svg
@@ -138,6 +139,15 @@ import { MomentumAuthService } from '../../services/auth.service';
 })
 export class ResetPasswordFormComponent {
 	private readonly auth = inject(MomentumAuthService);
+
+	/** Whether the component has been hydrated (SSR → client transition complete) */
+	readonly hydrated = signal(false);
+
+	constructor() {
+		afterNextRender(() => {
+			this.hydrated.set(true);
+		});
+	}
 
 	/** The reset token from the URL */
 	readonly token = input<string>('');

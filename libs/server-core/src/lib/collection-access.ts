@@ -18,6 +18,8 @@ export interface CollectionPermissions {
 	canRead: boolean;
 	canUpdate: boolean;
 	canDelete: boolean;
+	/** True if this collection is managed (read-only via API, owned by a plugin like Better Auth). */
+	managed?: boolean;
 }
 
 /**
@@ -108,13 +110,21 @@ export async function getCollectionPermissions(
 ): Promise<CollectionPermissions[]> {
 	const results = await Promise.all(
 		config.collections.map(async (collection) => {
+			const isManaged = collection.managed === true;
+
 			// Check all access functions in parallel
 			const [canAccess, canCreate, canRead, canUpdate, canDelete] = await Promise.all([
 				checkSingleCollectionAdminAccess(collection, user),
-				checkAccessFunction(collection.access?.create, user, !!user),
+				isManaged
+					? Promise.resolve(false)
+					: checkAccessFunction(collection.access?.create, user, !!user),
 				checkAccessFunction(collection.access?.read, user, true),
-				checkAccessFunction(collection.access?.update, user, !!user),
-				checkAccessFunction(collection.access?.delete, user, !!user),
+				isManaged
+					? Promise.resolve(false)
+					: checkAccessFunction(collection.access?.update, user, !!user),
+				isManaged
+					? Promise.resolve(false)
+					: checkAccessFunction(collection.access?.delete, user, !!user),
 			]);
 
 			return {
@@ -124,6 +134,7 @@ export async function getCollectionPermissions(
 				canRead,
 				canUpdate,
 				canDelete,
+				...(isManaged ? { managed: true } : {}),
 			};
 		}),
 	);

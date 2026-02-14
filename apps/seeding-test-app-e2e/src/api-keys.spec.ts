@@ -37,7 +37,7 @@ test.describe('API Key Management', () => {
 	});
 
 	test('create API key returns key and metadata', async () => {
-		const response = await adminContext.post('/api/api-keys', {
+		const response = await adminContext.post('/api/auth/api-keys', {
 			data: { name: 'Test Key', role: 'editor' },
 		});
 
@@ -60,7 +60,7 @@ test.describe('API Key Management', () => {
 	});
 
 	test('create API key requires name', async () => {
-		const response = await adminContext.post('/api/api-keys', {
+		const response = await adminContext.post('/api/auth/api-keys', {
 			data: {},
 		});
 
@@ -68,19 +68,47 @@ test.describe('API Key Management', () => {
 	});
 
 	test('create API key rejects invalid role', async () => {
-		const response = await adminContext.post('/api/api-keys', {
+		const response = await adminContext.post('/api/auth/api-keys', {
 			data: { name: 'Bad Role Key', role: 'superadmin' },
 		});
 
 		expect(response.status()).toBe(400);
 	});
 
+	test('all four AUTH_ROLES are accepted and stored correctly', async () => {
+		const roles = ['admin', 'editor', 'user', 'viewer'];
+
+		for (const role of roles) {
+			const response = await adminContext.post('/api/auth/api-keys', {
+				data: { name: `Role Test ${role}`, role },
+			});
+			expect(response.status()).toBe(201);
+
+			const data = (await response.json()) as { role: string };
+			expect(data.role).toBe(role);
+		}
+
+		// Verify all 4 roles appear correctly via the generic CRUD endpoint
+		const crudResponse = await adminContext.get('/api/auth-api-keys');
+		expect(crudResponse.ok()).toBe(true);
+
+		const crudData = (await crudResponse.json()) as {
+			docs: Array<{ name: string; role: string }>;
+		};
+
+		for (const role of roles) {
+			const match = crudData.docs.find((d) => d.name === `Role Test ${role}`);
+			expect(match).toBeDefined();
+			expect(match?.role).toBe(role);
+		}
+	});
+
 	test('list API keys returns created keys', async () => {
-		await adminContext.post('/api/api-keys', {
+		await adminContext.post('/api/auth/api-keys', {
 			data: { name: 'List Test Key', role: 'viewer' },
 		});
 
-		const response = await adminContext.get('/api/api-keys');
+		const response = await adminContext.get('/api/auth/api-keys');
 		expect(response.ok()).toBe(true);
 
 		const data = (await response.json()) as {
@@ -96,16 +124,16 @@ test.describe('API Key Management', () => {
 	});
 
 	test('delete API key removes it', async () => {
-		const createResponse = await adminContext.post('/api/api-keys', {
+		const createResponse = await adminContext.post('/api/auth/api-keys', {
 			data: { name: 'To Delete', role: 'user' },
 		});
 
 		const created = (await createResponse.json()) as { id: string };
 
-		const deleteResponse = await adminContext.delete(`/api/api-keys/${created.id}`);
+		const deleteResponse = await adminContext.delete(`/api/auth/api-keys/${created.id}`);
 		expect(deleteResponse.ok()).toBe(true);
 
-		const listResponse = await adminContext.get('/api/api-keys');
+		const listResponse = await adminContext.get('/api/auth/api-keys');
 
 		const listData = (await listResponse.json()) as {
 			keys: Array<{ id: string; name: string }>;
@@ -114,7 +142,7 @@ test.describe('API Key Management', () => {
 	});
 
 	test('delete non-existent key returns 404', async () => {
-		const response = await adminContext.delete('/api/api-keys/nonexistent-id');
+		const response = await adminContext.delete('/api/auth/api-keys/nonexistent-id');
 		expect(response.status()).toBe(404);
 	});
 });
@@ -137,7 +165,7 @@ test.describe('API Key Authentication', () => {
 		});
 		expect(signInResponse.ok()).toBe(true);
 
-		const createResponse = await adminContext.post('/api/api-keys', {
+		const createResponse = await adminContext.post('/api/auth/api-keys', {
 			data: { name: 'Auth Test Key', role: 'admin' },
 		});
 		expect(createResponse.status()).toBe(201);
@@ -217,7 +245,7 @@ test.describe('API Key Authentication', () => {
 });
 
 test.describe('API Key Access Control', () => {
-	test('non-admin user cannot create API keys', async ({ playwright, baseURL }) => {
+	test('editor can create API keys at or below their role', async ({ playwright, baseURL }) => {
 		const editorContext = await playwright.request.newContext({
 			baseURL,
 			extraHTTPHeaders: { Origin: baseURL },
@@ -232,16 +260,29 @@ test.describe('API Key Access Control', () => {
 			});
 			expect(signInResponse.ok()).toBe(true);
 
-			const response = await editorContext.post('/api/api-keys', {
+			// Editor can create editor-role key
+			const response = await editorContext.post('/api/auth/api-keys', {
 				data: { name: 'Editor Key', role: 'editor' },
 			});
-			expect(response.status()).toBe(403);
+			expect(response.status()).toBe(201);
+
+			// Editor can create user-role key (lower privilege)
+			const userKeyResponse = await editorContext.post('/api/auth/api-keys', {
+				data: { name: 'User Key', role: 'user' },
+			});
+			expect(userKeyResponse.status()).toBe(201);
+
+			// Editor cannot create admin-role key (higher privilege)
+			const adminKeyResponse = await editorContext.post('/api/auth/api-keys', {
+				data: { name: 'Admin Key', role: 'admin' },
+			});
+			expect(adminKeyResponse.status()).toBe(403);
 		} finally {
 			await editorContext.dispose();
 		}
 	});
 
-	test('non-admin user cannot list API keys', async ({ playwright, baseURL }) => {
+	test('editor can list only their own API keys', async ({ playwright, baseURL }) => {
 		const editorContext = await playwright.request.newContext({
 			baseURL,
 			extraHTTPHeaders: { Origin: baseURL },
@@ -256,26 +297,305 @@ test.describe('API Key Access Control', () => {
 			});
 			expect(signInResponse.ok()).toBe(true);
 
-			const response = await editorContext.get('/api/api-keys');
-			expect(response.status()).toBe(403);
+			// Create a key as editor
+			const createResponse = await editorContext.post('/api/auth/api-keys', {
+				data: { name: 'Scoping Test Key', role: 'editor' },
+			});
+			expect(createResponse.status()).toBe(201);
+
+			// List keys — should only see own keys
+			const listResponse = await editorContext.get('/api/auth/api-keys');
+			expect(listResponse.ok()).toBe(true);
+
+			const listData = (await listResponse.json()) as {
+				keys: Array<{ id: string; name: string; createdBy: string }>;
+			};
+			expect(listData.keys.length).toBeGreaterThan(0);
+
+			// All returned keys should belong to the editor (no admin keys visible)
+			for (const key of listData.keys) {
+				expect(key.createdBy).toBeDefined();
+			}
 		} finally {
 			await editorContext.dispose();
 		}
+	});
+
+	test('admin can see all API keys including other users keys', async ({
+		playwright,
+		workerBaseURL,
+		baseURL,
+	}) => {
+		// Editor creates a key
+		const editorContext = await playwright.request.newContext({
+			baseURL,
+			extraHTTPHeaders: { Origin: baseURL },
+		});
+
+		await editorContext.post('/api/auth/sign-in/email', {
+			data: {
+				email: TEST_EDITOR_CREDENTIALS.email,
+				password: TEST_EDITOR_CREDENTIALS.password,
+			},
+		});
+		await editorContext.post('/api/auth/api-keys', {
+			data: { name: 'Editor Visible Key', role: 'editor' },
+		});
+		await editorContext.dispose();
+
+		// Admin lists all keys — should see the editor's key
+		const adminContext = await playwright.request.newContext({
+			baseURL: workerBaseURL,
+			extraHTTPHeaders: { Origin: workerBaseURL },
+		});
+
+		await adminContext.post('/api/auth/sign-in/email', {
+			data: {
+				email: TEST_CREDENTIALS.email,
+				password: TEST_CREDENTIALS.password,
+			},
+		});
+
+		const listResponse = await adminContext.get('/api/auth/api-keys');
+		expect(listResponse.ok()).toBe(true);
+
+		const listData = (await listResponse.json()) as {
+			keys: Array<{ name: string }>;
+		};
+		const editorKey = listData.keys.find((k) => k.name === 'Editor Visible Key');
+		expect(editorKey).toBeDefined();
+
+		await adminContext.dispose();
+	});
+
+	test('editor can delete own key but not another users key', async ({
+		playwright,
+		workerBaseURL,
+		baseURL,
+	}) => {
+		// Admin creates a key
+		const adminContext = await playwright.request.newContext({
+			baseURL: workerBaseURL,
+			extraHTTPHeaders: { Origin: workerBaseURL },
+		});
+
+		await adminContext.post('/api/auth/sign-in/email', {
+			data: {
+				email: TEST_CREDENTIALS.email,
+				password: TEST_CREDENTIALS.password,
+			},
+		});
+
+		const adminKeyResponse = await adminContext.post('/api/auth/api-keys', {
+			data: { name: 'Admin Owned Key', role: 'admin' },
+		});
+		const adminKeyData = (await adminKeyResponse.json()) as { id: string };
+		await adminContext.dispose();
+
+		// Editor creates a key and can delete it
+		const editorContext = await playwright.request.newContext({
+			baseURL,
+			extraHTTPHeaders: { Origin: baseURL },
+		});
+
+		await editorContext.post('/api/auth/sign-in/email', {
+			data: {
+				email: TEST_EDITOR_CREDENTIALS.email,
+				password: TEST_EDITOR_CREDENTIALS.password,
+			},
+		});
+
+		const editorKeyResponse = await editorContext.post('/api/auth/api-keys', {
+			data: { name: 'Editor Owned Key', role: 'editor' },
+		});
+		const editorKeyData = (await editorKeyResponse.json()) as { id: string };
+
+		// Editor can delete own key
+		const deleteOwnResponse = await editorContext.delete(`/api/auth/api-keys/${editorKeyData.id}`);
+		expect(deleteOwnResponse.ok()).toBe(true);
+
+		// Editor cannot delete admin's key
+		const deleteAdminResponse = await editorContext.delete(`/api/auth/api-keys/${adminKeyData.id}`);
+		expect(deleteAdminResponse.status()).toBe(403);
+
+		await editorContext.dispose();
 	});
 
 	test('unauthenticated user cannot manage API keys', async ({ playwright, baseURL }) => {
 		const anonContext = await playwright.request.newContext({ baseURL });
 
 		try {
-			const listResponse = await anonContext.get('/api/api-keys');
+			const listResponse = await anonContext.get('/api/auth/api-keys');
 			expect(listResponse.status()).toBe(401);
 
-			const createResponse = await anonContext.post('/api/api-keys', {
+			const createResponse = await anonContext.post('/api/auth/api-keys', {
 				data: { name: 'Anon Key' },
 			});
 			expect(createResponse.status()).toBe(401);
 		} finally {
 			await anonContext.dispose();
+		}
+	});
+});
+
+test.describe('API Key Security', () => {
+	let adminContext: APIRequestContext;
+	let createdKeyId: string;
+
+	test.beforeAll(async ({ playwright, workerBaseURL }) => {
+		adminContext = await playwright.request.newContext({
+			baseURL: workerBaseURL,
+			extraHTTPHeaders: { Origin: workerBaseURL },
+		});
+
+		const signInResponse = await adminContext.post('/api/auth/sign-in/email', {
+			data: {
+				email: TEST_CREDENTIALS.email,
+				password: TEST_CREDENTIALS.password,
+			},
+		});
+		expect(signInResponse.ok()).toBe(true);
+
+		// Create a key via dedicated route for use in delete tests
+		const createResponse = await adminContext.post('/api/auth/api-keys', {
+			data: { name: 'Security Test Key', role: 'user' },
+		});
+		expect(createResponse.status()).toBe(201);
+		const data = (await createResponse.json()) as { id: string };
+		createdKeyId = data.id;
+	});
+
+	test.afterAll(async () => {
+		await adminContext?.dispose();
+	});
+
+	test('generic CRUD delete is blocked (must use dedicated route)', async () => {
+		// Attempt to delete via generic CRUD route: DELETE /api/auth-api-keys/:id
+		// This should be denied because access.delete returns false for everyone
+		const response = await adminContext.delete(`/api/auth-api-keys/${createdKeyId}`);
+		expect(response.status()).toBe(403);
+
+		// Verify the key still exists via dedicated route
+		const listResponse = await adminContext.get('/api/auth/api-keys');
+		expect(listResponse.ok()).toBe(true);
+		const listData = (await listResponse.json()) as {
+			keys: Array<{ id: string }>;
+		};
+		expect(listData.keys.find((k) => k.id === createdKeyId)).toBeDefined();
+	});
+
+	test('generic CRUD list does not expose keyHash', async () => {
+		// Fetch API keys via generic CRUD route: GET /api/auth-api-keys
+		const response = await adminContext.get('/api/auth-api-keys');
+		expect(response.ok()).toBe(true);
+
+		const data = (await response.json()) as {
+			docs: Array<Record<string, unknown>>;
+		};
+		expect(data.docs.length).toBeGreaterThan(0);
+
+		// Verify no document contains keyHash (field-level access blocks it)
+		for (const doc of data.docs) {
+			expect(doc).not.toHaveProperty('keyHash');
+		}
+	});
+
+	test('dedicated route rejects invalid expiresAt date', async () => {
+		// POST with a non-date string for expiresAt
+		const response = await adminContext.post('/api/auth/api-keys', {
+			data: { name: 'Bad Expiry Key', role: 'user', expiresAt: 'never' },
+		});
+		expect(response.status()).toBe(400);
+
+		const data = (await response.json()) as { error: string };
+		expect(data.error).toContain('Invalid expiresAt date format');
+	});
+
+	test('dedicated route accepts valid expiresAt date', async () => {
+		const futureDate = new Date(Date.now() + 86400000).toISOString();
+		const response = await adminContext.post('/api/auth/api-keys', {
+			data: { name: 'Valid Expiry Key', role: 'user', expiresAt: futureDate },
+		});
+		expect(response.status()).toBe(201);
+
+		const data = (await response.json()) as { expiresAt: string | null };
+		expect(data.expiresAt).toBeDefined();
+		expect(data.expiresAt).not.toBeNull();
+	});
+});
+
+test.describe('API Key Self-Replication Prevention', () => {
+	let adminContext: APIRequestContext;
+	let adminApiKey: string;
+
+	test.beforeAll(async ({ playwright, workerBaseURL }) => {
+		// Sign in as admin (session auth) and create an admin-role API key
+		adminContext = await playwright.request.newContext({
+			baseURL: workerBaseURL,
+			extraHTTPHeaders: { Origin: workerBaseURL },
+		});
+
+		const signInResponse = await adminContext.post('/api/auth/sign-in/email', {
+			data: {
+				email: TEST_CREDENTIALS.email,
+				password: TEST_CREDENTIALS.password,
+			},
+		});
+		expect(signInResponse.ok()).toBe(true);
+
+		const createResponse = await adminContext.post('/api/auth/api-keys', {
+			data: { name: 'Self-Replication Test Key', role: 'admin' },
+		});
+		expect(createResponse.status()).toBe(201);
+
+		const data = (await createResponse.json()) as { key: string };
+		adminApiKey = data.key;
+	});
+
+	test.afterAll(async () => {
+		await adminContext?.dispose();
+	});
+
+	test('API key cannot create another API key', async ({ playwright, workerBaseURL }) => {
+		// Use the API key (not session) to try to create another key
+		const keyContext = await playwright.request.newContext({
+			baseURL: workerBaseURL,
+			extraHTTPHeaders: { 'X-API-Key': adminApiKey },
+		});
+
+		try {
+			const response = await keyContext.post('/api/auth/api-keys', {
+				data: { name: 'Child Admin Key', role: 'admin' },
+			});
+			expect(response.status()).toBe(403);
+
+			const data = (await response.json()) as { error: string };
+			expect(data.error).toContain('API keys cannot create other API keys');
+		} finally {
+			await keyContext.dispose();
+		}
+	});
+
+	test('API key cannot create a lower-privilege key either', async ({
+		playwright,
+		workerBaseURL,
+	}) => {
+		// Even requesting a lower role should be blocked for API key auth
+		const keyContext = await playwright.request.newContext({
+			baseURL: workerBaseURL,
+			extraHTTPHeaders: { 'X-API-Key': adminApiKey },
+		});
+
+		try {
+			const response = await keyContext.post('/api/auth/api-keys', {
+				data: { name: 'Child Viewer Key', role: 'viewer' },
+			});
+			expect(response.status()).toBe(403);
+
+			const data = (await response.json()) as { error: string };
+			expect(data.error).toContain('API keys cannot create other API keys');
+		} finally {
+			await keyContext.dispose();
 		}
 	});
 });

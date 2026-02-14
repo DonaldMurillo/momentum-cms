@@ -42,18 +42,27 @@ export interface MailpitMessageDetail {
 
 /**
  * Check if Mailpit is running and accessible.
+ * Returns true if Mailpit is reachable, false otherwise.
  */
-export async function checkMailpitHealth(): Promise<void> {
+export async function isMailpitAvailable(): Promise<boolean> {
 	try {
 		const response = await fetch(`${MAILPIT_API}/messages`);
-		if (!response.ok) {
-			throw new Error(`Mailpit returned ${response.status}`);
-		}
-	} catch (err) {
+		return response.ok;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Check if Mailpit is running and accessible.
+ * Throws an error if Mailpit is not available.
+ */
+export async function checkMailpitHealth(): Promise<void> {
+	const available = await isMailpitAvailable();
+	if (!available) {
 		throw new Error(
 			`Mailpit is not running at ${MAILPIT_API}. ` +
-				`Start it with: docker run -d -p 8025:8025 -p 1025:1025 axllent/mailpit\n` +
-				`Error: ${err}`,
+				`Start it with: docker run -d -p 8025:8025 -p 1025:1025 axllent/mailpit`,
 		);
 	}
 }
@@ -110,6 +119,7 @@ export async function waitForEmail(
 			return email;
 		}
 
+		// eslint-disable-next-line local/no-direct-browser-apis -- Node.js Playwright helper, not Angular
 		await new Promise((resolve) => setTimeout(resolve, 500));
 	}
 

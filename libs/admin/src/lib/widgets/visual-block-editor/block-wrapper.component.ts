@@ -50,6 +50,7 @@ import { FieldRenderer } from '../entity-form/field-renderers/field-renderer.com
 	},
 	template: `
 		<!-- Header: always visible -->
+		<!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
 		<div
 			class="flex items-center gap-2 px-3 py-2 bg-muted/30"
 			data-testid="block-header"

@@ -17,26 +17,18 @@ import {
 	momentumApiMiddleware,
 	initializeMomentum,
 	createHealthMiddleware,
-	createAuthMiddleware,
-	createSetupMiddleware,
-	createSessionResolverMiddleware,
-	createApiKeyResolverMiddleware,
-	createApiKeyRoutes,
 	createOpenAPIMiddleware,
+	createDeferredSessionResolver,
 	getPluginProviders,
 } from '@momentum-cms/server-express';
 import {
 	getMomentumAPI,
-	createUserSyncHook,
 	registerWebhookHooks,
 	startPublishScheduler,
-	createPostgresApiKeyStore,
 } from '@momentum-cms/server-core';
-import { createMomentumAuth } from '@momentum-cms/auth';
 import { provideMomentumAPI } from '@momentum-cms/admin';
 import type { CollectionEvent } from '@momentum-cms/plugins/core';
-import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
-import momentumConfig, { events, analytics, analyticsAdapter } from './momentum.config';
+import momentumConfig, { events, analytics, analyticsAdapter, authPlugin } from './momentum.config';
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
@@ -46,45 +38,6 @@ const angularApp = new AngularNodeAppEngine();
 
 // Parse JSON request bodies (required for auth endpoints)
 app.use(express.json());
-
-/**
- * Get the pg pool from the adapter for Better Auth
- */
-// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- PostgresAdapter implements PostgresAdapterWithRaw
-const dbAdapter = momentumConfig.db.adapter as PostgresAdapterWithRaw;
-const pool = dbAdapter.getPool();
-
-/**
- * Create Better Auth instance with PostgreSQL
- * Email is enabled automatically if SMTP_HOST env var is set
- */
-const authBaseURL =
-	process.env['BETTER_AUTH_URL'] || `http://localhost:${momentumConfig.server.port}`;
-
-const auth = createMomentumAuth({
-	db: { type: 'postgres', pool },
-	baseURL: authBaseURL,
-	trustedOrigins: ['http://localhost:4200', authBaseURL],
-	email: {
-		// Email is auto-enabled when SMTP_HOST is set
-		// Configure via environment variables:
-		// SMTP_HOST=localhost SMTP_PORT=1025 SMTP_FROM=noreply@momentum.local
-		appName: 'Seeding Test App',
-	},
-	twoFactorAuth: true,
-});
-
-/**
- * Add user sync hooks to users collection
- * This ensures Momentum users are synced with Better Auth users on creation
- * The hook is prepended so it runs BEFORE the collection's built-in password stripper
- */
-const usersCollection = momentumConfig.collections.find((c) => c.slug === 'users');
-if (usersCollection) {
-	const existingHooks = usersCollection.hooks?.beforeChange ?? [];
-	usersCollection.hooks = usersCollection.hooks ?? {};
-	usersCollection.hooks.beforeChange = [createUserSyncHook({ auth }), ...existingHooks];
-}
 
 /**
  * Register webhook hooks for all collections with webhook configs
@@ -207,32 +160,30 @@ app.delete('/api/test-analytics-events', (_req, res) => {
 
 /**
  * Initialize Momentum CMS (database, API, seeding)
- * This is called AFTER hooks are configured so seeding benefits from them
+ * Auth plugin registers auth/setup middleware automatically.
+ * Auth instance is auto-detected from the plugin for seeding.
+ *
+ * Await ensures the auth plugin is ready before the server accepts requests,
+ * so the deferred session resolver can resolve user sessions correctly.
  */
 const momentum = initializeMomentum(momentumConfig, {
-	auth,
 	// eslint-disable-next-line no-console -- Seeding logger for testing
 	logger: (msg) => console.log(`[Seeding Test App] ${msg}`),
 });
 
-// Handle initialization errors
-momentum.ready.catch((error) => {
+try {
+	await momentum.ready;
+} catch (error) {
 	console.error('[Seeding Test App] Initialization failed:', error);
 	process.exit(1);
-});
+}
 
-// Start the publish scheduler after initialization
-momentum.ready
-	.then(() => {
-		startPublishScheduler(momentumConfig.db.adapter, momentumConfig.collections, {
-			intervalMs: 2000, // Check every 2 seconds (short for testing)
-			// eslint-disable-next-line no-console -- Scheduler logger
-			logger: (msg) => console.log(msg),
-		});
-	})
-	.catch(() => {
-		// Initialization failure already handled above
-	});
+// momentum.ready already resolved — start scheduler directly
+startPublishScheduler(momentumConfig.db.adapter, momentumConfig.collections, {
+	intervalMs: 2000, // Check every 2 seconds (short for testing)
+	// eslint-disable-next-line no-console -- Scheduler logger
+	logger: (msg) => console.log(msg),
+});
 
 /**
  * Health endpoint with seed status
@@ -248,81 +199,14 @@ app.use(
 );
 
 /**
- * Auth endpoints (Better Auth)
- * Handles sign-in, sign-up, sign-out, session management, password reset
- */
-app.use('/api', createAuthMiddleware(auth));
-
-/**
- * Setup endpoints
- * Handles first-time setup status and admin creation
- */
-app.use(
-	'/api',
-	createSetupMiddleware({ db: { type: 'postgres', pool }, auth, adapter: dbAdapter }),
-);
-
-/**
- * API Key support
- * Create API key store and wire up resolver + management routes
- */
-const apiKeyStore = createPostgresApiKeyStore({
-	query: async <T extends Record<string, unknown>>(
-		sql: string,
-		params?: unknown[],
-	): Promise<T[]> => {
-		const result = await pool.query(sql, params);
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- pg result rows
-		return result.rows as T[];
-	},
-	queryOne: async <T extends Record<string, unknown>>(
-		sql: string,
-		params?: unknown[],
-	): Promise<T | null> => {
-		const result = await pool.query(sql, params);
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- pg result rows
-		return (result.rows[0] as T) ?? null;
-	},
-	execute: async (sql: string, params?: unknown[]): Promise<number> => {
-		const result = await pool.query(sql, params);
-		return result.rowCount ?? 0;
-	},
-});
-
-// API key resolver - checks X-API-Key header before session auth
-app.use(createApiKeyResolverMiddleware({ store: apiKeyStore }));
-
-/**
  * Session resolver middleware
  * Resolves user session from auth cookies and attaches to req.user
- * Must be before API middleware for access control to work
+ * Role comes directly from Better Auth user table (single source of truth)
+ *
+ * API key resolver + management routes are auto-registered by initializeMomentum()
+ * as plugin middleware (mounted at /api/auth/api-keys via momentumApiMiddleware).
  */
-app.use(
-	createSessionResolverMiddleware(auth, {
-		getRoleByEmail: async (email: string): Promise<string | undefined> => {
-			try {
-				// Use setContext with a system admin user to bypass access control
-				const api = getMomentumAPI();
-				const systemApi = api.setContext({
-					user: { id: 'system', email: 'system@localhost', role: 'admin' },
-				});
-				// Filter by email server-side to avoid fetching all users
-				const result = await systemApi
-					.collection<{ email: string; role?: string }>('users')
-					.find({ where: { email: { equals: email } }, limit: 1 });
-				return result.docs[0]?.role;
-			} catch {
-				return undefined;
-			}
-		},
-	}),
-);
-
-/**
- * API key management endpoints (admin only)
- * GET /api/api-keys, POST /api/api-keys, DELETE /api/api-keys/:id
- */
-app.use('/api', createApiKeyRoutes({ store: apiKeyStore }));
+app.use(createDeferredSessionResolver(authPlugin));
 
 /**
  * OpenAPI / Swagger documentation

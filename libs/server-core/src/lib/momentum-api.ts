@@ -179,6 +179,41 @@ class MomentumAPIImpl implements MomentumAPI {
 }
 
 // ============================================
+// Deep Equality Helper
+// ============================================
+
+/**
+ * Recursively compares two values for structural equality.
+ * Used by matchesDefaultWhereConstraints to support non-primitive constraint values
+ * (arrays, objects) that would fail with strict === reference equality.
+ */
+function deepEqual(a: unknown, b: unknown): boolean {
+	if (a === b) return true;
+	if (a == null || b == null) return false;
+	if (typeof a !== 'object' || typeof b !== 'object') return false;
+
+	if (Array.isArray(a)) {
+		if (!Array.isArray(b) || a.length !== b.length) return false;
+		return a.every((item, i) => deepEqual(item, b[i]));
+	}
+
+	if (Array.isArray(b)) return false;
+
+	// Both a and b are non-null, non-array objects at this point
+	const aKeys = Object.keys(a);
+	const bKeys = Object.keys(b);
+	if (aKeys.length !== bKeys.length) return false;
+
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowed to non-null object, indexing by string key
+	const aRec = a as Record<string, unknown>;
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowed to non-null object, indexing by string key
+	const bRec = b as Record<string, unknown>;
+	return aKeys.every(
+		(key) => Object.prototype.hasOwnProperty.call(bRec, key) && deepEqual(aRec[key], bRec[key]),
+	);
+}
+
+// ============================================
 // Where Clause Helpers
 // ============================================
 
@@ -240,6 +275,14 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			whereParams[softDeleteField] = null;
 		} else if (softDeleteField && options.onlyDeleted) {
 			whereParams[softDeleteField] = { $ne: null };
+		}
+
+		// Inject defaultWhere constraints (e.g., user-scoped filtering)
+		if (this.collectionConfig.defaultWhere) {
+			const constraints = this.collectionConfig.defaultWhere(this.buildRequestContext());
+			if (constraints) {
+				Object.assign(whereParams, constraints);
+			}
 		}
 
 		const query: Record<string, unknown> = {
@@ -331,6 +374,12 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
 			(doc as Record<string, unknown>)[softDeleteField]
 		) {
+			return null;
+		}
+
+		// Filter by defaultWhere constraints (e.g., user-scoped filtering)
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
+		if (!this.matchesDefaultWhereConstraints(doc as Record<string, unknown>)) {
 			return null;
 		}
 
@@ -451,6 +500,11 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			throw new DocumentNotFoundError(this.slug, id);
 		}
 
+		// Enforce defaultWhere constraints (e.g., user-scoped filtering)
+		if (!this.matchesDefaultWhereConstraints(originalDoc)) {
+			throw new DocumentNotFoundError(this.slug, id);
+		}
+
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Partial<T> is compatible with Record<string, unknown>
 		let processedData = data as Record<string, unknown>;
 
@@ -537,6 +591,11 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			throw new DocumentNotFoundError(this.slug, id);
 		}
 
+		// Enforce defaultWhere constraints (e.g., user-scoped filtering)
+		if (!this.matchesDefaultWhereConstraints(doc)) {
+			throw new DocumentNotFoundError(this.slug, id);
+		}
+
 		const softDeleteField = getSoftDeleteField(this.collectionConfig);
 
 		if (softDeleteField) {
@@ -582,6 +641,11 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Get document first (for hooks)
 		const doc = await this.adapter.findById(this.slug, id);
 		if (!doc) {
+			throw new DocumentNotFoundError(this.slug, id);
+		}
+
+		// Enforce defaultWhere constraints (e.g., user-scoped filtering)
+		if (!this.matchesDefaultWhereConstraints(doc)) {
 			throw new DocumentNotFoundError(this.slug, id);
 		}
 
@@ -845,6 +909,20 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 	// ============================================
 	// Private Helpers
 	// ============================================
+
+	/**
+	 * Checks whether a document satisfies the collection's defaultWhere constraints.
+	 * Returns false if the document is outside the current user's scope.
+	 */
+	private matchesDefaultWhereConstraints(doc: Record<string, unknown>): boolean {
+		if (!this.collectionConfig.defaultWhere) return true;
+		const constraints = this.collectionConfig.defaultWhere(this.buildRequestContext());
+		if (!constraints) return true;
+		for (const [key, value] of Object.entries(constraints)) {
+			if (!deepEqual(doc[key], value)) return false;
+		}
+		return true;
+	}
 
 	private async checkAccess(
 		operation: 'create' | 'read' | 'update' | 'delete',

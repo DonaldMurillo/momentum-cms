@@ -5,6 +5,7 @@ import type { Database } from 'better-sqlite3';
 import { createEmailService, type EmailConfig, type EmailService } from './email';
 import { getPasswordResetEmail, getVerificationEmail } from './email-templates';
 import { createLogger } from '@momentum-cms/logger';
+import type { Field } from '@momentum-cms/core';
 
 /**
  * Database configuration for Better Auth.
@@ -61,6 +62,10 @@ export interface MomentumAuthConfig {
 	socialProviders?: OAuthProvidersConfig;
 	/** Enable two-factor authentication (TOTP). Default: false */
 	twoFactorAuth?: boolean;
+	/** Additional Better Auth plugins (from sub-plugins). */
+	plugins?: unknown[];
+	/** Extra user fields to register with Better Auth's user.additionalFields. */
+	userFields?: Field[];
 }
 
 /**
@@ -178,6 +183,42 @@ export function getEnabledOAuthProviders(config?: OAuthProvidersConfig): string[
 }
 
 /**
+ * Converts Momentum Field definitions to Better Auth's additionalFields format.
+ * Maps field types to the equivalent Better Auth type strings.
+ */
+function convertFieldsToAdditionalFields(
+	fields: Field[],
+): Record<string, { type: string; required?: boolean; defaultValue?: unknown; input?: boolean }> {
+	const result: Record<
+		string,
+		{ type: string; required?: boolean; defaultValue?: unknown; input?: boolean }
+	> = {};
+	for (const field of fields) {
+		let baType: string;
+		switch (field.type) {
+			case 'checkbox':
+				baType = 'boolean';
+				break;
+			case 'number':
+				baType = 'number';
+				break;
+			case 'date':
+				baType = 'string'; // Better Auth stores dates as strings
+				break;
+			default:
+				baType = 'string';
+				break;
+		}
+		result[field.name] = {
+			type: baType,
+			required: field.required ?? false,
+			input: false, // Sub-plugin fields are not user-settable by default
+		};
+	}
+	return result;
+}
+
+/**
  * Creates a Momentum Auth instance using Better Auth.
  *
  * @example
@@ -218,6 +259,10 @@ export function createMomentumAuth(
 		socialProviders,
 		twoFactorAuth,
 	} = config;
+
+	// Extract new plugin-related fields (only present on MomentumAuthConfig, not legacy)
+	const extraPlugins = !isLegacyConfig(config) ? (config.plugins ?? []) : [];
+	const extraUserFields = !isLegacyConfig(config) ? (config.userFields ?? []) : [];
 
 	// Configure database based on type
 	// Better Auth auto-detects the database type from the instance:
@@ -323,9 +368,15 @@ export function createMomentumAuth(
 	const socialProvidersConfig = buildSocialProviders(socialProviders, baseURL);
 
 	// Build plugins array
-	const plugins = [];
+	const plugins: unknown[] = [];
 	if (twoFactorAuth) {
 		plugins.push(twoFactor());
+	}
+	// Merge sub-plugin Better Auth plugins (filter out undefined stubs)
+	for (const p of extraPlugins) {
+		if (p !== undefined) {
+			plugins.push(p);
+		}
 	}
 
 	return betterAuth({
@@ -344,11 +395,16 @@ export function createMomentumAuth(
 		...(socialProvidersConfig && { socialProviders: socialProvidersConfig }),
 
 		// Plugins (2FA, etc.)
-		...(plugins.length > 0 && { plugins }),
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/consistent-type-assertions -- Better Auth plugin types are opaque from sub-plugins
+		...(plugins.length > 0 && { plugins: plugins as any[] }),
 
-		// Add custom role field to users
+		// Add custom role field to users + any extra user fields from sub-plugins.
+		// Base role is spread AFTER sub-plugin fields so it cannot be overwritten
+		// (a sub-plugin field named 'role' would lose defaultValue and input protection).
 		user: {
 			additionalFields: {
+				// Convert Momentum Field definitions to Better Auth additionalFields format
+				...convertFieldsToAdditionalFields(extraUserFields.filter((f) => f.name !== 'role')),
 				role: {
 					type: 'string',
 					required: false,
@@ -359,13 +415,12 @@ export function createMomentumAuth(
 		},
 
 		// Session configuration
+		// Note: cookieCache is intentionally disabled. It caches session data
+		// (including role) in a signed cookie, which causes stale role issues
+		// when roles are updated after session creation (e.g., setup flow).
 		session: {
 			expiresIn: 60 * 60 * 24 * 7, // 7 days
 			updateAge: 60 * 60 * 24, // Update session every 24 hours
-			cookieCache: {
-				enabled: true,
-				maxAge: 60 * 5, // 5 minutes
-			},
 		},
 	});
 }

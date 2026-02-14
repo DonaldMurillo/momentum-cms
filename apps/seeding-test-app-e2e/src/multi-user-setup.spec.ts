@@ -46,9 +46,9 @@ test.describe('Multi-user setup', () => {
 		});
 		expect(signInResponse.ok(), 'Admin sign-in should succeed').toBe(true);
 
-		// Fetch users collection with enough limit for all users
-		const response = await request.get('/api/users?limit=100');
-		expect(response.ok(), 'Users list should be accessible').toBe(true);
+		// Fetch auth-user collection (managed by auth plugin, read-only)
+		const response = await request.get('/api/auth-user?limit=100');
+		expect(response.ok(), 'Auth-user list should be accessible').toBe(true);
 
 		const data = (await response.json()) as {
 			docs: Array<{ email: string; role?: string }>;
@@ -57,7 +57,7 @@ test.describe('Multi-user setup', () => {
 		// Verify all users exist with correct roles
 		for (const user of allUsers) {
 			const found = data.docs.find((doc) => doc.email === user.email);
-			expect(found, `User ${user.email} should exist in users collection`).toBeTruthy();
+			expect(found, `User ${user.email} should exist in auth-user collection`).toBeTruthy();
 			expect(found?.role, `User ${user.email} should have role '${user.role}'`).toBe(user.role);
 		}
 	});

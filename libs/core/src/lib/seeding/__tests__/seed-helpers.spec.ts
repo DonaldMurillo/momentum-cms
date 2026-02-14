@@ -198,6 +198,101 @@ describe('createSeedHelpers', () => {
 		});
 	});
 
+	describe('authUser helper', () => {
+		it('should create authUser seed entity targeting the user table', () => {
+			const helpers = createSeedHelpers();
+			const authUser = helpers.authUser('auth-user-1', {
+				name: 'Test User',
+				email: 'test@example.com',
+				password: 'password123',
+			});
+
+			expect(authUser.seedId).toBe('auth-user-1');
+			expect(authUser.collection).toBe('user');
+		});
+
+		it('should set useAuthSignup option by default', () => {
+			const helpers = createSeedHelpers();
+			const authUser = helpers.authUser('auth-user-1', {
+				name: 'Test',
+				email: 'test@example.com',
+				password: 'password123',
+			});
+
+			expect(authUser.options?.useAuthSignup).toBe(true);
+		});
+
+		it('should not have syncAuth option', () => {
+			const helpers = createSeedHelpers();
+			const authUser = helpers.authUser('auth-user-1', {
+				name: 'Test',
+				email: 'test@example.com',
+				password: 'password123',
+			});
+
+			expect((authUser.options as Record<string, unknown>)?.['syncAuth']).toBeUndefined();
+		});
+
+		it('should set emailVerified to true by default', () => {
+			const helpers = createSeedHelpers();
+			const authUser = helpers.authUser('auth-user-1', {
+				name: 'Test',
+				email: 'test@example.com',
+				password: 'password123',
+			});
+
+			expect(authUser.data.emailVerified).toBe(true);
+		});
+
+		it('should set role to user by default', () => {
+			const helpers = createSeedHelpers();
+			const authUser = helpers.authUser('auth-user-1', {
+				name: 'Test',
+				email: 'test@example.com',
+				password: 'password123',
+			});
+
+			expect(authUser.data.role).toBe('user');
+		});
+
+		it('should allow overriding role', () => {
+			const helpers = createSeedHelpers();
+			const authUser = helpers.authUser('admin-auth', {
+				name: 'Admin',
+				email: 'admin@example.com',
+				password: 'admin123',
+				role: 'admin',
+			});
+
+			expect(authUser.data.role).toBe('admin');
+		});
+
+		it('should merge additional options with useAuthSignup', () => {
+			const helpers = createSeedHelpers();
+			const authUser = helpers.authUser(
+				'auth-user-1',
+				{ name: 'Test', email: 'test@example.com', password: 'password123' },
+				{ onConflict: 'skip' },
+			);
+
+			expect(authUser.options).toEqual({
+				onConflict: 'skip',
+				useAuthSignup: true,
+			});
+		});
+
+		it('should preserve password in data for signup hashing', () => {
+			const helpers = createSeedHelpers();
+			const authUser = helpers.authUser('auth-user-1', {
+				name: 'Test',
+				email: 'test@example.com',
+				password: 'secretpassword',
+			});
+
+			expect(authUser.data.password).toBe('secretpassword');
+		});
+	});
+
 	describe('helper combination', () => {
 		it('should work in typical seeding config pattern', () => {
 			const helpers = createSeedHelpers();

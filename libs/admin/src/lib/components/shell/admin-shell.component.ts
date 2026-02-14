@@ -181,18 +181,18 @@ export class AdminShellComponent implements OnInit {
 		return getCollectionsFromRouteData(this.route.snapshot.data);
 	});
 
-	/** Collections filtered by access permissions */
+	/** Collections filtered by access permissions and visibility */
 	readonly collections = computed((): CollectionConfig[] => {
 		const all = this.allCollections();
 		const accessible = this.collectionAccess.accessibleCollections();
 
-		// If permissions not loaded yet, show all (will be filtered after load)
+		// If permissions not loaded yet, show all non-hidden (will be filtered after load)
 		if (!this.collectionAccess.initialized()) {
-			return all;
+			return all.filter((c) => !c.admin?.hidden);
 		}
 
-		// Filter to only accessible collections
-		return all.filter((c) => accessible.includes(c.slug));
+		// Filter to only accessible, non-hidden collections
+		return all.filter((c) => !c.admin?.hidden && accessible.includes(c.slug));
 	});
 
 	/** Globals from route data */

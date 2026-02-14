@@ -111,6 +111,14 @@ export interface AdminConfig {
 
 	/** Enable preview mode */
 	preview?: boolean | ((doc: Record<string, unknown>) => string);
+
+	/** Custom action buttons displayed in the collection list header (alongside Create button) */
+	headerActions?: Array<{
+		id: string;
+		label: string;
+		/** HTTP endpoint path for the action (e.g., '/api/auth/api-keys') */
+		endpoint?: string;
+	}>;
 }
 
 // ============================================
@@ -185,6 +193,19 @@ export interface TimestampsConfig {
 }
 
 // ============================================
+// Indexes
+// ============================================
+
+export interface IndexDefinition {
+	/** Column names to include in the index */
+	columns: string[];
+	/** Whether this index enforces uniqueness */
+	unique?: boolean;
+	/** Custom index name (auto-generated from columns if omitted) */
+	name?: string;
+}
+
+// ============================================
 // Collection Configuration
 // ============================================
 
@@ -222,8 +243,18 @@ export interface CollectionConfig {
 	/** Enable soft deletes (sets deletedAt instead of removing row) */
 	softDelete?: boolean | SoftDeleteConfig;
 
+	/**
+	 * Mark this collection as managed — schema is created but no CRUD routes are generated.
+	 * Useful for tables owned by external systems (e.g., Better Auth) that should participate
+	 * in schema generation and optionally appear in the admin UI.
+	 */
+	managed?: boolean;
+
 	/** Custom database table/collection name */
 	dbName?: string;
+
+	/** Explicit database indexes for this collection */
+	indexes?: IndexDefinition[];
 
 	/** Default sort field */
 	defaultSort?: string;
@@ -235,6 +266,14 @@ export interface CollectionConfig {
 		disableQueries?: boolean;
 		disableMutations?: boolean;
 	};
+
+	/**
+	 * Default query constraints applied to all CRUD operations (find, findById, update, delete).
+	 * For reads, constraints are injected into the query. For mutations, the document is checked
+	 * post-fetch and rejected with DocumentNotFoundError if it falls outside the user's scope.
+	 * Returns WHERE conditions to enforce, or undefined for no filtering.
+	 */
+	defaultWhere?: (req: RequestContext) => Record<string, unknown> | undefined;
 
 	/** Custom endpoints */
 	endpoints?: EndpointConfig[];

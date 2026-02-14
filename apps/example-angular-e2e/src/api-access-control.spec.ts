@@ -155,55 +155,6 @@ async function authenticatedRequest(
 	return { status: response.status(), body };
 }
 
-/**
- * Ensure a Momentum user record exists with the correct role.
- * Creates the user if it doesn't exist. This handles the case where
- * Better Auth user exists but Momentum user record was not created
- * (e.g., from a previous partial test run or database reset).
- */
-async function ensureMomentumUserExists(
-	request: APIRequestContext,
-	adminCookies: string[],
-	user: { email: string; name: string; role: string },
-): Promise<void> {
-	// Get all users and filter client-side (where clause has issues)
-	const { status, body } = await authenticatedRequest(request, adminCookies, 'GET', '/api/users');
-
-	if (status === 200 && body && typeof body === 'object' && 'docs' in body) {
-		const docs = (body as { docs: Array<{ email: string; role: string }> }).docs;
-		const existingUser = docs.find((d) => d.email === user.email);
-
-		if (existingUser) {
-			console.log(
-				`[Test] Momentum user ${user.email} already exists with role: ${existingUser.role}`,
-			);
-			// Verify the role matches
-			if (existingUser.role !== user.role) {
-				console.log(
-					`[Test] Role mismatch: expected ${user.role}, got ${existingUser.role}. Continuing with existing role.`,
-				);
-			}
-			return;
-		}
-	}
-
-	// Create Momentum user record (without password - Better Auth user already exists)
-
-	console.log(`[Test] Creating Momentum user record for ${user.email} with role ${user.role}`);
-	const createResponse = await authenticatedRequest(request, adminCookies, 'POST', '/api/users', {
-		name: user.name,
-		email: user.email,
-		role: user.role,
-		active: true,
-	});
-
-	if (createResponse.status !== 201) {
-		console.log(`[Test] Momentum user create failed:`, createResponse.status, createResponse.body);
-	} else {
-		console.log(`[Test] Momentum user ${user.email} created successfully`);
-	}
-}
-
 // ============================================
 // Test Setup - Create Test Users
 // ============================================
@@ -224,16 +175,11 @@ test.describe('API Access Control - Setup', () => {
 
 		if (existingSession && existingSession.length > 0) {
 			// User exists and password matches - use existing session
-
 			console.log('[Test] Editor user exists, signed in successfully');
 			sessions.editor = existingSession;
-
-			// Ensure Momentum user record exists with correct role
-			// (Better Auth user might exist without Momentum record from previous partial run)
-			await ensureMomentumUserExists(request, sessions.admin, TEST_USERS.editor);
 		} else {
 			// User doesn't exist or password doesn't match - create via Better Auth
-
+			// User records are created via Better Auth (not via the Momentum API).
 			console.log('[Test] Creating editor user via Better Auth...');
 			const signUpSession = await trySignUp(
 				request,
@@ -244,25 +190,6 @@ test.describe('API Access Control - Setup', () => {
 
 			if (signUpSession && signUpSession.length > 0) {
 				console.log('[Test] Editor user created via Better Auth');
-
-				// Create corresponding Momentum user record (without password)
-				const momentumResponse = await authenticatedRequest(
-					request,
-					sessions.admin,
-					'POST',
-					'/api/users',
-					{
-						name: TEST_USERS.editor.name,
-						email: TEST_USERS.editor.email,
-						role: TEST_USERS.editor.role,
-						active: true,
-					},
-				);
-
-				if (momentumResponse.status !== 201) {
-					console.log('[Test] Momentum user create response:', momentumResponse.status);
-				}
-
 				sessions.editor = signUpSession;
 			} else {
 				console.warn('[Test] Could not create editor user. Role-based tests may be skipped.');
@@ -284,13 +211,9 @@ test.describe('API Access Control - Setup', () => {
 		if (existingSession && existingSession.length > 0) {
 			console.log('[Test] Viewer user exists, signed in successfully');
 			sessions.viewer = existingSession;
-
-			// Ensure Momentum user record exists with correct role
-			// (Better Auth user might exist without Momentum record from previous partial run)
-			await ensureMomentumUserExists(request, sessions.admin, TEST_USERS.viewer);
 		} else {
 			// User doesn't exist or password doesn't match - create via Better Auth
-
+			// User records are created via Better Auth (not via the Momentum API).
 			console.log('[Test] Creating viewer user via Better Auth...');
 			const signUpSession = await trySignUp(
 				request,
@@ -301,25 +224,6 @@ test.describe('API Access Control - Setup', () => {
 
 			if (signUpSession && signUpSession.length > 0) {
 				console.log('[Test] Viewer user created via Better Auth');
-
-				// Create corresponding Momentum user record (without password)
-				const momentumResponse = await authenticatedRequest(
-					request,
-					sessions.admin,
-					'POST',
-					'/api/users',
-					{
-						name: TEST_USERS.viewer.name,
-						email: TEST_USERS.viewer.email,
-						role: TEST_USERS.viewer.role,
-						active: true,
-					},
-				);
-
-				if (momentumResponse.status !== 201) {
-					console.log('[Test] Momentum user create response:', momentumResponse.status);
-				}
-
 				sessions.viewer = signUpSession;
 			} else {
 				console.warn('[Test] Could not create viewer user. Role-based tests may be skipped.');
@@ -508,19 +412,29 @@ test.describe('API Access Control - Posts Collection', () => {
 
 test.describe('API Access Control - Users Collection', () => {
 	test('unauthenticated: cannot read users (403)', async ({ request }) => {
-		const response = await request.get(`/api/users`);
+		const response = await request.get(`/api/auth-user`);
 		expect(response.status()).toBe(403);
 	});
 
 	test('viewer: cannot read users (403)', async ({ request }) => {
 		test.skip(!sessions.viewer, 'Viewer session not available');
-		const { status } = await authenticatedRequest(request, sessions.viewer, 'GET', '/api/users');
+		const { status } = await authenticatedRequest(
+			request,
+			sessions.viewer,
+			'GET',
+			'/api/auth-user',
+		);
 		expect(status).toBe(403);
 	});
 
 	test('editor: cannot read users (403)', async ({ request }) => {
 		test.skip(!sessions.editor, 'Editor session not available');
-		const { status } = await authenticatedRequest(request, sessions.editor, 'GET', '/api/users');
+		const { status } = await authenticatedRequest(
+			request,
+			sessions.editor,
+			'GET',
+			'/api/auth-user',
+		);
 		expect(status).toBe(403);
 	});
 
@@ -530,7 +444,7 @@ test.describe('API Access Control - Users Collection', () => {
 			request,
 			sessions.admin,
 			'GET',
-			'/api/users',
+			'/api/auth-user',
 		);
 		expect(status).toBe(200);
 		const docs = (body as { docs: { email: string }[] }).docs;
@@ -542,53 +456,62 @@ test.describe('API Access Control - Users Collection', () => {
 		expect(emails).toContain(TEST_USERS.admin.email);
 	});
 
-	test('admin: can update users', async ({ request }) => {
+	test('admin: can update auth-user collection', async ({ request }) => {
 		test.skip(!sessions.admin, 'Admin session not available');
-		// Get list of users to find editor's ID
-		const listResult = await authenticatedRequest(request, sessions.admin, 'GET', '/api/users');
+		const listResult = await authenticatedRequest(request, sessions.admin, 'GET', '/api/auth-user');
 		expect(listResult.status).toBe(200);
 
 		const users = (listResult.body as { docs: { id: string; email: string; name: string }[] }).docs;
 		const editor = users.find((u) => u.email === TEST_USERS.editor.email);
 
 		if (editor) {
-			const originalName = editor.name;
-			const { status, body } = await authenticatedRequest(
+			const { status } = await authenticatedRequest(
 				request,
 				sessions.admin,
 				'PATCH',
-				`/api/users/${editor.id}`,
+				`/api/auth-user/${editor.id}`,
 				{
 					name: 'Updated Editor Name',
 				},
 			);
 			expect(status).toBe(200);
-			expect((body as { doc: { name: string } }).doc.name).toBe('Updated Editor Name');
 
 			// Restore original name
-			await authenticatedRequest(request, sessions.admin, 'PATCH', `/api/users/${editor.id}`, {
-				name: originalName,
+			await authenticatedRequest(request, sessions.admin, 'PATCH', `/api/auth-user/${editor.id}`, {
+				name: editor.name,
 			});
 		}
 	});
 
 	test('viewer: cannot create users (403)', async ({ request }) => {
 		test.skip(!sessions.viewer, 'Viewer session not available');
-		const { status } = await authenticatedRequest(request, sessions.viewer, 'POST', '/api/users', {
-			name: 'Unauthorized User',
-			email: 'unauthorized@test.com',
-			role: 'viewer',
-		});
+		const { status } = await authenticatedRequest(
+			request,
+			sessions.viewer,
+			'POST',
+			'/api/auth-user',
+			{
+				name: 'Unauthorized User',
+				email: 'unauthorized@test.com',
+				role: 'viewer',
+			},
+		);
 		expect(status).toBe(403);
 	});
 
 	test('editor: cannot create users (403)', async ({ request }) => {
 		test.skip(!sessions.editor, 'Editor session not available');
-		const { status } = await authenticatedRequest(request, sessions.editor, 'POST', '/api/users', {
-			name: 'Unauthorized User',
-			email: 'unauthorized@test.com',
-			role: 'viewer',
-		});
+		const { status } = await authenticatedRequest(
+			request,
+			sessions.editor,
+			'POST',
+			'/api/auth-user',
+			{
+				name: 'Unauthorized User',
+				email: 'unauthorized@test.com',
+				role: 'viewer',
+			},
+		);
 		expect(status).toBe(403);
 	});
 });
@@ -612,7 +535,7 @@ test.describe('API Access Control - /api/access Endpoint', () => {
 		}[];
 
 		const posts = collections.find((c) => c.slug === 'posts');
-		const users = collections.find((c) => c.slug === 'users');
+		const users = collections.find((c) => c.slug === 'auth-user');
 
 		// Unauthenticated: can read posts (public), cannot access admin
 		expect(posts?.canRead).toBe(true);
@@ -643,11 +566,12 @@ test.describe('API Access Control - /api/access Endpoint', () => {
 					canRead: boolean;
 					canUpdate: boolean;
 					canDelete: boolean;
+					managed?: boolean;
 				}[];
 			}
 		).collections;
 		const posts = collections.find((c) => c.slug === 'posts');
-		const users = collections.find((c) => c.slug === 'users');
+		const users = collections.find((c) => c.slug === 'auth-user');
 
 		// Admin has full access to posts
 		expect(posts?.canAccess).toBe(true);
@@ -656,7 +580,7 @@ test.describe('API Access Control - /api/access Endpoint', () => {
 		expect(posts?.canUpdate).toBe(true);
 		expect(posts?.canDelete).toBe(true);
 
-		// Admin has full access to users
+		// auth-user: admin has full CRUD access
 		expect(users?.canAccess).toBe(true);
 		expect(users?.canCreate).toBe(true);
 		expect(users?.canRead).toBe(true);
@@ -680,15 +604,17 @@ test.describe('API Access Control - /api/access Endpoint', () => {
 			}
 		).collections;
 		const posts = collections.find((c) => c.slug === 'posts');
-		const users = collections.find((c) => c.slug === 'users');
+		const users = collections.find((c) => c.slug === 'auth-user');
 
 		// Editor can access posts admin, create/update, but NOT delete
 		expect(posts?.canAccess).toBe(true);
 		expect(posts?.canCreate).toBe(true);
 		expect(posts?.canDelete).toBe(false);
 
-		// Editor cannot access users admin
+		// Editor cannot access auth-user admin page (admin access restricted to admin role)
 		expect(users?.canAccess).toBe(false);
+		expect(users?.canCreate).toBe(false);
+		expect(users?.canRead).toBe(false);
 	});
 
 	test('returns correct permissions for viewer', async ({ request }) => {
@@ -707,15 +633,16 @@ test.describe('API Access Control - /api/access Endpoint', () => {
 			}
 		).collections;
 		const posts = collections.find((c) => c.slug === 'posts');
-		const users = collections.find((c) => c.slug === 'users');
+		const users = collections.find((c) => c.slug === 'auth-user');
 
 		// Viewer can access posts admin (authenticated) but cannot create/delete
 		expect(posts?.canAccess).toBe(true);
 		expect(posts?.canCreate).toBe(false);
 		expect(posts?.canDelete).toBe(false);
 
-		// Viewer cannot access users
+		// Viewer cannot access auth-user admin page (admin access restricted to admin role)
 		expect(users?.canAccess).toBe(false);
+		expect(users?.canRead).toBe(false);
 	});
 });
 

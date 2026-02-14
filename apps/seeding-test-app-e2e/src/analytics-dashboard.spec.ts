@@ -20,8 +20,8 @@ test.describe('Sidebar Collection Grouping', { tag: ['@analytics', '@smoke'] }, 
 		// Named groups appear before the default "Collections" group
 		// "Content" group: articles, categories, pages
 		await expect(sidebar.getByText('Content', { exact: true })).toBeVisible();
-		// "Admin" group: users
-		await expect(sidebar.getByText('Admin', { exact: true })).toBeVisible();
+		// "Authentication" group: users, api keys (from auth plugin)
+		await expect(sidebar.getByText('Authentication', { exact: true })).toBeVisible();
 		// Default "Collections" group: products, settings, events, media, etc.
 		await expect(sidebar.getByText('Collections', { exact: true })).toBeVisible();
 	});
@@ -38,11 +38,12 @@ test.describe('Sidebar Collection Grouping', { tag: ['@analytics', '@smoke'] }, 
 		await expect(sidebar.getByRole('link', { name: 'Pages' })).toBeVisible();
 	});
 
-	test('Admin group contains users', async ({ authenticatedPage }) => {
+	test('Authentication group contains Users (auth-user)', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const sidebar = authenticatedPage.getByLabel('Main navigation');
+		await expect(sidebar.getByText('Authentication')).toBeVisible();
 		await expect(sidebar.getByRole('link', { name: 'Users' })).toBeVisible();
 	});
 
@@ -54,7 +55,7 @@ test.describe('Sidebar Collection Grouping', { tag: ['@analytics', '@smoke'] }, 
 
 		// Products, Settings, Events, etc. have no admin.group → default "Collections"
 		await expect(sidebar.getByRole('link', { name: 'Products' })).toBeVisible();
-		await expect(sidebar.getByRole('link', { name: 'Settings' })).toBeVisible();
+		await expect(sidebar.getByRole('link', { name: 'Settings', exact: true })).toBeVisible();
 		await expect(sidebar.getByRole('link', { name: 'Events' })).toBeVisible();
 	});
 });

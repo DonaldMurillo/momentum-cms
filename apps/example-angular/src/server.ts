@@ -13,15 +13,11 @@ import { fileURLToPath } from 'node:url';
 import {
 	momentumApiMiddleware,
 	initializeMomentum,
-	createAuthMiddleware,
-	createSetupMiddleware,
-	createSessionResolverMiddleware,
+	createDeferredSessionResolver,
 } from '@momentum-cms/server-express';
-import { createMomentumAuth } from '@momentum-cms/auth';
-import { getMomentumAPI, createUserSyncHook } from '@momentum-cms/server-core';
+import { getMomentumAPI } from '@momentum-cms/server-core';
 import { provideMomentumAPI } from '@momentum-cms/admin';
-import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
-import momentumConfig from './momentum.config';
+import momentumConfig, { authPlugin } from './momentum.config';
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
@@ -32,90 +28,23 @@ const angularApp = new AngularNodeAppEngine();
 // Parse JSON request bodies (required for auth endpoints)
 app.use(express.json());
 
-// Get the pg pool from the adapter for Better Auth
-// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- PostgresAdapter implements PostgresAdapterWithRaw
-const dbAdapter = momentumConfig.db.adapter as PostgresAdapterWithRaw;
-const pool = dbAdapter.getPool();
-
-// Create Better Auth instance with PostgreSQL
-// Email is enabled automatically if SMTP_HOST env var is set
-// Defaults to Mailpit settings (localhost:1025) for local development
-const authBaseURL =
-	process.env['BETTER_AUTH_URL'] || `http://localhost:${momentumConfig.server.port}`;
-
-const auth = createMomentumAuth({
-	db: { type: 'postgres', pool },
-	baseURL: authBaseURL,
-	trustedOrigins: ['http://localhost:4200', authBaseURL],
-	email: {
-		// Email is auto-enabled when SMTP_HOST is set
-		// Configure via environment variables:
-		// SMTP_HOST=localhost SMTP_PORT=1025 SMTP_FROM=noreply@momentum.local
-		appName: 'Momentum CMS',
-	},
-});
-
-// Add user sync hooks to users collection
-// This ensures Momentum users are synced with Better Auth users on creation
-// The hook is prepended so it runs BEFORE the collection's built-in password stripper
-const usersCollection = momentumConfig.collections.find((c) => c.slug === 'users');
-if (usersCollection) {
-	const existingHooks = usersCollection.hooks?.beforeChange ?? [];
-	usersCollection.hooks = usersCollection.hooks ?? {};
-	usersCollection.hooks.beforeChange = [createUserSyncHook({ auth }), ...existingHooks];
-}
-
-// Initialize Momentum CMS (database schema, API, seeding — after hooks are configured)
+// Initialize Momentum CMS (database schema, API, seeding — auth plugin registers middleware)
+// Await ensures the auth plugin is ready before the server accepts requests,
+// so the deferred session resolver can resolve user sessions correctly.
 const momentum = initializeMomentum(momentumConfig);
-
-// Handle initialization errors
-momentum.ready.catch((error) => {
+try {
+	await momentum.ready;
+} catch (error) {
 	console.error('[Example Angular] Initialization failed:', error);
 	process.exit(1);
-});
-
-/**
- * Auth endpoints (Better Auth)
- * Handles sign-in, sign-up, sign-out, session management
- */
-app.use('/api', createAuthMiddleware(auth));
-
-/**
- * Setup endpoints
- * Handles first-time setup status and admin creation
- */
-app.use(
-	'/api',
-	createSetupMiddleware({ db: { type: 'postgres', pool }, auth, adapter: dbAdapter }),
-);
+}
 
 /**
  * Session resolver middleware
  * Resolves user session from auth cookies and attaches to req.user
- * Must be before API middleware for access control to work
+ * Must be before Angular SSR for access control to work
  */
-app.use(
-	createSessionResolverMiddleware(auth, {
-		getRoleByEmail: async (email: string): Promise<string | undefined> => {
-			try {
-				// Use setContext with a system admin user to bypass access control
-				// This is necessary because we're in the session resolver middleware
-				// and don't have a user context yet - but need to read the users collection
-				const api = getMomentumAPI();
-				const systemApi = api.setContext({
-					user: { id: 'system', email: 'system@localhost', role: 'admin' },
-				});
-				// Filter by email server-side to avoid fetching all users
-				const result = await systemApi
-					.collection<{ email: string; role?: string }>('users')
-					.find({ where: { email: { equals: email } }, limit: 1 });
-				return result.docs[0]?.role;
-			} catch {
-				return undefined;
-			}
-		},
-	}),
-);
+app.use(createDeferredSessionResolver(authPlugin));
 
 /**
  * Momentum CMS API endpoints

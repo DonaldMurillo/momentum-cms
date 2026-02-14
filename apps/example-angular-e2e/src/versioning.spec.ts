@@ -159,7 +159,7 @@ test.describe('Versioning - API Tests', () => {
 	test('should return 400 for non-versioned collection', async ({ authenticatedPage }) => {
 		const request = await getAuthRequest(authenticatedPage);
 		// Users collection doesn't have versioning enabled
-		const response = await request.get('/api/users/some-id/versions');
+		const response = await request.get('/api/auth-user/some-id/versions');
 
 		expect(response.status()).toBe(400);
 		const data = await response.json();

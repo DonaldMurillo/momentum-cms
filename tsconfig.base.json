@@ -22,6 +22,7 @@
 			"@momentum-cms/admin": ["libs/admin/src/index.ts"],
 			"@momentum-cms/db-drizzle": ["libs/db-drizzle/src/index.ts"],
 			"@momentum-cms/auth": ["libs/auth/src/index.ts"],
+			"@momentum-cms/auth/collections": ["libs/auth/src/lib/auth-collections.ts"],
 			"@momentum-cms/ui": ["libs/ui/src/index.ts"],
 			"@momentum-cms/storage": ["libs/storage/src/index.ts"],
 			"@momentum-cms/e2e-fixtures": ["libs/e2e-fixtures/src/index.ts"],
