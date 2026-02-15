@@ -409,12 +409,17 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 			const restored = await versionOps.restore({
 				versionId,
+				docId: req.params['id'],
 				publish: body['publish'] === true,
 			});
 
 			res.json({ doc: restored, message: 'Version restored successfully' });
 		} catch (error) {
 			const message = sanitizeErrorMessage(error, 'Unknown error');
+			if (error instanceof Error && error.message.includes('mismatch')) {
+				res.status(400).json({ error: 'Version parent mismatch', message });
+				return;
+			}
 			res.status(500).json({ error: 'Failed to restore version', message });
 		}
 	});
@@ -1133,8 +1138,6 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		}
 	});
 
-	// Route: GET /:collection - Find all documents
-	// Route: GET /:collection/:id - Find document by ID
 	// Route: POST /:collection/:id/restore - Restore a soft-deleted document
 	router.post('/:collection/:id/restore', async (req: Request, res: Response) => {
 		if (isManagedCollection(req.params['collection'])) {
@@ -1152,6 +1155,17 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		res.status(response.status ?? 200).json(response);
 	});
 
+	// Catch-all: POST /:collection/:id/:unknownAction - 404 for unrecognized actions
+	// Must be AFTER all specific action routes (publish, unpublish, draft, restore, etc.)
+	router.post('/:collection/:id/:action', (_req: Request, res: Response) => {
+		res.status(404).json({
+			error: 'Not found',
+			message: `Unknown action "${_req.params['action']}"`,
+		});
+	});
+
+	// Route: GET /:collection - Find all documents
+	// Route: GET /:collection/:id - Find document by ID
 	router.get('/:collection/:id?', async (req: Request, res: Response) => {
 		const sortParam = req.query['sort'];
 		const request: MomentumRequest = {

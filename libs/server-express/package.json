@@ -5,6 +5,7 @@
 	"main": "./index.cjs",
 	"types": "./index.d.ts",
 	"peerDependencies": {
+		"@angular/core": "^19.0.0 || ^20.0.0 || ^21.0.0",
 		"@momentum-cms/auth": "^0.0.1",
 		"@momentum-cms/core": "^0.0.1",
 		"@momentum-cms/logger": "^0.0.1",

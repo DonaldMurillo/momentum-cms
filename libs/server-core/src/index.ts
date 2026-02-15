@@ -133,6 +133,9 @@ export { getSwaggerUIHTML } from './lib/swagger-ui-html';
 // Preview Renderer
 export { renderPreviewHTML, type PreviewRenderOptions } from './lib/preview-renderer';
 
+// Rate Limiter
+export { RateLimiter } from './lib/rate-limiter';
+
 // Import/Export
 export {
 	exportToJson,

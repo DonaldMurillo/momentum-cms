@@ -26,7 +26,7 @@ import type {
 } from '@momentum-cms/plugins/analytics';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- server route handler uses analytics utilities directly
 import { parseUserAgent } from '@momentum-cms/plugins/analytics';
-import { getMomentumAPI } from '@momentum-cms/server-core';
+import { getMomentumAPI, RateLimiter } from '@momentum-cms/server-core';
 import {
 	ensureInitialized,
 	getAuth,
@@ -42,33 +42,6 @@ const VALID_CATEGORIES: Set<string> = new Set([
 	'action',
 	'custom',
 ]);
-
-// Rate limiter for ingest endpoint
-class RateLimiter {
-	private readonly limits: Map<string, { count: number; resetAt: number }> = new Map();
-	private readonly maxPerMinute: number;
-
-	constructor(maxPerMinute: number) {
-		this.maxPerMinute = maxPerMinute;
-	}
-
-	isAllowed(key: string): boolean {
-		const now = Date.now();
-		const entry = this.limits.get(key);
-
-		if (!entry || now >= entry.resetAt) {
-			this.limits.set(key, { count: 1, resetAt: now + 60_000 });
-			return true;
-		}
-
-		if (entry.count >= this.maxPerMinute) {
-			return false;
-		}
-
-		entry.count++;
-		return true;
-	}
-}
 
 const rateLimiter = new RateLimiter(analytics.analyticsConfig.ingestRateLimit ?? 100);
 

@@ -336,6 +336,57 @@ describe('VersionOperationsImpl', () => {
 
 			await expect(versionOps.restore({ versionId: 'v1' })).rejects.toThrow(AccessDeniedError);
 		});
+
+		it('should reject restore when docId does not match version parent', async () => {
+			const mockVersion = createMockVersion({ id: 'v1', parent: 'doc-1' });
+			vi.mocked(mockAdapter.findVersionById).mockResolvedValue(mockVersion);
+
+			const versionOps = new VersionOperationsImpl(
+				'posts',
+				mockVersionedCollection,
+				mockAdapter,
+				context,
+			);
+
+			await expect(versionOps.restore({ versionId: 'v1', docId: 'doc-2' })).rejects.toThrow(
+				'mismatch',
+			);
+			expect(mockAdapter.restoreVersion).not.toHaveBeenCalled();
+		});
+
+		it('should allow restore when docId matches version parent', async () => {
+			const mockVersion = createMockVersion({ id: 'v1', parent: 'doc-1' });
+			const restoredDoc = { id: 'doc-1', title: 'Restored' };
+			vi.mocked(mockAdapter.findVersionById).mockResolvedValue(mockVersion);
+			vi.mocked(mockAdapter.restoreVersion).mockResolvedValue(restoredDoc);
+
+			const versionOps = new VersionOperationsImpl(
+				'posts',
+				mockVersionedCollection,
+				mockAdapter,
+				context,
+			);
+
+			const result = await versionOps.restore({ versionId: 'v1', docId: 'doc-1' });
+			expect(result).toEqual(restoredDoc);
+			expect(mockAdapter.restoreVersion).toHaveBeenCalledWith('posts', 'v1');
+		});
+
+		it('should skip docId validation when docId is not provided', async () => {
+			const restoredDoc = { id: 'doc-1', title: 'Restored' };
+			vi.mocked(mockAdapter.restoreVersion).mockResolvedValue(restoredDoc);
+
+			const versionOps = new VersionOperationsImpl(
+				'posts',
+				mockVersionedCollection,
+				mockAdapter,
+				context,
+			);
+
+			const result = await versionOps.restore({ versionId: 'v1' });
+			expect(result).toEqual(restoredDoc);
+			expect(mockAdapter.findVersionById).not.toHaveBeenCalled();
+		});
 	});
 
 	describe('saveDraft()', () => {

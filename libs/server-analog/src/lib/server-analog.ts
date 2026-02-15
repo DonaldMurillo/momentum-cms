@@ -809,14 +809,20 @@ export function createComprehensiveMomentumHandler(
 					}
 					const restored = await versionOps.restore({
 						versionId,
+						docId,
 						publish: body['publish'] === true,
 					});
 					return { doc: restored, message: 'Version restored successfully' };
 				} catch (error) {
+					const message = sanitizeErrorMessage(error, 'Unknown error');
+					if (error instanceof Error && error.message.includes('mismatch')) {
+						utils.setResponseStatus(event, 400);
+						return { error: 'Version parent mismatch', message };
+					}
 					utils.setResponseStatus(event, 500);
 					return {
 						error: 'Failed to restore version',
-						message: sanitizeErrorMessage(error, 'Unknown error'),
+						message,
 					};
 				}
 			}
@@ -1002,6 +1008,10 @@ export function createComprehensiveMomentumHandler(
 				utils.setResponseStatus(event, response.status ?? 200);
 				return response;
 			}
+
+			// Unknown action — return 404 instead of falling through to CRUD
+			utils.setResponseStatus(event, 404);
+			return { error: 'Not found', message: `Unknown action "${action}"` };
 		}
 
 		// ============================================

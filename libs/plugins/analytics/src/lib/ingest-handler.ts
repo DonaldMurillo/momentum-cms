@@ -12,6 +12,7 @@ import type { AnalyticsEvent, AnalyticsCategory } from './analytics-event.types'
 import type { EventStore } from './event-store';
 import { createLogger } from '@momentum-cms/logger';
 import { parseUserAgent } from './utils/parse-user-agent';
+import { RateLimiter } from '@momentum-cms/server-core';
 
 const VALID_CATEGORIES: Set<AnalyticsCategory> = new Set([
 	'admin',
@@ -30,35 +31,6 @@ export interface IngestHandlerOptions {
 	eventStore: EventStore;
 	/** Rate limit per IP per minute. @default 100 */
 	rateLimit?: number;
-}
-
-/**
- * Simple in-memory rate limiter.
- */
-class RateLimiter {
-	private readonly limits: Map<string, { count: number; resetAt: number }> = new Map();
-	private readonly maxPerMinute: number;
-
-	constructor(maxPerMinute: number) {
-		this.maxPerMinute = maxPerMinute;
-	}
-
-	isAllowed(key: string): boolean {
-		const now = Date.now();
-		const entry = this.limits.get(key);
-
-		if (!entry || now >= entry.resetAt) {
-			this.limits.set(key, { count: 1, resetAt: now + 60_000 });
-			return true;
-		}
-
-		if (entry.count >= this.maxPerMinute) {
-			return false;
-		}
-
-		entry.count++;
-		return true;
-	}
 }
 
 /**

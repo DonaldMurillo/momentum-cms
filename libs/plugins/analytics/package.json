@@ -8,6 +8,7 @@
 		"@momentum-cms/core": "0.0.1",
 		"@momentum-cms/logger": "0.0.1",
 		"@momentum-cms/plugins-core": "0.0.1",
+		"@momentum-cms/server-core": "0.0.1",
 		"express": "^4.21.0"
 	},
 	"peerDependencies": {
