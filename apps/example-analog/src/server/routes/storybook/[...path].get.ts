@@ -1,4 +1,4 @@
-import { defineEventHandler } from 'h3';
+import { defineEventHandler, setResponseHeader } from 'h3';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -9,8 +9,9 @@ import { resolve } from 'node:path';
  * but Storybook's client-side routing (iframe.html, etc.) needs a fallback
  * to index.html for paths that don't match a physical file.
  */
-export default defineEventHandler(() => {
+export default defineEventHandler((event) => {
 	const storybookDir = resolve('dist/storybook/ui');
 	const html = readFileSync(resolve(storybookDir, 'index.html'), 'utf-8');
+	setResponseHeader(event, 'content-type', 'text/html;charset=UTF-8');
 	return html;
 });

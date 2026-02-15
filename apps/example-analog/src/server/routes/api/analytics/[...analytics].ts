@@ -24,15 +24,11 @@ import type {
 	AnalyticsCategory,
 	AnalyticsQueryOptions,
 } from '@momentum-cms/plugins/analytics';
-// eslint-disable-next-line @nx/enforce-module-boundaries -- server route handler uses analytics utilities directly
+
 import { parseUserAgent } from '@momentum-cms/plugins/analytics';
 import { getMomentumAPI, RateLimiter } from '@momentum-cms/server-core';
-import {
-	ensureInitialized,
-	getAuth,
-	analytics,
-	analyticsAdapter,
-} from '../../../utils/momentum-init';
+import { ensureInitialized, analytics, analyticsAdapter } from '../../../utils/momentum-init';
+import { resolveUserFromSession } from '../../../utils/resolve-user';
 
 const VALID_CATEGORIES: Set<string> = new Set([
 	'admin',
@@ -52,36 +48,6 @@ const cacheTtl =
 	typeof analytics.analyticsConfig.trackingRules === 'object'
 		? (analytics.analyticsConfig.trackingRules.cacheTtl ?? 60_000)
 		: 60_000;
-
-/**
- * Resolve user from session for admin checks.
- */
-async function resolveUser(
-	rawHeaders: Record<string, string | undefined>,
-): Promise<{ id: string; role?: string } | null> {
-	const auth = getAuth();
-	if (!auth) return null;
-
-	try {
-		const headers = new Headers();
-		for (const [key, value] of Object.entries(rawHeaders)) {
-			if (value != null) {
-				headers.set(key, value);
-			}
-		}
-		const session = await auth.api.getSession({ headers });
-		if (!session) return null;
-
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Better Auth user type
-		const userRecord = session.user as Record<string, unknown>;
-		return {
-			id: session.user.id,
-			role: typeof userRecord['role'] === 'string' ? userRecord['role'] : 'user',
-		};
-	} catch {
-		return null;
-	}
-}
 
 /**
  * Check if URL exactly matches the expected document path.
@@ -182,8 +148,8 @@ export default defineEventHandler(async (event) => {
 	// POST /analytics/collect — ingest client events
 	// ============================================
 	if (seg0 === 'collect' && method === 'POST') {
-		// Rate limit by IP
-		const ip = rawHeaders['x-forwarded-for'] ?? rawHeaders['x-real-ip'] ?? 'unknown';
+		// Rate limit by actual connection IP (not X-Forwarded-For which clients can spoof)
+		const ip = event.node.req.socket.remoteAddress ?? 'unknown';
 		if (!rateLimiter.isAllowed(ip)) {
 			setResponseStatus(event, 429);
 			return { error: 'Rate limit exceeded' };
@@ -255,7 +221,7 @@ export default defineEventHandler(async (event) => {
 	// GET /analytics/query — paginated event query (admin)
 	// ============================================
 	if (seg0 === 'query' && method === 'GET') {
-		const user = await resolveUser(rawHeaders);
+		const user = await resolveUserFromSession(rawHeaders);
 		if (!user) {
 			setResponseStatus(event, 401);
 			return { error: 'Authentication required' };
@@ -321,7 +287,7 @@ export default defineEventHandler(async (event) => {
 	// GET /analytics/summary — pre-aggregated metrics (admin)
 	// ============================================
 	if (seg0 === 'summary' && method === 'GET') {
-		const user = await resolveUser(rawHeaders);
+		const user = await resolveUserFromSession(rawHeaders);
 		if (!user) {
 			setResponseStatus(event, 401);
 			return { error: 'Authentication required' };
@@ -435,7 +401,7 @@ export default defineEventHandler(async (event) => {
 	// GET /analytics/content-performance (admin)
 	// ============================================
 	if (seg0 === 'content-performance' && method === 'GET') {
-		const user = await resolveUser(rawHeaders);
+		const user = await resolveUserFromSession(rawHeaders);
 		if (!user) {
 			setResponseStatus(event, 401);
 			return { error: 'Authentication required' };

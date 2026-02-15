@@ -57,7 +57,8 @@ test.describe('Route handler security', () => {
 
 		test('cleanup: delete test article', async ({ request }) => {
 			if (articleId) {
-				await request.delete(`/api/articles/${articleId}`);
+				const response = await request.delete(`/api/articles/${articleId}`);
+				expect(response.ok()).toBe(true);
 			}
 		});
 	});
@@ -137,10 +138,12 @@ test.describe('Route handler security', () => {
 
 		test('cleanup: delete test articles', async ({ request }) => {
 			if (articleAId) {
-				await request.delete(`/api/articles/${articleAId}`);
+				const responseA = await request.delete(`/api/articles/${articleAId}`);
+				expect(responseA.ok()).toBe(true);
 			}
 			if (articleBId) {
-				await request.delete(`/api/articles/${articleBId}`);
+				const responseB = await request.delete(`/api/articles/${articleBId}`);
+				expect(responseB.ok()).toBe(true);
 			}
 		});
 	});

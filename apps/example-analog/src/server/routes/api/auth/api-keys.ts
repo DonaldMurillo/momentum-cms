@@ -16,9 +16,9 @@ import {
 	hashApiKey,
 	getKeyPrefix,
 	generateApiKeyId,
-	isValidApiKeyFormat,
 } from '@momentum-cms/server-core';
-import { ensureInitialized, getAuth } from '../../../utils/momentum-init';
+import { ensureInitialized } from '../../../utils/momentum-init';
+import { resolveUserFromRequest } from '../../../utils/resolve-user';
 import momentumConfig from '../../../../momentum.config';
 
 /** Role hierarchy for permission checks. Lower index = higher privilege. */
@@ -33,69 +33,13 @@ function getStore(): ReturnType<typeof createAdapterApiKeyStore> {
 	return store;
 }
 
-/**
- * Resolve user from API key header or session cookie.
- * API key auth is checked first (matches Express middleware order).
- */
-async function resolveUser(
-	rawHeaders: Record<string, string | undefined>,
-): Promise<{ id: string; role?: string } | null> {
-	// 1. Try API key auth first
-	const apiKeyHeader = rawHeaders['x-api-key'];
-	if (apiKeyHeader && typeof apiKeyHeader === 'string' && isValidApiKeyFormat(apiKeyHeader)) {
-		try {
-			const apiKeyStore = getStore();
-			const keyHash = hashApiKey(apiKeyHeader);
-			const record = await apiKeyStore.findByHash(keyHash);
-			if (record) {
-				if (record.expiresAt && new Date(record.expiresAt) < new Date()) {
-					return null; // expired
-				}
-				apiKeyStore.updateLastUsed(record.id, new Date().toISOString()).catch(() => {
-					// Silently ignore — non-critical update
-				});
-				return {
-					id: `apikey:${record.id}`,
-					role: record.role,
-				};
-			}
-		} catch {
-			// Fall through to session auth
-		}
-	}
-
-	// 2. Try session auth
-	const auth = getAuth();
-	if (!auth) return null;
-
-	try {
-		const headers = new Headers();
-		for (const [key, value] of Object.entries(rawHeaders)) {
-			if (value != null) {
-				headers.set(key, value);
-			}
-		}
-		const session = await auth.api.getSession({ headers });
-		if (!session) return null;
-
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Better Auth user type
-		const userRecord = session.user as Record<string, unknown>;
-		return {
-			id: session.user.id,
-			role: typeof userRecord['role'] === 'string' ? userRecord['role'] : 'user',
-		};
-	} catch {
-		return null;
-	}
-}
-
 export default defineEventHandler(async (event) => {
 	await ensureInitialized();
 
 	const method = getMethod(event);
 	const rawHeaders = getHeaders(event);
 
-	const user = await resolveUser(rawHeaders);
+	const user = await resolveUserFromRequest(rawHeaders, getStore());
 	if (!user) {
 		setResponseStatus(event, 401);
 		return { error: 'Unauthorized' };

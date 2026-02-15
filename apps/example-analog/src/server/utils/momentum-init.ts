@@ -133,7 +133,10 @@ async function initialize(): Promise<void> {
  */
 export function ensureInitialized(): Promise<void> {
 	if (!initPromise) {
-		initPromise = initialize();
+		initPromise = initialize().catch((err) => {
+			initPromise = null; // Allow retry on next request
+			throw err;
+		});
 	}
 	return initPromise;
 }
