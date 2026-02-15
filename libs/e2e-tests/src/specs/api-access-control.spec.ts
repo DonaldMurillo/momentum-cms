@@ -166,7 +166,7 @@ test.describe('API Access Control - User Notes (Auth Required)', () => {
 	});
 
 	test('viewer: can read user-notes (authenticated)', async ({ request }) => {
-		test.skip(!sessions.viewer, 'Viewer session not available');
+		expect(sessions.viewer, 'Viewer session must exist from setup').toBeTruthy();
 		const { status, body } = await authenticatedRequest(
 			request,
 			sessions.viewer,
@@ -178,7 +178,7 @@ test.describe('API Access Control - User Notes (Auth Required)', () => {
 	});
 
 	test('editor: can create user-notes', async ({ request }) => {
-		test.skip(!sessions.editor, 'Editor session not available');
+		expect(sessions.editor, 'Editor session must exist from setup').toBeTruthy();
 		const { status, body } = await authenticatedRequest(
 			request,
 			sessions.editor,
@@ -194,7 +194,7 @@ test.describe('API Access Control - User Notes (Auth Required)', () => {
 	});
 
 	test('admin: can create and delete user-notes', async ({ request }) => {
-		test.skip(!sessions.admin, 'Admin session not available');
+		expect(sessions.admin, 'Admin session must exist from setup').toBeTruthy();
 
 		// Create
 		const createResult = await authenticatedRequest(
@@ -255,7 +255,7 @@ test.describe('API Access Control - Users Collection', () => {
 	});
 
 	test('viewer: cannot read users (403)', async ({ request }) => {
-		test.skip(!sessions.viewer, 'Viewer session not available');
+		expect(sessions.viewer, 'Viewer session must exist from setup').toBeTruthy();
 		const { status } = await authenticatedRequest(
 			request,
 			sessions.viewer,
@@ -266,7 +266,7 @@ test.describe('API Access Control - Users Collection', () => {
 	});
 
 	test('editor: cannot read users (403)', async ({ request }) => {
-		test.skip(!sessions.editor, 'Editor session not available');
+		expect(sessions.editor, 'Editor session must exist from setup').toBeTruthy();
 		const { status } = await authenticatedRequest(
 			request,
 			sessions.editor,
@@ -277,7 +277,7 @@ test.describe('API Access Control - Users Collection', () => {
 	});
 
 	test('admin: can read users', async ({ request }) => {
-		test.skip(!sessions.admin, 'Admin session not available');
+		expect(sessions.admin, 'Admin session must exist from setup').toBeTruthy();
 		const { status, body } = await authenticatedRequest(
 			request,
 			sessions.admin,
@@ -331,7 +331,7 @@ test.describe('API Access Control - /api/access Endpoint', () => {
 	});
 
 	test('returns correct permissions for admin', async ({ request }) => {
-		test.skip(!sessions.admin, 'Admin session not available');
+		expect(sessions.admin, 'Admin session must exist from setup').toBeTruthy();
 		const { status, body } = await authenticatedRequest(
 			request,
 			sessions.admin,

@@ -16,6 +16,45 @@ test.describe('Route handler security', () => {
 	});
 
 	// ============================================
+	// CORS: X-API-Key must be in Access-Control-Allow-Headers
+	// ============================================
+	test.describe('CORS preflight allows X-API-Key header', () => {
+		test('OPTIONS preflight includes X-API-Key in Access-Control-Allow-Headers', async ({
+			request,
+		}) => {
+			const response = await request.fetch('/api/articles', {
+				method: 'OPTIONS',
+				headers: {
+					Origin: 'https://external-app.example.com',
+					'Access-Control-Request-Method': 'GET',
+					'Access-Control-Request-Headers': 'X-API-Key',
+				},
+			});
+
+			const allowHeaders = response.headers()['access-control-allow-headers'] ?? '';
+			expect(
+				allowHeaders.toLowerCase(),
+				'CORS Access-Control-Allow-Headers must include x-api-key for cross-origin API key auth',
+			).toContain('x-api-key');
+		});
+
+		test('OPTIONS preflight still allows Content-Type and Authorization', async ({ request }) => {
+			const response = await request.fetch('/api/articles', {
+				method: 'OPTIONS',
+				headers: {
+					Origin: 'https://external-app.example.com',
+					'Access-Control-Request-Method': 'POST',
+					'Access-Control-Request-Headers': 'Content-Type, Authorization',
+				},
+			});
+
+			const allowHeaders = response.headers()['access-control-allow-headers'] ?? '';
+			expect(allowHeaders.toLowerCase()).toContain('content-type');
+			expect(allowHeaders.toLowerCase()).toContain('authorization');
+		});
+	});
+
+	// ============================================
 	// Bug #1: Unknown POST actions should return 404
 	// ============================================
 	test.describe('Unknown POST actions return 404', () => {

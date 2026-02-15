@@ -81,7 +81,7 @@ const config = defineMomentumConfig({
 			// WARNING: Use specific origins in production (e.g. process.env['CORS_ORIGIN'])
 			origin: '*',
 			methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-			headers: ['Content-Type', 'Authorization'],
+			headers: ['Content-Type', 'Authorization', 'X-API-Key'],
 		},
 	},
 	logging: {
