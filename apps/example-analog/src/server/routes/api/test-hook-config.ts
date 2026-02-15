@@ -1,11 +1,10 @@
 import { defineEventHandler, getMethod, readBody, createError } from 'h3';
 
-import { getHookBehavior, setHookBehavior } from '@momentum-cms/example-config';
-
 import type { HookBehaviorConfig } from '@momentum-cms/example-config';
 import { ensureInitialized } from '../../utils/momentum-init';
 
 export default defineEventHandler(async (event) => {
+	const { getHookBehavior, setHookBehavior } = await import('@momentum-cms/example-config');
 	await ensureInitialized();
 	const method = getMethod(event);
 
