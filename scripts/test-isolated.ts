@@ -153,7 +153,7 @@ async function buildApp(prod: boolean): Promise<void> {
 
 	console.log('[Isolated Test] Building app for production...');
 	return new Promise((resolve, reject) => {
-		const build = spawn('npx', ['nx', 'build', 'seeding-test-app', '--configuration=production'], {
+		const build = spawn('npx', ['nx', 'build', 'example-angular', '--configuration=production'], {
 			cwd: path.resolve(__dirname, '..'),
 			stdio: 'inherit',
 			shell: true,
@@ -180,8 +180,8 @@ function startServer(port: number, dbName: string, prod: boolean): ChildProcess 
 	};
 
 	const command = prod
-		? `node dist/seeding-test-app/server/server.mjs`
-		: `npx nx serve seeding-test-app`;
+		? `node dist/apps/example-angular/server/server.mjs`
+		: `npx nx serve example-angular`;
 
 	console.log(`[Isolated Test] Starting server on port ${port}...`);
 
@@ -233,6 +233,7 @@ async function waitForServer(port: number): Promise<void> {
 			// Server not ready yet
 		}
 
+		// eslint-disable-next-line local/no-direct-browser-apis -- Node.js script, not Angular
 		await new Promise((r) => setTimeout(r, POLL_INTERVAL));
 	}
 
@@ -243,7 +244,7 @@ async function waitForServer(port: number): Promise<void> {
  * Run Playwright tests
  */
 async function runPlaywright(port: number, config: TestConfig): Promise<number> {
-	const args = ['playwright', 'test', '--config=apps/seeding-test-app-e2e/playwright.config.ts'];
+	const args = ['playwright', 'test', '--config=apps/example-angular-e2e/playwright.config.ts'];
 
 	if (config.project) {
 		args.push(`--project=${config.project}`);

@@ -9,11 +9,14 @@ import {
 } from '@angular/platform-browser';
 import { crudToastInterceptor } from '@momentum-cms/admin';
 
+import { providePageBlocks } from '@momentum-cms/example-config/pages';
+
 export const appConfig: ApplicationConfig = {
 	providers: [
 		provideHttpClient(withFetch(), withInterceptors([crudToastInterceptor])),
 		provideClientHydration(withEventReplay(), withIncrementalHydration()),
 		provideBrowserGlobalErrorListeners(),
 		provideRouter(appRoutes, withViewTransitions()),
+		...providePageBlocks(),
 	],
 };

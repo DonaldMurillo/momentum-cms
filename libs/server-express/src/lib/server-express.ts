@@ -13,6 +13,7 @@ import {
 	buildGraphQLSchema,
 	executeGraphQL,
 	generateOpenAPISpec,
+	getSwaggerUIHTML,
 	exportToJson,
 	exportToCsv,
 	parseJsonImport,
@@ -24,6 +25,9 @@ import {
 	type OpenAPIGeneratorOptions,
 	type ExportFormat,
 	type ImportResult,
+	sanitizeErrorMessage,
+	parseWhereParam,
+	sanitizeFilename,
 } from '@momentum-cms/server-core';
 import type {
 	MomentumConfig,
@@ -36,39 +40,7 @@ import type {
 import { createLogger } from '@momentum-cms/logger';
 import { getPluginMiddleware } from './plugin-middleware-registry';
 
-/**
- * Sanitize error messages to prevent leaking internal details (SQL, file paths, etc.).
- */
-function sanitizeErrorMessage(error: unknown, fallback: string): string {
-	if (!(error instanceof Error)) return fallback;
-	const msg = error.message;
-	// Strip messages that look like they contain SQL, file paths, or stack traces
-	if (/SELECT |INSERT |UPDATE |DELETE |FROM |WHERE /i.test(msg)) return fallback;
-	if (/\/[a-z_-]+\/[a-z_-]+\//i.test(msg) && msg.includes('/')) return fallback;
-	if (msg.includes('at ') && msg.includes('.js:')) return fallback;
-	return msg;
-}
-
-/**
- * Parses the `where` query parameter from an Express request.
- * Handles both JSON string format (?where={"slug":{"equals":"home"}})
- * and Express/qs bracket notation (?where[slug][equals]=home).
- */
-function parseWhereParam(raw: unknown): Record<string, unknown> | undefined {
-	if (typeof raw === 'string') {
-		try {
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- JSON.parse returns unknown
-			return JSON.parse(raw) as Record<string, unknown>;
-		} catch {
-			return undefined;
-		}
-	}
-	if (typeof raw === 'object' && raw !== null) {
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- qs parsed object
-		return raw as Record<string, unknown>;
-	}
-	return undefined;
-}
+// sanitizeErrorMessage and parseWhereParam are imported from @momentum-cms/server-core
 
 /**
  * Extended Express Request with user context from auth middleware.
@@ -119,16 +91,31 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	router.use(jsonParser());
 
 	// CORS middleware
-	router.use((_req: Request, res: Response, next: NextFunction) => {
+	router.use((req: Request, res: Response, next: NextFunction) => {
 		const corsConfig = config.server?.cors ?? {};
-		const origin = Array.isArray(corsConfig.origin) ? corsConfig.origin[0] : corsConfig.origin;
-		const allowOrigin = origin ?? '*';
+		const origins = Array.isArray(corsConfig.origin)
+			? corsConfig.origin
+			: corsConfig.origin
+				? [corsConfig.origin]
+				: [];
+
+		let allowOrigin: string;
+		if (origins.length === 0) {
+			allowOrigin = '*';
+		} else {
+			const requestOrigin = req.headers['origin'] ?? '';
+			allowOrigin = origins.includes(requestOrigin) ? requestOrigin : origins[0];
+		}
+
 		if (allowOrigin === '*' && process.env['NODE_ENV'] === 'production') {
 			createLogger('CORS').warn(
 				'Origin is set to "*" in production. Configure explicit origins via config.server.cors.origin.',
 			);
 		}
 		res.setHeader('Access-Control-Allow-Origin', allowOrigin);
+		if (allowOrigin !== '*') {
+			res.setHeader('Vary', 'Origin');
+		}
 		res.setHeader(
 			'Access-Control-Allow-Methods',
 			corsConfig.methods?.join(', ') ?? 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
@@ -408,12 +395,17 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 			const restored = await versionOps.restore({
 				versionId,
+				docId: req.params['id'],
 				publish: body['publish'] === true,
 			});
 
 			res.json({ doc: restored, message: 'Version restored successfully' });
 		} catch (error) {
 			const message = sanitizeErrorMessage(error, 'Unknown error');
+			if (error instanceof Error && error.message.includes('mismatch')) {
+				res.status(400).json({ error: 'Version parent mismatch', message });
+				return;
+			}
 			res.status(500).json({ error: 'Failed to restore version', message });
 		}
 	});
@@ -1021,17 +1013,15 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 			const docs = result.docs as Record<string, unknown>[];
 
+			const safeSlug = sanitizeFilename(collectionSlug);
 			if (format === 'csv') {
 				const exportResult = exportToCsv(docs, collectionConfig);
 				res.setHeader('Content-Type', 'text/csv');
-				res.setHeader('Content-Disposition', `attachment; filename="${collectionSlug}-export.csv"`);
+				res.setHeader('Content-Disposition', `attachment; filename="${safeSlug}-export.csv"`);
 				res.send(exportResult.data);
 			} else {
 				const exportResult = exportToJson(docs, collectionConfig);
-				res.setHeader(
-					'Content-Disposition',
-					`attachment; filename="${collectionSlug}-export.json"`,
-				);
+				res.setHeader('Content-Disposition', `attachment; filename="${safeSlug}-export.json"`);
 				res.json({
 					collection: collectionSlug,
 					format: 'json',
@@ -1115,12 +1105,8 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 					result.docs.push(doc as Record<string, unknown>);
 					result.imported++;
 				} catch (err) {
-					const errMsg = err instanceof Error ? err.message : 'Unknown error';
-					result.errors.push({
-						index: i,
-						message: errMsg,
-						data: docsToImport[i],
-					});
+					const errMsg = sanitizeErrorMessage(err, 'Failed to import document');
+					result.errors.push({ index: i, message: errMsg });
 				}
 			}
 
@@ -1132,8 +1118,6 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		}
 	});
 
-	// Route: GET /:collection - Find all documents
-	// Route: GET /:collection/:id - Find document by ID
 	// Route: POST /:collection/:id/restore - Restore a soft-deleted document
 	router.post('/:collection/:id/restore', async (req: Request, res: Response) => {
 		if (isManagedCollection(req.params['collection'])) {
@@ -1151,6 +1135,17 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		res.status(response.status ?? 200).json(response);
 	});
 
+	// Catch-all: POST /:collection/:id/:unknownAction - 404 for unrecognized actions
+	// Must be AFTER all specific action routes (publish, unpublish, draft, restore, etc.)
+	router.post('/:collection/:id/:action', (_req: Request, res: Response) => {
+		res.status(404).json({
+			error: 'Not found',
+			message: `Unknown action "${_req.params['action']}"`,
+		});
+	});
+
+	// Route: GET /:collection - Find all documents
+	// Route: GET /:collection/:id - Find document by ID
 	router.get('/:collection/:id?', async (req: Request, res: Response) => {
 		const sortParam = req.query['sort'];
 		const request: MomentumRequest = {
@@ -1316,34 +1311,4 @@ export function createOpenAPIMiddleware(docsConfig: OpenAPIDocsConfig): Router {
 	});
 
 	return docsRouter;
-}
-
-/**
- * Returns a minimal Swagger UI HTML page that loads the OpenAPI spec
- * from the adjacent openapi.json endpoint via CDN-hosted Swagger UI.
- */
-function getSwaggerUIHTML(): string {
-	return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Momentum CMS - API Docs</title>
-<link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
-<style>html{box-sizing:border-box;overflow-y:scroll}*,*:before,*:after{box-sizing:inherit}body{margin:0;background:#fafafa}</style>
-</head>
-<body>
-<div id="swagger-ui"></div>
-<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-<script>
-SwaggerUIBundle({
-  url: './openapi.json',
-  dom_id: '#swagger-ui',
-  presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
-  layout: 'BaseLayout',
-  deepLinking: true,
-  defaultModelsExpandDepth: 1,
-});
-</script>
-</body>
-</html>`;
 }

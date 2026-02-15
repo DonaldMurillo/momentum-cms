@@ -127,8 +127,17 @@ export {
 	type OpenAPIGeneratorOptions,
 } from './lib/openapi-generator';
 
+// Swagger UI
+export { getSwaggerUIHTML } from './lib/swagger-ui-html';
+
 // Preview Renderer
 export { renderPreviewHTML, type PreviewRenderOptions } from './lib/preview-renderer';
+
+// Rate Limiter
+export { RateLimiter } from './lib/rate-limiter';
+
+// Shared Server Utilities
+export { sanitizeErrorMessage, parseWhereParam, sanitizeFilename } from './lib/shared-server-utils';
 
 // Import/Export
 export {

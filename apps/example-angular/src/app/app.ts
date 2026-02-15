@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, afterNextRender } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 @Component({
@@ -8,4 +8,17 @@ import { RouterModule } from '@angular/router';
 	styleUrl: './app.css',
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class App {}
+export class App {
+	constructor() {
+		afterNextRender(() => {
+			void import('@momentum-cms/plugins/analytics/client').then((m) => {
+				m.createTracker({
+					endpoint: '/api/analytics/collect',
+					trackingRules: true,
+					blockTracking: true,
+					flushInterval: 1000,
+				});
+			});
+		});
+	}
+}

@@ -75,6 +75,7 @@ describe('createMomentumHandler', () => {
 			// Create a document first
 			mockUtils.readBody.mockResolvedValue({ title: 'Test Post', content: 'Hello' });
 			const createResult = await handler(createMockEvent('POST'), mockUtils);
+
 			const id = (createResult.body.doc as Record<string, unknown>)['id'];
 
 			// Get by ID
@@ -94,6 +95,7 @@ describe('createMomentumHandler', () => {
 			const result = await handler(createMockEvent('POST'), mockUtils);
 
 			expect(result.status).toBe(201);
+
 			expect((result.body.doc as Record<string, unknown>)['title']).toBe('New Post');
 		});
 
@@ -115,6 +117,7 @@ describe('createMomentumHandler', () => {
 			// Create a document first
 			mockUtils.readBody.mockResolvedValue({ title: 'Original', content: 'Content' });
 			const createResult = await handler(createMockEvent('POST'), mockUtils);
+
 			const id = (createResult.body.doc as Record<string, unknown>)['id'];
 
 			// Update
@@ -123,6 +126,7 @@ describe('createMomentumHandler', () => {
 			const result = await handler(createMockEvent('PATCH'), mockUtils);
 
 			expect(result.status).toBe(200);
+
 			expect((result.body.doc as Record<string, unknown>)['title']).toBe('Updated');
 		});
 	});
@@ -134,6 +138,7 @@ describe('createMomentumHandler', () => {
 			// Create a document first
 			mockUtils.readBody.mockResolvedValue({ title: 'To Delete', content: 'Content' });
 			const createResult = await handler(createMockEvent('POST'), mockUtils);
+
 			const id = (createResult.body.doc as Record<string, unknown>)['id'];
 
 			// Delete

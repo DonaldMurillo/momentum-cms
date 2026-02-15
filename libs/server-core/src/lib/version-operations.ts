@@ -150,6 +150,22 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 			throw new Error('Version operations not supported by database adapter');
 		}
 
+		// Validate that the version belongs to the expected document
+		if (options.docId) {
+			if (!this.adapter.findVersionById) {
+				throw new Error('Version operations not supported by database adapter');
+			}
+			const version = await this.adapter.findVersionById(this.slug, options.versionId);
+			if (!version) {
+				throw new Error(`Version "${options.versionId}" not found`);
+			}
+			if (version.parent !== options.docId) {
+				throw new Error(
+					'Version parent mismatch: version does not belong to the specified document',
+				);
+			}
+		}
+
 		// Use transaction if available for atomicity
 		if (this.adapter.transaction) {
 			return this.adapter.transaction(async (txAdapter) => {
@@ -158,10 +174,7 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 				}
 
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record, safe cast
-				const restored = (await txAdapter.restoreVersion(
-					this.slug,
-					options.versionId,
-				)) as T;
+				const restored = (await txAdapter.restoreVersion(this.slug, options.versionId)) as T;
 
 				// If publish option is set, publish the restored document
 				if (options.publish && txAdapter.updateStatus) {

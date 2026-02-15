@@ -87,6 +87,12 @@
 				"spa": true
 			}
 		},
+		"typecheck": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "npx tsc --noEmit -p apps/example-angular/tsconfig.app.json"
+			}
+		},
 		"generate-types": {
 			"executor": "nx:run-commands",
 			"options": {

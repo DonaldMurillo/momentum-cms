@@ -8,6 +8,7 @@
 	"targets": {
 		"build": {
 			"executor": "@analogjs/platform:vite",
+			"dependsOn": ["ui:build-storybook"],
 			"options": {
 				"configFile": "apps/example-analog/vite.config.ts",
 				"main": "apps/example-analog/src/main.ts",
@@ -57,16 +58,14 @@
 				"spa": true
 			}
 		},
-		"test": {
-			"executor": "@analogjs/vitest-angular:test"
-		},
-		"seed": {
+		"typecheck": {
 			"executor": "nx:run-commands",
 			"options": {
-				"command": "node apps/example-analog/scripts/seed.cjs",
-				"cwd": "{workspaceRoot}"
-			},
-			"dependsOn": ["core:build", "db-drizzle:build", "server-core:build"]
+				"command": "npx tsc --noEmit -p apps/example-analog/tsconfig.app.json"
+			}
+		},
+		"test": {
+			"executor": "@analogjs/vitest-angular:test"
 		}
 	}
 }

@@ -11,7 +11,7 @@ import { authOrganization } from '../plugins/organization';
  *
  * NOTE: onInit tests require a real Momentum server environment because
  * onInit injects collections and creates the Better Auth instance.
- * That behavior is covered by E2E tests in apps/seeding-test-app-e2e/.
+ * That behavior is covered by E2E tests in apps/example-angular-e2e/.
  *
  * These tests verify:
  * - Plugin factory returns the correct structure

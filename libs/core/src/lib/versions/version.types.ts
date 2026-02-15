@@ -144,6 +144,9 @@ export interface RestoreVersionOptions {
 	/** The version ID to restore */
 	versionId: string;
 
+	/** The document ID that the version must belong to (validated when provided) */
+	docId?: string;
+
 	/** Whether to publish the restored version immediately (default: false) */
 	publish?: boolean;
 }

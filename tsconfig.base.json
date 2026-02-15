@@ -41,7 +41,11 @@
 			],
 			"@momentum-cms/plugins/analytics/block-fields": [
 				"libs/plugins/analytics/src/lib/collectors/block-field-injector.ts"
-			]
+			],
+			"@momentum-cms/example-config": ["libs/example-config/src/index.ts"],
+			"@momentum-cms/example-config/collections": ["libs/example-config/src/collections/index.ts"],
+			"@momentum-cms/example-config/globals": ["libs/example-config/src/globals/index.ts"],
+			"@momentum-cms/example-config/pages": ["libs/example-config/src/pages/index.ts"]
 		}
 	},
 	"exclude": ["node_modules", "tmp"]

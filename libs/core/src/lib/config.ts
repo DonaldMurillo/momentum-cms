@@ -435,7 +435,7 @@ export function defineMomentumConfig(config: MomentumConfig): ResolvedMomentumCo
 			cors: config.server?.cors ?? {
 				origin: '*',
 				methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-				headers: ['Content-Type', 'Authorization'],
+				headers: ['Content-Type', 'Authorization', 'X-API-Key'],
 			},
 		},
 		seeding: config.seeding
