@@ -28,6 +28,9 @@ import {
 	type ExportFormat,
 	type ImportResult,
 	type UploadRequest,
+	sanitizeErrorMessage,
+	parseWhereParam,
+	sanitizeFilename,
 } from '@momentum-cms/server-core';
 import type {
 	MomentumConfig,
@@ -123,38 +126,7 @@ export interface MomentumH3Utils {
 // Shared Helpers
 // ============================================
 
-/**
- * Parses the `where` query parameter.
- * Handles both JSON string format (?where={"slug":{"equals":"home"}})
- * and pre-parsed object format from h3/qs.
- */
-function parseWhereParam(raw: unknown): Record<string, unknown> | undefined {
-	if (typeof raw === 'string') {
-		try {
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- JSON.parse returns unknown
-			return JSON.parse(raw) as Record<string, unknown>;
-		} catch {
-			return undefined;
-		}
-	}
-	if (typeof raw === 'object' && raw !== null) {
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- qs parsed object
-		return raw as Record<string, unknown>;
-	}
-	return undefined;
-}
-
-/**
- * Sanitize error messages to prevent leaking internal details (SQL, file paths, etc.).
- */
-function sanitizeErrorMessage(error: unknown, fallback: string): string {
-	if (!(error instanceof Error)) return fallback;
-	const msg = error.message;
-	if (/SELECT |INSERT |UPDATE |DELETE |FROM |WHERE /i.test(msg)) return fallback;
-	if (/\/[a-z_-]+\/[a-z_-]+\//i.test(msg) && msg.includes('/')) return fallback;
-	if (msg.includes('at ') && msg.includes('.js:')) return fallback;
-	return msg;
-}
+// sanitizeErrorMessage and parseWhereParam are imported from @momentum-cms/server-core
 
 /**
  * Convert string method to MomentumRequest method type.
@@ -1232,13 +1204,14 @@ export function createComprehensiveMomentumHandler(
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 				const docs = result.docs as Record<string, unknown>[];
 
+				const safeSlug = sanitizeFilename(collectionSlug);
 				if (format === 'csv') {
 					const exportResult = exportToCsv(docs, collectionConfig);
 					utils.setResponseHeader(event, 'Content-Type', 'text/csv');
 					utils.setResponseHeader(
 						event,
 						'Content-Disposition',
-						`attachment; filename="${collectionSlug}-export.csv"`,
+						`attachment; filename="${safeSlug}-export.csv"`,
 					);
 					return utils.send(event, exportResult.data ?? '');
 				} else {
@@ -1246,7 +1219,7 @@ export function createComprehensiveMomentumHandler(
 					utils.setResponseHeader(
 						event,
 						'Content-Disposition',
-						`attachment; filename="${collectionSlug}-export.json"`,
+						`attachment; filename="${safeSlug}-export.json"`,
 					);
 					return {
 						collection: collectionSlug,
@@ -1334,8 +1307,8 @@ export function createComprehensiveMomentumHandler(
 						result.docs.push(doc as Record<string, unknown>);
 						result.imported++;
 					} catch (err) {
-						const errMsg = err instanceof Error ? err.message : 'Unknown error';
-						result.errors.push({ index: i, message: errMsg, data: docsToImport[i] });
+						const errMsg = sanitizeErrorMessage(err, 'Failed to import document');
+						result.errors.push({ index: i, message: errMsg });
 					}
 				}
 

@@ -136,6 +136,9 @@ export { renderPreviewHTML, type PreviewRenderOptions } from './lib/preview-rend
 // Rate Limiter
 export { RateLimiter } from './lib/rate-limiter';
 
+// Shared Server Utilities
+export { sanitizeErrorMessage, parseWhereParam, sanitizeFilename } from './lib/shared-server-utils';
+
 // Import/Export
 export {
 	exportToJson,

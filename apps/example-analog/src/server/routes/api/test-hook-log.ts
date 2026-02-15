@@ -1,8 +1,11 @@
-import { defineEventHandler, getMethod } from 'h3';
+import { defineEventHandler, getMethod, createError } from 'h3';
 
 import { ensureInitialized } from '../../utils/momentum-init';
 
 export default defineEventHandler(async (event) => {
+	if (process.env['NODE_ENV'] === 'production') {
+		throw createError({ statusCode: 404, message: 'Not found' });
+	}
 	await ensureInitialized();
 	const { getHookLog, clearHookLog } = await import('@momentum-cms/example-config');
 	const method = getMethod(event);

@@ -1,4 +1,4 @@
-import { defineEventHandler, getMethod } from 'h3';
+import { defineEventHandler, getMethod, createError } from 'h3';
 import { ensureInitialized, events } from '../../utils/momentum-init';
 import {
 	eventBusLog,
@@ -8,6 +8,9 @@ import {
 import type { CollectionEvent } from '@momentum-cms/plugins/core';
 
 export default defineEventHandler(async (event) => {
+	if (process.env['NODE_ENV'] === 'production') {
+		throw createError({ statusCode: 404, message: 'Not found' });
+	}
 	await ensureInitialized();
 
 	// Register event bus listener once
