@@ -15,4 +15,5 @@ export default defineEventHandler(async (event) => {
 		analyticsAdapter.events.length = 0;
 		return { cleared: true };
 	}
+	return { error: 'Method not allowed' };
 });

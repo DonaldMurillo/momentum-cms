@@ -1,4 +1,5 @@
 import { defineEventHandler, getMethod } from 'h3';
+
 import { getHookLog, clearHookLog } from '@momentum-cms/example-config';
 import { ensureInitialized } from '../../utils/momentum-init';
 
@@ -14,4 +15,5 @@ export default defineEventHandler(async (event) => {
 		clearHookLog();
 		return { cleared: true };
 	}
+	return { error: 'Method not allowed' };
 });

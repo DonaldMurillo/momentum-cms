@@ -27,4 +27,5 @@ export default defineEventHandler(async (event) => {
 		receivedWebhooks.length = 0;
 		return { cleared: true };
 	}
+	return { error: 'Method not allowed' };
 });

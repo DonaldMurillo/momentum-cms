@@ -3,5 +3,8 @@
 # Run lint-staged (eslint + prettier on staged files)
 npx lint-staged
 
-# Build affected projects (includes type checking)
+# Type-check affected projects (strict, single source of truth)
+npx nx affected -t typecheck --parallel=3
+
+# Build affected projects
 npx nx affected -t build --parallel=3

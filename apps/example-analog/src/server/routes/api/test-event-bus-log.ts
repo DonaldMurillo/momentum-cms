@@ -25,4 +25,5 @@ export default defineEventHandler(async (event) => {
 		eventBusLog.length = 0;
 		return { cleared: true };
 	}
+	return { error: 'Method not allowed' };
 });

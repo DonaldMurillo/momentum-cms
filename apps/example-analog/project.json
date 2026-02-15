@@ -57,6 +57,12 @@
 				"spa": true
 			}
 		},
+		"typecheck": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "npx tsc --noEmit -p apps/example-analog/tsconfig.app.json"
+			}
+		},
 		"test": {
 			"executor": "@analogjs/vitest-angular:test"
 		}
