@@ -8,6 +8,7 @@
 	"targets": {
 		"build": {
 			"executor": "@analogjs/platform:vite",
+			"dependsOn": ["ui:build-storybook"],
 			"options": {
 				"configFile": "apps/example-analog/vite.config.ts",
 				"main": "apps/example-analog/src/main.ts",

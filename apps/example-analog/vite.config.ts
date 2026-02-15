@@ -10,6 +10,17 @@ export default defineConfig(({ mode: _mode }) => {
 	return {
 		root: __dirname,
 		cacheDir: `../../node_modules/.vite`,
+		resolve: {
+			alias: {
+				// Vite client build doesn't resolve tsconfig subpath patterns that share a prefix
+				// with Nitro aliases. Explicitly resolve the analytics client subpath so the
+				// tracker + rule engine are bundled into the browser build.
+				'@momentum-cms/plugins/analytics/client': resolve(
+					__dirname,
+					'../../libs/plugins/analytics/src/lib/client/tracker.ts',
+				),
+			},
+		},
 		build: {
 			outDir: '../../dist/apps/example-analog/client',
 			reportCompressedSize: true,
@@ -23,6 +34,14 @@ export default defineConfig(({ mode: _mode }) => {
 		plugins: [
 			analog({
 				nitro: {
+					// Serve Storybook static files at /storybook
+					publicAssets: [
+						{
+							dir: resolve(__dirname, '../../dist/storybook/ui'),
+							baseURL: '/storybook',
+							maxAge: 31536000,
+						},
+					],
 					// Configure Nitro to resolve monorepo packages
 					alias: {
 						'@momentum-cms/server-analog': resolve(

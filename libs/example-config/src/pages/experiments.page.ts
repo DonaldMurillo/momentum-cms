@@ -15,7 +15,7 @@ export class ExperimentsPage {
 
 	constructor() {
 		this.api
-			.collection('users')
+			.collection('auth-user')
 			.find()
 			.then((result) => {
 				console.info('Users:', result.docs);

@@ -16,6 +16,7 @@ import {
 	runSeeding,
 	shouldRunSeeding,
 	registerWebhookHooks,
+	startPublishScheduler,
 	type SeedingResult,
 } from '@momentum-cms/server-core';
 import { initializeMomentumLogger, createLogger } from '@momentum-cms/logger';
@@ -110,7 +111,13 @@ async function initialize(): Promise<void> {
 		);
 	}
 
-	// 7. Run plugin onReady (API is initialized, seeding complete)
+	// 7. Start publish scheduler (auto-publishes documents when scheduledPublishAt arrives)
+	startPublishScheduler(momentumConfig.db.adapter, momentumConfig.collections, {
+		intervalMs: 2000,
+	});
+	log.info('Publish scheduler started (interval: 2000ms)');
+
+	// 8. Run plugin onReady (API is initialized, seeding complete)
 	if (plugins.length > 0) {
 		log.info('Notifying plugins: ready');
 		await pluginRunner.runReady(api);

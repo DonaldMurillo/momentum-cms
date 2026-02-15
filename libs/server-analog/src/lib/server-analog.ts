@@ -13,6 +13,15 @@ import {
 	parseJsonImport,
 	parseCsvImport,
 	renderPreviewHTML,
+	generateOpenAPISpec,
+	getSwaggerUIHTML,
+	createAdapterApiKeyStore,
+	generateApiKey,
+	hashApiKey,
+	getKeyPrefix,
+	generateApiKeyId,
+	type ApiKeyStore,
+	type OpenAPIDocument,
 	type MomentumRequest,
 	type MomentumResponse,
 	type GraphQLRequestBody,
@@ -296,6 +305,11 @@ export function createComprehensiveMomentumHandler(
 ): (event: H3Event, utils: MomentumH3Utils, context?: { user?: UserContext }) => Promise<unknown> {
 	const handlers = createMomentumHandlers(config);
 	const graphqlSchema = buildGraphQLSchema(config.collections);
+	let cachedOpenAPISpec: OpenAPIDocument | null = null;
+	const apiKeyStore: ApiKeyStore = createAdapterApiKeyStore(config.db.adapter);
+
+	/** Role hierarchy for permission checks. Lower index = higher privilege. */
+	const ROLE_HIERARCHY = ['admin', 'editor', 'user', 'viewer'];
 
 	// Build a map of custom endpoints for fast lookup
 	const customEndpointMap = new Map<
@@ -435,6 +449,155 @@ export function createComprehensiveMomentumHandler(
 		if (seg0 === 'access' && method === 'GET') {
 			const permissions = await getCollectionPermissions(config, user);
 			return { collections: permissions };
+		}
+
+		// ============================================
+		// OpenAPI Docs: GET /docs, GET /docs/openapi.json
+		// ============================================
+		if (seg0 === 'docs' && method === 'GET') {
+			if (seg1 === 'openapi.json') {
+				if (!cachedOpenAPISpec) {
+					cachedOpenAPISpec = generateOpenAPISpec(config);
+				}
+				utils.setResponseHeader(event, 'Cache-Control', 'public, max-age=3600');
+				return cachedOpenAPISpec;
+			}
+			if (!seg1) {
+				utils.setResponseHeader(event, 'Content-Type', 'text/html');
+				return utils.send(event, getSwaggerUIHTML(), 'text/html');
+			}
+		}
+
+		// ============================================
+		// API Key Management: GET/POST /auth/api-keys, DELETE /auth/api-keys/:id
+		// ============================================
+		if (seg0 === 'auth' && seg1 === 'api-keys') {
+			if (!user) {
+				utils.setResponseStatus(event, 401);
+				return { error: 'Unauthorized' };
+			}
+
+			// GET /auth/api-keys — list API keys
+			if (method === 'GET' && !seg2) {
+				try {
+					const keys =
+						user.role === 'admin'
+							? await apiKeyStore.listAll()
+							: await apiKeyStore.listByUser(String(user.id));
+					return { keys };
+				} catch {
+					utils.setResponseStatus(event, 500);
+					return { error: 'Failed to list API keys' };
+				}
+			}
+
+			// POST /auth/api-keys — create a new API key
+			if (method === 'POST' && !seg2) {
+				// API keys cannot create other API keys
+				if (String(user.id).startsWith('apikey:')) {
+					utils.setResponseStatus(event, 403);
+					return { error: 'API keys cannot create other API keys' };
+				}
+
+				const body = await safeReadBody(event, utils, method);
+				const name = body['name'];
+				if (!name || typeof name !== 'string' || name.trim().length === 0) {
+					utils.setResponseStatus(event, 400);
+					return { error: 'Name is required' };
+				}
+
+				const role = typeof body['role'] === 'string' ? body['role'] : 'user';
+				const validRoles = ['admin', 'editor', 'user', 'viewer'];
+				if (!validRoles.includes(role)) {
+					utils.setResponseStatus(event, 400);
+					return { error: `Invalid role. Must be one of: ${validRoles.join(', ')}` };
+				}
+
+				// Non-admin users cannot create keys with a higher role than their own
+				const userRoleIndex = ROLE_HIERARCHY.indexOf(user.role ?? 'viewer');
+				if (user.role !== 'admin' && userRoleIndex === -1) {
+					utils.setResponseStatus(event, 403);
+					return { error: 'Unknown role — cannot determine privileges' };
+				}
+				const requestedRoleIndex = ROLE_HIERARCHY.indexOf(role);
+				if (user.role !== 'admin' && requestedRoleIndex < userRoleIndex) {
+					utils.setResponseStatus(event, 403);
+					return { error: 'Cannot create a key with higher privileges than your own role' };
+				}
+
+				// Validate expiresAt if provided
+				let expiresAt: string | null = null;
+				if (body['expiresAt'] != null) {
+					const parsed = new Date(String(body['expiresAt']));
+					if (isNaN(parsed.getTime())) {
+						utils.setResponseStatus(event, 400);
+						return { error: 'Invalid expiresAt date format. Use ISO 8601.' };
+					}
+					expiresAt = parsed.toISOString();
+				}
+
+				try {
+					const key = generateApiKey();
+					const id = generateApiKeyId();
+					const now = new Date().toISOString();
+
+					const createdId = await apiKeyStore.create({
+						id,
+						name: name.trim(),
+						keyHash: hashApiKey(key),
+						keyPrefix: getKeyPrefix(key),
+						createdBy: String(user.id),
+						role,
+						expiresAt,
+						createdAt: now,
+						updatedAt: now,
+					});
+
+					utils.setResponseStatus(event, 201);
+					return {
+						id: createdId,
+						name: name.trim(),
+						key,
+						keyPrefix: getKeyPrefix(key),
+						role,
+						expiresAt,
+						createdAt: now,
+					};
+				} catch {
+					utils.setResponseStatus(event, 500);
+					return { error: 'Failed to create API key' };
+				}
+			}
+
+			// DELETE /auth/api-keys/:id — delete an API key
+			if (method === 'DELETE' && seg2) {
+				const keyId = seg2;
+
+				// Non-admin users can only delete their own keys
+				if (user.role !== 'admin') {
+					const existingKey = await apiKeyStore.findById(keyId);
+					if (!existingKey) {
+						utils.setResponseStatus(event, 404);
+						return { error: 'API key not found' };
+					}
+					if (existingKey.createdBy !== String(user.id)) {
+						utils.setResponseStatus(event, 403);
+						return { error: 'You can only delete your own API keys' };
+					}
+				}
+
+				try {
+					const deleted = await apiKeyStore.deleteById(keyId);
+					if (deleted) {
+						return { deleted: true };
+					}
+					utils.setResponseStatus(event, 404);
+					return { error: 'API key not found' };
+				} catch {
+					utils.setResponseStatus(event, 500);
+					return { error: 'Failed to delete API key' };
+				}
+			}
 		}
 
 		// ============================================

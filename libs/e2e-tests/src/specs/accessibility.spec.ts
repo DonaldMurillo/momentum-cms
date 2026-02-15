@@ -171,10 +171,10 @@ test.describe('Accessibility: Entity form', () => {
 		await expect(saveButton.first()).toBeVisible({ timeout: 5000 });
 		await saveButton.first().click();
 
-		// After validation failure, an alert element should appear
-		const formErrorAlert = page.locator('[role="alert"]');
-		await expect(formErrorAlert.first()).toBeVisible({ timeout: 5000 });
-		await expect(formErrorAlert.first()).toHaveAttribute('aria-live', 'assertive');
+		// After validation failure, the form error alert should appear
+		const formErrorAlert = page.locator('[role="alert"]:has-text("Please fix the errors")');
+		await expect(formErrorAlert).toBeVisible({ timeout: 5000 });
+		await expect(formErrorAlert).toHaveAttribute('aria-live', 'assertive');
 	});
 });
 
