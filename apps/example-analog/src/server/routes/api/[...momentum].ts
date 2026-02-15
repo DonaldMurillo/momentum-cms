@@ -4,42 +4,53 @@ import {
 	getQuery,
 	getRouterParams,
 	setResponseStatus,
+	setResponseHeader,
+	readMultipartFormData,
+	send,
 	getHeaders,
 } from 'h3';
-import { createSimpleMomentumHandler } from '@momentum-cms/server-analog';
+import { createComprehensiveMomentumHandler } from '@momentum-cms/server-analog';
 import { ensureInitialized, getAuth } from '../../utils/momentum-init';
 import momentumConfig from '../../../momentum.config';
 
-let handler: ReturnType<typeof createSimpleMomentumHandler>;
+let handler: ReturnType<typeof createComprehensiveMomentumHandler>;
 
 /**
- * Catch-all API handler for Momentum CMS collections.
- * Handles: GET/POST/PATCH/PUT/DELETE on /api/:collection/:id
+ * Catch-all API handler for Momentum CMS.
+ * Handles all collection CRUD, globals, versioning, publishing, media,
+ * GraphQL, batch operations, search, import/export, and custom endpoints.
  *
- * Uses Better Auth for session resolution (replaces in-memory sessions).
+ * Uses Better Auth for session resolution.
  */
 export default defineEventHandler(async (event) => {
 	// Ensure full initialization (plugins, DB, seeding) has completed
 	await ensureInitialized();
 
 	if (!handler) {
-		handler = createSimpleMomentumHandler(momentumConfig);
+		handler = createComprehensiveMomentumHandler(momentumConfig);
 	}
 
 	// Resolve user session via Better Auth
+	let user: { id: string; email?: string; role?: string } | undefined;
 	const auth = getAuth();
 	if (auth) {
 		try {
-			const session = await auth.api.getSession({
-				headers: getHeaders(event),
-			});
+			const rawHeaders = getHeaders(event);
+			const headers = new Headers();
+			for (const [key, value] of Object.entries(rawHeaders)) {
+				if (value != null) {
+					headers.set(key, value);
+				}
+			}
+			const session = await auth.api.getSession({ headers });
 			if (session) {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/consistent-type-assertions -- h3 event context augmentation
-				(event.context as any).user = {
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Better Auth user type doesn't include custom fields
+				const userRecord = session.user as Record<string, unknown>;
+				const role = typeof userRecord['role'] === 'string' ? userRecord['role'] : 'user';
+				user = {
 					id: session.user.id,
 					email: session.user.email,
-					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Better Auth user type doesn't include custom fields
-					role: (session.user as Record<string, unknown>).role ?? 'user',
+					role,
 				};
 			}
 		} catch {
@@ -47,11 +58,18 @@ export default defineEventHandler(async (event) => {
 		}
 	}
 
-	// Call the Momentum handler
-	return handler(event, {
-		readBody,
-		getQuery,
-		getRouterParams,
-		setResponseStatus,
-	});
+	// Call the comprehensive Momentum handler
+	return handler(
+		event,
+		{
+			readBody,
+			getQuery,
+			getRouterParams,
+			setResponseStatus,
+			setResponseHeader,
+			readMultipartFormData,
+			send,
+		},
+		{ user },
+	);
 });
