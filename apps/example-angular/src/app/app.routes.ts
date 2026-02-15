@@ -6,9 +6,12 @@ import { analyticsAdminRoutes } from '@momentum-cms/plugins/analytics/admin-rout
 // eslint-disable-next-line @nx/enforce-module-boundaries -- browser-safe block field injector
 import { injectBlockAnalyticsFields } from '@momentum-cms/plugins/analytics/block-fields';
 import { BASE_AUTH_COLLECTIONS } from '@momentum-cms/auth/collections';
+// eslint-disable-next-line @nx/enforce-module-boundaries -- config is also lazy-loaded for page components
 import { collections } from '@momentum-cms/example-config/collections';
+// eslint-disable-next-line @nx/enforce-module-boundaries -- config is also lazy-loaded for page components
 import { globals } from '@momentum-cms/example-config/globals';
-import { pageResolver } from './pages/page.resolver';
+// eslint-disable-next-line @nx/enforce-module-boundaries -- resolver must be static, page components are lazy-loaded
+import { pageResolver } from '@momentum-cms/example-config/pages';
 
 // Merge all collections for admin routes, then inject analytics block fields
 const adminCollections = [...collections, ...BASE_AUTH_COLLECTIONS];
@@ -18,7 +21,7 @@ export const appRoutes: Route[] = [
 	// Home page (renders the page with slug 'home')
 	{
 		path: '',
-		loadComponent: () => import('./pages/page.component').then((m) => m.PageComponent),
+		loadComponent: () => import('@momentum-cms/example-config/pages').then((m) => m.PageComponent),
 		pathMatch: 'full',
 		data: { slug: 'home' },
 		resolve: { pageData: pageResolver },
@@ -27,7 +30,7 @@ export const appRoutes: Route[] = [
 	{
 		path: 'experiments',
 		loadComponent: () =>
-			import('./pages/experiments/experiments.page').then((m) => m.ExperimentsPage),
+			import('@momentum-cms/example-config/pages').then((m) => m.ExperimentsPage),
 	},
 	// Kitchen Sink - UI component showcase
 	{
@@ -47,7 +50,7 @@ export const appRoutes: Route[] = [
 	// Dynamic page rendering by slug
 	{
 		path: ':slug',
-		loadComponent: () => import('./pages/page.component').then((m) => m.PageComponent),
+		loadComponent: () => import('@momentum-cms/example-config/pages').then((m) => m.PageComponent),
 		resolve: { pageData: pageResolver },
 	},
 ];

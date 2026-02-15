@@ -18,7 +18,7 @@ import {
 	InlineBlockEditDialog,
 	type InlineBlockEditData,
 } from './inline-block-edit-dialog.component';
-import { Pages } from '@momentum-cms/example-config';
+import { Pages } from '../collections/index';
 
 interface PageState {
 	page: Record<string, unknown> | null;

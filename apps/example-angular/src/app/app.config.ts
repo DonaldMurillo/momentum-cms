@@ -8,7 +8,8 @@ import {
 	withIncrementalHydration,
 } from '@angular/platform-browser';
 import { crudToastInterceptor } from '@momentum-cms/admin';
-import { providePageBlocks } from './pages/page-block-providers';
+
+import { providePageBlocks } from '@momentum-cms/example-config/pages';
 
 export const appConfig: ApplicationConfig = {
 	providers: [
