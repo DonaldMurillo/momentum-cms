@@ -7,6 +7,7 @@ export interface CLIOptions {
 	flavor: 'angular' | 'analog';
 	database: 'postgres' | 'sqlite';
 	install: boolean;
+	docker?: boolean;
 	registry?: string;
 }
 
@@ -28,6 +29,8 @@ function parseArgs(argv: string[]): Partial<CLIOptions> {
 			}
 		} else if (arg === '--no-install') {
 			opts.install = false;
+		} else if (arg === '--docker') {
+			opts.docker = true;
 		} else if (arg === '--registry' && args[i + 1]) {
 			opts.registry = args[++i];
 		} else if (!arg.startsWith('-') && !opts.projectName) {
@@ -86,6 +89,12 @@ export async function runCLI(): Promise<void> {
 				message: 'Install dependencies?',
 				initial: true,
 			},
+			{
+				type: cliArgs.docker !== undefined || cliArgs.database !== 'postgres' ? null : 'confirm',
+				name: 'docker',
+				message: 'Set up PostgreSQL with Docker?',
+				initial: true,
+			},
 		],
 		{
 			onCancel: () => {
@@ -95,11 +104,14 @@ export async function runCLI(): Promise<void> {
 		},
 	);
 
+	const database = cliArgs.database ?? response.database;
+
 	const options: CLIOptions = {
 		projectName: cliArgs.projectName ?? response.projectName,
 		flavor: cliArgs.flavor ?? response.flavor,
-		database: cliArgs.database ?? response.database,
+		database,
 		install: cliArgs.install ?? response.install ?? true,
+		docker: database === 'postgres' ? (cliArgs.docker ?? response.docker ?? false) : false,
 		registry: cliArgs.registry,
 	};
 
