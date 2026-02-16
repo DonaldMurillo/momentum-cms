@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/server-analog",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"description": "Nitro/h3 adapter for Momentum CMS with Analog.js support",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
