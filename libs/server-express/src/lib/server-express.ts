@@ -1,7 +1,6 @@
 import { Router, json as jsonParser } from 'express';
 import type { Request, Response, NextFunction } from 'express';
-// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- multer requires CommonJS import
-const multer = require('multer') as typeof import('multer');
+import multer from 'multer';
 import {
 	createMomentumHandlers,
 	getCollectionPermissions,

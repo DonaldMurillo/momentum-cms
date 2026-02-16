@@ -24,7 +24,6 @@
 	"engines": {
 		"node": ">=18"
 	},
-	"type": "commonjs",
 	"main": "./index.cjs",
 	"types": "./src/index.d.ts",
 	"peerDependencies": {

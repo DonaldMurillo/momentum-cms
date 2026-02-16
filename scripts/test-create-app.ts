@@ -9,7 +9,9 @@
  * 4. Build create-momentum-app CLI
  * 5. Run CLI for each flavor (angular + analog) × database (postgres + sqlite)
  * 6. Verify generated projects: files, npm install, tsc --noEmit
- * 7. Cleanup
+ * 7. Build the generated project (ng build / analog build)
+ * 8. Start server and verify health + admin endpoints (SQLite only)
+ * 9. Cleanup
  *
  * Usage:
  *   npx tsx scripts/test-create-app.ts              # Full test (all flavors)
@@ -346,7 +348,10 @@ function verifyProject(projectDir: string, flavor: Flavor, database: Database): 
 			'src/momentum.config.ts',
 			'src/app/app.ts',
 			'src/app/app.config.ts',
+			'src/app/app.config.server.ts',
 			'src/app/app.routes.ts',
+			'src/app/app.routes.server.ts',
+			'src/main.server.ts',
 			'src/collections/posts.ts',
 		],
 		analog: [
@@ -467,6 +472,123 @@ function verifyTypeScript(projectDir: string): void {
 }
 
 /**
+ * Build the scaffolded project using its own build script.
+ * Angular: ng build, Analog: analog build
+ */
+function buildProject(projectDir: string): void {
+	console.log(`${LOG_PREFIX} Running npm run build in ${path.basename(projectDir)}...`);
+	execFileSync('npm', ['run', 'build'], {
+		cwd: projectDir,
+		stdio: 'inherit',
+		timeout: 300000, // 5 min — Angular SSR builds can be slow
+	});
+	console.log(`${LOG_PREFIX} Build succeeded.`);
+}
+
+/**
+ * Start the built server and verify health + admin endpoints respond.
+ * Only runs for SQLite projects (postgres needs an external DB).
+ */
+async function startAndVerifyServer(
+	projectDir: string,
+	flavor: Flavor,
+	projectName: string,
+	database: Database,
+): Promise<void> {
+	if (database !== 'sqlite') {
+		console.log(
+			`${LOG_PREFIX} Skipping server verification for ${database} (requires external DB)`,
+		);
+		return;
+	}
+
+	const port = await findFreePort();
+
+	// Determine the server entry point based on flavor
+	const serverEntry =
+		flavor === 'angular'
+			? path.join(projectDir, 'dist', projectName, 'server', 'server.mjs')
+			: path.join(projectDir, 'dist', 'analog', 'server', 'index.mjs');
+
+	if (!fs.existsSync(serverEntry)) {
+		throw new Error(`Server entry not found: ${serverEntry}`);
+	}
+
+	// Ensure data directory exists for SQLite
+	fs.mkdirSync(path.join(projectDir, 'data'), { recursive: true });
+
+	console.log(`${LOG_PREFIX} Starting server on port ${port}...`);
+
+	const serverProc = spawn('node', [serverEntry], {
+		cwd: projectDir,
+		env: {
+			...process.env,
+			PORT: String(port),
+			DATABASE_PATH: path.join(projectDir, 'data', 'test.db'),
+			BETTER_AUTH_URL: `http://localhost:${port}`,
+			NODE_ENV: 'production',
+		},
+		stdio: ['ignore', 'pipe', 'pipe'],
+		detached: true,
+	});
+
+	let serverOutput = '';
+	serverProc.stdout?.on('data', (data: Buffer) => {
+		const msg = data.toString();
+		serverOutput += msg;
+		if (msg.trim()) console.log(`[server] ${msg.trim()}`);
+	});
+	serverProc.stderr?.on('data', (data: Buffer) => {
+		const msg = data.toString();
+		serverOutput += msg;
+		if (msg.trim()) console.error(`[server] ${msg.trim()}`);
+	});
+
+	try {
+		// Wait for server to become ready via health endpoint
+		const healthUrl = `http://localhost:${port}/api/health`;
+		const start = Date.now();
+		const timeoutMs = 30000;
+		let ready = false;
+
+		while (Date.now() - start < timeoutMs) {
+			try {
+				const res = await fetch(healthUrl);
+				if (res.ok) {
+					ready = true;
+					break;
+				}
+			} catch {
+				// not ready yet
+			}
+			await new Promise((r) => setTimeout(r, 500));
+		}
+
+		if (!ready) {
+			console.error(`Server output:\n${serverOutput}`);
+			throw new Error(`Server did not become ready within ${timeoutMs}ms`);
+		}
+
+		console.log(`${LOG_PREFIX} Server health check passed on port ${port}`);
+
+		// For Angular: verify SSR returns HTML at root
+		if (flavor === 'angular') {
+			const rootRes = await fetch(`http://localhost:${port}/`);
+			if (!rootRes.ok) {
+				throw new Error(`/ returned status ${rootRes.status}`);
+			}
+			const html = await rootRes.text();
+			if (!html.includes('<html') && !html.includes('<!DOCTYPE') && !html.includes('<!doctype')) {
+				throw new Error('/ did not return HTML content');
+			}
+			console.log(`${LOG_PREFIX} Angular SSR serves HTML correctly.`);
+		}
+	} finally {
+		killProcess(serverProc);
+	}
+}
+
+/**
  * Kill a process and its children
  */
 function killProcess(proc: ChildProcess): void {
@@ -570,6 +692,12 @@ async function main(): Promise<void> {
 
 						// Verify TypeScript compiles
 						verifyTypeScript(projectDir);
+
+						// Build the project (ng build / analog build)
+						buildProject(projectDir);
+
+						// Start server and verify endpoints (SQLite only)
+						await startAndVerifyServer(projectDir, flavor, projectName, database);
 					}
 
 					console.log(`${LOG_PREFIX} PASS: ${flavor} + ${database}\n`);

@@ -4,7 +4,7 @@
  * Provides a framework-agnostic handler that executes GraphQL queries
  * against the auto-generated schema. Can be used by Express, h3, etc.
  */
-import { graphql, parse, validate, type GraphQLSchema } from 'graphql';
+import { graphql, parse, validate, GraphQLError, type GraphQLSchema } from 'graphql';
 import type { GraphQLContext } from './graphql-schema';
 import type { UserContext } from '@momentumcms/core';
 
@@ -38,7 +38,7 @@ function checkDepth(
 	if (node.kind === 'Field') {
 		if (currentDepth > maxDepth) {
 			context.reportError(
-				new (require('graphql').GraphQLError)(
+				new GraphQLError(
 					`Query depth of ${currentDepth} exceeds maximum allowed depth of ${maxDepth}`,
 					{ nodes: [node] },
 				),

@@ -23,7 +23,6 @@
 	"engines": {
 		"node": ">=18"
 	},
-	"type": "commonjs",
 	"main": "./src/index.js",
 	"types": "./src/index.d.ts",
 	"dependencies": {

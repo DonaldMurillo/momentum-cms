@@ -42,7 +42,7 @@
 			"inputs": ["production", "^production"],
 			"options": {
 				"assets": ["{projectRoot}/*.md", { "input": ".", "glob": "LICENSE", "output": "." }],
-				"format": ["cjs"],
+				"format": ["cjs", "esm"],
 				"generatePackageJson": true
 			}
 		},

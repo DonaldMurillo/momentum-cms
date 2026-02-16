@@ -5,7 +5,7 @@
  * Uses the `pg` package (same as @momentumcms/db-drizzle).
  */
 
-import type { Pool as PgPool, PoolConfig } from 'pg';
+import type { Pool as PgPool } from 'pg';
 import { createLogger } from '@momentumcms/logger';
 import type { AnalyticsAdapter } from '../analytics-config.types';
 import type {
@@ -47,22 +47,22 @@ export function postgresAnalyticsAdapter(
 	// Lazy pool creation to avoid requiring `pg` at import time
 	let pool: PgPool | null = null;
 
-	function getPool(): PgPool {
+	async function getPool(): Promise<PgPool> {
 		if (!pool) {
-			// Dynamic require so the adapter works as an optional feature
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- dynamic import of optional peer dep
-			const pg = require('pg') as { Pool: new (config: PoolConfig) => PgPool };
-			pool = new pg.Pool({
+			// Dynamic import so the adapter works as an optional feature (pg is a peer dep)
+			const { Pool } = await import('pg');
+			pool = new Pool({
 				connectionString: options.connectionString,
 				max: options.poolSize ?? 5,
 			});
 		}
-		return pool;
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed non-null after the if block above
+		return pool!;
 	}
 
 	const adapter: AnalyticsAdapter = {
 		async initialize(): Promise<void> {
-			const p = getPool();
+			const p = await getPool();
 			await p.query(`
 				CREATE TABLE IF NOT EXISTS ${tableName} (
 					id TEXT PRIMARY KEY,
@@ -94,7 +94,7 @@ export function postgresAnalyticsAdapter(
 		async store(events: AnalyticsEvent[]): Promise<void> {
 			if (events.length === 0) return;
 
-			const p = getPool();
+			const p = await getPool();
 
 			// Build batch INSERT with parameterized values (9 columns per row)
 			const rows: string[] = [];
@@ -129,7 +129,7 @@ export function postgresAnalyticsAdapter(
 		},
 
 		async query(queryOptions: AnalyticsQueryOptions = {}): Promise<AnalyticsQueryResult> {
-			const p = getPool();
+			const p = await getPool();
 			const conditions: string[] = [];
 			const params: unknown[] = [];
 			let paramIdx = 1;
