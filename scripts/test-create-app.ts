@@ -8,9 +8,11 @@
  * 3. Publish them to local Verdaccio
  * 4. Build create-momentum-app CLI
  * 5. Run CLI for each flavor (angular + analog) × database (postgres + sqlite)
- * 6. Verify generated projects: files, npm install, tsc --noEmit
- * 7. Build the generated project (ng build / analog build)
- * 8. Start server and verify health + admin endpoints (SQLite only)
+ * 6. Verify generated projects: files, npm install
+ * 7. Start dev server briefly to verify dependency optimization (catches missing peer deps)
+ * 8. Run tsc --noEmit
+ * 9. Build the generated project (ng build / vite build)
+ * 10. Start production server and verify health + SSR endpoints (SQLite only)
  * 9. Cleanup
  *
  * Usage:
@@ -472,6 +474,73 @@ function verifyTypeScript(projectDir: string): void {
 }
 
 /**
+ * Start the dev server briefly to verify esbuild dependency optimization passes.
+ * This catches missing peer dependencies (like @angular/aria) that production
+ * builds miss because they only bundle actually-imported code, while the dev
+ * server eagerly pre-bundles ALL packages in node_modules.
+ */
+async function verifyDevServer(projectDir: string, flavor: Flavor): Promise<void> {
+	console.log(`${LOG_PREFIX} Starting dev server to verify dependency optimization...`);
+
+	const port = await findFreePort();
+	const cmd = flavor === 'angular' ? 'npx' : 'npx';
+	const args =
+		flavor === 'angular'
+			? ['ng', 'serve', '--port', String(port)]
+			: ['vite', '--port', String(port)];
+
+	const proc = spawn(cmd, args, {
+		cwd: projectDir,
+		stdio: ['ignore', 'pipe', 'pipe'],
+		shell: true,
+		detached: true,
+		env: { ...process.env, NODE_ENV: 'development' },
+	});
+
+	let output = '';
+	proc.stdout?.on('data', (data: Buffer) => {
+		output += data.toString();
+	});
+	proc.stderr?.on('data', (data: Buffer) => {
+		output += data.toString();
+	});
+
+	try {
+		const timeoutMs = 60000;
+		const start = Date.now();
+
+		await new Promise<void>((resolve, reject) => {
+			const checkInterval = setInterval(() => {
+				// Check for successful compilation indicators
+				if (
+					output.includes('Application bundle generation complete') ||
+					output.includes('Local:') ||
+					output.includes('ready in')
+				) {
+					clearInterval(checkInterval);
+					resolve();
+				}
+				// Check for esbuild errors (missing dependencies)
+				if (output.includes('Could not resolve') || output.includes('ERROR')) {
+					clearInterval(checkInterval);
+					reject(new Error(`Dev server dependency optimization failed:\n${output}`));
+				}
+				if (Date.now() - start > timeoutMs) {
+					clearInterval(checkInterval);
+					reject(new Error(`Dev server did not start within ${timeoutMs}ms:\n${output}`));
+				}
+			}, 500);
+		});
+
+		console.log(`${LOG_PREFIX} Dev server started successfully (dependency optimization passed).`);
+	} finally {
+		killProcess(proc);
+		// Give it a moment to shut down
+		await new Promise((r) => setTimeout(r, 1000));
+	}
+}
+
+/**
  * Build the scaffolded project using its own build script.
  * Angular: ng build, Analog: analog build
  */
@@ -689,6 +758,9 @@ async function main(): Promise<void> {
 					// Install dependencies (routes @momentumcms to Verdaccio, rest to npm)
 					if (!config.skipInstall) {
 						installDeps(projectDir, port);
+
+						// Verify dev server starts (catches missing peer deps)
+						await verifyDevServer(projectDir, flavor);
 
 						// Verify TypeScript compiles
 						verifyTypeScript(projectDir);
