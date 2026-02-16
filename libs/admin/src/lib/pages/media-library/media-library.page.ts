@@ -16,7 +16,7 @@ import {
 	Badge,
 	ToastService,
 	DialogService,
-} from '@momentum-cms/ui';
+} from '@momentumcms/ui';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
 	heroCloudArrowUp,

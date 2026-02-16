@@ -3,7 +3,7 @@
  * Used by individual h3 route handlers to share webhook and event bus data.
  */
 
-import type { CollectionEvent } from '@momentum-cms/plugins/core';
+import type { CollectionEvent } from '@momentumcms/plugins/core';
 
 /**
  * In-memory webhook receiver storage.

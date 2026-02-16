@@ -24,9 +24,9 @@ import {
 	CardFooter,
 	Button,
 	Badge,
-} from '@momentum-cms/ui';
-import { humanizeFieldName } from '@momentum-cms/core';
-import type { Field, BlockConfig } from '@momentum-cms/core';
+} from '@momentumcms/ui';
+import { humanizeFieldName } from '@momentumcms/core';
+import type { Field, BlockConfig } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form.types';
 import {
 	getFieldNodeState,

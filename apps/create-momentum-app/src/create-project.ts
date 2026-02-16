@@ -67,15 +67,15 @@ export async function createProject(options: CLIOptions): Promise<void> {
 		databaseType: database,
 		dbImport:
 			database === 'postgres'
-				? "import { postgresAdapter } from '@momentum-cms/db-drizzle';"
-				: "import { sqliteAdapter } from '@momentum-cms/db-drizzle';",
+				? "import { postgresAdapter } from '@momentumcms/db-drizzle';"
+				: "import { sqliteAdapter } from '@momentumcms/db-drizzle';",
 		dbAdapter:
 			database === 'postgres'
 				? `postgresAdapter({\n\t\tconnectionString: process.env['DATABASE_URL'] ?? 'postgresql://postgres:postgres@localhost:5432/momentum',\n\t})`
 				: `sqliteAdapter({\n\t\tfilename: process.env['DATABASE_PATH'] ?? './data/momentum.db',\n\t})`,
 		dbPoolSetup:
 			database === 'postgres'
-				? `import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
+				? `import type { PostgresAdapterWithRaw } from '@momentumcms/db-drizzle';
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- PostgresAdapter implements PostgresAdapterWithRaw
 const pool = (dbAdapter as PostgresAdapterWithRaw).getPool();`

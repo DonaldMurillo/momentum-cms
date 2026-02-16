@@ -7,7 +7,7 @@ import {
 	output,
 	afterNextRender,
 } from '@angular/core';
-import { Input, Button, McmsFormField } from '@momentum-cms/ui';
+import { Input, Button, McmsFormField } from '@momentumcms/ui';
 import { MomentumAuthService } from '../../services/auth.service';
 
 /**

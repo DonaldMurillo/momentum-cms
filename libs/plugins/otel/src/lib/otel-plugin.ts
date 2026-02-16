@@ -10,7 +10,7 @@
  *
  * @example
  * ```typescript
- * import { otelPlugin } from '@momentum-cms/plugins/otel';
+ * import { otelPlugin } from '@momentumcms/plugins/otel';
  *
  * export default defineMomentumConfig({
  *   plugins: [
@@ -21,9 +21,9 @@
  */
 
 import { trace, type Span, type Tracer, SpanStatusCode } from '@opentelemetry/api';
-import type { MomentumPlugin, PluginContext } from '@momentum-cms/plugins/core';
-import { MomentumLogger, type LogEnricher } from '@momentum-cms/logger';
-import type { HookFunction, CollectionConfig } from '@momentum-cms/core';
+import type { MomentumPlugin, PluginContext } from '@momentumcms/plugins/core';
+import { MomentumLogger, type LogEnricher } from '@momentumcms/logger';
+import type { HookFunction, CollectionConfig } from '@momentumcms/core';
 import type { OtelPluginConfig } from './otel-plugin.types';
 
 /**

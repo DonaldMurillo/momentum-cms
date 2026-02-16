@@ -17,7 +17,7 @@ import {
 	CardContent,
 	Separator,
 	DialogService,
-} from '@momentum-cms/ui';
+} from '@momentumcms/ui';
 import {
 	VersionService,
 	type DocumentVersionParsed,

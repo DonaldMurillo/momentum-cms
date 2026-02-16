@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { injectCollectionEventHooks, type CollectionEventListener } from '../hook-injector';
-import type { CollectionConfig } from '@momentum-cms/core';
+import type { CollectionConfig } from '@momentumcms/core';
 import type { CollectionEvent } from '../plugin.types';
 
 function createCollection(slug: string): CollectionConfig {

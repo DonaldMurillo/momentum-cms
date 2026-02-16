@@ -6,7 +6,7 @@
  *
  * Usage in Angular:
  * ```typescript
- * import { momentumAdminRoutes } from '@momentum-cms/admin';
+ * import { momentumAdminRoutes } from '@momentumcms/admin';
  * import { collections } from './collections';
  *
  * export const routes: Routes = [
@@ -26,7 +26,7 @@ import type {
 	MomentumConfig,
 	MomentumPlugin,
 	PluginAdminRouteDescriptor,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';
 import { authGuard } from '../guards/auth.guard';
 import { guestGuard } from '../guards/guest.guard';
 import { setupGuard } from '../guards/setup.guard';

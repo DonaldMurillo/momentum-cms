@@ -10,9 +10,9 @@ import type { Request, Response, Router } from 'express';
 import { Router as createRouter } from 'express';
 import type { AnalyticsEvent, AnalyticsCategory } from './analytics-event.types';
 import type { EventStore } from './event-store';
-import { createLogger } from '@momentum-cms/logger';
+import { createLogger } from '@momentumcms/logger';
 import { parseUserAgent } from './utils/parse-user-agent';
-import { RateLimiter } from '@momentum-cms/server-core';
+import { RateLimiter } from '@momentumcms/server-core';
 
 const VALID_CATEGORIES: Set<AnalyticsCategory> = new Set([
 	'admin',

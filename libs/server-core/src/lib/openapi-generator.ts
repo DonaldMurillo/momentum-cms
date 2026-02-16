@@ -17,8 +17,8 @@ import type {
 	ArrayField,
 	GroupField,
 	BlocksField,
-} from '@momentum-cms/core';
-import { flattenDataFields } from '@momentum-cms/core';
+} from '@momentumcms/core';
+import { flattenDataFields } from '@momentumcms/core';
 
 /** OpenAPI 3.0 document (simplified typing for generation). */
 export interface OpenAPIDocument {

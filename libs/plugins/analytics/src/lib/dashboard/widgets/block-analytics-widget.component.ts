@@ -15,7 +15,7 @@ import {
 	PLATFORM_ID,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Card, CardHeader, CardTitle, CardContent, Badge, Skeleton } from '@momentum-cms/ui';
+import { Card, CardHeader, CardTitle, CardContent, Badge, Skeleton } from '@momentumcms/ui';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { heroCubeTransparent } from '@ng-icons/heroicons/outline';
 

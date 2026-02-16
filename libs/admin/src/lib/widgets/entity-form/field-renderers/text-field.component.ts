@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions needed to narrow Field union to TextField/TextareaField after type guard */
 
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { McmsFormField, Input, Textarea } from '@momentum-cms/ui';
-import type { ValidationError } from '@momentum-cms/ui';
-import { humanizeFieldName } from '@momentum-cms/core';
-import type { Field, TextField, TextareaField } from '@momentum-cms/core';
+import { McmsFormField, Input, Textarea } from '@momentumcms/ui';
+import type { ValidationError } from '@momentumcms/ui';
+import { humanizeFieldName } from '@momentumcms/core';
+import type { Field, TextField, TextareaField } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form.types';
 import { getFieldNodeState } from '../entity-form.types';
 

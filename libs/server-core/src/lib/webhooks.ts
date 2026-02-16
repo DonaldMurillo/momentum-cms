@@ -12,8 +12,8 @@ import type {
 	WebhookConfig,
 	WebhookEvent,
 	WebhookPayload,
-} from '@momentum-cms/core';
-import { createLogger } from '@momentum-cms/logger';
+} from '@momentumcms/core';
+import { createLogger } from '@momentumcms/logger';
 
 const webhookLogger = createLogger('Webhook');
 

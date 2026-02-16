@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, inject, computed, viewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import type { CollectionConfig, GlobalConfig } from '@momentum-cms/core';
-import { humanizeFieldName } from '@momentum-cms/core';
+import type { CollectionConfig, GlobalConfig } from '@momentumcms/core';
+import { humanizeFieldName } from '@momentumcms/core';
 import { getGlobalsFromRouteData } from '../../utils/route-data';
 import { EntityFormWidget } from '../../widgets/entity-form/entity-form.component';
 import type { HasUnsavedChanges } from '../../guards/unsaved-changes.guard';

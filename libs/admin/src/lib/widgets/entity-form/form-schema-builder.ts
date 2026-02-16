@@ -22,8 +22,8 @@ import {
 	applyEach,
 } from '@angular/forms/signals';
 import type { SchemaPath } from '@angular/forms/signals';
-import { flattenDataFields, humanizeFieldName } from '@momentum-cms/core';
-import type { Field } from '@momentum-cms/core';
+import { flattenDataFields, humanizeFieldName } from '@momentumcms/core';
+import type { Field } from '@momentumcms/core';
 
 /**
  * Applies collection field validators to a signal forms schema path tree.

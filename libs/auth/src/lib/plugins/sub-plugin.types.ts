@@ -5,8 +5,8 @@
  * collections, user/session fields, and admin routes.
  */
 
-import type { CollectionConfig, Field } from '@momentum-cms/core';
-import type { PluginAdminRouteDescriptor } from '@momentum-cms/core';
+import type { CollectionConfig, Field } from '@momentumcms/core';
+import type { PluginAdminRouteDescriptor } from '@momentumcms/core';
 
 /**
  * A Momentum Auth sub-plugin wraps a Better Auth plugin.

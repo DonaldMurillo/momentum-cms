@@ -7,7 +7,7 @@ import {
 	group,
 	array,
 	allowAll,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';
 
 /**
  * Products collection for testing group and array field renderers.

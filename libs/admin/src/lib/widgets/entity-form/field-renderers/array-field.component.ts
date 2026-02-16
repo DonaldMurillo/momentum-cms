@@ -8,9 +8,9 @@ import {
 } from '@angular/cdk/drag-drop';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { heroPlus, heroTrash, heroBars2 } from '@ng-icons/heroicons/outline';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter, Button } from '@momentum-cms/ui';
-import { humanizeFieldName } from '@momentum-cms/core';
-import type { Field } from '@momentum-cms/core';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter, Button } from '@momentumcms/ui';
+import { humanizeFieldName } from '@momentumcms/core';
+import type { Field } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form.types';
 import {
 	getFieldNodeState,

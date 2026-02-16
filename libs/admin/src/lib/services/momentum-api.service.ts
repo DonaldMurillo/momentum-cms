@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { injectMomentumAPI } from '@momentum-cms/admin';
+ * import { injectMomentumAPI } from '@momentumcms/admin';
  *
  * @Component({...})
  * export class PostsComponent {
@@ -133,7 +133,7 @@ export const MOMENTUM_API_CONTEXT = new InjectionToken<MomentumAPIContext>('MOME
  *
  * @example
  * ```typescript
- * import { provideMomentumAPI } from '@momentum-cms/admin';
+ * import { provideMomentumAPI } from '@momentumcms/admin';
  *
  * angularApp.handle(req, {
  *   providers: provideMomentumAPI(getMomentumAPI(), { user: req.user }),
@@ -155,7 +155,7 @@ export function provideMomentumAPI(
 // ============================================
 
 /**
- * Server-side API interface (from @momentum-cms/server-core).
+ * Server-side API interface (from @momentumcms/server-core).
  * This mirrors the MomentumAPI interface for type safety.
  */
 export interface MomentumAPIServer {

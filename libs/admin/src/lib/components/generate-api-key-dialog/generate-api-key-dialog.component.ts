@@ -14,8 +14,8 @@ import {
 	Input,
 	Label,
 	Select,
-} from '@momentum-cms/ui';
-import type { SelectOption } from '@momentum-cms/ui';
+} from '@momentumcms/ui';
+import type { SelectOption } from '@momentumcms/ui';
 import { MomentumAuthService } from '../../services/auth.service';
 
 /** Data passed to the GenerateApiKeyDialog. */
@@ -36,7 +36,7 @@ interface ApiKeyCreateResponse {
 }
 
 /** Role hierarchy: lower index = higher privilege.
- * Keep in sync with AUTH_ROLES in @momentum-cms/auth/collections */
+ * Keep in sync with AUTH_ROLES in @momentumcms/auth/collections */
 const ROLE_HIERARCHY: SelectOption[] = [
 	{ label: 'Admin', value: 'admin' },
 	{ label: 'Editor', value: 'editor' },

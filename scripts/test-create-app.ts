@@ -4,7 +4,7 @@
  *
  * Tests the full publish-and-scaffold pipeline:
  * 1. Start local Verdaccio registry on ephemeral port
- * 2. Build all publishable @momentum-cms/* packages
+ * 2. Build all publishable @momentumcms/* packages
  * 3. Publish them to local Verdaccio
  * 4. Build create-momentum-app CLI
  * 5. Run CLI for each flavor (angular + analog) × database (postgres + sqlite)
@@ -293,7 +293,7 @@ function verifyProject(projectDir: string, flavor: Flavor, database: Database): 
 	// Verify package.json has correct @momentum-cms dependencies
 	const pkgJson = JSON.parse(fs.readFileSync(path.join(projectDir, 'package.json'), 'utf-8'));
 	const deps = { ...pkgJson.dependencies, ...pkgJson.devDependencies };
-	const requiredDeps = ['@momentum-cms/core', '@momentum-cms/db-drizzle', '@momentum-cms/auth'];
+	const requiredDeps = ['@momentumcms/core', '@momentumcms/db-drizzle', '@momentumcms/auth'];
 	const missingDeps: string[] = [];
 	for (const dep of requiredDeps) {
 		if (!deps[dep]) {

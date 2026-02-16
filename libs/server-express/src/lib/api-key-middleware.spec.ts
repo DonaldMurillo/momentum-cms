@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import { createApiKeyRoutes } from './api-key-middleware';
-import type { ApiKeyStore } from '@momentum-cms/server-core';
+import type { ApiKeyStore } from '@momentumcms/server-core';
 
 /**
  * Creates a mock ApiKeyStore with all methods stubbed.

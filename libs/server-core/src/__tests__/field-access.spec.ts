@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { text, number, group, array, blocks, tabs, collapsible, row } from '@momentum-cms/core';
-import type { Field, RequestContext } from '@momentum-cms/core';
+import { text, number, group, array, blocks, tabs, collapsible, row } from '@momentumcms/core';
+import type { Field, RequestContext } from '@momentumcms/core';
 import {
 	hasFieldAccessControl,
 	filterReadableFields,
@@ -283,9 +283,9 @@ describe('field-access', () => {
 			];
 			const doc = { id: '1', title: 'Hello', broken: 'value' };
 
-			return expect(
-				filterReadableFields(fields, doc, regularUser),
-			).rejects.toThrow('Access check failed');
+			return expect(filterReadableFields(fields, doc, regularUser)).rejects.toThrow(
+				'Access check failed',
+			);
 		});
 	});
 });

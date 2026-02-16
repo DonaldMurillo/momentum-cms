@@ -7,11 +7,11 @@ import {
 	createAdapterApiKeyStore,
 	type SeedingResult,
 	type MomentumAuthLike,
-} from '@momentum-cms/server-core';
-import type { MomentumConfig, ResolvedMomentumConfig } from '@momentum-cms/core';
-import type { MomentumAuthPlugin } from '@momentum-cms/auth';
-import { initializeMomentumLogger, createLogger } from '@momentum-cms/logger';
-import { PluginRunner } from '@momentum-cms/plugins/core';
+} from '@momentumcms/server-core';
+import type { MomentumConfig, ResolvedMomentumConfig } from '@momentumcms/core';
+import type { MomentumAuthPlugin } from '@momentumcms/auth';
+import { initializeMomentumLogger, createLogger } from '@momentumcms/logger';
+import { PluginRunner } from '@momentumcms/plugins/core';
 import { createAuthMiddleware } from './auth-middleware';
 import { createSetupMiddleware } from './setup-middleware';
 import { createApiKeyResolverMiddleware, createApiKeyRoutes } from './api-key-middleware';
@@ -95,7 +95,7 @@ export interface InitializeMomentumOptions {
  *
  * @example
  * ```typescript
- * import { initializeMomentum } from '@momentum-cms/server-express';
+ * import { initializeMomentum } from '@momentumcms/server-express';
  * import momentumConfig from './momentum.config';
  *
  * const { ready, getSeedingStatus } = initializeMomentum(momentumConfig);
@@ -290,7 +290,7 @@ export interface HealthResponse {
  *
  * @example
  * ```typescript
- * import { initializeMomentum, createHealthMiddleware } from '@momentum-cms/server-express';
+ * import { initializeMomentum, createHealthMiddleware } from '@momentumcms/server-express';
  *
  * const init = initializeMomentum(config);
  *

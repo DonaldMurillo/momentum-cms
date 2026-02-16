@@ -1,11 +1,11 @@
 # Admin Dashboard
 
-The admin library (`@momentum-cms/admin`) provides a pre-built Angular dashboard for managing collections, globals, and media.
+The admin library (`@momentumcms/admin`) provides a pre-built Angular dashboard for managing collections, globals, and media.
 
 ## Package
 
 ```bash
-npm install @momentum-cms/admin
+npm install @momentumcms/admin
 ```
 
 ## Setup
@@ -13,7 +13,7 @@ npm install @momentum-cms/admin
 Register admin routes in your Angular app:
 
 ```typescript
-import { momentumAdminRoutes } from '@momentum-cms/admin';
+import { momentumAdminRoutes } from '@momentumcms/admin';
 import momentumConfig from './momentum.config';
 
 const routes: Routes = [

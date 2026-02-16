@@ -9,8 +9,8 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs/operators';
-import type { CollectionConfig } from '@momentum-cms/core';
-import { Button } from '@momentum-cms/ui';
+import type { CollectionConfig } from '@momentumcms/core';
+import { Button } from '@momentumcms/ui';
 import { getCollectionsFromRouteData } from '../../utils/route-data';
 import { EntityViewWidget } from '../../widgets/entity-view/entity-view.component';
 import { LivePreviewComponent } from '../../widgets/live-preview/live-preview.component';

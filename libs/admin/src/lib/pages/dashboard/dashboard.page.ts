@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, computed } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import type { CollectionConfig } from '@momentum-cms/core';
+import type { CollectionConfig } from '@momentumcms/core';
 import { getCollectionsFromRouteData } from '../../utils/route-data';
 import { CollectionAccessService } from '../../services/collection-access.service';
 import { CollectionCardWidget } from '../../widgets/collection-card/collection-card.component';

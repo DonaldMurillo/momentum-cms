@@ -1,4 +1,4 @@
-import { defineGlobal, text, textarea, checkbox } from '@momentum-cms/core';
+import { defineGlobal, text, textarea, checkbox } from '@momentumcms/core';
 
 export const SiteSettings = defineGlobal({
 	slug: 'site-settings',

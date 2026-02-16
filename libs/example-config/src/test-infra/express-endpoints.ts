@@ -1,7 +1,7 @@
 import type { Router } from 'express';
-import type { AnalyticsPluginInstance } from '@momentum-cms/plugins/analytics';
-import type { MemoryAnalyticsAdapter } from '@momentum-cms/plugins/analytics';
-import type { EventBusPlugin, CollectionEvent } from '@momentum-cms/plugins/core';
+import type { AnalyticsPluginInstance } from '@momentumcms/plugins/analytics';
+import type { MemoryAnalyticsAdapter } from '@momentumcms/plugins/analytics';
+import type { EventBusPlugin, CollectionEvent } from '@momentumcms/plugins/core';
 import {
 	getHookLog,
 	clearHookLog,

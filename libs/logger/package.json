@@ -1,5 +1,5 @@
 {
-	"name": "@momentum-cms/logger",
+	"name": "@momentumcms/logger",
 	"version": "0.0.1",
 	"description": "Structured logging for Momentum CMS",
 	"license": "MIT",

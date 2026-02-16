@@ -12,13 +12,13 @@ import type {
 	CreateVersionOptions,
 	VersionQueryOptions,
 	VersionCountOptions,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';
 import {
 	flattenDataFields,
 	ReferentialIntegrityError,
 	getSoftDeleteField,
-} from '@momentum-cms/core';
-import { createLogger } from '@momentum-cms/logger';
+} from '@momentumcms/core';
+import { createLogger } from '@momentumcms/logger';
 
 /**
  * PostgreSQL adapter options.

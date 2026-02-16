@@ -1,5 +1,5 @@
 {
-	"name": "@momentum-cms/storage",
+	"name": "@momentumcms/storage",
 	"version": "0.0.1",
 	"description": "File storage adapters (local filesystem, S3) for Momentum CMS",
 	"license": "MIT",
@@ -30,7 +30,7 @@
 		"tslib": "^2.3.0"
 	},
 	"peerDependencies": {
-		"@momentum-cms/core": ">=0.0.1",
+		"@momentumcms/core": ">=0.0.1",
 		"@aws-sdk/client-s3": "^3.0.0",
 		"@aws-sdk/s3-request-presigner": "^3.0.0"
 	},

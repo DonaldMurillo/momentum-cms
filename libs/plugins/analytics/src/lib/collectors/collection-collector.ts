@@ -6,7 +6,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import type { CollectionConfig, HookFunction } from '@momentum-cms/core';
+import type { CollectionConfig, HookFunction } from '@momentumcms/core';
 import type { AnalyticsEvent } from '../analytics-event.types';
 
 /**

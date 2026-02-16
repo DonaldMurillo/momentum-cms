@@ -9,7 +9,7 @@
  *
  * @example
  * ```typescript
- * import { access, hasRole, hasAnyRole, isAuthenticated, allowAll } from '@momentum-cms/core';
+ * import { access, hasRole, hasAnyRole, isAuthenticated, allowAll } from '@momentumcms/core';
  *
  * // Using pre-built helpers
  * access: {

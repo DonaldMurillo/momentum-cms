@@ -6,7 +6,7 @@ import type {
 	DatabaseAdapter,
 	DocumentVersion,
 	DocumentStatus,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';
 import type { MomentumAPIContext } from './momentum-api.types';
 
 // Mock collection with versioning enabled

@@ -11,9 +11,9 @@ import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
-import { injectMomentumAPI, MomentumAuthService, type FindResult } from '@momentum-cms/admin';
-import { BlockRendererComponent, BlockAdminModeService, DialogService } from '@momentum-cms/ui';
-import type { BlocksField } from '@momentum-cms/core';
+import { injectMomentumAPI, MomentumAuthService, type FindResult } from '@momentumcms/admin';
+import { BlockRendererComponent, BlockAdminModeService, DialogService } from '@momentumcms/ui';
+import type { BlocksField } from '@momentumcms/core';
 import {
 	InlineBlockEditDialog,
 	type InlineBlockEditData,

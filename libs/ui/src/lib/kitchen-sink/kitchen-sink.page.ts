@@ -113,7 +113,7 @@ interface KitchenSinkUser {
  * @example
  * ```typescript
  * // In routing:
- * { path: 'kitchen-sink', loadComponent: () => import('@momentum-cms/ui').then(m => m.KitchenSinkPage) }
+ * { path: 'kitchen-sink', loadComponent: () => import('@momentumcms/ui').then(m => m.KitchenSinkPage) }
  * ```
  */
 @Component({

@@ -5,7 +5,7 @@
  */
 
 import { defineEventHandler, getRouterParam, getHeaders, setResponseStatus } from 'h3';
-import { createAdapterApiKeyStore } from '@momentum-cms/server-core';
+import { createAdapterApiKeyStore } from '@momentumcms/server-core';
 import { ensureInitialized } from '../../../../utils/momentum-init';
 import { resolveUserFromRequest } from '../../../../utils/resolve-user';
 import momentumConfig from '../../../../../momentum.config';

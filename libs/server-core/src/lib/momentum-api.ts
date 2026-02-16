@@ -14,13 +14,9 @@ import type {
 	AccessArgs,
 	HookArgs,
 	RequestContext,
-} from '@momentum-cms/core';
-import { createLogger } from '@momentum-cms/logger';
-import {
-	flattenDataFields,
-	validateFieldConstraints,
-	getSoftDeleteField,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';
+import { createLogger } from '@momentumcms/logger';
+import { flattenDataFields, validateFieldConstraints, getSoftDeleteField } from '@momentumcms/core';
 import {
 	hasFieldAccessControl,
 	filterCreatableFields,
@@ -66,7 +62,7 @@ let momentumApiInstance: MomentumAPIImpl | null = null;
  * @example
  * ```typescript
  * // In server.ts
- * import { initializeMomentumAPI } from '@momentum-cms/server-core';
+ * import { initializeMomentumAPI } from '@momentumcms/server-core';
  * import momentumConfig from './momentum.config';
  *
  * initializeMomentumAPI(momentumConfig);
@@ -1492,4 +1488,4 @@ export {
 	ValidationError,
 } from './momentum-api.types';
 
-export { ReferentialIntegrityError } from '@momentum-cms/core';
+export { ReferentialIntegrityError } from '@momentumcms/core';

@@ -1,5 +1,5 @@
 {
-	"name": "@momentum-cms/db-drizzle",
+	"name": "@momentumcms/db-drizzle",
 	"version": "0.0.1",
 	"description": "Drizzle ORM database adapter for Momentum CMS",
 	"license": "MIT",
@@ -29,8 +29,8 @@
 	"main": "./index.cjs",
 	"types": "./index.d.ts",
 	"peerDependencies": {
-		"@momentum-cms/core": ">=0.0.1",
-		"@momentum-cms/logger": ">=0.0.1",
+		"@momentumcms/core": ">=0.0.1",
+		"@momentumcms/logger": ">=0.0.1",
 		"drizzle-orm": "^0.45.0",
 		"better-sqlite3": "^12.0.0",
 		"pg": "^8.0.0"

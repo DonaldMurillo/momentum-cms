@@ -9,8 +9,8 @@ import {
 	signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { CollectionConfig } from '@momentum-cms/core';
-import { humanizeFieldName } from '@momentum-cms/core';
+import type { CollectionConfig } from '@momentumcms/core';
+import { humanizeFieldName } from '@momentumcms/core';
 import {
 	Card,
 	CardHeader,
@@ -19,7 +19,7 @@ import {
 	Badge,
 	Button,
 	Skeleton,
-} from '@momentum-cms/ui';
+} from '@momentumcms/ui';
 import { injectMomentumAPI } from '../../services/momentum-api.service';
 import { CollectionAccessService } from '../../services/collection-access.service';
 

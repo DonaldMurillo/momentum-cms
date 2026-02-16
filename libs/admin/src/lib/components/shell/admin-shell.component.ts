@@ -9,8 +9,8 @@ import {
 import { isPlatformBrowser } from '@angular/common';
 import { RouterOutlet, ActivatedRoute, Router } from '@angular/router';
 import { A11yModule } from '@angular/cdk/a11y';
-import type { CollectionConfig, GlobalConfig } from '@momentum-cms/core';
-import { SidebarService, SidebarTrigger, ToastContainer } from '@momentum-cms/ui';
+import type { CollectionConfig, GlobalConfig } from '@momentumcms/core';
+import { SidebarService, SidebarTrigger, ToastContainer } from '@momentumcms/ui';
 import {
 	getCollectionsFromRouteData,
 	getGlobalsFromRouteData,

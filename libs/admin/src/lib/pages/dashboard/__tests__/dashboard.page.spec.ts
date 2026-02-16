@@ -9,7 +9,7 @@ import { provideRouter, ActivatedRoute } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { computed, signal } from '@angular/core';
-import type { CollectionConfig } from '@momentum-cms/core';
+import type { CollectionConfig } from '@momentumcms/core';
 import { DashboardPage } from '../dashboard.page';
 import { CollectionAccessService } from '../../../services/collection-access.service';
 

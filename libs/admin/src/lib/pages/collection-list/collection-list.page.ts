@@ -2,8 +2,8 @@ import { Component, ChangeDetectionStrategy, inject, computed, viewChild } from 
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs/operators';
-import type { AdminConfig, CollectionConfig } from '@momentum-cms/core';
-import { DialogService } from '@momentum-cms/ui';
+import type { AdminConfig, CollectionConfig } from '@momentumcms/core';
+import { DialogService } from '@momentumcms/ui';
 import { getCollectionsFromRouteData } from '../../utils/route-data';
 import { EntityListWidget } from '../../widgets/entity-list/entity-list.component';
 import type { Entity, EntityAction } from '../../widgets/widget.types';

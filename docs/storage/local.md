@@ -5,7 +5,7 @@ Store uploads on the local filesystem. Best for development and single-server de
 ## Setup
 
 ```typescript
-import { localStorageAdapter } from '@momentum-cms/storage';
+import { localStorageAdapter } from '@momentumcms/storage';
 
 export default defineMomentumConfig({
 	storage: {

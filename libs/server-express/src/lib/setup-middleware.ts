@@ -2,8 +2,8 @@ import type { Router, Request, Response } from 'express';
 import { Router as createRouter } from 'express';
 import type { Pool } from 'pg';
 import type { Database } from 'better-sqlite3';
-import type { MomentumAuth } from '@momentum-cms/auth';
-import { MIN_PASSWORD_LENGTH } from '@momentum-cms/core';
+import type { MomentumAuth } from '@momentumcms/auth';
+import { MIN_PASSWORD_LENGTH } from '@momentumcms/core';
 
 /**
  * Response type for the setup status endpoint.
@@ -200,8 +200,8 @@ function isLegacyConfig(
  *
  * @example
  * ```typescript
- * import { createSetupMiddleware } from '@momentum-cms/server-express';
- * import { createMomentumAuth } from '@momentum-cms/auth';
+ * import { createSetupMiddleware } from '@momentumcms/server-express';
+ * import { createMomentumAuth } from '@momentumcms/auth';
  *
  * // With PostgreSQL
  * const auth = createMomentumAuth({ db: { type: 'postgres', pool } });

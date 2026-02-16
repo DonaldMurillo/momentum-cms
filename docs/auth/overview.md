@@ -1,11 +1,11 @@
 # Authentication Overview
 
-Momentum CMS uses [Better Auth](https://better-auth.com) for authentication via the `@momentum-cms/auth` package.
+Momentum CMS uses [Better Auth](https://better-auth.com) for authentication via the `@momentumcms/auth` package.
 
 ## Setup
 
 ```typescript
-import { momentumAuth } from '@momentum-cms/auth';
+import { momentumAuth } from '@momentumcms/auth';
 
 export default {
   auth: momentumAuth({

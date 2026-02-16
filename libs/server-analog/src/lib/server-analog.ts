@@ -31,7 +31,7 @@ import {
 	sanitizeErrorMessage,
 	parseWhereParam,
 	sanitizeFilename,
-} from '@momentum-cms/server-core';
+} from '@momentumcms/server-core';
 import type {
 	MomentumConfig,
 	ResolvedMomentumConfig,
@@ -39,7 +39,7 @@ import type {
 	UploadedFile,
 	EndpointQueryHelper,
 	DatabaseAdapter,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';
 
 // ============================================
 // H3 Type Definitions
@@ -126,7 +126,7 @@ export interface MomentumH3Utils {
 // Shared Helpers
 // ============================================
 
-// sanitizeErrorMessage and parseWhereParam are imported from @momentum-cms/server-core
+// sanitizeErrorMessage and parseWhereParam are imported from @momentumcms/server-core
 
 /**
  * Convert string method to MomentumRequest method type.
@@ -149,7 +149,7 @@ function toMomentumMethod(m: string): MomentumRequest['method'] {
  * ```typescript
  * // src/server/routes/api/[...momentum].ts
  * import { defineEventHandler, readBody, getQuery, getRouterParams } from 'h3';
- * import { createMomentumHandler } from '@momentum-cms/server-analog';
+ * import { createMomentumHandler } from '@momentumcms/server-analog';
  * import momentumConfig from '../../../momentum.config';
  *
  * const handler = createMomentumHandler(momentumConfig);
@@ -262,7 +262,7 @@ const MAX_BATCH_SIZE = 100;
  * ```typescript
  * import { defineEventHandler, readBody, getQuery, getRouterParams,
  *   setResponseStatus, setResponseHeader, readMultipartFormData, send, getHeaders } from 'h3';
- * import { createComprehensiveMomentumHandler } from '@momentum-cms/server-analog';
+ * import { createComprehensiveMomentumHandler } from '@momentumcms/server-analog';
  *
  * const handler = createComprehensiveMomentumHandler(momentumConfig);
  *

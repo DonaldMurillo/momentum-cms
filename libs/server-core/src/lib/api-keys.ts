@@ -1,5 +1,5 @@
 import { randomBytes, createHash } from 'node:crypto';
-import type { DatabaseAdapter } from '@momentum-cms/core';
+import type { DatabaseAdapter } from '@momentumcms/core';
 
 /**
  * API key prefix for easy identification.

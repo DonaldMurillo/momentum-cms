@@ -7,7 +7,7 @@ import {
 	collapsible,
 	row,
 	allowAll,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';
 
 /**
  * Settings collection for testing layout field renderers (tabs, collapsible, row).

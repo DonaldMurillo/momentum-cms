@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { injectBlockAnalyticsFields } from '../collectors/block-field-injector';
-import type { CollectionConfig, Field } from '@momentum-cms/core';
+import type { CollectionConfig, Field } from '@momentumcms/core';
 
 function makeBlockField(blocks: Array<{ slug: string; fields: Field[] }>): Field {
 	return {

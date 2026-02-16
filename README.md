@@ -55,7 +55,7 @@ Full documentation is available in the [docs/](docs/README.md) directory, coveri
 ## Define a Collection
 
 ```typescript
-import { defineCollection, text, richText, relationship } from '@momentum-cms/core';
+import { defineCollection, text, richText, relationship } from '@momentumcms/core';
 
 export const Posts = defineCollection({
 	slug: 'posts',
@@ -73,29 +73,29 @@ export const Posts = defineCollection({
 
 ## Packages
 
-| Package                           | npm                        | Description                                          |
-| --------------------------------- | -------------------------- | ---------------------------------------------------- |
-| `@momentum-cms/core`              | `libs/core`                | Collection config, fields, hooks, and access control |
-| `@momentum-cms/db-drizzle`        | `libs/db-drizzle`          | Drizzle ORM database adapter (PostgreSQL + SQLite)   |
-| `@momentum-cms/auth`              | `libs/auth`                | Better Auth integration                              |
-| `@momentum-cms/server-core`       | `libs/server-core`         | Framework-agnostic server handlers                   |
-| `@momentum-cms/server-express`    | `libs/server-express`      | Express adapter for Angular SSR                      |
-| `@momentum-cms/server-analog`     | `libs/server-analog`       | Nitro/h3 adapter for Analog.js                       |
-| `@momentum-cms/admin`             | `libs/admin`               | Angular admin dashboard UI                           |
-| `@momentum-cms/ui`                | `libs/ui`                  | Base UI component library                            |
-| `@momentum-cms/storage`           | `libs/storage`             | File storage adapters (local, S3)                    |
-| `@momentum-cms/logger`            | `libs/logger`              | Structured logging                                   |
-| `@momentum-cms/plugins-core`      | `libs/plugins/core`        | Plugin system core (event bus)                       |
-| `@momentum-cms/plugins-analytics` | `libs/plugins/analytics`   | Analytics and tracking plugin                        |
-| `@momentum-cms/plugins-otel`      | `libs/plugins/otel`        | OpenTelemetry observability plugin                   |
-| `create-momentum-app`             | `apps/create-momentum-app` | CLI scaffolding tool                                 |
+| Package                          | npm                        | Description                                          |
+| -------------------------------- | -------------------------- | ---------------------------------------------------- |
+| `@momentumcms/core`              | `libs/core`                | Collection config, fields, hooks, and access control |
+| `@momentumcms/db-drizzle`        | `libs/db-drizzle`          | Drizzle ORM database adapter (PostgreSQL + SQLite)   |
+| `@momentumcms/auth`              | `libs/auth`                | Better Auth integration                              |
+| `@momentumcms/server-core`       | `libs/server-core`         | Framework-agnostic server handlers                   |
+| `@momentumcms/server-express`    | `libs/server-express`      | Express adapter for Angular SSR                      |
+| `@momentumcms/server-analog`     | `libs/server-analog`       | Nitro/h3 adapter for Analog.js                       |
+| `@momentumcms/admin`             | `libs/admin`               | Angular admin dashboard UI                           |
+| `@momentumcms/ui`                | `libs/ui`                  | Base UI component library                            |
+| `@momentumcms/storage`           | `libs/storage`             | File storage adapters (local, S3)                    |
+| `@momentumcms/logger`            | `libs/logger`              | Structured logging                                   |
+| `@momentumcms/plugins-core`      | `libs/plugins/core`        | Plugin system core (event bus)                       |
+| `@momentumcms/plugins-analytics` | `libs/plugins/analytics`   | Analytics and tracking plugin                        |
+| `@momentumcms/plugins-otel`      | `libs/plugins/otel`        | OpenTelemetry observability plugin                   |
+| `create-momentum-app`            | `apps/create-momentum-app` | CLI scaffolding tool                                 |
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────┐
 │              Admin Dashboard            │
-│          (@momentum-cms/admin)          │
+│          (@momentumcms/admin)          │
 ├─────────────────────────────────────────┤
 │          Server Adapters                │
 │   server-express  │  server-analog      │
@@ -118,20 +118,20 @@ export const Posts = defineCollection({
 If you prefer to add Momentum CMS to an existing Angular project:
 
 ```bash
-npm install @momentum-cms/core @momentum-cms/db-drizzle @momentum-cms/auth \
-  @momentum-cms/server-core @momentum-cms/admin @momentum-cms/storage
+npm install @momentumcms/core @momentumcms/db-drizzle @momentumcms/auth \
+  @momentumcms/server-core @momentumcms/admin @momentumcms/storage
 ```
 
 For Angular + Express:
 
 ```bash
-npm install @momentum-cms/server-express
+npm install @momentumcms/server-express
 ```
 
 For Analog + Nitro:
 
 ```bash
-npm install @momentum-cms/server-analog
+npm install @momentumcms/server-analog
 ```
 
 See the generated `momentum.config.ts` from `create-momentum-app` for a configuration example.

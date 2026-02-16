@@ -2,11 +2,11 @@
  * PostgreSQL Analytics Adapter
  *
  * Stores analytics events in a PostgreSQL table with JSONB columns.
- * Uses the `pg` package (same as @momentum-cms/db-drizzle).
+ * Uses the `pg` package (same as @momentumcms/db-drizzle).
  */
 
 import type { Pool as PgPool, PoolConfig } from 'pg';
-import { createLogger } from '@momentum-cms/logger';
+import { createLogger } from '@momentumcms/logger';
 import type { AnalyticsAdapter } from '../analytics-config.types';
 import type {
 	AnalyticsEvent,
@@ -31,7 +31,7 @@ export interface PostgresAnalyticsAdapterOptions {
  *
  * @example
  * ```typescript
- * import { postgresAnalyticsAdapter } from '@momentum-cms/plugins/analytics';
+ * import { postgresAnalyticsAdapter } from '@momentumcms/plugins/analytics';
  *
  * const adapter = postgresAnalyticsAdapter({
  *   connectionString: process.env.DATABASE_URL,

@@ -16,7 +16,7 @@ import {
 	hashApiKey,
 	getKeyPrefix,
 	generateApiKeyId,
-} from '@momentum-cms/server-core';
+} from '@momentumcms/server-core';
 import { ensureInitialized } from '../../../utils/momentum-init';
 import { resolveUserFromRequest } from '../../../utils/resolve-user';
 import momentumConfig from '../../../../momentum.config';

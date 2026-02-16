@@ -7,7 +7,7 @@
  */
 
 import { ChangeDetectionStrategy, Component, forwardRef, inject } from '@angular/core';
-import type { BlockConfig, Field } from '@momentum-cms/core';
+import type { BlockConfig, Field } from '@momentumcms/core';
 import {
 	Button,
 	Dialog,
@@ -18,7 +18,7 @@ import {
 	DialogClose,
 	DialogRef,
 	DIALOG_DATA,
-} from '@momentum-cms/ui';
+} from '@momentumcms/ui';
 import { getSubNode } from '../entity-form/entity-form.types';
 import type { EntityFormMode } from '../entity-form/entity-form.types';
 import { FieldRenderer } from '../entity-form/field-renderers/field-renderer.component';

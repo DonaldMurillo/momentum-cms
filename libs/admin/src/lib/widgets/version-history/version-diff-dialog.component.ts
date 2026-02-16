@@ -10,7 +10,7 @@ import {
 	Badge,
 	Skeleton,
 	DIALOG_DATA,
-} from '@momentum-cms/ui';
+} from '@momentumcms/ui';
 import { VersionService, type VersionFieldDiff } from '../../services/version.service';
 
 /**

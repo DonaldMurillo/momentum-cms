@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PluginRunner } from '../plugin-runner';
 import { PluginFatalError } from '../plugin-fatal-error';
 import type { MomentumPlugin, MomentumAPI } from '../plugin.types';
-import type { MomentumConfig, CollectionConfig } from '@momentum-cms/core';
-import { resetMomentumLogger } from '@momentum-cms/logger';
+import type { MomentumConfig, CollectionConfig } from '@momentumcms/core';
+import { resetMomentumLogger } from '@momentumcms/logger';
 
 function createMockConfig(): MomentumConfig {
 	return {

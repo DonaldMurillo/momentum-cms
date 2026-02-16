@@ -1,5 +1,5 @@
 {
-	"name": "@momentum-cms/server-analog",
+	"name": "@momentumcms/server-analog",
 	"version": "0.0.1",
 	"description": "Nitro/h3 adapter for Momentum CMS with Analog.js support",
 	"license": "MIT",
@@ -28,7 +28,7 @@
 	"main": "./index.cjs",
 	"types": "./index.d.ts",
 	"peerDependencies": {
-		"@momentum-cms/core": ">=0.0.1",
-		"@momentum-cms/server-core": ">=0.0.1"
+		"@momentumcms/core": ">=0.0.1",
+		"@momentumcms/server-core": ">=0.0.1"
 	}
 }

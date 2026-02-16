@@ -36,7 +36,7 @@ src/
 Collections are the core data model. Each collection generates a database table, REST API, and admin UI.
 
 ```typescript
-import { defineCollection, text, richText, select, relationship } from '@momentum-cms/core';
+import { defineCollection, text, richText, select, relationship } from '@momentumcms/core';
 
 export const Posts = defineCollection({
 	slug: 'posts',
@@ -94,7 +94,7 @@ export const Posts = defineCollection({
 ### Access Control Helpers
 
 ```typescript
-import { allowAll, isAuthenticated, hasRole, hasAnyRole, isOwner, and, or, not } from '@momentum-cms/core';
+import { allowAll, isAuthenticated, hasRole, hasAnyRole, isOwner, and, or, not } from '@momentumcms/core';
 
 access: {
   read: allowAll(),
@@ -107,7 +107,7 @@ access: {
 ## Using the API in Components
 
 ```typescript
-import { injectMomentumAPI } from '@momentum-cms/admin';
+import { injectMomentumAPI } from '@momentumcms/admin';
 
 @Component({...})
 export class MyComponent {

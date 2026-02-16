@@ -1,4 +1,4 @@
-import { defineCollection, text } from '@momentum-cms/core';
+import { defineCollection, text } from '@momentumcms/core';
 
 /**
  * Test collection for validating defaultWhere enforcement on mutations.

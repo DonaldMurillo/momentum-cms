@@ -6,7 +6,7 @@ import {
 	GlobalNotFoundError,
 	AccessDeniedError,
 } from './momentum-api';
-import type { GlobalConfig, MomentumConfig, DatabaseAdapter } from '@momentum-cms/core';
+import type { GlobalConfig, MomentumConfig, DatabaseAdapter } from '@momentumcms/core';
 
 const mockSiteSettings: GlobalConfig = {
 	slug: 'site-settings',

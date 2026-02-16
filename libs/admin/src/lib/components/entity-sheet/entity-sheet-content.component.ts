@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import type { CollectionConfig } from '@momentum-cms/core';
-import { humanizeFieldName } from '@momentum-cms/core';
+import type { CollectionConfig } from '@momentumcms/core';
+import { humanizeFieldName } from '@momentumcms/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { heroXMark } from '@ng-icons/heroicons/outline';
-import { Button } from '@momentum-cms/ui';
+import { Button } from '@momentumcms/ui';
 import { EntityFormWidget } from '../../widgets/entity-form/entity-form.component';
 import { EntityViewWidget } from '../../widgets/entity-view/entity-view.component';
 import { EntitySheetService, SHEET_QUERY_PARAMS } from '../../services/entity-sheet.service';

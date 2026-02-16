@@ -15,8 +15,8 @@ import type {
 	RelationshipField,
 	PolymorphicRelationshipValue,
 	RequestContext,
-} from '@momentum-cms/core';
-import { flattenDataFields, getSoftDeleteField } from '@momentum-cms/core';
+} from '@momentumcms/core';
+import { flattenDataFields, getSoftDeleteField } from '@momentumcms/core';
 import { filterReadableFields, hasFieldAccessControl } from './field-access';
 
 export interface PopulateOptions {

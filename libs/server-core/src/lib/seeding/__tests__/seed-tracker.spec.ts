@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createSeedTracker, type SeedTracker } from '../seed-tracker';
-import type { DatabaseAdapter } from '@momentum-cms/core';
+import type { DatabaseAdapter } from '@momentumcms/core';
 
 describe('createSeedTracker', () => {
 	let mockAdapter: DatabaseAdapter;

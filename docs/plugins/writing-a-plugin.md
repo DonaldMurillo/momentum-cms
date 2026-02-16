@@ -5,7 +5,7 @@ Create custom plugins to extend Momentum CMS with new collections, hooks, middle
 ## Basic Structure
 
 ```typescript
-import { MomentumPlugin } from '@momentum-cms/core';
+import { MomentumPlugin } from '@momentumcms/core';
 
 export function myPlugin(config: MyPluginConfig): MomentumPlugin {
 	return {
@@ -46,7 +46,7 @@ export function myPlugin(config: MyPluginConfig): MomentumPlugin {
 Plugins can contribute their own collections:
 
 ```typescript
-import { defineCollection, text, number } from '@momentum-cms/core';
+import { defineCollection, text, number } from '@momentumcms/core';
 
 const AuditLog = defineCollection({
 	slug: 'audit-logs',
@@ -173,7 +173,7 @@ async onReady(context) {
 - Throw `PluginFatalError` to halt server startup:
 
 ```typescript
-import { PluginFatalError } from '@momentum-cms/plugins/core';
+import { PluginFatalError } from '@momentumcms/plugins/core';
 
 async onInit(context) {
   const isAvailable = await checkExternalService();

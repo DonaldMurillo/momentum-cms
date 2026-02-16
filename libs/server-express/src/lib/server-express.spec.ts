@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import { momentumApiMiddleware } from './server-express';
-import { createInMemoryAdapter } from '@momentum-cms/server-core';
-import type { CollectionConfig, MomentumConfig, DatabaseAdapter } from '@momentum-cms/core';
+import { createInMemoryAdapter } from '@momentumcms/server-core';
+import type { CollectionConfig, MomentumConfig, DatabaseAdapter } from '@momentumcms/core';
 
 // Mock collections for testing
 const mockPostsCollection: CollectionConfig = {

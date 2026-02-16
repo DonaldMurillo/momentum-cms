@@ -7,7 +7,7 @@ import {
 	CardDescription,
 	CardContent,
 	CardFooter,
-} from '@momentum-cms/ui';
+} from '@momentumcms/ui';
 import { ForgotPasswordFormComponent } from '../../components/forgot-password-form/forgot-password-form.component';
 
 /**

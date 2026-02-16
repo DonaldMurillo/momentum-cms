@@ -1,4 +1,4 @@
-import type { TestUserCredentials } from '@momentum-cms/e2e-fixtures';
+import type { TestUserCredentials } from '@momentumcms/e2e-fixtures';
 
 /**
  * Shared test user credentials used by both example apps and E2E tests.

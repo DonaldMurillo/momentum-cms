@@ -5,7 +5,7 @@ Track content operations, API usage, page views, and custom events with adapter-
 ## Setup
 
 ```typescript
-import { analyticsPlugin } from '@momentum-cms/plugins/analytics';
+import { analyticsPlugin } from '@momentumcms/plugins/analytics';
 
 export default defineMomentumConfig({
 	plugins: [

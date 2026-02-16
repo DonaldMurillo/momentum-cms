@@ -2,8 +2,8 @@
  * Plugin System Type Definitions
  *
  * Canonical type definitions for the Momentum CMS plugin system.
- * These live in @momentum-cms/core to avoid circular dependencies.
- * Runtime implementations (PluginRunner, etc.) live in @momentum-cms/plugins/core.
+ * These live in @momentumcms/core to avoid circular dependencies.
+ * Runtime implementations (PluginRunner, etc.) live in @momentumcms/plugins/core.
  */
 
 import type { CollectionConfig } from './collections';
@@ -93,7 +93,7 @@ export interface CollectionEvent {
 	timestamp: string;
 }
 
-/** Logger interface for plugins (avoids importing @momentum-cms/logger in core) */
+/** Logger interface for plugins (avoids importing @momentumcms/logger in core) */
 export interface PluginLogger {
 	debug(message: string, ...args: unknown[]): void;
 	info(message: string, ...args: unknown[]): void;
@@ -130,7 +130,7 @@ export interface PluginReadyContext extends PluginContext {
 /**
  * Minimal MomentumAPI interface to avoid circular dependencies.
  * The real MomentumAPI from server-core is structurally compatible.
- * Plugins that need full typing can import from @momentum-cms/server-core.
+ * Plugins that need full typing can import from @momentumcms/server-core.
  */
 export interface MomentumAPI {
 	/** Get operations for a specific collection */

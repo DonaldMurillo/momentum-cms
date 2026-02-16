@@ -18,7 +18,7 @@ import {
 	CardDescription,
 	CardContent,
 	CardFooter,
-} from '@momentum-cms/ui';
+} from '@momentumcms/ui';
 import { MomentumAuthService } from '../../services/auth.service';
 
 /**

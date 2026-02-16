@@ -9,8 +9,8 @@
  * mutable collections array during plugin `onInit`.
  */
 
-import type { CollectionConfig, Field, GroupField } from '@momentum-cms/core';
-import { group, checkbox } from '@momentum-cms/core';
+import type { CollectionConfig, Field, GroupField } from '@momentumcms/core';
+import { group, checkbox } from '@momentumcms/core';
 
 /**
  * Create the `_analytics` group field injected into each block definition.

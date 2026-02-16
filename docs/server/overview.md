@@ -20,11 +20,11 @@ Momentum CMS uses a layered server architecture with framework-agnostic handlers
 
 ## Packages
 
-| Package                        | Purpose                                             |
-| ------------------------------ | --------------------------------------------------- |
-| `@momentum-cms/server-core`    | Framework-agnostic handlers, validation, middleware |
-| `@momentum-cms/server-express` | Express adapter for Angular SSR                     |
-| `@momentum-cms/server-analog`  | Nitro/h3 adapter for Analog.js                      |
+| Package                       | Purpose                                             |
+| ----------------------------- | --------------------------------------------------- |
+| `@momentumcms/server-core`    | Framework-agnostic handlers, validation, middleware |
+| `@momentumcms/server-express` | Express adapter for Angular SSR                     |
+| `@momentumcms/server-analog`  | Nitro/h3 adapter for Analog.js                      |
 
 ## Request Lifecycle
 
@@ -41,7 +41,7 @@ Momentum CMS uses a layered server architecture with framework-agnostic handlers
 ## Initialization
 
 ```typescript
-import { initializeMomentum } from '@momentum-cms/server-core';
+import { initializeMomentum } from '@momentumcms/server-core';
 
 const momentum = await initializeMomentum({
   db: adapter,

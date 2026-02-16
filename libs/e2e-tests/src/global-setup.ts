@@ -2,7 +2,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Client } from 'pg';
-import { ensureMailpit } from '@momentum-cms/e2e-fixtures';
+import { ensureMailpit } from '@momentumcms/e2e-fixtures';
 import { getFlavorConfig, getServerFlavor } from './fixtures/worker-config';
 
 const WORKSPACE_ROOT = process.env['E2E_WORKSPACE_ROOT']

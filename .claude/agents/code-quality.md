@@ -99,7 +99,7 @@ Check for:
 #### Nx Monorepo Rules
 
 - **Flag**: Importing from `apps/` into `libs/` (violates dependency direction)
-- **Flag**: Deep imports bypassing barrel exports (use `@momentum-cms/*`)
+- **Flag**: Deep imports bypassing barrel exports (use `@momentumcms/*`)
 
 ## Output Format
 

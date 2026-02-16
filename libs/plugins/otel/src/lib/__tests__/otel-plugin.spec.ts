@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { trace } from '@opentelemetry/api';
 import { otelPlugin } from '../otel-plugin';
-import { createLogger, resetMomentumLogger, MomentumLogger } from '@momentum-cms/logger';
-import type { CollectionConfig, MomentumConfig } from '@momentum-cms/core';
-import type { PluginContext } from '@momentum-cms/plugins/core';
+import { createLogger, resetMomentumLogger, MomentumLogger } from '@momentumcms/logger';
+import type { CollectionConfig, MomentumConfig } from '@momentumcms/core';
+import type { PluginContext } from '@momentumcms/plugins/core';
 
 function createMockConfig(): MomentumConfig {
 	return {

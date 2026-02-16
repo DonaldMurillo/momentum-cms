@@ -1,5 +1,5 @@
 /**
- * @momentum-cms/logger
+ * @momentumcms/logger
  *
  * Colorful, configurable logging engine for Momentum CMS.
  * Built from scratch with ANSI color support, log levels, and child loggers.

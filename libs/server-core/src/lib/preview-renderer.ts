@@ -5,7 +5,7 @@
  * Used by the built-in preview endpoint to render live previews in the admin iframe.
  */
 
-import type { CollectionConfig, Field } from '@momentum-cms/core';
+import type { CollectionConfig, Field } from '@momentumcms/core';
 
 /** Options for rendering a preview HTML page. */
 export interface PreviewRenderOptions {
@@ -40,9 +40,7 @@ export function renderPreviewHTML(options: PreviewRenderOptions): string {
 		.join('\n');
 
 	// Build a JSON map of which fields are rich text for the client script
-	const richTextFields = fields
-		.filter((f) => f.type === 'richText')
-		.map((f) => f.name);
+	const richTextFields = fields.filter((f) => f.type === 'richText').map((f) => f.name);
 
 	return `<!DOCTYPE html>
 <html lang="en">
@@ -107,26 +105,47 @@ function renderField(field: Field, doc: Record<string, unknown>): string {
 	switch (field.type) {
 		case 'richText':
 			// Rich text is stored as HTML - server-side content from the database is trusted
-			return renderFieldWrapper(field, `<div class="field-value rich-text" data-field="${escapeHtml(field.name)}">${String(value)}</div>`);
+			return renderFieldWrapper(
+				field,
+				`<div class="field-value rich-text" data-field="${escapeHtml(field.name)}">${String(value)}</div>`,
+			);
 		case 'checkbox':
-			return renderFieldWrapper(field, `<div class="field-value" data-field="${escapeHtml(field.name)}">${value ? '<span class="badge badge-true">Yes</span>' : '<span class="badge badge-false">No</span>'}</div>`);
+			return renderFieldWrapper(
+				field,
+				`<div class="field-value" data-field="${escapeHtml(field.name)}">${value ? '<span class="badge badge-true">Yes</span>' : '<span class="badge badge-false">No</span>'}</div>`,
+			);
 		case 'date':
-			return renderFieldWrapper(field, `<div class="field-value" data-field="${escapeHtml(field.name)}">${formatDate(value)}</div>`);
+			return renderFieldWrapper(
+				field,
+				`<div class="field-value" data-field="${escapeHtml(field.name)}">${formatDate(value)}</div>`,
+			);
 		case 'select':
 		case 'radio':
-			return renderFieldWrapper(field, `<div class="field-value" data-field="${escapeHtml(field.name)}">${escapeHtml(String(value))}</div>`);
+			return renderFieldWrapper(
+				field,
+				`<div class="field-value" data-field="${escapeHtml(field.name)}">${escapeHtml(String(value))}</div>`,
+			);
 		case 'json':
 		case 'point':
-			return renderFieldWrapper(field, `<div class="field-value" data-field="${escapeHtml(field.name)}"><code>${escapeHtml(JSON.stringify(value, null, 2))}</code></div>`);
+			return renderFieldWrapper(
+				field,
+				`<div class="field-value" data-field="${escapeHtml(field.name)}"><code>${escapeHtml(JSON.stringify(value, null, 2))}</code></div>`,
+			);
 		case 'password':
 			return ''; // Never render passwords
 		case 'array':
 		case 'group':
 		case 'blocks':
-			return renderFieldWrapper(field, `<div class="field-value" data-field="${escapeHtml(field.name)}"><code>${escapeHtml(JSON.stringify(value, null, 2))}</code></div>`);
+			return renderFieldWrapper(
+				field,
+				`<div class="field-value" data-field="${escapeHtml(field.name)}"><code>${escapeHtml(JSON.stringify(value, null, 2))}</code></div>`,
+			);
 		default:
 			// text, textarea, email, number, slug, upload, relationship
-			return renderFieldWrapper(field, `<div class="field-value" data-field="${escapeHtml(field.name)}">${escapeHtml(String(value))}</div>`);
+			return renderFieldWrapper(
+				field,
+				`<div class="field-value" data-field="${escapeHtml(field.name)}">${escapeHtml(String(value))}</div>`,
+			);
 	}
 }
 
@@ -167,13 +186,15 @@ function formatDate(value: unknown): string {
 	try {
 		const date = new Date(String(value));
 		if (isNaN(date.getTime())) return escapeHtml(String(value));
-		return escapeHtml(date.toLocaleDateString('en-US', {
-			year: 'numeric',
-			month: 'long',
-			day: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit',
-		}));
+		return escapeHtml(
+			date.toLocaleDateString('en-US', {
+				year: 'numeric',
+				month: 'long',
+				day: 'numeric',
+				hour: '2-digit',
+				minute: '2-digit',
+			}),
+		);
 	} catch {
 		return escapeHtml(String(value));
 	}

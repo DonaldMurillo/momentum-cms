@@ -1,4 +1,4 @@
-# Auth Library (`@momentum-cms/auth`)
+# Auth Library (`@momentumcms/auth`)
 
 Better Auth integration for Momentum CMS. Plugin-based architecture that manages auth collections, session resolution, and sub-plugin composition.
 
@@ -110,10 +110,10 @@ Follow the `two-factor.ts` pattern:
 The auth-collections are importable in browser code via:
 
 ```typescript
-import { BASE_AUTH_COLLECTIONS } from '@momentum-cms/auth/collections';
+import { BASE_AUTH_COLLECTIONS } from '@momentumcms/auth/collections';
 ```
 
-This path alias (`tsconfig.base.json`) points to `auth-collections.ts`, which only imports from `@momentum-cms/core` (no Node.js dependencies). This is used by `momentumAdminRoutes()` for static route generation.
+This path alias (`tsconfig.base.json`) points to `auth-collections.ts`, which only imports from `@momentumcms/core` (no Node.js dependencies). This is used by `momentumAdminRoutes()` for static route generation.
 
 **Never add Node.js imports** (pg, better-auth, etc.) to `auth-collections.ts`.
 

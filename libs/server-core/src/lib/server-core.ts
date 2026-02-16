@@ -1,4 +1,4 @@
-import type { DatabaseAdapter, MomentumConfig } from '@momentum-cms/core';
+import type { DatabaseAdapter, MomentumConfig } from '@momentumcms/core';
 import {
 	initializeMomentumAPI,
 	getMomentumAPI,
@@ -12,7 +12,7 @@ import {
 import type { MomentumAPI, MomentumAPIContext } from './momentum-api.types';
 
 // Re-export types for convenience
-export type { DatabaseAdapter, MomentumConfig, ResolvedMomentumConfig } from '@momentum-cms/core';
+export type { DatabaseAdapter, MomentumConfig, ResolvedMomentumConfig } from '@momentumcms/core';
 
 /**
  * Query options for database operations.

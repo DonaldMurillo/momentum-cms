@@ -10,7 +10,7 @@
  * when the full admin integration is implemented.
  */
 
-import { text, checkbox, date } from '@momentum-cms/core';
+import { text, checkbox, date } from '@momentumcms/core';
 import type { MomentumAuthSubPlugin } from './sub-plugin.types';
 
 /**

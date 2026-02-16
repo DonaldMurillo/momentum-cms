@@ -9,7 +9,7 @@ import {
 	AccessDeniedError,
 	ValidationError,
 } from './momentum-api';
-import type { CollectionConfig, MomentumConfig, DatabaseAdapter } from '@momentum-cms/core';
+import type { CollectionConfig, MomentumConfig, DatabaseAdapter } from '@momentumcms/core';
 
 // Mock collection for testing
 const mockPostsCollection: CollectionConfig = {

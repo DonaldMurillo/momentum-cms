@@ -6,9 +6,9 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import type { DatabaseAdapter } from '@momentum-cms/core';
-import { SEED_TRACKING_COLLECTION_SLUG } from '@momentum-cms/core';
-import type { SeedTrackingDocument } from '@momentum-cms/core';
+import type { DatabaseAdapter } from '@momentumcms/core';
+import { SEED_TRACKING_COLLECTION_SLUG } from '@momentumcms/core';
+import type { SeedTrackingDocument } from '@momentumcms/core';
 
 /**
  * Data required to create a new seed tracking record.

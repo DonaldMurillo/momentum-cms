@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import type { CollectionConfig, GlobalConfig } from '@momentum-cms/core';
+import type { CollectionConfig, GlobalConfig } from '@momentumcms/core';
 import {
 	Sidebar,
 	SidebarNav,
@@ -12,7 +12,7 @@ import {
 	DropdownSeparator,
 	DropdownLabel,
 	DropdownTrigger,
-} from '@momentum-cms/ui';
+} from '@momentumcms/ui';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
 	heroSquares2x2,
@@ -29,7 +29,7 @@ import {
 	heroPuzzlePiece,
 } from '@ng-icons/heroicons/outline';
 import type { AdminBranding, AdminUser } from '../widget.types';
-import { humanizeFieldName } from '@momentum-cms/core';
+import { humanizeFieldName } from '@momentumcms/core';
 import { McmsThemeService } from '../../ui/theme/theme.service';
 import type { AdminPluginRoute } from '../../routes/momentum-admin-routes';
 

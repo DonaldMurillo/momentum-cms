@@ -1,6 +1,6 @@
 # Fields
 
-All field types available in Momentum CMS. Import field builders from `@momentum-cms/core`.
+All field types available in Momentum CMS. Import field builders from `@momentumcms/core`.
 
 ## Common Options
 

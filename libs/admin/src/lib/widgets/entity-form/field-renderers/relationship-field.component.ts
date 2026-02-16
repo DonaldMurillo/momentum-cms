@@ -9,13 +9,13 @@ import {
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import type { Subscription } from 'rxjs';
-import { McmsFormField, Badge } from '@momentum-cms/ui';
-import type { ValidationError } from '@momentum-cms/ui';
+import { McmsFormField, Badge } from '@momentumcms/ui';
+import type { ValidationError } from '@momentumcms/ui';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { heroXMark, heroPlus, heroEye } from '@ng-icons/heroicons/outline';
 import { EntitySheetService } from '../../../services/entity-sheet.service';
-import { humanizeFieldName } from '@momentum-cms/core';
-import type { Field } from '@momentum-cms/core';
+import { humanizeFieldName } from '@momentumcms/core';
+import type { Field } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form.types';
 import { getFieldNodeState, isRecord, getTitleField } from '../entity-form.types';
 

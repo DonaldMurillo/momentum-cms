@@ -16,7 +16,7 @@ import {
 } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { heroPlus } from '@ng-icons/heroicons/outline';
-import type { BlockConfig } from '@momentum-cms/core';
+import type { BlockConfig } from '@momentumcms/core';
 import {
 	PopoverTrigger,
 	PopoverContent,
@@ -26,7 +26,7 @@ import {
 	CommandGroup,
 	CommandItem,
 	CommandEmpty,
-} from '@momentum-cms/ui';
+} from '@momentumcms/ui';
 
 @Component({
 	selector: 'mcms-block-inserter',

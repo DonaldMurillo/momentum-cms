@@ -16,9 +16,9 @@ import {
 	AccordionItem,
 	AccordionTrigger,
 	AccordionContent,
-} from '@momentum-cms/ui';
-import { humanizeFieldName } from '@momentum-cms/core';
-import type { Field } from '@momentum-cms/core';
+} from '@momentumcms/ui';
+import { humanizeFieldName } from '@momentumcms/core';
+import type { Field } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form.types';
 import { getSubNode } from '../entity-form.types';
 import { FieldRenderer } from './field-renderer.component';

@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { analyticsPlugin, createAnalyticsMiddleware, MemoryAnalyticsAdapter } from '@momentum-cms/plugins/analytics';
+ * import { analyticsPlugin, createAnalyticsMiddleware, MemoryAnalyticsAdapter } from '@momentumcms/plugins/analytics';
  *
  * const analytics = analyticsPlugin({ adapter: new MemoryAnalyticsAdapter() });
  *

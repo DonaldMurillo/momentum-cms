@@ -1,5 +1,5 @@
 import { defineEventHandler } from 'h3';
-import { getEnabledOAuthProviders } from '@momentum-cms/auth';
+import { getEnabledOAuthProviders } from '@momentumcms/auth';
 
 /**
  * GET /api/auth/providers

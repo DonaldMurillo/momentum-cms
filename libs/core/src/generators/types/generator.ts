@@ -283,7 +283,7 @@ function generateTypes(config: MomentumConfig): string {
 	lines.push(` *`);
 	lines.push(` * @example`);
 	lines.push(` * \`\`\`typescript`);
-	lines.push(` * import { injectTypedMomentumAPI } from '@momentum-cms/admin';`);
+	lines.push(` * import { injectTypedMomentumAPI } from '@momentumcms/admin';`);
 	lines.push(` * import type { TypedMomentumCollections } from './types/momentum.generated';`);
 	lines.push(` *`);
 	lines.push(` * const api = injectTypedMomentumAPI<TypedMomentumCollections>();`);

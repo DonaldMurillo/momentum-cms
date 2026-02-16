@@ -207,7 +207,7 @@ export interface DatabaseAdapter {
 export interface DatabaseConfig {
 	/**
 	 * Database adapter instance.
-	 * Use @momentum-cms/db-drizzle for Drizzle ORM support.
+	 * Use @momentumcms/db-drizzle for Drizzle ORM support.
 	 */
 	adapter: DatabaseAdapter;
 }
@@ -267,7 +267,7 @@ export interface ServerConfig {
 export interface StorageConfig {
 	/**
 	 * Storage adapter instance.
-	 * Use localStorageAdapter or s3StorageAdapter from @momentum-cms/storage.
+	 * Use localStorageAdapter or s3StorageAdapter from @momentumcms/storage.
 	 */
 	adapter: StorageAdapter;
 
@@ -290,7 +290,7 @@ export interface StorageConfig {
 }
 
 // ============================================
-// Logging Configuration (types only — runtime in @momentum-cms/logger)
+// Logging Configuration (types only — runtime in @momentumcms/logger)
 // ============================================
 
 /**
@@ -305,7 +305,7 @@ export type LogFormat = 'pretty' | 'json';
 
 /**
  * Logging configuration for Momentum CMS.
- * Runtime implementation is in @momentum-cms/logger.
+ * Runtime implementation is in @momentumcms/logger.
  */
 export interface LoggingConfig {
 	/** Minimum log level. @default 'info' */
@@ -403,8 +403,8 @@ export interface ResolvedMomentumConfig extends MomentumConfig {
  * @example
  * ```typescript
  * // momentum.config.ts
- * import { defineMomentumConfig } from '@momentum-cms/core';
- * import { sqliteAdapter } from '@momentum-cms/db-drizzle';
+ * import { defineMomentumConfig } from '@momentumcms/core';
+ * import { sqliteAdapter } from '@momentumcms/db-drizzle';
  * import { Posts } from './collections/posts';
  * import { Users } from './collections/users';
  *

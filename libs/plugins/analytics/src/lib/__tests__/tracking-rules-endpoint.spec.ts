@@ -5,7 +5,7 @@ import {
 	createTrackingRulesRouter,
 	type TrackingRulesEndpointOptions,
 } from '../tracking-rules/tracking-rules-endpoint';
-import type { MomentumAPI } from '@momentum-cms/core';
+import type { MomentumAPI } from '@momentumcms/core';
 
 function makeRule(overrides: Record<string, unknown> = {}): Record<string, unknown> {
 	return {

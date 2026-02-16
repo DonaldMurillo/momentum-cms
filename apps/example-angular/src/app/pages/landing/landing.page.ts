@@ -8,7 +8,7 @@ import {
 	CardDescription,
 	CardContent,
 	CardFooter,
-} from '@momentum-cms/ui';
+} from '@momentumcms/ui';
 
 @Component({
 	selector: 'app-landing-page',

@@ -101,7 +101,7 @@ export interface MomentumCollections {
  *
  * @example
  * ```typescript
- * import { injectTypedMomentumAPI } from '@momentum-cms/admin';
+ * import { injectTypedMomentumAPI } from '@momentumcms/admin';
  * import type { TypedMomentumCollections } from './types/momentum.generated';
  *
  * const api = injectTypedMomentumAPI<TypedMomentumCollections>();

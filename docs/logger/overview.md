@@ -5,13 +5,13 @@ Momentum CMS includes a structured logging library with hierarchical contexts, m
 ## Package
 
 ```bash
-npm install @momentum-cms/logger
+npm install @momentumcms/logger
 ```
 
 ## Quick Start
 
 ```typescript
-import { initializeMomentumLogger, createLogger } from '@momentum-cms/logger';
+import { initializeMomentumLogger, createLogger } from '@momentumcms/logger';
 
 // Initialize at startup (once)
 initializeMomentumLogger({ level: 'debug', format: 'pretty' });
@@ -110,7 +110,7 @@ Enrichments are merged at the top level, data goes under a `data` key.
 Add contextual data to every log entry:
 
 ```typescript
-import { MomentumLogger, type LogEnricher } from '@momentum-cms/logger';
+import { MomentumLogger, type LogEnricher } from '@momentumcms/logger';
 
 class RequestIdEnricher implements LogEnricher {
 	enrich(): Record<string, unknown> {

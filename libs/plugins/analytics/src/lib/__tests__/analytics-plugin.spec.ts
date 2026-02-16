@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { analyticsPlugin } from '../analytics-plugin';
 import { MemoryAnalyticsAdapter } from '../adapters/memory-adapter';
 import type { AnalyticsConfig } from '../analytics-config.types';
-import type { CollectionConfig } from '@momentum-cms/core';
-import type { MomentumLogger } from '@momentum-cms/logger';
-import type { PluginContext, PluginMiddlewareDescriptor } from '@momentum-cms/plugins/core';
+import type { CollectionConfig } from '@momentumcms/core';
+import type { MomentumLogger } from '@momentumcms/logger';
+import type { PluginContext, PluginMiddlewareDescriptor } from '@momentumcms/plugins/core';
 
 function createMockLogger(): MomentumLogger {
 	return {

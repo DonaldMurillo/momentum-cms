@@ -1,5 +1,5 @@
 import { SiteSettings } from './site-settings.global';
-import type { GlobalConfig } from '@momentum-cms/core';
+import type { GlobalConfig } from '@momentumcms/core';
 
 export const globals: GlobalConfig[] = [SiteSettings];
 

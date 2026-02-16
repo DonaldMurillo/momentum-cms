@@ -1,13 +1,13 @@
 import type { Router, Response, NextFunction } from 'express';
 import { Router as createRouter } from 'express';
-import type { ApiKeyStore } from '@momentum-cms/server-core';
+import type { ApiKeyStore } from '@momentumcms/server-core';
 import {
 	generateApiKey,
 	hashApiKey,
 	getKeyPrefix,
 	isValidApiKeyFormat,
 	generateApiKeyId,
-} from '@momentum-cms/server-core';
+} from '@momentumcms/server-core';
 import type { AuthenticatedRequest } from './auth-middleware';
 
 /**
@@ -88,7 +88,7 @@ export function createApiKeyResolverMiddleware(
 }
 
 /** Role hierarchy for permission checks. Lower index = higher privilege.
- * Canonical source: AUTH_ROLES in @momentum-cms/auth/collections */
+ * Canonical source: AUTH_ROLES in @momentumcms/auth/collections */
 const ROLE_HIERARCHY = ['admin', 'editor', 'user', 'viewer'];
 
 /**

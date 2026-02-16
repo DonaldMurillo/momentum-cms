@@ -1,5 +1,5 @@
 {
-	"name": "@momentum-cms/plugins-core",
+	"name": "@momentumcms/plugins-core",
 	"version": "0.0.1",
 	"description": "Plugin system core and event bus for Momentum CMS",
 	"license": "MIT",
@@ -26,7 +26,7 @@
 	"main": "./index.cjs",
 	"types": "./src/index.d.ts",
 	"dependencies": {
-		"@momentum-cms/core": "0.0.1",
-		"@momentum-cms/logger": "0.0.1"
+		"@momentumcms/core": "0.0.1",
+		"@momentumcms/logger": "0.0.1"
 	}
 }

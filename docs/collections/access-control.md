@@ -5,7 +5,7 @@ Restrict who can perform operations on your collections.
 ## Collection-Level Access
 
 ```typescript
-import { defineCollection } from '@momentum-cms/core';
+import { defineCollection } from '@momentumcms/core';
 
 export const Posts = defineCollection({
 	slug: 'posts',
@@ -44,7 +44,7 @@ type AccessFunction = (args: {
 
 ## Pre-Built Helpers
 
-Import from `@momentum-cms/core`:
+Import from `@momentumcms/core`:
 
 ```typescript
 import {
@@ -59,7 +59,7 @@ import {
 	or,
 	not,
 	access,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';
 ```
 
 ### Basic Helpers

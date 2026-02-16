@@ -6,7 +6,7 @@
 import { existsSync, mkdirSync, writeFileSync, unlinkSync, readFileSync, lstatSync } from 'node:fs';
 import { join, extname, resolve, normalize } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import type { StorageAdapter, UploadedFile, StoredFile, UploadOptions } from '@momentum-cms/core';
+import type { StorageAdapter, UploadedFile, StoredFile, UploadOptions } from '@momentumcms/core';
 import type { LocalStorageOptions } from './storage.types';
 
 /**

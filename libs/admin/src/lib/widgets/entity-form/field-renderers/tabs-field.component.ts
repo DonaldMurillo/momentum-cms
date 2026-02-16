@@ -1,11 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, forwardRef, input, signal } from '@angular/core';
 import {
-	Tabs,
-	TabsList,
-	TabsTrigger,
-	TabsContent,
-} from '@momentum-cms/ui';
-import type { Field, TabConfig } from '@momentum-cms/core';
+	ChangeDetectionStrategy,
+	Component,
+	computed,
+	forwardRef,
+	input,
+	signal,
+} from '@angular/core';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@momentumcms/ui';
+import type { Field, TabConfig } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form.types';
 import { getSubNode } from '../entity-form.types';
 import { FieldRenderer } from './field-renderer.component';

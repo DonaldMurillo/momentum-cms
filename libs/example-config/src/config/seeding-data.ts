@@ -1,4 +1,4 @@
-import type { SeedingConfig } from '@momentum-cms/core';
+import type { SeedingConfig } from '@momentumcms/core';
 
 /**
  * Document types for type-safe seeding.

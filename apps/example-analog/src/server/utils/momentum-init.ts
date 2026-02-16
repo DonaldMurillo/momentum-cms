@@ -18,11 +18,11 @@ import {
 	registerWebhookHooks,
 	startPublishScheduler,
 	type SeedingResult,
-} from '@momentum-cms/server-core';
-import { initializeMomentumLogger, createLogger } from '@momentum-cms/logger';
-import { PluginRunner } from '@momentum-cms/plugins/core';
-import type { MomentumAuthPlugin } from '@momentum-cms/auth';
-import type { MomentumAuth } from '@momentum-cms/auth';
+} from '@momentumcms/server-core';
+import { initializeMomentumLogger, createLogger } from '@momentumcms/logger';
+import { PluginRunner } from '@momentumcms/plugins/core';
+import type { MomentumAuthPlugin } from '@momentumcms/auth';
+import type { MomentumAuth } from '@momentumcms/auth';
 import momentumConfig, {
 	authPlugin,
 	analytics,

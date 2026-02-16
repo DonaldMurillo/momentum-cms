@@ -7,7 +7,7 @@ Walk through creating a collection from scratch, generating the database schema,
 Create `src/collections/pages.ts`:
 
 ```typescript
-import { defineCollection, text, richText, slug, select, checkbox } from '@momentum-cms/core';
+import { defineCollection, text, richText, slug, select, checkbox } from '@momentumcms/core';
 
 export const Pages = defineCollection({
 	slug: 'pages',
@@ -99,7 +99,7 @@ curl -X DELETE http://localhost:4200/api/pages/:id
 
 ```typescript
 import { Component, signal } from '@angular/core';
-import { injectMomentumAPI } from '@momentum-cms/admin';
+import { injectMomentumAPI } from '@momentumcms/admin';
 
 @Component({
 	selector: 'app-pages',

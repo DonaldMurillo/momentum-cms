@@ -1,3 +1,3 @@
-import { KitchenSinkPage } from '@momentum-cms/ui';
+import { KitchenSinkPage } from '@momentumcms/ui';
 
 export default KitchenSinkPage;

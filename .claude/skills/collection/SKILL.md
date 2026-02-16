@@ -9,6 +9,7 @@ argument-hint: <collection-name>
 Create a new collection file following project conventions.
 
 ## Arguments
+
 - `$ARGUMENTS` - Collection name (e.g., "posts", "products", "users")
 
 ## Steps
@@ -16,6 +17,7 @@ Create a new collection file following project conventions.
 1. Create the collection file at `collections/<name>.collection.ts`
 
 2. Use this template:
+
 ```typescript
 import {
   defineCollection,
@@ -26,7 +28,7 @@ import {
   checkbox,
   select,
   relationship,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';
 
 export const <PascalName> = defineCollection({
   slug: '<kebab-name>',
@@ -57,17 +59,20 @@ export const <PascalName> = defineCollection({
 ```
 
 3. Export from `collections/index.ts`:
+
 ```typescript
 export { <PascalName> } from './<name>.collection';
 ```
 
 4. Remind user to run schema generation:
+
 ```bash
 nx run db-drizzle:generate-schema
 npx drizzle-kit generate
 ```
 
 ## Field Types Available
+
 - `text(name, options)` - Short text
 - `richText(name, options)` - Rich text editor
 - `number(name, options)` - Numeric value

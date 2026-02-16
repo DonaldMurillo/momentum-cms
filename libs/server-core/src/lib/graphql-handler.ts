@@ -6,7 +6,7 @@
  */
 import { graphql, parse, validate, type GraphQLSchema } from 'graphql';
 import type { GraphQLContext } from './graphql-schema';
-import type { UserContext } from '@momentum-cms/core';
+import type { UserContext } from '@momentumcms/core';
 
 /** Maximum allowed query depth to prevent DoS via deeply nested queries. */
 const MAX_QUERY_DEPTH = 7;
@@ -15,7 +15,9 @@ const MAX_QUERY_DEPTH = 7;
  * Simple depth-limit validation rule for GraphQL queries.
  * Returns an error if the query exceeds the maximum nesting depth.
  */
-function depthLimitRule(maxDepth: number): (ctx: import('graphql').ValidationContext) => import('graphql').ASTVisitor {
+function depthLimitRule(
+	maxDepth: number,
+): (ctx: import('graphql').ValidationContext) => import('graphql').ASTVisitor {
 	return (context) => {
 		return {
 			Document: {

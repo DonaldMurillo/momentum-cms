@@ -9,8 +9,8 @@ import {
 	signal,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import type { CollectionConfig, Field, DocumentStatus } from '@momentum-cms/core';
-import { humanizeFieldName, getSoftDeleteField } from '@momentum-cms/core';
+import type { CollectionConfig, Field, DocumentStatus } from '@momentumcms/core';
+import { humanizeFieldName, getSoftDeleteField } from '@momentumcms/core';
 import {
 	Card,
 	CardContent,
@@ -22,13 +22,13 @@ import {
 	Breadcrumbs,
 	BreadcrumbItem,
 	BreadcrumbSeparator,
-} from '@momentum-cms/ui';
+} from '@momentumcms/ui';
 import type {
 	FieldDisplayType,
 	FieldDisplayFieldMeta,
 	FieldDisplayNumberFormat,
 	FieldDisplayDateFormat,
-} from '@momentum-cms/ui';
+} from '@momentumcms/ui';
 import { injectMomentumAPI } from '../../services/momentum-api.service';
 import { CollectionAccessService } from '../../services/collection-access.service';
 import { FeedbackService } from '../feedback/feedback.service';

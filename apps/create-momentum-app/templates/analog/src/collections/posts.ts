@@ -1,4 +1,4 @@
-import { defineCollection, text, richText } from '@momentum-cms/core';
+import { defineCollection, text, richText } from '@momentumcms/core';
 
 export const Posts = defineCollection({
 	slug: 'posts',

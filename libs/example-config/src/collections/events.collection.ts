@@ -1,4 +1,4 @@
-import { defineCollection, text, textarea, date, allowAll } from '@momentum-cms/core';
+import { defineCollection, text, textarea, date, allowAll } from '@momentumcms/core';
 
 /**
  * Events collection for E2E testing.

@@ -14,8 +14,8 @@ import {
 import { Router } from '@angular/router';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { form, submit } from '@angular/forms/signals';
-import type { CollectionConfig, Field } from '@momentum-cms/core';
-import { humanizeFieldName } from '@momentum-cms/core';
+import type { CollectionConfig, Field } from '@momentumcms/core';
+import { humanizeFieldName } from '@momentumcms/core';
 import {
 	Card,
 	CardContent,
@@ -26,7 +26,7 @@ import {
 	Breadcrumbs,
 	BreadcrumbItem,
 	BreadcrumbSeparator,
-} from '@momentum-cms/ui';
+} from '@momentumcms/ui';
 import { injectMomentumAPI } from '../../services/momentum-api.service';
 import { VersionService } from '../../services/version.service';
 import { CollectionAccessService } from '../../services/collection-access.service';

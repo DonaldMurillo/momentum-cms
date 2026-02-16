@@ -14,7 +14,7 @@
 import type {
 	PluginMiddlewareDescriptor,
 	PluginProviderDescriptor,
-} from '@momentum-cms/plugins/core';
+} from '@momentumcms/plugins/core';
 
 let pluginMiddleware: PluginMiddlewareDescriptor[] = [];
 let pluginProviders: PluginProviderDescriptor[] = [];
@@ -49,7 +49,7 @@ export function setPluginProviders(providers: PluginProviderDescriptor[]): void 
  *
  * @example
  * ```typescript
- * import { getPluginProviders } from '@momentum-cms/server-express';
+ * import { getPluginProviders } from '@momentumcms/server-express';
  *
  * angularApp.handle(req, {
  *   providers: [

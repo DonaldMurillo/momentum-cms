@@ -6,7 +6,7 @@
  *
  * Usage in app tailwind.config.js:
  * ```js
- * const adminPreset = require('@momentum-cms/admin/tailwind.preset');
+ * const adminPreset = require('@momentumcms/admin/tailwind.preset');
  * module.exports = {
  *   presets: [adminPreset],
  *   content: ['./src/**\/*.{html,ts}', '../../libs/admin/src/**\/*.{html,ts}'],

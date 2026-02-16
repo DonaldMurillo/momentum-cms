@@ -28,7 +28,7 @@ import {
 	sanitizeErrorMessage,
 	parseWhereParam,
 	sanitizeFilename,
-} from '@momentum-cms/server-core';
+} from '@momentumcms/server-core';
 import type {
 	MomentumConfig,
 	ResolvedMomentumConfig,
@@ -36,11 +36,11 @@ import type {
 	UploadedFile,
 	DatabaseAdapter,
 	EndpointQueryHelper,
-} from '@momentum-cms/core';
-import { createLogger } from '@momentum-cms/logger';
+} from '@momentumcms/core';
+import { createLogger } from '@momentumcms/logger';
 import { getPluginMiddleware } from './plugin-middleware-registry';
 
-// sanitizeErrorMessage and parseWhereParam are imported from @momentum-cms/server-core
+// sanitizeErrorMessage and parseWhereParam are imported from @momentumcms/server-core
 
 /**
  * Extended Express Request with user context from auth middleware.
@@ -76,7 +76,7 @@ function extractUserFromRequest(req: Request): UserContext | undefined {
  * Usage:
  * ```typescript
  * import express from 'express';
- * import { momentumApiMiddleware } from '@momentum-cms/server-express';
+ * import { momentumApiMiddleware } from '@momentumcms/server-express';
  * import momentumConfig from './momentum.config';
  *
  * const app = express();
