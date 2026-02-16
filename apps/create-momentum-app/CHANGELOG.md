@@ -1,3 +1,14 @@
+## 0.1.3 (2026-02-16)
+
+### 🩹 Fixes
+
+- **ui:** add missing @angular/aria peer dependency ([eb08862](https://github.com/DonaldMurillo/momentum-cms/commit/eb08862))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.1.2 (2026-02-16)
 
 ### 🩹 Fixes
