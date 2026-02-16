@@ -1,3 +1,14 @@
+## 0.1.4 (2026-02-16)
+
+### 🩹 Fixes
+
+- **create-app:** wire admin routes and add missing peer deps to templates ([1356357](https://github.com/DonaldMurillo/momentum-cms/commit/1356357))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.1.3 (2026-02-16)
 
 ### 🩹 Fixes
