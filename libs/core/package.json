@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/core",
-	"version": "0.1.8",
+	"version": "0.1.9",
 	"description": "Core collection config, fields, hooks, and access control for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",

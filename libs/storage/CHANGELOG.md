@@ -1,3 +1,7 @@
+## 0.1.9 (2026-02-16)
+
+This was a version bump only for storage to align it with other projects, there were no code changes.
+
 ## 0.1.8 (2026-02-16)
 
 ### 🩹 Fixes
