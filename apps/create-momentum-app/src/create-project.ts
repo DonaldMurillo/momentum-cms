@@ -131,4 +131,6 @@ const pool = (dbAdapter as PostgresAdapterWithRaw).getPool();`
 	console.log();
 	console.log(pc.dim('  Open http://localhost:' + vars.defaultPort + '/admin'));
 	console.log();
+	console.log(pc.dim('  Docs: https://github.com/DonaldMurillo/momentum-cms#readme'));
+	console.log();
 }

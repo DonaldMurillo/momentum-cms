@@ -5,11 +5,11 @@
 	"author": "Momentum CMS Contributors",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/momentum-cms/momentum-cms.git"
+		"url": "https://github.com/DonaldMurillo/momentum-cms.git"
 	},
-	"homepage": "https://github.com/momentum-cms/momentum-cms#readme",
+	"homepage": "https://github.com/DonaldMurillo/momentum-cms#readme",
 	"bugs": {
-		"url": "https://github.com/momentum-cms/momentum-cms/issues"
+		"url": "https://github.com/DonaldMurillo/momentum-cms/issues"
 	},
 	"scripts": {
 		"test": "vitest",
