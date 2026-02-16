@@ -51,7 +51,7 @@ function copyTemplateDir(srcDir: string, destDir: string, vars: Record<string, s
 
 function isDockerInstalled(): boolean {
 	try {
-		execFileSync('docker', ['--version'], { stdio: 'pipe', timeout: 5000 });
+		execFileSync('docker', ['--version'], { stdio: 'pipe', timeout: 5000, shell: true });
 		return true;
 	} catch {
 		return false;
@@ -60,7 +60,7 @@ function isDockerInstalled(): boolean {
 
 function isDockerRunning(): boolean {
 	try {
-		execFileSync('docker', ['info'], { stdio: 'pipe', timeout: 5000 });
+		execFileSync('docker', ['info'], { stdio: 'pipe', timeout: 5000, shell: true });
 		return true;
 	} catch {
 		return false;
@@ -107,6 +107,7 @@ function startPostgresContainer(projectDir: string): void {
 		execFileSync('docker', ['compose', 'up', '-d'], {
 			cwd: projectDir,
 			stdio: 'inherit',
+			shell: true,
 		});
 	} catch (error) {
 		throw new Error(`Failed to start Docker container: ${error}`);
@@ -128,6 +129,7 @@ function waitForPostgres(projectDir: string, timeout = 30000): Promise<boolean> 
 							cwd: projectDir,
 							stdio: 'pipe',
 							timeout: 5000,
+							shell: true,
 						},
 					);
 					resolve(true);
@@ -302,6 +304,7 @@ The database is automatically created on first run - no setup required.`,
 		execFileSync('npm', args, {
 			cwd: projectDir,
 			stdio: 'inherit',
+			shell: true,
 		});
 		console.log();
 	}
