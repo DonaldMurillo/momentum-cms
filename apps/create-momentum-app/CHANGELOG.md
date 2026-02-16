@@ -1,3 +1,14 @@
+## 0.1.7 (2026-02-16)
+
+### 🩹 Fixes
+
+- correct repository URLs and add GitHub link to CLI output ([f7e96bb](https://github.com/DonaldMurillo/momentum-cms/commit/f7e96bb))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.1.6 (2026-02-16)
 
 ### 🩹 Fixes
