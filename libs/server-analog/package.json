@@ -1,11 +1,34 @@
 {
 	"name": "@momentum-cms/server-analog",
 	"version": "0.0.1",
+	"description": "Nitro/h3 adapter for Momentum CMS with Analog.js support",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/momentum-cms/momentum-cms.git",
+		"directory": "libs/server-analog"
+	},
+	"homepage": "https://github.com/momentum-cms/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/momentum-cms/momentum-cms/issues"
+	},
+	"keywords": [
+		"cms",
+		"momentum-cms",
+		"analog",
+		"nitro",
+		"h3",
+		"server"
+	],
+	"engines": {
+		"node": ">=18"
+	},
 	"type": "commonjs",
 	"main": "./index.cjs",
 	"types": "./index.d.ts",
 	"peerDependencies": {
-		"@momentum-cms/core": "^0.0.1",
-		"@momentum-cms/server-core": "^0.0.1"
+		"@momentum-cms/core": ">=0.0.1",
+		"@momentum-cms/server-core": ">=0.0.1"
 	}
 }

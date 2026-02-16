@@ -1,0 +1,50 @@
+import 'dotenv/config';
+import { defineMomentumConfig } from '@momentum-cms/core';
+{{dbImport}}
+import { momentumAuth } from '@momentum-cms/auth';
+import { localStorageAdapter } from '@momentum-cms/storage';
+import { join } from 'node:path';
+import { Posts } from './collections/posts';
+
+const dbAdapter = {{dbAdapter}};
+
+{{dbPoolSetup}}
+
+const authBaseURL =
+	process.env['BETTER_AUTH_URL'] || `http://localhost:${process.env['PORT'] || {{defaultPort}}}`;
+
+export const authPlugin = momentumAuth({
+	{{authDbConfig}}
+	baseURL: authBaseURL,
+	trustedOrigins: [authBaseURL],
+	email: {
+		appName: '{{projectName}}',
+	},
+});
+
+const config = defineMomentumConfig({
+	db: { adapter: dbAdapter },
+	collections: [Posts],
+	storage: {
+		adapter: localStorageAdapter({
+			directory: join(process.cwd(), 'data', 'uploads'),
+		}),
+	},
+	admin: {
+		basePath: '/admin',
+		branding: {
+			title: '{{projectName}}',
+		},
+	},
+	server: {
+		port: Number(process.env['PORT']) || {{defaultPort}},
+		cors: {
+			origin: process.env['CORS_ORIGIN'] || '*',
+			methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+			headers: ['Content-Type', 'Authorization', 'X-API-Key'],
+		},
+	},
+	plugins: [authPlugin],
+});
+
+export default config;

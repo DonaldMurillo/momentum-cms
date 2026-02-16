@@ -28,7 +28,15 @@
 			},
 			"defaultConfiguration": "production"
 		},
+		"copy-assets": {
+			"executor": "nx:run-commands",
+			"options": {
+				"commands": ["cp LICENSE dist/libs/ui/"]
+			},
+			"dependsOn": ["build"]
+		},
 		"nx-release-publish": {
+			"dependsOn": ["copy-assets"],
 			"options": {
 				"packageRoot": "dist/{projectRoot}"
 			}

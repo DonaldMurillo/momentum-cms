@@ -29,7 +29,18 @@
 			"defaultConfiguration": "production",
 			"dependsOn": ["^build"]
 		},
+		"copy-assets": {
+			"executor": "nx:run-commands",
+			"options": {
+				"commands": [
+					"cp LICENSE dist/libs/admin/",
+					"cp libs/admin/tailwind.preset.js dist/libs/admin/"
+				]
+			},
+			"dependsOn": ["build"]
+		},
 		"nx-release-publish": {
+			"dependsOn": ["copy-assets"],
 			"options": {
 				"packageRoot": "dist/{projectRoot}"
 			}

@@ -1,0 +1,46 @@
+{
+	"name": "create-momentum-app",
+	"version": "0.0.1",
+	"description": "Create a new Momentum CMS application",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/momentum-cms/momentum-cms.git",
+		"directory": "apps/create-momentum-app"
+	},
+	"homepage": "https://github.com/momentum-cms/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/momentum-cms/momentum-cms/issues"
+	},
+	"keywords": [
+		"cms",
+		"headless-cms",
+		"angular",
+		"momentum-cms",
+		"create-app",
+		"cli",
+		"scaffold"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"bin": {
+		"create-momentum-app": "./index.cjs"
+	},
+	"files": [
+		"index.cjs",
+		"templates",
+		"LICENSE",
+		"README.md"
+	],
+	"dependencies": {
+		"prompts": "^2.4.2",
+		"picocolors": "^1.1.0",
+		"fs-extra": "^11.2.0"
+	},
+	"devDependencies": {
+		"@types/prompts": "^2.4.9",
+		"@types/fs-extra": "^11.0.4"
+	}
+}

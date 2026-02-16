@@ -1,101 +1,185 @@
-# Cancun
+# Momentum CMS
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+An Angular-based headless CMS. Define collections in TypeScript, auto-generate an Admin UI, REST API, and database schema.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+> **ALPHA SOFTWARE — DO NOT USE IN PRODUCTION.** This project is in early alpha. APIs will change, things will break, and there are missing features. It is a prototype and a learning platform. Use it for experimentation and prototyping only.
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/tutorials/angular-monorepo-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+## Why Momentum?
 
-## Run tasks
+I really enjoy using [Payload CMS](https://payloadcms.com). It's one of the best tools out there for rapid prototyping and content-heavy applications. The admin UI is great, the flexibility you get from defining collections in code is unmatched, and having everything — admin, API, auth, database — all living together inside one ecosystem (Next.js) is incredibly productive. I've grown to really like the patterns: collection-based config, field types, hooks, access control.
 
-To run the dev server for your app, use:
+But I'm an Angular developer, and the Angular community doesn't have anything like it. There's no equivalent where you define your data model in TypeScript and get a full admin dashboard, REST API, authentication, and database schema generated automatically — all within the Angular ecosystem.
 
-```sh
-npx nx serve cms-admin
+That's what Momentum is. It takes the patterns and developer experience I love from Payload CMS and brings them to Angular. The goal is to have a platform for quickly building Angular full-stack applications with an admin dashboard and prebuilt functionality out of the box, using [Better Auth](https://better-auth.com) for authentication and [Drizzle ORM](https://orm.drizzle.team) for the database layer. A lot of the design is directly inspired by how Payload does things — collections, fields, hooks, access control — adapted to work natively with Angular SSR (via Express or Analog/Nitro).
+
+## Status: Alpha
+
+**This project is not production-ready.** It is in active, early-stage development. Expect breaking changes, incomplete features, and rough edges.
+
+A few things to know:
+
+- **Built with AI.** This project is being developed almost entirely with AI tooling — primarily Claude Code. If that's not your thing, fair warning. I use a good chunk of my monthly AI budget on this, so development moves fast but in AI-assisted increments.
+- **It's a prototype.** The main purpose right now is to have a solid platform for rapidly prototyping Angular full-stack apps. It works, but it's not battle-tested.
+- **APIs will change.** Collection config, plugin interfaces, server adapters — all of it is subject to change as the project matures. Don't build anything critical on top of this yet.
+
+## Quick Start
+
+```bash
+npx create-momentum-app my-app
+cd my-app
+npm run dev
 ```
 
-To create a production bundle:
+The CLI will prompt you for:
 
-```sh
-npx nx build cms-admin
+- **Framework** - Angular (Express SSR) or Analog (Nitro)
+- **Database** - PostgreSQL or SQLite
+
+Then open `http://localhost:4200/admin` to access the admin dashboard.
+
+## Documentation
+
+Full documentation is available in the [docs/](docs/README.md) directory, covering collections, fields, access control, hooks, database adapters, authentication, plugins, and more.
+
+## Features
+
+- **Collection-first** - Define your data model in TypeScript; the admin UI, API routes, and database schema are generated automatically
+- **Angular 21** - Server-side rendered with Express or Analog/Nitro
+- **Admin Dashboard** - Auto-generated CRUD interface with rich text editing, relationships, file uploads, and dark mode
+- **Drizzle ORM** - Type-safe database access with PostgreSQL and SQLite adapters
+- **Authentication** - Built-in auth via Better Auth with email/password, sessions, and role-based access control
+- **File Storage** - Local filesystem and S3-compatible storage adapters
+- **Plugin System** - Event bus architecture with analytics and OpenTelemetry plugins
+- **Soft Deletes** - Built-in trash/restore with configurable retention
+
+## Define a Collection
+
+```typescript
+import { defineCollection, text, richText, relationship } from '@momentum-cms/core';
+
+export const Posts = defineCollection({
+	slug: 'posts',
+	fields: [
+		text('title', { required: true }),
+		richText('content'),
+		relationship('author', { collection: () => Users }),
+	],
+	access: {
+		read: () => true,
+		create: ({ req }) => !!req.user,
+	},
+});
 ```
 
-To see all available targets to run for a project, run:
+## Packages
 
-```sh
-npx nx show project cms-admin
+| Package                           | npm                        | Description                                          |
+| --------------------------------- | -------------------------- | ---------------------------------------------------- |
+| `@momentum-cms/core`              | `libs/core`                | Collection config, fields, hooks, and access control |
+| `@momentum-cms/db-drizzle`        | `libs/db-drizzle`          | Drizzle ORM database adapter (PostgreSQL + SQLite)   |
+| `@momentum-cms/auth`              | `libs/auth`                | Better Auth integration                              |
+| `@momentum-cms/server-core`       | `libs/server-core`         | Framework-agnostic server handlers                   |
+| `@momentum-cms/server-express`    | `libs/server-express`      | Express adapter for Angular SSR                      |
+| `@momentum-cms/server-analog`     | `libs/server-analog`       | Nitro/h3 adapter for Analog.js                       |
+| `@momentum-cms/admin`             | `libs/admin`               | Angular admin dashboard UI                           |
+| `@momentum-cms/ui`                | `libs/ui`                  | Base UI component library                            |
+| `@momentum-cms/storage`           | `libs/storage`             | File storage adapters (local, S3)                    |
+| `@momentum-cms/logger`            | `libs/logger`              | Structured logging                                   |
+| `@momentum-cms/plugins-core`      | `libs/plugins/core`        | Plugin system core (event bus)                       |
+| `@momentum-cms/plugins-analytics` | `libs/plugins/analytics`   | Analytics and tracking plugin                        |
+| `@momentum-cms/plugins-otel`      | `libs/plugins/otel`        | OpenTelemetry observability plugin                   |
+| `create-momentum-app`             | `apps/create-momentum-app` | CLI scaffolding tool                                 |
+
+## Architecture
+
+```
+┌─────────────────────────────────────────┐
+│              Admin Dashboard            │
+│          (@momentum-cms/admin)          │
+├─────────────────────────────────────────┤
+│          Server Adapters                │
+│   server-express  │  server-analog      │
+├───────────────────┴─────────────────────┤
+│           server-core                   │
+│      (REST API, file handling)          │
+├─────────────────────────────────────────┤
+│    core     │   auth    │   storage     │
+│  (fields,   │ (Better   │ (local, S3)   │
+│   hooks,    │  Auth)    │               │
+│   access)   │           │               │
+├─────────────┴───────────┴───────────────┤
+│             db-drizzle                  │
+│      (PostgreSQL / SQLite)              │
+└─────────────────────────────────────────┘
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+## Manual Integration
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+If you prefer to add Momentum CMS to an existing Angular project:
 
-## Add new projects
-
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
-
-Use the plugin's generator to create new projects.
-
-To generate a new application, use:
-
-```sh
-npx nx g @nx/angular:app demo
+```bash
+npm install @momentum-cms/core @momentum-cms/db-drizzle @momentum-cms/auth \
+  @momentum-cms/server-core @momentum-cms/admin @momentum-cms/storage
 ```
 
-To generate a new library, use:
+For Angular + Express:
 
-```sh
-npx nx g @nx/angular:lib mylib
+```bash
+npm install @momentum-cms/server-express
 ```
 
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
+For Analog + Nitro:
 
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Set up CI!
-
-### Step 1
-
-To connect to Nx Cloud, run the following command:
-
-```sh
-npx nx connect
+```bash
+npm install @momentum-cms/server-analog
 ```
 
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
+See the generated `momentum.config.ts` from `create-momentum-app` for a configuration example.
 
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## Development
 
-### Step 2
+This is an Nx monorepo. Prerequisites: Node.js >= 18, npm.
 
-Use the following command to configure a CI workflow for your workspace:
+```bash
+# Install dependencies
+npm install
 
-```sh
-npx nx g ci-workflow
+# Dev server (example Angular app)
+npx nx serve example-angular
+
+# Run all tests
+npx nx run-many -t test
+
+# Build all packages
+npx nx run-many -t build
+
+# Lint
+npx nx run-many -t lint
+
+# Dependency graph
+npx nx graph
 ```
 
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+### Testing the CLI
 
-## Install Nx Console
+```bash
+npm run test:create-app
+```
 
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
+This starts a local Verdaccio registry, publishes all packages, runs `create-momentum-app` for each flavor, and verifies the generated projects compile.
 
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## Contributing
 
-## Useful links
+The best way to contribute is to **open a GitHub issue**. Be as specific as possible — include screenshots, error messages, reproduction steps, and what you expected to happen. The more context you provide, the better.
 
-Learn more:
+Here's why that matters: issues are often picked up directly with AI tooling (Claude Code, Codex) straight from GitHub. I'll grab an issue, feed it into the AI, and push changes based on the recommendations or bug reports. So the more detailed and specific your issue is, the more likely it gets resolved quickly and correctly. Vague issues like "it doesn't work" are hard for anyone to act on — but a screenshot with steps to reproduce is gold.
 
-- [Learn more about this workspace setup](https://nx.dev/getting-started/tutorials/angular-monorepo-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+Pull requests are also welcome. Fork the repo, create a feature branch, make sure `npx nx affected -t test` and `npx nx affected -t lint` pass, and submit a PR.
 
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## Acknowledgments
+
+Inspired by [Payload CMS](https://payloadcms.com). Built with [Angular](https://angular.dev), [Drizzle ORM](https://orm.drizzle.team), [Better Auth](https://better-auth.com), and [Nx](https://nx.dev).
+
+## License
+
+[MIT](LICENSE)

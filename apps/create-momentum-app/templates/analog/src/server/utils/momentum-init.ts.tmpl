@@ -1,0 +1,87 @@
+import 'dotenv/config';
+import {
+	initializeMomentumAPI,
+	registerWebhookHooks,
+} from '@momentum-cms/server-core';
+import { initializeMomentumLogger, createLogger } from '@momentum-cms/logger';
+import { PluginRunner } from '@momentum-cms/plugins-core';
+import type { MomentumAuthPlugin } from '@momentum-cms/auth';
+import momentumConfig from '../../momentum.config';
+
+let initPromise: Promise<void> | null = null;
+let authInstance: ReturnType<MomentumAuthPlugin['getAuth']> | null = null;
+
+async function initialize(): Promise<void> {
+	const loggingConfig =
+		'logging' in momentumConfig && momentumConfig.logging ? momentumConfig.logging : undefined;
+	initializeMomentumLogger(loggingConfig);
+	const log = createLogger('Init');
+
+	const plugins = momentumConfig.plugins ?? [];
+	const pluginRunner = new PluginRunner({
+		config: momentumConfig,
+		collections: momentumConfig.collections,
+		plugins,
+	});
+
+	if (plugins.length > 0) {
+		log.info(`Initializing ${plugins.length} plugin(s)...`);
+		await pluginRunner.runInit();
+	}
+
+	for (const plugin of plugins) {
+		if ('getAuth' in plugin && typeof plugin.getAuth === 'function') {
+			try {
+				const ap = plugin as MomentumAuthPlugin;
+				authInstance = ap.getAuth();
+				log.info('Auth instance ready');
+			} catch {
+				// Plugin not ready, skip
+			}
+			break;
+		}
+	}
+
+	registerWebhookHooks(momentumConfig.collections);
+
+	if (momentumConfig.db.adapter.initialize) {
+		log.info('Initializing database schema...');
+		await momentumConfig.db.adapter.initialize(momentumConfig.collections);
+	}
+
+	if (
+		momentumConfig.db.adapter.initializeGlobals &&
+		momentumConfig.globals &&
+		momentumConfig.globals.length > 0
+	) {
+		log.info(`Initializing globals table for ${momentumConfig.globals.length} global(s)...`);
+		await momentumConfig.db.adapter.initializeGlobals(momentumConfig.globals);
+	}
+
+	log.info('Initializing API...');
+	const api = initializeMomentumAPI(momentumConfig);
+
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	(globalThis as any).__momentum_api = api;
+
+	if (plugins.length > 0) {
+		log.info('Notifying plugins: ready');
+		await pluginRunner.runReady(api);
+	}
+
+	log.info('Initialization complete');
+}
+
+export function ensureInitialized(): Promise<void> {
+	if (!initPromise) {
+		initPromise = initialize().catch((err) => {
+			initPromise = null;
+			throw err;
+		});
+	}
+	return initPromise;
+}
+
+export function getAuth(): typeof authInstance {
+	return authInstance;
+}

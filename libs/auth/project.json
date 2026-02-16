@@ -25,10 +25,7 @@
 			"options": {
 				"outputPath": "dist/libs/auth",
 				"main": "libs/auth/src/index.ts",
-				"tsConfig": "libs/auth/tsconfig.lib.json",
-				"assets": ["libs/auth/*.md"],
-				"format": ["cjs"],
-				"generatePackageJson": true
+				"tsConfig": "libs/auth/tsconfig.lib.json"
 			}
 		},
 		"nx-release-publish": {

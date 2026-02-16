@@ -39,7 +39,12 @@
 		"@nx/esbuild:esbuild": {
 			"cache": true,
 			"dependsOn": ["^build"],
-			"inputs": ["production", "^production"]
+			"inputs": ["production", "^production"],
+			"options": {
+				"assets": ["{projectRoot}/*.md", { "input": ".", "glob": "LICENSE", "output": "." }],
+				"format": ["cjs"],
+				"generatePackageJson": true
+			}
 		},
 		"@nx/angular:package": {
 			"cache": true,
@@ -69,7 +74,10 @@
 		"@nx/js:tsc": {
 			"cache": true,
 			"dependsOn": ["^build"],
-			"inputs": ["production", "^production"]
+			"inputs": ["production", "^production"],
+			"options": {
+				"assets": ["{projectRoot}/*.md", { "input": ".", "glob": "LICENSE", "output": "." }]
+			}
 		}
 	},
 	"plugins": [
@@ -121,8 +129,28 @@
 		}
 	},
 	"release": {
+		"projects": [
+			"core",
+			"logger",
+			"storage",
+			"ui",
+			"admin",
+			"auth",
+			"db-drizzle",
+			"server-core",
+			"server-express",
+			"server-analog",
+			"plugins-core",
+			"plugins-analytics",
+			"plugins-otel",
+			"create-momentum-app"
+		],
 		"version": {
-			"preVersionCommand": "npx nx run-many -t build"
+			"preVersionCommand": "npx nx run-many -t build",
+			"conventionalCommits": true
+		},
+		"changelog": {
+			"projectChangelogs": true
 		}
 	},
 	"tasksRunnerOptions": {

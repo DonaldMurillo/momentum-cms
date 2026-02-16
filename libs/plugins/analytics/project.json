@@ -26,9 +26,6 @@
 				"outputPath": "dist/libs/plugins/analytics",
 				"main": "libs/plugins/analytics/src/index.ts",
 				"tsConfig": "libs/plugins/analytics/tsconfig.lib.json",
-				"assets": ["libs/plugins/analytics/*.md"],
-				"format": ["cjs"],
-				"generatePackageJson": true,
 				"external": ["@angular/*", "@ng-icons/*", "@momentum-cms/ui"]
 			}
 		},

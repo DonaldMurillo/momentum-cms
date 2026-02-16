@@ -1,0 +1,14 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"outDir": "../../dist/out-tsc",
+		"declaration": false,
+		"module": "commonjs",
+		"target": "es2022",
+		"lib": ["es2022"],
+		"types": ["node"],
+		"esModuleInterop": true,
+		"resolveJsonModule": true
+	},
+	"include": ["src/**/*.ts"]
+}
