@@ -42,7 +42,8 @@
 		"nx-release-publish": {
 			"dependsOn": ["copy-assets"],
 			"options": {
-				"packageRoot": "dist/{projectRoot}"
+				"packageRoot": "dist/{projectRoot}",
+				"access": "public"
 			}
 		},
 		"test": {
