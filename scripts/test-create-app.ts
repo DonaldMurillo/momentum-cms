@@ -28,7 +28,6 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 
 const LOG_PREFIX = '[test-create-app]';
-const VERDACCIO_CONFIG = path.join(ROOT_DIR, '.verdaccio', 'config.yml');
 
 // Libraries to publish (order matters - dependencies first)
 const PUBLISHABLE_LIBS = [
@@ -89,18 +88,53 @@ async function findFreePort(): Promise<number> {
 }
 
 /**
+ * Create a temporary Verdaccio config file that uses the given storage directory.
+ * This ensures each test run gets a fresh, isolated registry.
+ */
+function createVerdaccioConfig(storageDir: string, configDir: string): string {
+	const configPath = path.join(configDir, 'verdaccio-config.yml');
+	const content = `storage: ${storageDir}
+uplinks:
+  npmjs:
+    url: https://registry.npmjs.org/
+    maxage: 60m
+packages:
+  '@momentumcms/*':
+    access: $all
+    publish: $all
+    unpublish: $all
+  'create-momentum-app':
+    access: $all
+    publish: $all
+    unpublish: $all
+  '**':
+    access: $all
+    publish: $all
+    unpublish: $all
+    proxy: npmjs
+log:
+  type: stdout
+  format: pretty
+  level: warn
+publish:
+  allow_offline: true
+`;
+	fs.writeFileSync(configPath, content);
+	return configPath;
+}
+
+/**
  * Start Verdaccio on a given port and wait for it to be ready.
  * Uses shell: true because npx requires shell resolution on all platforms.
  */
-function startVerdaccio(port: number, storageDir: string): ChildProcess {
+function startVerdaccio(port: number, configPath: string): ChildProcess {
 	console.log(`${LOG_PREFIX} Starting Verdaccio on port ${port}...`);
 
 	const proc = spawn(
 		'npx',
-		['verdaccio', '--config', VERDACCIO_CONFIG, '--listen', `http://0.0.0.0:${port}`],
+		['verdaccio', '--config', configPath, '--listen', `http://0.0.0.0:${port}`],
 		{
 			cwd: ROOT_DIR,
-			env: { ...process.env, VERDACCIO_STORAGE_PATH: storageDir },
 			stdio: ['ignore', 'pipe', 'pipe'],
 			shell: true,
 			detached: true,
@@ -188,59 +222,108 @@ function resolveDistPath(lib: string): string {
 }
 
 /**
+ * Create a temporary .npmrc file that routes @momentumcms packages to local Verdaccio
+ * while letting all other packages resolve from the real npm registry.
+ * Also includes a fake auth token required by Verdaccio for publishing.
+ */
+function createLocalNpmrc(port: number, dir: string): string {
+	const npmrcPath = path.join(dir, '.npmrc');
+	const content = [
+		`@momentumcms:registry=http://localhost:${port}`,
+		`//localhost:${port}/:_authToken=test-token`,
+		'',
+	].join('\n');
+	fs.writeFileSync(npmrcPath, content);
+	return npmrcPath;
+}
+
+/**
  * Publish a single library to local registry using execFileSync (safe, no shell injection)
  */
-function publishLib(lib: string, registryUrl: string): void {
+function publishLib(lib: string, registryUrl: string, npmrcPath: string): void {
 	const distPath = resolveDistPath(lib);
 	if (!fs.existsSync(distPath)) {
 		throw new Error(`Dist path not found for ${lib}: ${distPath}`);
 	}
 
 	console.log(`${LOG_PREFIX}   Publishing ${lib}...`);
-	execFileSync('npm', ['publish', '--registry', registryUrl, '--access', 'public'], {
-		cwd: distPath,
-		stdio: 'pipe',
-	});
+	execFileSync(
+		'npm',
+		['publish', '--registry', registryUrl, '--access', 'public', '--userconfig', npmrcPath],
+		{
+			cwd: distPath,
+			stdio: 'pipe',
+		},
+	);
+}
+
+const TEST_VERSION = '0.0.1-test.0';
+
+/**
+ * Normalize all dist package.json versions to a consistent test version.
+ * This is necessary because nx release may have updated some dist versions
+ * while others remain at source version, causing semver range mismatches.
+ */
+function normalizeDistVersions(): void {
+	console.log(`${LOG_PREFIX} Normalizing dist package versions to ${TEST_VERSION}...`);
+
+	// Normalize all lib dist packages
+	for (const lib of PUBLISHABLE_LIBS) {
+		const distPath = resolveDistPath(lib);
+		const pkgPath = path.join(distPath, 'package.json');
+		if (!fs.existsSync(pkgPath)) continue;
+
+		const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+		pkg.version = TEST_VERSION;
+
+		// Also update any @momentumcms/* dependency versions to match
+		for (const depType of ['dependencies', 'peerDependencies', 'devDependencies'] as const) {
+			const deps = pkg[depType];
+			if (!deps) continue;
+			for (const [name, version] of Object.entries(deps)) {
+				if (name.startsWith('@momentumcms/') && typeof version === 'string') {
+					deps[name] = TEST_VERSION;
+				}
+			}
+		}
+
+		fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+	}
+
+	// Normalize the CLI dist package
+	const cliDistPkg = path.join(ROOT_DIR, 'dist', 'apps', 'create-momentum-app', 'package.json');
+	if (fs.existsSync(cliDistPkg)) {
+		const pkg = JSON.parse(fs.readFileSync(cliDistPkg, 'utf-8'));
+		pkg.version = TEST_VERSION;
+		fs.writeFileSync(cliDistPkg, JSON.stringify(pkg, null, 2) + '\n');
+	}
 }
 
 /**
  * Publish all libraries to local registry
  */
-function publishAllLibs(registryUrl: string): void {
+function publishAllLibs(registryUrl: string, npmrcPath: string): void {
 	console.log(`${LOG_PREFIX} Publishing all libraries to local Verdaccio...`);
 	for (const lib of PUBLISHABLE_LIBS) {
-		publishLib(lib, registryUrl);
+		publishLib(lib, registryUrl, npmrcPath);
 	}
 	console.log(`${LOG_PREFIX} All libraries published successfully.`);
 }
 
 /**
- * Run create-momentum-app to scaffold a project using execFileSync (safe, no shell)
+ * Run create-momentum-app to scaffold a project using execFileSync (safe, no shell).
+ * Always scaffolds without install — install is handled separately via installDeps.
  */
 function scaffoldProject(
 	projectName: string,
 	flavor: Flavor,
 	database: Database,
 	targetDir: string,
-	registryUrl: string,
-	install: boolean,
 ): void {
 	console.log(`${LOG_PREFIX} Scaffolding ${projectName} (${flavor} + ${database})...`);
 
 	const cliPath = path.join(ROOT_DIR, 'dist', 'apps', 'create-momentum-app', 'index.cjs');
-	const args = [
-		cliPath,
-		projectName,
-		'--flavor',
-		flavor,
-		'--database',
-		database,
-		'--registry',
-		registryUrl,
-	];
-	if (!install) {
-		args.push('--no-install');
-	}
+	const args = [cliPath, projectName, '--flavor', flavor, '--database', database, '--no-install'];
 
 	execFileSync('node', args, {
 		cwd: targetDir,
@@ -348,11 +431,21 @@ function verifyProject(projectDir: string, flavor: Flavor, database: Database): 
 }
 
 /**
- * Run npm install in the generated project against local registry
+ * Run npm install in the generated project against local registry.
+ * Writes a .npmrc in the project directory that routes @momentumcms packages
+ * to local Verdaccio while all other packages use the real npm registry.
  */
-function installDeps(projectDir: string, registryUrl: string): void {
+function installDeps(projectDir: string, port: number): void {
 	console.log(`${LOG_PREFIX} Running npm install in ${path.basename(projectDir)}...`);
-	execFileSync('npm', ['install', '--registry', registryUrl], {
+
+	// Write project-level .npmrc to route scoped packages to Verdaccio
+	const projectNpmrc = path.join(projectDir, '.npmrc');
+	fs.writeFileSync(
+		projectNpmrc,
+		`@momentumcms:registry=http://localhost:${port}\n//localhost:${port}/:_authToken=test-token\n`,
+	);
+
+	execFileSync('npm', ['install'], {
 		cwd: projectDir,
 		stdio: 'inherit',
 		timeout: 120000,
@@ -418,11 +511,16 @@ async function main(): Promise<void> {
 		storageDir = fs.mkdtempSync(path.join(tmpBase, 'verdaccio-storage-'));
 		console.log(`${LOG_PREFIX} Temp directory: ${tempDir}`);
 
-		// 2. Find free port and start Verdaccio
+		// 2. Find free port and start Verdaccio with isolated config
 		const port = await findFreePort();
-		verdaccioProc = startVerdaccio(port, storageDir);
+		const verdaccioConfigPath = createVerdaccioConfig(storageDir, tempDir);
+		verdaccioProc = startVerdaccio(port, verdaccioConfigPath);
 		await waitForVerdaccio(port);
 		const registryUrl = `http://localhost:${port}`;
+
+		// 2b. Create .npmrc with fake auth token for local Verdaccio
+		const npmrcPath = createLocalNpmrc(port, tempDir);
+		console.log(`${LOG_PREFIX} Created local .npmrc at ${npmrcPath}`);
 
 		// 3. Build all packages
 		buildAllPackages();
@@ -449,8 +547,9 @@ async function main(): Promise<void> {
 			// target may not exist; continue
 		}
 
-		// 6. Publish all libs to local Verdaccio
-		publishAllLibs(registryUrl);
+		// 6. Normalize versions and publish all libs to local Verdaccio
+		normalizeDistVersions();
+		publishAllLibs(registryUrl, npmrcPath);
 
 		// 7. Test each flavor × database combination
 		for (const flavor of flavors) {
@@ -459,19 +558,19 @@ async function main(): Promise<void> {
 				const projectDir = path.join(tempDir, projectName);
 
 				try {
-					// Scaffold the project (with or without install based on config)
-					scaffoldProject(projectName, flavor, database, tempDir, registryUrl, !config.skipInstall);
+					// Scaffold the project (always without install — we handle it)
+					scaffoldProject(projectName, flavor, database, tempDir);
 
 					// Verify file structure and template interpolation
 					verifyProject(projectDir, flavor, database);
 
-					// If CLI didn't install, install now for TypeScript verification
-					if (config.skipInstall) {
-						installDeps(projectDir, registryUrl);
-					}
+					// Install dependencies (routes @momentumcms to Verdaccio, rest to npm)
+					if (!config.skipInstall) {
+						installDeps(projectDir, port);
 
-					// Verify TypeScript compiles
-					verifyTypeScript(projectDir);
+						// Verify TypeScript compiles
+						verifyTypeScript(projectDir);
+					}
 
 					console.log(`${LOG_PREFIX} PASS: ${flavor} + ${database}\n`);
 				} catch (error) {

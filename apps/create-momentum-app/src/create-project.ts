@@ -83,7 +83,7 @@ const pool = (dbAdapter as PostgresAdapterWithRaw).getPool();`
 		authDbConfig:
 			database === 'postgres'
 				? "db: { type: 'postgres', pool },"
-				: "db: { type: 'sqlite', database: dbAdapter.getDatabase() },",
+				: "db: { type: 'sqlite', database: dbAdapter.getRawDatabase() },",
 		dbPackage: database === 'postgres' ? '"pg": "^8.18.0"' : '"better-sqlite3": "^12.6.0"',
 		dbDevPackage: database === 'postgres' ? '' : '"@types/better-sqlite3": "^7.6.13",',
 		envDbVar:

@@ -26,7 +26,7 @@
 	},
 	"type": "commonjs",
 	"main": "./index.cjs",
-	"types": "./index.d.ts",
+	"types": "./src/index.d.ts",
 	"peerDependencies": {
 		"@momentumcms/core": ">=0.0.1",
 		"@momentumcms/logger": ">=0.0.1",

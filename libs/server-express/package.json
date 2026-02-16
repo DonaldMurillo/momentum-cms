@@ -26,7 +26,7 @@
 	},
 	"type": "commonjs",
 	"main": "./index.cjs",
-	"types": "./index.d.ts",
+	"types": "./src/index.d.ts",
 	"peerDependencies": {
 		"@angular/core": "^19.0.0 || ^20.0.0 || ^21.0.0",
 		"@momentumcms/auth": ">=0.0.1",
