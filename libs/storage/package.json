@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/storage",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"description": "File storage adapters (local filesystem, S3) for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",

@@ -1,3 +1,14 @@
+## 0.1.5 (2026-02-16)
+
+### 🚀 Features
+
+- **create-app:** add landing page, fix setup flow, theme detection, type generator, Playwright E2E ([5e0f4ed](https://github.com/DonaldMurillo/momentum-cms/commit/5e0f4ed))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.1.4 (2026-02-16)
 
 This was a version bump only for core to align it with other projects, there were no code changes.
