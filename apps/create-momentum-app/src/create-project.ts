@@ -90,7 +90,7 @@ const pool = (dbAdapter as PostgresAdapterWithRaw).getPool();`
 			database === 'postgres'
 				? 'DATABASE_URL=postgresql://postgres:postgres@localhost:5432/momentum'
 				: 'DATABASE_PATH=./data/momentum.db',
-		defaultPort: flavor === 'angular' ? '4000' : '4200',
+		defaultPort: '4200',
 		externalDependencies: database === 'postgres' ? '"pg", "pg-native"' : '"better-sqlite3"',
 	};
 
