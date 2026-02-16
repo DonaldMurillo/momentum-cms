@@ -25,10 +25,7 @@
 			"options": {
 				"outputPath": "dist/libs/logger",
 				"main": "libs/logger/src/index.ts",
-				"tsConfig": "libs/logger/tsconfig.lib.json",
-				"assets": ["libs/logger/*.md"],
-				"format": ["cjs"],
-				"generatePackageJson": true
+				"tsConfig": "libs/logger/tsconfig.lib.json"
 			}
 		},
 		"nx-release-publish": {

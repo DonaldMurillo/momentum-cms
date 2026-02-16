@@ -15,6 +15,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createMomentumServer } from '@momentum-cms/server-express';
 import { provideMomentumAPI } from '@momentum-cms/admin';
+// eslint-disable-next-line @nx/enforce-module-boundaries -- server-side import, does not affect client bundle
 import { mountTestEndpoints } from '@momentum-cms/example-config';
 import momentumConfig, { authPlugin, analytics, analyticsAdapter, events } from './momentum.config';
 
@@ -43,8 +44,8 @@ const server = await createMomentumServer({
 	health: true,
 	openapi: true,
 	publishScheduler: { intervalMs: 2000 },
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- server-express uses unknown to avoid admin dependency
 	providerFactory: (api, ctx) =>
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- server-express uses unknown to avoid admin dependency
 		provideMomentumAPI(api as Parameters<typeof provideMomentumAPI>[0], ctx),
 });
 

@@ -1,6 +1,27 @@
 {
 	"name": "@momentum-cms/plugins-core",
 	"version": "0.0.1",
+	"description": "Plugin system core and event bus for Momentum CMS",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/momentum-cms/momentum-cms.git",
+		"directory": "libs/plugins/core"
+	},
+	"homepage": "https://github.com/momentum-cms/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/momentum-cms/momentum-cms/issues"
+	},
+	"keywords": [
+		"cms",
+		"momentum-cms",
+		"plugins",
+		"event-bus"
+	],
+	"engines": {
+		"node": ">=18"
+	},
 	"type": "commonjs",
 	"main": "./index.cjs",
 	"types": "./src/index.d.ts",

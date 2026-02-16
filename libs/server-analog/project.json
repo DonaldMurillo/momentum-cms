@@ -25,10 +25,7 @@
 			"options": {
 				"outputPath": "dist/libs/server-analog",
 				"main": "libs/server-analog/src/index.ts",
-				"tsConfig": "libs/server-analog/tsconfig.lib.json",
-				"assets": ["libs/server-analog/*.md"],
-				"format": ["cjs"],
-				"generatePackageJson": true
+				"tsConfig": "libs/server-analog/tsconfig.lib.json"
 			}
 		},
 		"nx-release-publish": {

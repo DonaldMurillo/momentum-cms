@@ -1,6 +1,28 @@
 {
 	"name": "@momentum-cms/plugins-analytics",
 	"version": "0.0.1",
+	"description": "Analytics and content tracking plugin for Momentum CMS",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/momentum-cms/momentum-cms.git",
+		"directory": "libs/plugins/analytics"
+	},
+	"homepage": "https://github.com/momentum-cms/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/momentum-cms/momentum-cms/issues"
+	},
+	"keywords": [
+		"cms",
+		"momentum-cms",
+		"analytics",
+		"tracking",
+		"content-performance"
+	],
+	"engines": {
+		"node": ">=18"
+	},
 	"type": "commonjs",
 	"main": "./index.cjs",
 	"types": "./src/index.d.ts",

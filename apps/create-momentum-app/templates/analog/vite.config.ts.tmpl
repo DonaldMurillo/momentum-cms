@@ -1,0 +1,19 @@
+/// <reference types="vitest" />
+import { defineConfig } from 'vite';
+import analog from '@analogjs/platform';
+
+export default defineConfig({
+	plugins: [
+		analog({
+			ssr: true,
+			nitro: {
+				routeRules: {
+					'/': { prerender: false },
+				},
+			},
+		}),
+	],
+	server: {
+		port: {{defaultPort}},
+	},
+});

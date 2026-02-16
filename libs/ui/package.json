@@ -1,6 +1,25 @@
 {
 	"name": "@momentum-cms/ui",
 	"version": "0.0.1",
+	"description": "Base UI component library for Momentum CMS",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/momentum-cms/momentum-cms.git",
+		"directory": "libs/ui"
+	},
+	"homepage": "https://github.com/momentum-cms/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/momentum-cms/momentum-cms/issues"
+	},
+	"keywords": [
+		"cms",
+		"momentum-cms",
+		"angular",
+		"ui-components",
+		"tailwindcss"
+	],
 	"peerDependencies": {
 		"@angular/common": "^21.0.0",
 		"@angular/core": "^21.0.0",

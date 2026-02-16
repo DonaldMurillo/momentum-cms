@@ -1,13 +1,36 @@
 {
 	"name": "@momentum-cms/server-core",
 	"version": "0.0.1",
+	"description": "Framework-agnostic server handlers for Momentum CMS",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/momentum-cms/momentum-cms.git",
+		"directory": "libs/server-core"
+	},
+	"homepage": "https://github.com/momentum-cms/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/momentum-cms/momentum-cms/issues"
+	},
+	"keywords": [
+		"cms",
+		"momentum-cms",
+		"server",
+		"api",
+		"rest",
+		"crud"
+	],
+	"engines": {
+		"node": ">=18"
+	},
 	"type": "commonjs",
 	"main": "./index.cjs",
 	"types": "./index.d.ts",
 	"peerDependencies": {
-		"@momentum-cms/core": "^0.0.1",
-		"@momentum-cms/logger": "^0.0.1",
-		"@momentum-cms/storage": "^0.0.1",
+		"@momentum-cms/core": ">=0.0.1",
+		"@momentum-cms/logger": ">=0.0.1",
+		"@momentum-cms/storage": ">=0.0.1",
 		"graphql": "^16.0.0"
 	}
 }

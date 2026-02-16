@@ -25,10 +25,7 @@
 			"options": {
 				"outputPath": "dist/libs/server-express",
 				"main": "libs/server-express/src/index.ts",
-				"tsConfig": "libs/server-express/tsconfig.lib.json",
-				"assets": ["libs/server-express/*.md"],
-				"format": ["cjs"],
-				"generatePackageJson": true
+				"tsConfig": "libs/server-express/tsconfig.lib.json"
 			}
 		},
 		"nx-release-publish": {

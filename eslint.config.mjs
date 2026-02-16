@@ -6,7 +6,13 @@ export default [
 	...nx.configs['flat/typescript'],
 	...nx.configs['flat/javascript'],
 	{
-		ignores: ['**/dist', '**/out-tsc', '**/node_modules', '**/vitest.config.*.timestamp*'],
+		ignores: [
+			'**/dist',
+			'**/out-tsc',
+			'**/node_modules',
+			'**/vitest.config.*.timestamp*',
+			'**/templates/**',
+		],
 	},
 	{
 		files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
@@ -112,6 +118,14 @@ export default [
 			'libs/server-analog/**/*.ts',
 		],
 		rules: {
+			'local/no-direct-browser-apis': 'off',
+		},
+	},
+	{
+		// CLI tools and Node.js scripts legitimately use console.log and setTimeout
+		files: ['apps/create-momentum-app/src/**/*.ts', 'scripts/**/*.ts'],
+		rules: {
+			'no-console': 'off',
 			'local/no-direct-browser-apis': 'off',
 		},
 	},

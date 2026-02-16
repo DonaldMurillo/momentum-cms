@@ -1,12 +1,34 @@
 {
 	"name": "@momentum-cms/auth",
 	"version": "0.0.1",
+	"description": "Better Auth integration for Momentum CMS",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/momentum-cms/momentum-cms.git",
+		"directory": "libs/auth"
+	},
+	"homepage": "https://github.com/momentum-cms/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/momentum-cms/momentum-cms/issues"
+	},
+	"keywords": [
+		"cms",
+		"momentum-cms",
+		"authentication",
+		"better-auth",
+		"auth"
+	],
+	"engines": {
+		"node": ">=18"
+	},
 	"type": "commonjs",
 	"main": "./index.cjs",
 	"types": "./index.d.ts",
 	"peerDependencies": {
-		"@momentum-cms/core": "^0.0.1",
-		"@momentum-cms/logger": "^0.0.1",
+		"@momentum-cms/core": ">=0.0.1",
+		"@momentum-cms/logger": ">=0.0.1",
 		"better-auth": "^1.4.0",
 		"better-sqlite3": "^12.0.0",
 		"nodemailer": "^8.0.0",

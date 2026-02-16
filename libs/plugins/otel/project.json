@@ -25,10 +25,7 @@
 			"options": {
 				"outputPath": "dist/libs/plugins/otel",
 				"main": "libs/plugins/otel/src/index.ts",
-				"tsConfig": "libs/plugins/otel/tsconfig.lib.json",
-				"assets": ["libs/plugins/otel/*.md"],
-				"format": ["cjs"],
-				"generatePackageJson": true
+				"tsConfig": "libs/plugins/otel/tsconfig.lib.json"
 			}
 		},
 		"nx-release-publish": {

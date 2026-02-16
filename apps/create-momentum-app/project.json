@@ -1,0 +1,46 @@
+{
+	"name": "create-momentum-app",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "apps/create-momentum-app/src",
+	"projectType": "application",
+	"release": {
+		"version": {
+			"manifestRootsToUpdate": ["dist/{projectRoot}"],
+			"currentVersionResolver": "git-tag",
+			"fallbackCurrentVersionResolver": "disk"
+		}
+	},
+	"tags": ["scope:cli"],
+	"targets": {
+		"build": {
+			"executor": "@nx/esbuild:esbuild",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/apps/create-momentum-app",
+				"main": "apps/create-momentum-app/src/index.ts",
+				"tsConfig": "apps/create-momentum-app/tsconfig.app.json",
+				"format": ["cjs"],
+				"bundle": true,
+				"platform": "node",
+				"generatePackageJson": true,
+				"assets": [
+					{
+						"glob": "**/*",
+						"input": "apps/create-momentum-app/templates",
+						"output": "./templates"
+					},
+					{ "input": ".", "glob": "LICENSE", "output": "." },
+					"apps/create-momentum-app/README.md"
+				]
+			}
+		},
+		"nx-release-publish": {
+			"options": {
+				"packageRoot": "dist/{projectRoot}"
+			}
+		},
+		"lint": {
+			"executor": "@nx/eslint:lint"
+		}
+	}
+}

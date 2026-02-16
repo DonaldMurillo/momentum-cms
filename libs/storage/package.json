@@ -1,15 +1,45 @@
 {
 	"name": "@momentum-cms/storage",
 	"version": "0.0.1",
+	"description": "File storage adapters (local filesystem, S3) for Momentum CMS",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/momentum-cms/momentum-cms.git",
+		"directory": "libs/storage"
+	},
+	"homepage": "https://github.com/momentum-cms/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/momentum-cms/momentum-cms/issues"
+	},
+	"keywords": [
+		"cms",
+		"momentum-cms",
+		"storage",
+		"file-upload",
+		"s3"
+	],
+	"engines": {
+		"node": ">=18"
+	},
 	"type": "commonjs",
 	"main": "./src/index.js",
 	"types": "./src/index.d.ts",
 	"dependencies": {
-		"tslib": "^2.3.0",
-		"@momentum-cms/core": "^0.0.1",
+		"tslib": "^2.3.0"
+	},
+	"peerDependencies": {
+		"@momentum-cms/core": ">=0.0.1",
 		"@aws-sdk/client-s3": "^3.0.0",
-		"@aws-sdk/s3-request-presigner": "^3.0.0",
-		"vitest": "^4.0.0",
-		"@nx/vite": "^22.0.0"
+		"@aws-sdk/s3-request-presigner": "^3.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@aws-sdk/client-s3": {
+			"optional": true
+		},
+		"@aws-sdk/s3-request-presigner": {
+			"optional": true
+		}
 	}
 }
