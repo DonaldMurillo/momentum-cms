@@ -5,7 +5,7 @@ Momentum CMS includes a seeding system for populating your database with initial
 ## Configuration
 
 ```typescript
-import { defineMomentumConfig } from '@momentum-cms/core';
+import { defineMomentumConfig } from '@momentumcms/core';
 
 export default defineMomentumConfig({
 	seeding: {

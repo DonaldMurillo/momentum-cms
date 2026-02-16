@@ -9,9 +9,9 @@
 import { defineEventHandler, getRequestURL, getHeaders } from 'h3';
 import { randomUUID } from 'node:crypto';
 
-import type { AnalyticsEvent } from '@momentum-cms/plugins/analytics';
+import type { AnalyticsEvent } from '@momentumcms/plugins/analytics';
 // eslint-disable-next-line @nx/enforce-module-boundaries -- server middleware uses analytics utilities directly
-import { parseUserAgent } from '@momentum-cms/plugins/analytics';
+import { parseUserAgent } from '@momentumcms/plugins/analytics';
 import { analytics } from '../utils/momentum-init';
 
 export default defineEventHandler((event) => {

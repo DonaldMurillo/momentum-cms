@@ -2,7 +2,7 @@
  * Default analytics admin route descriptors.
  *
  * Browser-safe: no server-side dependencies (Express, pg, etc.).
- * This file is the entry point for `@momentum-cms/plugins/analytics/admin-routes`.
+ * This file is the entry point for `@momentumcms/plugins/analytics/admin-routes`.
  *
  * Three admin pages:
  * - Analytics Dashboard  — general system overview (all event types, API metrics, sessions)
@@ -13,7 +13,7 @@
  * - Angular app routing (browser build)
  * - Analytics plugin factory (server build, as defaults)
  */
-import type { PluginAdminRouteDescriptor } from '@momentum-cms/core';
+import type { PluginAdminRouteDescriptor } from '@momentumcms/core';
 
 /**
  * Default analytics admin dashboard route.

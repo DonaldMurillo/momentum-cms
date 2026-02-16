@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, forwardRef, input } from '@angular/core';
-import type { Field } from '@momentum-cms/core';
+import type { Field } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form.types';
 import { TextFieldRenderer } from './text-field.component';
 import { NumberFieldRenderer } from './number-field.component';

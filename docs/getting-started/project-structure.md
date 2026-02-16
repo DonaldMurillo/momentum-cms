@@ -61,8 +61,8 @@ my-app/
 Central configuration file. Defines your database adapter, collections, auth, storage, seeding, and plugins.
 
 ```typescript
-import { postgresAdapter } from '@momentum-cms/db-drizzle';
-import { momentumAuth } from '@momentum-cms/auth';
+import { postgresAdapter } from '@momentumcms/db-drizzle';
+import { momentumAuth } from '@momentumcms/auth';
 import { Posts } from './collections/posts';
 
 export default {

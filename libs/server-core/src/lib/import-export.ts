@@ -10,8 +10,8 @@
 
 /* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions needed to narrow parsed JSON body to Record types */
 
-import type { CollectionConfig, Field } from '@momentum-cms/core';
-import { flattenDataFields } from '@momentum-cms/core';
+import type { CollectionConfig, Field } from '@momentumcms/core';
+import { flattenDataFields } from '@momentumcms/core';
 
 // ============================================
 // Types

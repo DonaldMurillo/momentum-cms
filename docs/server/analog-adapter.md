@@ -5,7 +5,7 @@ Integrate Momentum CMS with Analog.js (Nitro/h3).
 ## Package
 
 ```bash
-npm install @momentum-cms/server-analog
+npm install @momentumcms/server-analog
 ```
 
 ## Setup
@@ -15,7 +15,7 @@ Analog uses file-based routing for the server. Three files are involved:
 ### Server Initialization (`server/utils/momentum-init.ts`)
 
 ```typescript
-import { initializeMomentum } from '@momentum-cms/server-analog';
+import { initializeMomentum } from '@momentumcms/server-analog';
 import momentumConfig from '../../momentum.config';
 
 let momentum: Awaited<ReturnType<typeof initializeMomentum>>;
@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
 ### API Catch-All (`server/routes/api/[...]momentum].ts`)
 
 ```typescript
-import { createMomentumHandler } from '@momentum-cms/server-analog';
+import { createMomentumHandler } from '@momentumcms/server-analog';
 import { getMomentum } from '../../utils/momentum-init';
 
 export default defineEventHandler(async (event) => {

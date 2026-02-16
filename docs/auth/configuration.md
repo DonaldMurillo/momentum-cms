@@ -5,7 +5,7 @@ Configure authentication options for your Momentum CMS application.
 ## Basic Config
 
 ```typescript
-import { momentumAuth } from '@momentum-cms/auth';
+import { momentumAuth } from '@momentumcms/auth';
 
 export default {
 	auth: momentumAuth({

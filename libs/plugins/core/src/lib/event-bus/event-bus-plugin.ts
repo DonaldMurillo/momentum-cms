@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { eventBusPlugin } from '@momentum-cms/plugins/core';
+ * import { eventBusPlugin } from '@momentumcms/plugins/core';
  *
  * const events = eventBusPlugin();
  *

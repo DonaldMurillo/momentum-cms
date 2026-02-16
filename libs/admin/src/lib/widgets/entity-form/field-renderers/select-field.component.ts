@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { McmsFormField, Select } from '@momentum-cms/ui';
-import type { ValidationError, SelectOption } from '@momentum-cms/ui';
-import { humanizeFieldName } from '@momentum-cms/core';
-import type { Field, SelectField as SelectFieldType } from '@momentum-cms/core';
+import { McmsFormField, Select } from '@momentumcms/ui';
+import type { ValidationError, SelectOption } from '@momentumcms/ui';
+import { humanizeFieldName } from '@momentumcms/core';
+import type { Field, SelectField as SelectFieldType } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form.types';
 import { getFieldNodeState } from '../entity-form.types';
 

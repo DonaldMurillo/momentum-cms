@@ -2,7 +2,7 @@
  * Type-safe route data utilities
  */
 
-import type { CollectionConfig, GlobalConfig } from '@momentum-cms/core';
+import type { CollectionConfig, GlobalConfig } from '@momentumcms/core';
 import type { MomentumAdminBranding, AdminPluginRoute } from '../routes/momentum-admin-routes';
 import type { Data } from '@angular/router';
 

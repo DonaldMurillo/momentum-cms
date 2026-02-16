@@ -1,17 +1,17 @@
 {
-	"name": "@momentum-cms/admin",
-	"version": "0.0.1",
+	"name": "@momentumcms/admin",
+	"version": "0.1.7",
 	"description": "Angular admin dashboard UI for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/momentum-cms/momentum-cms.git",
+		"url": "https://github.com/DonaldMurillo/momentum-cms.git",
 		"directory": "libs/admin"
 	},
-	"homepage": "https://github.com/momentum-cms/momentum-cms#readme",
+	"homepage": "https://github.com/DonaldMurillo/momentum-cms#readme",
 	"bugs": {
-		"url": "https://github.com/momentum-cms/momentum-cms/issues"
+		"url": "https://github.com/DonaldMurillo/momentum-cms/issues"
 	},
 	"keywords": [
 		"cms",
@@ -29,8 +29,8 @@
 		"@angular/forms": "^21.1.0",
 		"@angular/platform-browser": "^21.1.0",
 		"@angular/router": "^21.1.0",
-		"@momentum-cms/core": ">=0.0.1",
-		"@momentum-cms/ui": ">=0.0.1",
+		"@momentumcms/core": ">=0.0.1",
+		"@momentumcms/ui": ">=0.0.1",
 		"@ng-icons/core": "^33.0.0",
 		"@ng-icons/heroicons": "^33.0.0",
 		"@tiptap/core": "^3.0.0",

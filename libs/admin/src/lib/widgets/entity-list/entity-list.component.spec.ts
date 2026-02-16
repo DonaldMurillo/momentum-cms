@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
-import type { CollectionConfig } from '@momentum-cms/core';
+import type { CollectionConfig } from '@momentumcms/core';
 import { EntityListWidget } from './entity-list.component';
 import { CollectionAccessService } from '../../services/collection-access.service';
 import { FeedbackService } from '../feedback/feedback.service';

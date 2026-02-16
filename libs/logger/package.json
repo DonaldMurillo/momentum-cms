@@ -1,17 +1,17 @@
 {
-	"name": "@momentum-cms/logger",
-	"version": "0.0.1",
+	"name": "@momentumcms/logger",
+	"version": "0.1.7",
 	"description": "Structured logging for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/momentum-cms/momentum-cms.git",
+		"url": "https://github.com/DonaldMurillo/momentum-cms.git",
 		"directory": "libs/logger"
 	},
-	"homepage": "https://github.com/momentum-cms/momentum-cms#readme",
+	"homepage": "https://github.com/DonaldMurillo/momentum-cms#readme",
 	"bugs": {
-		"url": "https://github.com/momentum-cms/momentum-cms/issues"
+		"url": "https://github.com/DonaldMurillo/momentum-cms/issues"
 	},
 	"keywords": [
 		"cms",
@@ -22,7 +22,6 @@
 	"engines": {
 		"node": ">=18"
 	},
-	"type": "commonjs",
 	"main": "./index.cjs",
 	"types": "./src/index.d.ts",
 	"dependencies": {}

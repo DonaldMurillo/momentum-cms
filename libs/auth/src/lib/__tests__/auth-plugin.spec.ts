@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { momentumAuth } from '../auth-plugin';
 import type { MomentumAuthPluginConfig } from '../auth-plugin';
-import { text, checkbox } from '@momentum-cms/core';
+import { text, checkbox } from '@momentumcms/core';
 import { authTwoFactor } from '../plugins/two-factor';
 import { authAdmin } from '../plugins/admin';
 import { authOrganization } from '../plugins/organization';

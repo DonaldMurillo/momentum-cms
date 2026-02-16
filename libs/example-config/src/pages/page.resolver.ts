@@ -1,5 +1,5 @@
 import type { ResolveFn } from '@angular/router';
-import { injectMomentumAPI, type FindResult } from '@momentum-cms/admin';
+import { injectMomentumAPI, type FindResult } from '@momentumcms/admin';
 
 export const pageResolver: ResolveFn<FindResult<Record<string, unknown>>> = (route) => {
 	const api = injectMomentumAPI();

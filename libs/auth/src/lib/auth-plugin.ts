@@ -7,10 +7,10 @@
  * - Exposes getAuth()/tryGetAuth() for server framework middleware creation
  *
  * Framework-agnostic: no Express dependency. Middleware creation is handled by
- * @momentum-cms/server-express (initializeMomentum + createDeferredSessionResolver).
+ * @momentumcms/server-express (initializeMomentum + createDeferredSessionResolver).
  */
 
-import type { MomentumPlugin, PluginContext, CollectionConfig, Field } from '@momentum-cms/core';
+import type { MomentumPlugin, PluginContext, CollectionConfig, Field } from '@momentumcms/core';
 import {
 	createMomentumAuth,
 	type MomentumAuth,
@@ -78,7 +78,7 @@ export interface MomentumAuthPlugin extends MomentumPlugin {
  *
  * @example
  * ```typescript
- * import { momentumAuth, authTwoFactor } from '@momentum-cms/auth';
+ * import { momentumAuth, authTwoFactor } from '@momentumcms/auth';
  *
  * export default defineMomentumConfig({
  *   plugins: [
@@ -184,7 +184,7 @@ export function momentumAuth(config: MomentumAuthPluginConfig): MomentumAuthPlug
 			logger.info('Better Auth instance created');
 
 			// Note: Auth and setup middleware are auto-registered by initializeMomentum()
-			// in @momentum-cms/server-express after detecting this plugin via getAuth().
+			// in @momentumcms/server-express after detecting this plugin via getAuth().
 			// This keeps the auth library framework-agnostic (no Express dependency).
 		},
 	};

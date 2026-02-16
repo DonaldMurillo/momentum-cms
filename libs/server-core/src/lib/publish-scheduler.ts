@@ -5,7 +5,7 @@
  * and publishes them when their scheduled time arrives.
  */
 
-import type { DatabaseAdapter, CollectionConfig } from '@momentum-cms/core';
+import type { DatabaseAdapter, CollectionConfig } from '@momentumcms/core';
 import { getMomentumAPI } from './momentum-api';
 
 /**

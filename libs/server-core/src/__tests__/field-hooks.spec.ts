@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { text, number, group, array, blocks, tabs, collapsible, row } from '@momentum-cms/core';
-import type { Field, RequestContext } from '@momentum-cms/core';
+import { text, number, group, array, blocks, tabs, collapsible, row } from '@momentumcms/core';
+import type { Field, RequestContext } from '@momentumcms/core';
 import { hasFieldHooks, runFieldHooks } from '../lib/field-hooks';
 
 const req: RequestContext = { user: { id: '1', email: 'test@test.com', role: 'admin' } };
@@ -29,9 +29,7 @@ describe('field-hooks', () => {
 			const fields: Field[] = [
 				text('title', {
 					hooks: {
-						beforeChange: [
-							({ value }) => (typeof value === 'string' ? value.trim() : value),
-						],
+						beforeChange: [({ value }) => (typeof value === 'string' ? value.trim() : value)],
 					},
 				}),
 			];
@@ -156,9 +154,7 @@ describe('field-hooks', () => {
 					fields: [
 						text('metaTitle', {
 							hooks: {
-								beforeChange: [
-									({ value }) => (typeof value === 'string' ? value.trim() : value),
-								],
+								beforeChange: [({ value }) => (typeof value === 'string' ? value.trim() : value)],
 							},
 						}),
 					],
@@ -178,8 +174,7 @@ describe('field-hooks', () => {
 						text('name', {
 							hooks: {
 								beforeChange: [
-									({ value }) =>
-										typeof value === 'string' ? value.toUpperCase() : value,
+									({ value }) => (typeof value === 'string' ? value.toUpperCase() : value),
 								],
 							},
 						}),
@@ -260,9 +255,7 @@ describe('field-hooks', () => {
 			const fields: Field[] = [
 				text('title', {
 					hooks: {
-						afterChange: [
-							({ value }) => (typeof value === 'string' ? `[saved] ${value}` : value),
-						],
+						afterChange: [({ value }) => (typeof value === 'string' ? `[saved] ${value}` : value)],
 					},
 				}),
 			];
@@ -308,9 +301,9 @@ describe('field-hooks', () => {
 			];
 			const data = { title: 'hello' };
 
-			await expect(
-				runFieldHooks('beforeChange', fields, data, req, 'create'),
-			).rejects.toThrow('Hook failed');
+			await expect(runFieldHooks('beforeChange', fields, data, req, 'create')).rejects.toThrow(
+				'Hook failed',
+			);
 		});
 
 		it('should propagate errors from async throwing hooks', async () => {
@@ -327,9 +320,9 @@ describe('field-hooks', () => {
 			];
 			const data = { title: 'hello' };
 
-			await expect(
-				runFieldHooks('beforeChange', fields, data, req, 'create'),
-			).rejects.toThrow('Async hook failed');
+			await expect(runFieldHooks('beforeChange', fields, data, req, 'create')).rejects.toThrow(
+				'Async hook failed',
+			);
 		});
 	});
 
@@ -344,8 +337,7 @@ describe('field-hooks', () => {
 								text('body', {
 									hooks: {
 										beforeChange: [
-											({ value }) =>
-												typeof value === 'string' ? value.toUpperCase() : value,
+											({ value }) => (typeof value === 'string' ? value.toUpperCase() : value),
 										],
 									},
 								}),
@@ -397,8 +389,7 @@ describe('field-hooks', () => {
 								text('title', {
 									hooks: {
 										beforeChange: [
-											({ value }) =>
-												typeof value === 'string' ? value.trim() : value,
+											({ value }) => (typeof value === 'string' ? value.trim() : value),
 										],
 									},
 								}),
@@ -420,8 +411,7 @@ describe('field-hooks', () => {
 						text('name', {
 							hooks: {
 								beforeChange: [
-									({ value }) =>
-										typeof value === 'string' ? value.toLowerCase() : value,
+									({ value }) => (typeof value === 'string' ? value.toLowerCase() : value),
 								],
 							},
 						}),

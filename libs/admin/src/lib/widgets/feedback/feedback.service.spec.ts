@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ToastService, ConfirmationService } from '@momentum-cms/ui';
+import { ToastService, ConfirmationService } from '@momentumcms/ui';
 import { FeedbackService } from './feedback.service';
 
 describe('FeedbackService', () => {

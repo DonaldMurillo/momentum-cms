@@ -15,7 +15,7 @@ export default defineConfig(({ mode: _mode }) => {
 				// Vite client build doesn't resolve tsconfig subpath patterns that share a prefix
 				// with Nitro aliases. Explicitly resolve the analytics client subpath so the
 				// tracker + rule engine are bundled into the browser build.
-				'@momentum-cms/plugins/analytics/client': resolve(
+				'@momentumcms/plugins/analytics/client': resolve(
 					__dirname,
 					'../../libs/plugins/analytics/src/lib/client/tracker.ts',
 				),
@@ -44,36 +44,33 @@ export default defineConfig(({ mode: _mode }) => {
 					],
 					// Configure Nitro to resolve monorepo packages
 					alias: {
-						'@momentum-cms/server-analog': resolve(
+						'@momentumcms/server-analog': resolve(
 							__dirname,
 							'../../libs/server-analog/src/index.ts',
 						),
-						'@momentum-cms/server-core': resolve(__dirname, '../../libs/server-core/src/index.ts'),
-						'@momentum-cms/core': resolve(__dirname, '../../libs/core/src/index.ts'),
-						'@momentum-cms/db-drizzle': resolve(__dirname, '../../libs/db-drizzle/src/index.ts'),
-						'@momentum-cms/auth': resolve(__dirname, '../../libs/auth/src/index.ts'),
-						'@momentum-cms/example-config/collections': resolve(
+						'@momentumcms/server-core': resolve(__dirname, '../../libs/server-core/src/index.ts'),
+						'@momentumcms/core': resolve(__dirname, '../../libs/core/src/index.ts'),
+						'@momentumcms/db-drizzle': resolve(__dirname, '../../libs/db-drizzle/src/index.ts'),
+						'@momentumcms/auth': resolve(__dirname, '../../libs/auth/src/index.ts'),
+						'@momentumcms/example-config/collections': resolve(
 							__dirname,
 							'../../libs/example-config/src/collections/index.ts',
 						),
-						'@momentum-cms/example-config/globals': resolve(
+						'@momentumcms/example-config/globals': resolve(
 							__dirname,
 							'../../libs/example-config/src/globals/index.ts',
 						),
-						'@momentum-cms/example-config': resolve(
+						'@momentumcms/example-config': resolve(
 							__dirname,
 							'../../libs/example-config/src/index.ts',
 						),
-						'@momentum-cms/plugins/core': resolve(
-							__dirname,
-							'../../libs/plugins/core/src/index.ts',
-						),
-						'@momentum-cms/plugins/analytics': resolve(
+						'@momentumcms/plugins/core': resolve(__dirname, '../../libs/plugins/core/src/index.ts'),
+						'@momentumcms/plugins/analytics': resolve(
 							__dirname,
 							'../../libs/plugins/analytics/src/index.ts',
 						),
-						'@momentum-cms/storage': resolve(__dirname, '../../libs/storage/src/index.ts'),
-						'@momentum-cms/logger': resolve(__dirname, '../../libs/logger/src/index.ts'),
+						'@momentumcms/storage': resolve(__dirname, '../../libs/storage/src/index.ts'),
+						'@momentumcms/logger': resolve(__dirname, '../../libs/logger/src/index.ts'),
 					},
 				},
 			}),

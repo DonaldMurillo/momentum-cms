@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 404, message: 'Not found' });
 	}
 	await ensureInitialized();
-	const { getHookLog, clearHookLog } = await import('@momentum-cms/example-config');
+	const { getHookLog, clearHookLog } = await import('@momentumcms/example-config');
 	const method = getMethod(event);
 
 	if (method === 'GET') {

@@ -7,7 +7,7 @@
  * @example
  * ```typescript
  * import type { Users } from './types/momentum.generated';
- * import { injectUser } from '@momentum-cms/admin';
+ * import { injectUser } from '@momentumcms/admin';
  *
  * @Component({...})
  * export class MyComponent {

@@ -1,5 +1,5 @@
 /**
- * @momentum-cms/core
+ * @momentumcms/core
  *
  * Core package for Momentum CMS
  * Contains collection types, field builders, and utility functions

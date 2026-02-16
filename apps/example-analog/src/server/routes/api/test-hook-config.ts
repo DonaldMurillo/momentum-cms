@@ -1,13 +1,13 @@
 import { defineEventHandler, getMethod, readBody, createError } from 'h3';
 
-import type { HookBehaviorConfig } from '@momentum-cms/example-config';
+import type { HookBehaviorConfig } from '@momentumcms/example-config';
 import { ensureInitialized } from '../../utils/momentum-init';
 
 export default defineEventHandler(async (event) => {
 	if (process.env['NODE_ENV'] === 'production') {
 		throw createError({ statusCode: 404, message: 'Not found' });
 	}
-	const { getHookBehavior, setHookBehavior } = await import('@momentum-cms/example-config');
+	const { getHookBehavior, setHookBehavior } = await import('@momentumcms/example-config');
 	await ensureInitialized();
 	const method = getMethod(event);
 

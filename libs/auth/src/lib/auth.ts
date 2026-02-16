@@ -4,8 +4,8 @@ import type { Pool } from 'pg';
 import type { Database } from 'better-sqlite3';
 import { createEmailService, type EmailConfig, type EmailService } from './email';
 import { getPasswordResetEmail, getVerificationEmail } from './email-templates';
-import { createLogger } from '@momentum-cms/logger';
-import type { Field } from '@momentum-cms/core';
+import { createLogger } from '@momentumcms/logger';
+import type { Field } from '@momentumcms/core';
 
 /**
  * Database configuration for Better Auth.
@@ -223,7 +223,7 @@ function convertFieldsToAdditionalFields(
  *
  * @example
  * ```typescript
- * import { createMomentumAuth } from '@momentum-cms/auth';
+ * import { createMomentumAuth } from '@momentumcms/auth';
  *
  * // With PostgreSQL
  * const auth = createMomentumAuth({

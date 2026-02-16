@@ -5,7 +5,7 @@ PostgreSQL adapter configuration for Momentum CMS.
 ## Setup
 
 ```typescript
-import { postgresAdapter } from '@momentum-cms/db-drizzle';
+import { postgresAdapter } from '@momentumcms/db-drizzle';
 
 export default {
 	db: postgresAdapter({

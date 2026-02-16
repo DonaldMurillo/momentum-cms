@@ -1,7 +1,7 @@
 import '@angular/compiler';
 import { describe, it, expect } from 'vitest';
 import { momentumAdminRoutes } from '../../lib/routes/momentum-admin-routes';
-import type { CollectionConfig } from '@momentum-cms/core';
+import type { CollectionConfig } from '@momentumcms/core';
 
 describe('momentumAdminRoutes()', () => {
 	const mockCollections: CollectionConfig[] = [

@@ -3,18 +3,18 @@ import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/
 import { provideClientHydration } from '@angular/platform-browser';
 import { provideFileRouter, requestContextInterceptor, withExtraRoutes } from '@analogjs/router';
 import type { Routes } from '@angular/router';
-import { momentumAdminRoutes, crudToastInterceptor } from '@momentum-cms/admin';
+import { momentumAdminRoutes, crudToastInterceptor } from '@momentumcms/admin';
 
-import { collections } from '@momentum-cms/example-config/collections';
+import { collections } from '@momentumcms/example-config/collections';
 
-import { globals } from '@momentum-cms/example-config/globals';
-import { BASE_AUTH_COLLECTIONS } from '@momentum-cms/auth/collections';
+import { globals } from '@momentumcms/example-config/globals';
+import { BASE_AUTH_COLLECTIONS } from '@momentumcms/auth/collections';
 
-import { analyticsAdminRoutes } from '@momentum-cms/plugins/analytics/admin-routes';
+import { analyticsAdminRoutes } from '@momentumcms/plugins/analytics/admin-routes';
 
-import { injectBlockAnalyticsFields } from '@momentum-cms/plugins/analytics/block-fields';
+import { injectBlockAnalyticsFields } from '@momentumcms/plugins/analytics/block-fields';
 
-import { providePageBlocks, pageResolver } from '@momentum-cms/example-config/pages';
+import { providePageBlocks, pageResolver } from '@momentumcms/example-config/pages';
 
 // Merge all collections for admin routes, then inject analytics block fields
 const adminCollections = [...collections, ...BASE_AUTH_COLLECTIONS];
@@ -26,19 +26,18 @@ const pageRoutes: Routes = [
 	{
 		path: '',
 		pathMatch: 'full',
-		loadComponent: () => import('@momentum-cms/example-config/pages').then((m) => m.PageComponent),
+		loadComponent: () => import('@momentumcms/example-config/pages').then((m) => m.PageComponent),
 		data: { slug: 'home' },
 		resolve: { pageData: pageResolver },
 	},
 	// Experiments page (must be before :slug catch-all)
 	{
 		path: 'experiments',
-		loadComponent: () =>
-			import('@momentum-cms/example-config/pages').then((m) => m.ExperimentsPage),
+		loadComponent: () => import('@momentumcms/example-config/pages').then((m) => m.ExperimentsPage),
 	},
 	{
 		path: ':slug',
-		loadComponent: () => import('@momentum-cms/example-config/pages').then((m) => m.PageComponent),
+		loadComponent: () => import('@momentumcms/example-config/pages').then((m) => m.PageComponent),
 		resolve: { pageData: pageResolver },
 	},
 ];

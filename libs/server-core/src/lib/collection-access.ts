@@ -1,4 +1,4 @@
-import type { MomentumConfig, CollectionConfig, UserContext, AccessArgs } from '@momentum-cms/core';
+import type { MomentumConfig, CollectionConfig, UserContext, AccessArgs } from '@momentumcms/core';
 
 /**
  * Result of checking admin access for a single collection.

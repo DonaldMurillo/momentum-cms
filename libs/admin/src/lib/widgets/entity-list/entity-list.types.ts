@@ -4,7 +4,7 @@
  * Types for the entity list widget that displays collection data.
  */
 
-import type { DataTableColumn, DataTableRowAction } from '@momentum-cms/ui';
+import type { DataTableColumn, DataTableRowAction } from '@momentumcms/ui';
 import type { Entity, EntityAction } from '../widget.types';
 
 /**

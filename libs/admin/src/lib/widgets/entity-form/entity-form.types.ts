@@ -5,8 +5,8 @@
  */
 
 import type { Signal, WritableSignal } from '@angular/core';
-import type { Field, CollectionConfig, BlockConfig } from '@momentum-cms/core';
-import { flattenDataFields } from '@momentum-cms/core';
+import type { Field, CollectionConfig, BlockConfig } from '@momentumcms/core';
+import { flattenDataFields } from '@momentumcms/core';
 
 /**
  * Form mode - create, edit, or view.

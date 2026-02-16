@@ -1,7 +1,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient, HttpEventType, HttpRequest } from '@angular/common/http';
 import { Observable, Subject, finalize } from 'rxjs';
-import type { MediaDocument } from '@momentum-cms/core';
+import type { MediaDocument } from '@momentumcms/core';
 
 /**
  * Upload progress state.

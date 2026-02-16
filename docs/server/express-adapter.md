@@ -5,7 +5,7 @@ Integrate Momentum CMS with Angular SSR via Express.
 ## Package
 
 ```bash
-npm install @momentum-cms/server-express
+npm install @momentumcms/server-express
 ```
 
 ## Setup
@@ -14,7 +14,7 @@ In your `server.ts`:
 
 ```typescript
 import express from 'express';
-import { createMomentumServer } from '@momentum-cms/server-express';
+import { createMomentumServer } from '@momentumcms/server-express';
 import momentumConfig from './momentum.config';
 
 const app = express();

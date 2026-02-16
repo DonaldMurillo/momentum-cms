@@ -4,7 +4,7 @@ import {
 	checkSingleCollectionAdminAccess,
 	getCollectionPermissions,
 } from './collection-access';
-import type { CollectionConfig, MomentumConfig, UserContext } from '@momentum-cms/core';
+import type { CollectionConfig, MomentumConfig, UserContext } from '@momentumcms/core';
 
 // Mock collections for testing
 const publicCollection: CollectionConfig = {

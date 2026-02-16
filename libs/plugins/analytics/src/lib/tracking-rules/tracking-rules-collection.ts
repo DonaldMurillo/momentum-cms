@@ -5,15 +5,7 @@
  * Injected into the collections array by the analytics plugin during onInit.
  */
 
-import {
-	defineCollection,
-	text,
-	select,
-	json,
-	checkbox,
-	number,
-	hasRole,
-} from '@momentum-cms/core';
+import { defineCollection, text, select, json, checkbox, number, hasRole } from '@momentumcms/core';
 import { isSelectorBlocked } from '../utils/selector-security';
 
 /**

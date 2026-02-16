@@ -21,8 +21,8 @@ import {
 	heroChevronRight,
 	heroTrash,
 } from '@ng-icons/heroicons/outline';
-import type { BlockConfig, Field } from '@momentum-cms/core';
-import { Badge, Button } from '@momentum-cms/ui';
+import type { BlockConfig, Field } from '@momentumcms/core';
+import { Badge, Button } from '@momentumcms/ui';
 import { getSubNode } from '../entity-form/entity-form.types';
 import type { EntityFormMode } from '../entity-form/entity-form.types';
 import type { BlockItem } from './visual-editor.types';

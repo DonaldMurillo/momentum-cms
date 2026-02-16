@@ -1,17 +1,17 @@
 {
-	"name": "@momentum-cms/plugins-otel",
-	"version": "0.0.1",
+	"name": "@momentumcms/plugins-otel",
+	"version": "0.1.7",
 	"description": "OpenTelemetry observability plugin for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/momentum-cms/momentum-cms.git",
+		"url": "https://github.com/DonaldMurillo/momentum-cms.git",
 		"directory": "libs/plugins/otel"
 	},
-	"homepage": "https://github.com/momentum-cms/momentum-cms#readme",
+	"homepage": "https://github.com/DonaldMurillo/momentum-cms#readme",
 	"bugs": {
-		"url": "https://github.com/momentum-cms/momentum-cms/issues"
+		"url": "https://github.com/DonaldMurillo/momentum-cms/issues"
 	},
 	"keywords": [
 		"cms",
@@ -24,14 +24,13 @@
 	"engines": {
 		"node": ">=18"
 	},
-	"type": "commonjs",
 	"main": "./index.cjs",
 	"types": "./src/index.d.ts",
 	"peerDependencies": {
 		"@opentelemetry/api": "^1.0.0",
-		"@momentum-cms/plugins-core": "0.0.1",
-		"@momentum-cms/logger": "0.0.1",
-		"@momentum-cms/core": "0.0.1"
+		"@momentumcms/plugins-core": "0.1.7",
+		"@momentumcms/logger": "0.1.7",
+		"@momentumcms/core": "0.1.7"
 	},
 	"dependencies": {}
 }

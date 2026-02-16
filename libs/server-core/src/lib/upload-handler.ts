@@ -9,8 +9,8 @@ import type {
 	StoredFile,
 	MomentumConfig,
 	MediaDocument,
-} from '@momentum-cms/core';
-import { validateMimeType as validateMimeByMagicBytes } from '@momentum-cms/storage';
+} from '@momentumcms/core';
+import { validateMimeType as validateMimeByMagicBytes } from '@momentumcms/storage';
 import { getMomentumAPI, type MomentumAPIContext } from './momentum-api';
 
 /**

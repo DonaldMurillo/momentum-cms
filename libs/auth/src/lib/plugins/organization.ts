@@ -10,7 +10,7 @@
  * when the full organization integration is implemented.
  */
 
-import { defineCollection, text, select, date } from '@momentum-cms/core';
+import { defineCollection, text, select, date } from '@momentumcms/core';
 import type { MomentumAuthSubPlugin } from './sub-plugin.types';
 
 const AuthOrganizationCollection = defineCollection({

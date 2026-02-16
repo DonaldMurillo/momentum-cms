@@ -23,7 +23,7 @@ import {
 	and,
 	or,
 	not,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';
 
 export const Posts = defineCollection({
 	slug: 'posts',
@@ -43,7 +43,7 @@ export const Posts = defineCollection({
 Define a custom user type for IntelliSense:
 
 ```typescript
-import { access } from '@momentum-cms/core';
+import { access } from '@momentumcms/core';
 
 interface AppUser {
   id: string;
@@ -65,7 +65,7 @@ access: {
 ## Multi-Role Example
 
 ```typescript
-import { and, or, hasRole, isAuthenticated, isOwner } from '@momentum-cms/core';
+import { and, or, hasRole, isAuthenticated, isOwner } from '@momentumcms/core';
 
 export const Articles = defineCollection({
 	slug: 'articles',

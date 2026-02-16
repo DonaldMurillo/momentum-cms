@@ -7,7 +7,7 @@
  */
 
 import { twoFactor } from 'better-auth/plugins';
-import { defineCollection, text, checkbox } from '@momentum-cms/core';
+import { defineCollection, text, checkbox } from '@momentumcms/core';
 import type { MomentumAuthSubPlugin } from './sub-plugin.types';
 
 const AuthTwoFactorCollection = defineCollection({

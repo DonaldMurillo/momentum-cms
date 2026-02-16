@@ -1,4 +1,4 @@
-import { createWorkerFixture } from '@momentum-cms/e2e-fixtures';
+import { createWorkerFixture } from '@momentumcms/e2e-fixtures';
 import * as path from 'node:path';
 import { getFlavorConfig, TEST_CREDENTIALS, ADDITIONAL_TEST_USERS } from './worker-config';
 

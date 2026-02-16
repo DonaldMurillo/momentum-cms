@@ -29,8 +29,8 @@ import {
 	type CdkDragDrop,
 	moveItemInArray,
 } from '@angular/cdk/drag-drop';
-import type { Field, BlockConfig } from '@momentum-cms/core';
-import { humanizeFieldName } from '@momentum-cms/core';
+import type { Field, BlockConfig } from '@momentumcms/core';
+import { humanizeFieldName } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form/entity-form.types';
 import {
 	getFieldNodeState,

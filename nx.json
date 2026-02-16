@@ -42,7 +42,7 @@
 			"inputs": ["production", "^production"],
 			"options": {
 				"assets": ["{projectRoot}/*.md", { "input": ".", "glob": "LICENSE", "output": "." }],
-				"format": ["cjs"],
+				"format": ["cjs", "esm"],
 				"generatePackageJson": true
 			}
 		},
@@ -147,7 +147,8 @@
 		],
 		"version": {
 			"preVersionCommand": "npx nx run-many -t build",
-			"conventionalCommits": true
+			"conventionalCommits": true,
+			"manifestRootsToUpdate": ["{projectRoot}", "dist/{projectRoot}"]
 		},
 		"changelog": {
 			"projectChangelogs": true

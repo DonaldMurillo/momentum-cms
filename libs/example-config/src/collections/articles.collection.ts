@@ -1,4 +1,4 @@
-import { defineCollection, text, richText, relationship, allowAll } from '@momentum-cms/core';
+import { defineCollection, text, richText, relationship, allowAll } from '@momentumcms/core';
 import { Categories } from './categories.collection';
 
 /**

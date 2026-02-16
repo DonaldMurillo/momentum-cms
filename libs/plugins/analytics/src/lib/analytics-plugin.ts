@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { analyticsPlugin, MemoryAnalyticsAdapter } from '@momentum-cms/plugins/analytics';
+ * import { analyticsPlugin, MemoryAnalyticsAdapter } from '@momentumcms/plugins/analytics';
  *
  * export default defineMomentumConfig({
  *   plugins: [
@@ -25,7 +25,7 @@ import type {
 	PluginReadyContext,
 	PluginAdminRouteDescriptor,
 	MomentumAPI,
-} from '@momentum-cms/plugins/core';
+} from '@momentumcms/plugins/core';
 import type { AnalyticsConfig } from './analytics-config.types';
 import { EventStore } from './event-store';
 import { injectCollectionCollector } from './collectors/collection-collector';
@@ -53,7 +53,7 @@ export interface AnalyticsPluginInstance extends MomentumPlugin {
  * NOTE: Does NOT import `analytics-admin-routes.ts` because that file contains
  * a static `import('./dashboard/...')` that esbuild follows during the CJS build.
  * Instead, constructs routes inline using a variable-based import path.
- * For browser builds, use `@momentum-cms/plugins/analytics/admin-routes` directly.
+ * For browser builds, use `@momentumcms/plugins/analytics/admin-routes` directly.
  */
 function resolveAdminRoutes(
 	dashboardConfig: AnalyticsConfig['adminDashboard'],

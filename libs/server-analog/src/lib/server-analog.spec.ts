@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createMomentumHandler, type H3Event } from './server-analog';
-import { createInMemoryAdapter } from '@momentum-cms/server-core';
-import type { CollectionConfig, DatabaseAdapter, MomentumConfig } from '@momentum-cms/core';
+import { createInMemoryAdapter } from '@momentumcms/server-core';
+import type { CollectionConfig, DatabaseAdapter, MomentumConfig } from '@momentumcms/core';
 
 // Mock collections for testing
 const mockPostsCollection: CollectionConfig = {

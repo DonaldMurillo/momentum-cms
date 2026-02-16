@@ -1,4 +1,4 @@
-import { defineCollection, text, allowAll } from '@momentum-cms/core';
+import { defineCollection, text, allowAll } from '@momentumcms/core';
 
 /**
  * Simple collection for seeding E2E tests.

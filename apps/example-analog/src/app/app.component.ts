@@ -10,7 +10,7 @@ import { RouterOutlet } from '@angular/router';
 export class AppComponent {
 	constructor() {
 		afterNextRender(() => {
-			void import('@momentum-cms/plugins/analytics/client').then((m) => {
+			void import('@momentumcms/plugins/analytics/client').then((m) => {
 				m.createTracker({
 					endpoint: '/api/analytics/collect',
 					trackingRules: true,

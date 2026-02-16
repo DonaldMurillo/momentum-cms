@@ -18,8 +18,8 @@ import {
 	date,
 	select,
 	relationship,
-} from '@momentum-cms/core';
-import type { CollectionConfig, SelectOption } from '@momentum-cms/core';
+} from '@momentumcms/core';
+import type { CollectionConfig, SelectOption } from '@momentumcms/core';
 
 /**
  * Canonical list of auth roles, ordered by privilege (highest first).

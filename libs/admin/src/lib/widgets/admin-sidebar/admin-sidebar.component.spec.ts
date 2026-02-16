@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
-import type { CollectionConfig } from '@momentum-cms/core';
+import type { CollectionConfig } from '@momentumcms/core';
 import { AdminSidebarWidget } from './admin-sidebar.component';
 import type { AdminBranding, AdminUser } from '../widget.types';
 import { McmsThemeService } from '../../ui/theme/theme.service';

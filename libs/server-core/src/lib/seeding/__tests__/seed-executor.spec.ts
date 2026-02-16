@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { runSeeding, shouldRunSeeding, calculateChecksum } from '../seed-executor';
-import type { DatabaseAdapter, SeedingConfig } from '@momentum-cms/core';
+import type { DatabaseAdapter, SeedingConfig } from '@momentumcms/core';
 
 // Mock the logger module so seed-executor's createLogger returns a spy
 const mockLoggerInfo = vi.fn();
 const mockLoggerWarn = vi.fn();
-vi.mock('@momentum-cms/logger', () => ({
+vi.mock('@momentumcms/logger', () => ({
 	createLogger: () => ({
 		debug: vi.fn(),
 		info: mockLoggerInfo,

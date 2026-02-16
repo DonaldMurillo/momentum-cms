@@ -5,7 +5,7 @@ Momentum CMS has a plugin system for extending functionality with lifecycle hook
 ## Package
 
 ```bash
-npm install @momentum-cms/plugins
+npm install @momentumcms/plugins
 ```
 
 ## MomentumPlugin Interface
@@ -54,9 +54,9 @@ interface PluginReadyContext extends PluginContext {
 Add plugins to your Momentum config:
 
 ```typescript
-import { defineMomentumConfig } from '@momentum-cms/core';
-import { analyticsPlugin } from '@momentum-cms/plugins/analytics';
-import { otelPlugin } from '@momentum-cms/plugins/otel';
+import { defineMomentumConfig } from '@momentumcms/core';
+import { analyticsPlugin } from '@momentumcms/plugins/analytics';
+import { otelPlugin } from '@momentumcms/plugins/otel';
 
 export default defineMomentumConfig({
 	plugins: [
@@ -73,7 +73,7 @@ export default defineMomentumConfig({
 The event bus provides pub/sub for collection events:
 
 ```typescript
-import { eventBusPlugin } from '@momentum-cms/plugins/core';
+import { eventBusPlugin } from '@momentumcms/plugins/core';
 
 const events = eventBusPlugin();
 
@@ -154,7 +154,7 @@ const myPlugin: MomentumPlugin = {
 - Throw `PluginFatalError` to halt server startup:
 
 ```typescript
-import { PluginFatalError } from '@momentum-cms/plugins/core';
+import { PluginFatalError } from '@momentumcms/plugins/core';
 
 throw new PluginFatalError('my-plugin', 'Required service unavailable');
 ```

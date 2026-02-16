@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { isInlineEditableField, INLINE_FIELD_TYPES } from '../visual-editor.types';
-import type { FieldType } from '@momentum-cms/core';
+import type { FieldType } from '@momentumcms/core';
 
 describe('visual-editor.types', () => {
 	describe('INLINE_FIELD_TYPES', () => {

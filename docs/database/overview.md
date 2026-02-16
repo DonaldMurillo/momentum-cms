@@ -1,6 +1,6 @@
 # Database Overview
 
-Momentum CMS uses an adapter pattern for database access. The `@momentum-cms/db-drizzle` package provides a Drizzle ORM adapter supporting PostgreSQL and SQLite.
+Momentum CMS uses an adapter pattern for database access. The `@momentumcms/db-drizzle` package provides a Drizzle ORM adapter supporting PostgreSQL and SQLite.
 
 ## How It Works
 
@@ -13,7 +13,7 @@ Momentum CMS uses an adapter pattern for database access. The `@momentum-cms/db-
 
 ```typescript
 // momentum.config.ts
-import { postgresAdapter } from '@momentum-cms/db-drizzle';
+import { postgresAdapter } from '@momentumcms/db-drizzle';
 
 export default {
   db: postgresAdapter({
@@ -25,10 +25,10 @@ export default {
 
 ## Adapters
 
-| Adapter           | Package                    | Database   |
-| ----------------- | -------------------------- | ---------- |
-| `postgresAdapter` | `@momentum-cms/db-drizzle` | PostgreSQL |
-| `sqliteAdapter`   | `@momentum-cms/db-drizzle` | SQLite     |
+| Adapter           | Package                   | Database   |
+| ----------------- | ------------------------- | ---------- |
+| `postgresAdapter` | `@momentumcms/db-drizzle` | PostgreSQL |
+| `sqliteAdapter`   | `@momentumcms/db-drizzle` | SQLite     |
 
 ## Schema Generation
 

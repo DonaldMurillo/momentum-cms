@@ -27,15 +27,17 @@
 						"scripts": [],
 						"ssr": {
 							"entry": "src/server.ts"
-						}
+						},
+						"outputMode": "server",
+						"externalDependencies": [{{externalDependencies}}]
 					},
 					"configurations": {
 						"production": {
 							"budgets": [
 								{
 									"type": "initial",
-									"maximumWarning": "500kB",
-									"maximumError": "1MB"
+									"maximumWarning": "1MB",
+									"maximumError": "2MB"
 								},
 								{
 									"type": "anyComponentStyle",

@@ -1,14 +1,14 @@
-import { defineMomentumConfig } from '@momentum-cms/core';
-import { postgresAdapter } from '@momentum-cms/db-drizzle';
-import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
-import { momentumAuth } from '@momentum-cms/auth';
-import { localStorageAdapter } from '@momentum-cms/storage';
-import { eventBusPlugin } from '@momentum-cms/plugins/core';
-import { analyticsPlugin, MemoryAnalyticsAdapter } from '@momentum-cms/plugins/analytics';
+import { defineMomentumConfig } from '@momentumcms/core';
+import { postgresAdapter } from '@momentumcms/db-drizzle';
+import type { PostgresAdapterWithRaw } from '@momentumcms/db-drizzle';
+import { momentumAuth } from '@momentumcms/auth';
+import { localStorageAdapter } from '@momentumcms/storage';
+import { eventBusPlugin } from '@momentumcms/plugins/core';
+import { analyticsPlugin, MemoryAnalyticsAdapter } from '@momentumcms/plugins/analytics';
 import { join } from 'node:path';
-import { collections } from '@momentum-cms/example-config/collections';
-import { globals } from '@momentum-cms/example-config/globals';
-import { exampleSeedingConfig } from '@momentum-cms/example-config';
+import { collections } from '@momentumcms/example-config/collections';
+import { globals } from '@momentumcms/example-config/globals';
+import { exampleSeedingConfig } from '@momentumcms/example-config';
 
 /**
  * Database adapter — shared between Momentum and the auth plugin.
@@ -56,7 +56,7 @@ export const analytics = analyticsPlugin({
 /**
  * Momentum CMS configuration.
  *
- * Collections, globals, and seeding data are imported from @momentum-cms/example-config.
+ * Collections, globals, and seeding data are imported from @momentumcms/example-config.
  * DB adapter, auth, and plugins are configured here since they depend on runtime env vars.
  */
 const config = defineMomentumConfig({

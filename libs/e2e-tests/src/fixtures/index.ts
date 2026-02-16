@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { createAuthPageFixture, getWorkerAuthFilePath } from '@momentum-cms/e2e-fixtures';
+import { createAuthPageFixture, getWorkerAuthFilePath } from '@momentumcms/e2e-fixtures';
 import { workerTest } from './worker-server.fixture';
 import {
 	TEST_CREDENTIALS,
@@ -96,7 +96,7 @@ export {
 	ADDITIONAL_TEST_USERS,
 } from './worker-config';
 
-export type { TestUserCredentials } from '@momentum-cms/e2e-fixtures';
+export type { TestUserCredentials } from '@momentumcms/e2e-fixtures';
 
 // Accessibility helpers
 export { checkA11y } from './axe-helpers';

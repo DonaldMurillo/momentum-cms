@@ -13,7 +13,7 @@ import { signal } from '@angular/core';
 import { VisualBlockEditorComponent } from '../visual-block-editor.component';
 import { BlockWrapperComponent } from '../block-wrapper.component';
 import { BlockInserterComponent } from '../block-inserter.component';
-import type { BlockConfig, Field, BlocksField } from '@momentum-cms/core';
+import type { BlockConfig, Field, BlocksField } from '@momentumcms/core';
 import type { FieldNodeState } from '../../entity-form/entity-form.types';
 
 /** Create a mock BlocksField */

@@ -5,7 +5,7 @@ SQLite adapter configuration for Momentum CMS.
 ## Setup
 
 ```typescript
-import { sqliteAdapter } from '@momentum-cms/db-drizzle';
+import { sqliteAdapter } from '@momentumcms/db-drizzle';
 
 export default {
 	db: sqliteAdapter({

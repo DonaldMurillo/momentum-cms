@@ -1,4 +1,4 @@
-import { defineCollection, text, number, allowAll } from '@momentum-cms/core';
+import { defineCollection, text, number, allowAll } from '@momentumcms/core';
 
 /**
  * In-memory hook invocation log for E2E testing.

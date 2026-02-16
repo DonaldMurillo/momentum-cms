@@ -1,5 +1,5 @@
 import type { Provider } from '@angular/core';
-import { provideBlockComponents } from '@momentum-cms/ui';
+import { provideBlockComponents } from '@momentumcms/ui';
 import { HeroBlockComponent } from './blocks/hero-block.component';
 import { TextBlockComponent } from './blocks/text-block.component';
 import { FeatureBlockComponent } from './blocks/feature-block.component';

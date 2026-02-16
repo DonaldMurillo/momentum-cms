@@ -28,7 +28,7 @@ import {
   checkbox,
   select,
   relationship,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';
 
 export const <PascalName> = defineCollection({
   slug: '<kebab-name>',
@@ -113,5 +113,5 @@ import {
 	and,
 	or,
 	not,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';
 ```

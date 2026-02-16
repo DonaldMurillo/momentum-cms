@@ -17,14 +17,14 @@ import type {
 	SeedContext,
 	SeedingOptions,
 	RolledBackSeed,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';
 import {
 	createSeedHelpers,
 	SeedConflictError,
 	SeedRollbackError,
 	MIN_PASSWORD_LENGTH,
-} from '@momentum-cms/core';
-import { createLogger } from '@momentum-cms/logger';
+} from '@momentumcms/core';
+import { createLogger } from '@momentumcms/logger';
 import { createSeedTracker, type SeedTracker } from './seed-tracker';
 
 /**

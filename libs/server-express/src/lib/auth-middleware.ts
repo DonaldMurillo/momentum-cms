@@ -1,8 +1,8 @@
 import type { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import { Router as createRouter } from 'express';
 import { toNodeHandler } from 'better-auth/node';
-import type { MomentumAuth, MomentumAuthPlugin, OAuthProvidersConfig } from '@momentum-cms/auth';
-import { getEnabledOAuthProviders } from '@momentum-cms/auth';
+import type { MomentumAuth, MomentumAuthPlugin, OAuthProvidersConfig } from '@momentumcms/auth';
+import { getEnabledOAuthProviders } from '@momentumcms/auth';
 
 /**
  * Extended Request type with auth session data.
@@ -36,8 +36,8 @@ function headersToRecord(headers: Request['headers']): Record<string, string> {
  *
  * @example
  * ```typescript
- * import { createAuthMiddleware } from '@momentum-cms/server-express';
- * import { createMomentumAuth } from '@momentum-cms/auth';
+ * import { createAuthMiddleware } from '@momentumcms/server-express';
+ * import { createMomentumAuth } from '@momentumcms/auth';
  *
  * const auth = createMomentumAuth({ database });
  * app.use('/api', createAuthMiddleware(auth));
@@ -77,7 +77,7 @@ export function createAuthMiddleware(auth: MomentumAuth, options?: AuthMiddlewar
  *
  * @example
  * ```typescript
- * import { createProtectMiddleware } from '@momentum-cms/server-express';
+ * import { createProtectMiddleware } from '@momentumcms/server-express';
  *
  * // Protect all collection routes
  * app.use('/api/collections', createProtectMiddleware(auth), collectionsRouter);
@@ -119,7 +119,7 @@ export function createProtectMiddleware(
  *
  * @example
  * ```typescript
- * import { createSessionResolverMiddleware } from '@momentum-cms/server-express';
+ * import { createSessionResolverMiddleware } from '@momentumcms/server-express';
  *
  * app.use(createSessionResolverMiddleware(auth));
  * ```
@@ -162,8 +162,8 @@ export function createSessionResolverMiddleware(
  *
  * @example
  * ```typescript
- * import { createDeferredSessionResolver } from '@momentum-cms/server-express';
- * import { momentumAuth } from '@momentum-cms/auth';
+ * import { createDeferredSessionResolver } from '@momentumcms/server-express';
+ * import { momentumAuth } from '@momentumcms/auth';
  *
  * const authPlugin = momentumAuth({ ... });
  * app.use(createDeferredSessionResolver(authPlugin));

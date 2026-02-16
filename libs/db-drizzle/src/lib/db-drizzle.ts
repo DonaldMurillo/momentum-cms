@@ -12,8 +12,8 @@ import type {
 	VersionQueryOptions,
 	VersionCountOptions,
 	CreateVersionOptions,
-} from '@momentum-cms/core';
-import { flattenDataFields, getSoftDeleteField } from '@momentum-cms/core';
+} from '@momentumcms/core';
+import { flattenDataFields, getSoftDeleteField } from '@momentumcms/core';
 
 /**
  * Type guard to check if a value is a record object.

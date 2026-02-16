@@ -8,6 +8,13 @@
 		<link rel="icon" type="image/x-icon" href="favicon.ico" />
 	</head>
 	<body>
+		<script>
+			try {
+				var t = localStorage.getItem('mcms-theme');
+				if (t === 'dark' || ((!t || t === 'system') && matchMedia('(prefers-color-scheme:dark)').matches))
+					document.documentElement.classList.add('dark');
+			} catch (e) {}
+		</script>
 		<app-root></app-root>
 	</body>
 </html>

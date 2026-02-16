@@ -1,4 +1,4 @@
-import { stopMailpit } from '@momentum-cms/e2e-fixtures';
+import { stopMailpit } from '@momentumcms/e2e-fixtures';
 
 /**
  * Global teardown — runs once after all workers finish.

@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
-import { McmsFormField, Button, Progress, DialogService } from '@momentum-cms/ui';
-import type { ValidationError } from '@momentum-cms/ui';
-import { humanizeFieldName } from '@momentum-cms/core';
-import type { Field, UploadField } from '@momentum-cms/core';
+import { McmsFormField, Button, Progress, DialogService } from '@momentumcms/ui';
+import type { ValidationError } from '@momentumcms/ui';
+import { humanizeFieldName } from '@momentumcms/core';
+import type { Field, UploadField } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form.types';
 import { getFieldNodeState } from '../entity-form.types';
 import { UploadService, type UploadProgress } from '../../../services/upload.service';

@@ -7,8 +7,8 @@
  */
 
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import type { BlockConfig, Field } from '@momentum-cms/core';
-import { injectMomentumAPI } from '@momentum-cms/admin';
+import type { BlockConfig, Field } from '@momentumcms/core';
+import { injectMomentumAPI } from '@momentumcms/admin';
 import {
 	Button,
 	Dialog,
@@ -21,7 +21,7 @@ import {
 	Input,
 	Textarea,
 	McmsFormField,
-} from '@momentum-cms/ui';
+} from '@momentumcms/ui';
 
 /** Data passed to the dialog via DIALOG_DATA. */
 export interface InlineBlockEditData {

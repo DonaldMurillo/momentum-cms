@@ -1,5 +1,5 @@
 import { defineEventHandler } from 'h3';
-import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
+import type { PostgresAdapterWithRaw } from '@momentumcms/db-drizzle';
 import { ensureInitialized } from '../../../utils/momentum-init';
 import momentumConfig from '../../../../momentum.config';
 

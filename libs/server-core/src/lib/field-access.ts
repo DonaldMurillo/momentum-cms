@@ -7,8 +7,8 @@
 
 /* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions needed to narrow filtered[field.name] from unknown to Record/array */
 
-import type { Field, FieldAccessConfig, RequestContext } from '@momentum-cms/core';
-import { flattenDataFields } from '@momentum-cms/core';
+import type { Field, FieldAccessConfig, RequestContext } from '@momentumcms/core';
+import { flattenDataFields } from '@momentumcms/core';
 
 interface FieldAccessArgs {
 	req: RequestContext;

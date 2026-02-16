@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import { Component, ChangeDetectionStrategy } from '@angular/core';
-import { injectMomentumAPI } from '@momentum-cms/admin';
+import { injectMomentumAPI } from '@momentumcms/admin';
 
 @Component({
 	selector: 'app-experiments-page',

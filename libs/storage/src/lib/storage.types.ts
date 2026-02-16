@@ -4,7 +4,7 @@
  */
 
 // Re-export core interfaces
-export type { StorageAdapter, UploadedFile, StoredFile, UploadOptions } from '@momentum-cms/core';
+export type { StorageAdapter, UploadedFile, StoredFile, UploadOptions } from '@momentumcms/core';
 
 /**
  * Options for local filesystem storage adapter.

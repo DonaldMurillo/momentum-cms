@@ -5,7 +5,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
-import type { StorageAdapter, UploadedFile, StoredFile, UploadOptions } from '@momentum-cms/core';
+import type { StorageAdapter, UploadedFile, StoredFile, UploadOptions } from '@momentumcms/core';
 import type { S3StorageOptions } from './storage.types';
 
 // Dynamic import for AWS SDK to avoid bundling issues

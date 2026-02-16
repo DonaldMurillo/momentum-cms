@@ -5,7 +5,7 @@
 ## Usage
 
 ```typescript
-import { McmsThemeService } from '@momentum-cms/admin';
+import { McmsThemeService } from '@momentumcms/admin';
 
 @Component({...})
 export class MyComponent {

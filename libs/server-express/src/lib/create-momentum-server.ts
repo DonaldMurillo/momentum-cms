@@ -17,14 +17,14 @@
  */
 
 import express, { type Express, type RequestHandler } from 'express';
-import type { MomentumConfig, ResolvedMomentumConfig } from '@momentum-cms/core';
+import type { MomentumConfig, ResolvedMomentumConfig } from '@momentumcms/core';
 import type { Provider } from '@angular/core';
 import {
 	getMomentumAPI,
 	registerWebhookHooks,
 	startPublishScheduler,
 	type PublishSchedulerHandle,
-} from '@momentum-cms/server-core';
+} from '@momentumcms/server-core';
 import {
 	initializeMomentum,
 	createHealthMiddleware,
@@ -33,7 +33,7 @@ import {
 import { createDeferredSessionResolver } from './auth-middleware';
 import { getPluginProviders } from './plugin-middleware-registry';
 import { momentumApiMiddleware, createOpenAPIMiddleware } from './server-express';
-import type { MomentumAuthPlugin } from '@momentum-cms/auth';
+import type { MomentumAuthPlugin } from '@momentumcms/auth';
 
 /**
  * Options for creating a consolidated Momentum CMS Express server.
@@ -83,7 +83,7 @@ export interface CreateMomentumServerOptions {
 	 * Factory to create SSR providers for the Momentum API.
 	 * Receives the API singleton and user context; should return Angular Providers.
 	 *
-	 * Typically: `(api, ctx) => provideMomentumAPI(api, ctx)` from `@momentum-cms/admin`.
+	 * Typically: `(api, ctx) => provideMomentumAPI(api, ctx)` from `@momentumcms/admin`.
 	 * If not provided, `getSsrProviders()` returns only plugin providers.
 	 */
 	providerFactory?: (
@@ -136,7 +136,7 @@ export interface MomentumServer {
  *
  * @example
  * ```typescript
- * import { createMomentumServer } from '@momentum-cms/server-express';
+ * import { createMomentumServer } from '@momentumcms/server-express';
  * import config from './momentum.config';
  *
  * const server = await createMomentumServer({

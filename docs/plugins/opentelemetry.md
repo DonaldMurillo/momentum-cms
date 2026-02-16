@@ -9,7 +9,7 @@ npm install @opentelemetry/api
 ```
 
 ```typescript
-import { otelPlugin } from '@momentum-cms/plugins/otel';
+import { otelPlugin } from '@momentumcms/plugins/otel';
 
 export default defineMomentumConfig({
 	plugins: [

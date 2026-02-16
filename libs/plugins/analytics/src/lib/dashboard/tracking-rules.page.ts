@@ -31,8 +31,8 @@ import {
 	DropdownTrigger,
 	DropdownMenuItem,
 	DropdownSeparator,
-} from '@momentum-cms/ui';
-import { ConfirmationService } from '@momentum-cms/ui';
+} from '@momentumcms/ui';
+import { ConfirmationService } from '@momentumcms/ui';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
 	heroCursorArrowRays,

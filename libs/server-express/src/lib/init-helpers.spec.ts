@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import { initializeMomentum, createHealthMiddleware } from './init-helpers';
-import type { MomentumConfig, CollectionConfig, DatabaseAdapter } from '@momentum-cms/core';
-import type { SeedingConfig } from '@momentum-cms/core';
+import type { MomentumConfig, CollectionConfig, DatabaseAdapter } from '@momentumcms/core';
+import type { SeedingConfig } from '@momentumcms/core';
 
 // Mock server-core module
-vi.mock('@momentum-cms/server-core', () => ({
+vi.mock('@momentumcms/server-core', () => ({
 	initializeMomentumAPI: vi.fn(),
 	runSeeding: vi.fn().mockResolvedValue({
 		created: 2,
@@ -20,7 +20,7 @@ vi.mock('@momentum-cms/server-core', () => ({
 
 // Mock the logger module
 const mockLoggerInfo = vi.fn();
-vi.mock('@momentum-cms/logger', () => ({
+vi.mock('@momentumcms/logger', () => ({
 	createLogger: () => ({
 		debug: vi.fn(),
 		info: mockLoggerInfo,
@@ -33,7 +33,7 @@ vi.mock('@momentum-cms/logger', () => ({
 }));
 
 // Mock the plugins module
-vi.mock('@momentum-cms/plugins', () => ({
+vi.mock('@momentumcms/plugins', () => ({
 	PluginRunner: class MockPluginRunner {
 		runInit = vi.fn().mockResolvedValue(undefined);
 		runReady = vi.fn().mockResolvedValue(undefined);
@@ -42,7 +42,7 @@ vi.mock('@momentum-cms/plugins', () => ({
 }));
 
 // Import mocked functions for assertions
-import { initializeMomentumAPI, runSeeding, shouldRunSeeding } from '@momentum-cms/server-core';
+import { initializeMomentumAPI, runSeeding, shouldRunSeeding } from '@momentumcms/server-core';
 
 // Mock collection for testing
 const mockCollection: CollectionConfig = {

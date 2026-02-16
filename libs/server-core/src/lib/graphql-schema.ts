@@ -27,13 +27,13 @@ import {
 	type GraphQLInputFieldConfigMap,
 } from 'graphql';
 import { GraphQLJSON } from './graphql-scalars';
-import type { CollectionConfig, UserContext } from '@momentum-cms/core';
+import type { CollectionConfig, UserContext } from '@momentumcms/core';
 import {
 	flattenDataFields,
 	type Field,
 	type SelectField,
 	type BlocksField,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';
 import { getMomentumAPI } from './momentum-api';
 
 /** Context passed to every GraphQL resolver. */

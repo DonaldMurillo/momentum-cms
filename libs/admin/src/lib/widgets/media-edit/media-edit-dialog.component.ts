@@ -14,7 +14,7 @@ import {
 	Label,
 	Spinner,
 	Alert,
-} from '@momentum-cms/ui';
+} from '@momentumcms/ui';
 import { injectMomentumAPI } from '../../services/momentum-api.service';
 import { MediaPreviewComponent } from '../media-preview/media-preview.component';
 

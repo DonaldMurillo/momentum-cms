@@ -2,8 +2,8 @@ import { mergeApplicationConfig, ApplicationConfig } from '@angular/core';
 import { provideServerRendering, withRoutes } from '@angular/ssr';
 import { appConfig } from './app.config';
 import { serverRoutes } from './app.routes.server';
-import { getMomentumAPI, isMomentumAPIInitialized } from '@momentum-cms/server-core';
-import { MOMENTUM_API, MOMENTUM_API_CONTEXT } from '@momentum-cms/admin';
+import { getMomentumAPI, isMomentumAPIInitialized } from '@momentumcms/server-core';
+import { MOMENTUM_API, MOMENTUM_API_CONTEXT } from '@momentumcms/admin';
 
 const serverConfig: ApplicationConfig = {
 	providers: [

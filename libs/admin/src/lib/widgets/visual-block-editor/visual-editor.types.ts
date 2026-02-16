@@ -5,7 +5,7 @@
  */
 
 import type { WritableSignal } from '@angular/core';
-import type { FieldType } from '@momentum-cms/core';
+import type { FieldType } from '@momentumcms/core';
 
 /** Shape of a block item in the stored data */
 export interface BlockItem {

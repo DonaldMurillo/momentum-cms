@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions needed to narrow Field union to NumberField after type guard */
 
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { McmsFormField, Input } from '@momentum-cms/ui';
-import type { ValidationError } from '@momentum-cms/ui';
-import { humanizeFieldName } from '@momentum-cms/core';
-import type { Field, NumberField } from '@momentum-cms/core';
+import { McmsFormField, Input } from '@momentumcms/ui';
+import type { ValidationError } from '@momentumcms/ui';
+import { humanizeFieldName } from '@momentumcms/core';
+import type { Field, NumberField } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form.types';
 import { getFieldNodeState } from '../entity-form.types';
 

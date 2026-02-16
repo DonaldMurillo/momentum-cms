@@ -5,7 +5,7 @@
  * Mirrors the pattern from registerWebhookHooks() in webhooks.ts.
  */
 
-import type { CollectionConfig, HookFunction } from '@momentum-cms/core';
+import type { CollectionConfig, HookFunction } from '@momentumcms/core';
 import type { CollectionEvent, CollectionEventType } from './plugin.types';
 
 /**

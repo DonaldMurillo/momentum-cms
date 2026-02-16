@@ -11,10 +11,10 @@ import {
 	signal,
 	viewChild,
 } from '@angular/core';
-import { McmsFormField } from '@momentum-cms/ui';
-import type { ValidationError } from '@momentum-cms/ui';
-import { humanizeFieldName } from '@momentum-cms/core';
-import type { Field } from '@momentum-cms/core';
+import { McmsFormField } from '@momentumcms/ui';
+import type { ValidationError } from '@momentumcms/ui';
+import { humanizeFieldName } from '@momentumcms/core';
+import type { Field } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form.types';
 import { getFieldNodeState } from '../entity-form.types';
 import { Editor } from '@tiptap/core';

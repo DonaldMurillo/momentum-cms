@@ -67,15 +67,15 @@ export async function createProject(options: CLIOptions): Promise<void> {
 		databaseType: database,
 		dbImport:
 			database === 'postgres'
-				? "import { postgresAdapter } from '@momentum-cms/db-drizzle';"
-				: "import { sqliteAdapter } from '@momentum-cms/db-drizzle';",
+				? "import { postgresAdapter } from '@momentumcms/db-drizzle';"
+				: "import { sqliteAdapter } from '@momentumcms/db-drizzle';",
 		dbAdapter:
 			database === 'postgres'
 				? `postgresAdapter({\n\t\tconnectionString: process.env['DATABASE_URL'] ?? 'postgresql://postgres:postgres@localhost:5432/momentum',\n\t})`
 				: `sqliteAdapter({\n\t\tfilename: process.env['DATABASE_PATH'] ?? './data/momentum.db',\n\t})`,
 		dbPoolSetup:
 			database === 'postgres'
-				? `import type { PostgresAdapterWithRaw } from '@momentum-cms/db-drizzle';
+				? `import type { PostgresAdapterWithRaw } from '@momentumcms/db-drizzle';
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- PostgresAdapter implements PostgresAdapterWithRaw
 const pool = (dbAdapter as PostgresAdapterWithRaw).getPool();`
@@ -83,14 +83,15 @@ const pool = (dbAdapter as PostgresAdapterWithRaw).getPool();`
 		authDbConfig:
 			database === 'postgres'
 				? "db: { type: 'postgres', pool },"
-				: "db: { type: 'sqlite', database: dbAdapter.getDatabase() },",
+				: "db: { type: 'sqlite', database: dbAdapter.getRawDatabase() },",
 		dbPackage: database === 'postgres' ? '"pg": "^8.18.0"' : '"better-sqlite3": "^12.6.0"',
 		dbDevPackage: database === 'postgres' ? '' : '"@types/better-sqlite3": "^7.6.13",',
 		envDbVar:
 			database === 'postgres'
 				? 'DATABASE_URL=postgresql://postgres:postgres@localhost:5432/momentum'
 				: 'DATABASE_PATH=./data/momentum.db',
-		defaultPort: flavor === 'angular' ? '4000' : '4200',
+		defaultPort: '4200',
+		externalDependencies: database === 'postgres' ? '"pg", "pg-native"' : '"better-sqlite3"',
 	};
 
 	console.log();
@@ -129,5 +130,7 @@ const pool = (dbAdapter as PostgresAdapterWithRaw).getPool();`
 	console.log(pc.dim('  npm run dev'));
 	console.log();
 	console.log(pc.dim('  Open http://localhost:' + vars.defaultPort + '/admin'));
+	console.log();
+	console.log(pc.dim('  Docs: https://github.com/DonaldMurillo/momentum-cms#readme'));
 	console.log();
 }

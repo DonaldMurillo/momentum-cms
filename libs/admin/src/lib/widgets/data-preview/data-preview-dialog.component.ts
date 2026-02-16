@@ -10,8 +10,8 @@ import {
 	DialogRef,
 	DIALOG_DATA,
 	FieldDisplay,
-} from '@momentum-cms/ui';
-import type { FieldDisplayType, FieldDisplayFieldMeta } from '@momentum-cms/ui';
+} from '@momentumcms/ui';
+import type { FieldDisplayType, FieldDisplayFieldMeta } from '@momentumcms/ui';
 
 /** Data passed to the DataPreviewDialog. */
 export interface DataPreviewDialogData {

@@ -5,7 +5,7 @@
 ## Basic Usage
 
 ```typescript
-import { injectMomentumAPI } from '@momentum-cms/admin';
+import { injectMomentumAPI } from '@momentumcms/admin';
 
 @Component({...})
 export class PostListComponent {
@@ -125,7 +125,7 @@ Cache entries are consumed on first browser access (single-use).
 For full IntelliSense across all collections:
 
 ```typescript
-import { injectTypedMomentumAPI } from '@momentum-cms/admin';
+import { injectTypedMomentumAPI } from '@momentumcms/admin';
 
 interface MyCollections {
   posts: { doc: Post; where: PostWhereClause };
@@ -147,7 +147,7 @@ export class MyComponent {
 In your `server.ts`, provide the server-side API:
 
 ```typescript
-import { provideMomentumAPI } from '@momentum-cms/admin';
+import { provideMomentumAPI } from '@momentumcms/admin';
 
 // In your Angular SSR bootstrap
 providers: [provideMomentumAPI(momentumApi, context)];

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { injectCollectionCollector } from '../collectors/collection-collector';
 import type { AnalyticsEvent } from '../analytics-event.types';
-import type { CollectionConfig, HookFunction } from '@momentum-cms/core';
+import type { CollectionConfig, HookFunction } from '@momentumcms/core';
 
 function makeCollection(slug: string, hooks?: CollectionConfig['hooks']): CollectionConfig {
 	return {

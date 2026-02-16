@@ -12,10 +12,10 @@ export default defineConfig({
 		exclude: ['**/node_modules/**'],
 		passWithNoTests: true,
 		alias: {
-			'@momentum-cms/core': resolve(__dirname, '../../libs/core/src/index.ts'),
-			'@momentum-cms/server-core': resolve(__dirname, '../../libs/server-core/src/index.ts'),
-			'@momentum-cms/admin': resolve(__dirname, './src/index.ts'),
-			'@momentum-cms/ui': resolve(__dirname, '../../libs/ui/src/index.ts'),
+			'@momentumcms/core': resolve(__dirname, '../../libs/core/src/index.ts'),
+			'@momentumcms/server-core': resolve(__dirname, '../../libs/server-core/src/index.ts'),
+			'@momentumcms/admin': resolve(__dirname, './src/index.ts'),
+			'@momentumcms/ui': resolve(__dirname, '../../libs/ui/src/index.ts'),
 		},
 	},
 });

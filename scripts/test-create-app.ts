@@ -4,12 +4,16 @@
  *
  * Tests the full publish-and-scaffold pipeline:
  * 1. Start local Verdaccio registry on ephemeral port
- * 2. Build all publishable @momentum-cms/* packages
+ * 2. Build all publishable @momentumcms/* packages
  * 3. Publish them to local Verdaccio
  * 4. Build create-momentum-app CLI
  * 5. Run CLI for each flavor (angular + analog) × database (postgres + sqlite)
- * 6. Verify generated projects: files, npm install, tsc --noEmit
- * 7. Cleanup
+ * 6. Verify generated projects: files, npm install
+ * 7. Start dev server briefly to verify dependency optimization (catches missing peer deps)
+ * 8. Run tsc --noEmit
+ * 9. Build the generated project (ng build / vite build)
+ * 10. Start production server and verify health + SSR endpoints (SQLite only)
+ * 9. Cleanup
  *
  * Usage:
  *   npx tsx scripts/test-create-app.ts              # Full test (all flavors)
@@ -22,13 +26,13 @@ import * as net from 'net';
 import * as path from 'path';
 import * as fs from 'fs';
 import { fileURLToPath } from 'url';
+import { chromium, type Browser } from 'playwright';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 
 const LOG_PREFIX = '[test-create-app]';
-const VERDACCIO_CONFIG = path.join(ROOT_DIR, '.verdaccio', 'config.yml');
 
 // Libraries to publish (order matters - dependencies first)
 const PUBLISHABLE_LIBS = [
@@ -89,18 +93,53 @@ async function findFreePort(): Promise<number> {
 }
 
 /**
+ * Create a temporary Verdaccio config file that uses the given storage directory.
+ * This ensures each test run gets a fresh, isolated registry.
+ */
+function createVerdaccioConfig(storageDir: string, configDir: string): string {
+	const configPath = path.join(configDir, 'verdaccio-config.yml');
+	const content = `storage: ${storageDir}
+uplinks:
+  npmjs:
+    url: https://registry.npmjs.org/
+    maxage: 60m
+packages:
+  '@momentumcms/*':
+    access: $all
+    publish: $all
+    unpublish: $all
+  'create-momentum-app':
+    access: $all
+    publish: $all
+    unpublish: $all
+  '**':
+    access: $all
+    publish: $all
+    unpublish: $all
+    proxy: npmjs
+log:
+  type: stdout
+  format: pretty
+  level: warn
+publish:
+  allow_offline: true
+`;
+	fs.writeFileSync(configPath, content);
+	return configPath;
+}
+
+/**
  * Start Verdaccio on a given port and wait for it to be ready.
  * Uses shell: true because npx requires shell resolution on all platforms.
  */
-function startVerdaccio(port: number, storageDir: string): ChildProcess {
+function startVerdaccio(port: number, configPath: string): ChildProcess {
 	console.log(`${LOG_PREFIX} Starting Verdaccio on port ${port}...`);
 
 	const proc = spawn(
 		'npx',
-		['verdaccio', '--config', VERDACCIO_CONFIG, '--listen', `http://0.0.0.0:${port}`],
+		['verdaccio', '--config', configPath, '--listen', `http://0.0.0.0:${port}`],
 		{
 			cwd: ROOT_DIR,
-			env: { ...process.env, VERDACCIO_STORAGE_PATH: storageDir },
 			stdio: ['ignore', 'pipe', 'pipe'],
 			shell: true,
 			detached: true,
@@ -188,59 +227,108 @@ function resolveDistPath(lib: string): string {
 }
 
 /**
+ * Create a temporary .npmrc file that routes @momentumcms packages to local Verdaccio
+ * while letting all other packages resolve from the real npm registry.
+ * Also includes a fake auth token required by Verdaccio for publishing.
+ */
+function createLocalNpmrc(port: number, dir: string): string {
+	const npmrcPath = path.join(dir, '.npmrc');
+	const content = [
+		`@momentumcms:registry=http://localhost:${port}`,
+		`//localhost:${port}/:_authToken=test-token`,
+		'',
+	].join('\n');
+	fs.writeFileSync(npmrcPath, content);
+	return npmrcPath;
+}
+
+/**
  * Publish a single library to local registry using execFileSync (safe, no shell injection)
  */
-function publishLib(lib: string, registryUrl: string): void {
+function publishLib(lib: string, registryUrl: string, npmrcPath: string): void {
 	const distPath = resolveDistPath(lib);
 	if (!fs.existsSync(distPath)) {
 		throw new Error(`Dist path not found for ${lib}: ${distPath}`);
 	}
 
 	console.log(`${LOG_PREFIX}   Publishing ${lib}...`);
-	execFileSync('npm', ['publish', '--registry', registryUrl, '--access', 'public'], {
-		cwd: distPath,
-		stdio: 'pipe',
-	});
+	execFileSync(
+		'npm',
+		['publish', '--registry', registryUrl, '--access', 'public', '--userconfig', npmrcPath],
+		{
+			cwd: distPath,
+			stdio: 'pipe',
+		},
+	);
+}
+
+const TEST_VERSION = '0.0.1-test.0';
+
+/**
+ * Normalize all dist package.json versions to a consistent test version.
+ * This is necessary because nx release may have updated some dist versions
+ * while others remain at source version, causing semver range mismatches.
+ */
+function normalizeDistVersions(): void {
+	console.log(`${LOG_PREFIX} Normalizing dist package versions to ${TEST_VERSION}...`);
+
+	// Normalize all lib dist packages
+	for (const lib of PUBLISHABLE_LIBS) {
+		const distPath = resolveDistPath(lib);
+		const pkgPath = path.join(distPath, 'package.json');
+		if (!fs.existsSync(pkgPath)) continue;
+
+		const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+		pkg.version = TEST_VERSION;
+
+		// Also update any @momentumcms/* dependency versions to match
+		for (const depType of ['dependencies', 'peerDependencies', 'devDependencies'] as const) {
+			const deps = pkg[depType];
+			if (!deps) continue;
+			for (const [name, version] of Object.entries(deps)) {
+				if (name.startsWith('@momentumcms/') && typeof version === 'string') {
+					deps[name] = TEST_VERSION;
+				}
+			}
+		}
+
+		fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+	}
+
+	// Normalize the CLI dist package
+	const cliDistPkg = path.join(ROOT_DIR, 'dist', 'apps', 'create-momentum-app', 'package.json');
+	if (fs.existsSync(cliDistPkg)) {
+		const pkg = JSON.parse(fs.readFileSync(cliDistPkg, 'utf-8'));
+		pkg.version = TEST_VERSION;
+		fs.writeFileSync(cliDistPkg, JSON.stringify(pkg, null, 2) + '\n');
+	}
 }
 
 /**
  * Publish all libraries to local registry
  */
-function publishAllLibs(registryUrl: string): void {
+function publishAllLibs(registryUrl: string, npmrcPath: string): void {
 	console.log(`${LOG_PREFIX} Publishing all libraries to local Verdaccio...`);
 	for (const lib of PUBLISHABLE_LIBS) {
-		publishLib(lib, registryUrl);
+		publishLib(lib, registryUrl, npmrcPath);
 	}
 	console.log(`${LOG_PREFIX} All libraries published successfully.`);
 }
 
 /**
- * Run create-momentum-app to scaffold a project using execFileSync (safe, no shell)
+ * Run create-momentum-app to scaffold a project using execFileSync (safe, no shell).
+ * Always scaffolds without install — install is handled separately via installDeps.
  */
 function scaffoldProject(
 	projectName: string,
 	flavor: Flavor,
 	database: Database,
 	targetDir: string,
-	registryUrl: string,
-	install: boolean,
 ): void {
 	console.log(`${LOG_PREFIX} Scaffolding ${projectName} (${flavor} + ${database})...`);
 
 	const cliPath = path.join(ROOT_DIR, 'dist', 'apps', 'create-momentum-app', 'index.cjs');
-	const args = [
-		cliPath,
-		projectName,
-		'--flavor',
-		flavor,
-		'--database',
-		database,
-		'--registry',
-		registryUrl,
-	];
-	if (!install) {
-		args.push('--no-install');
-	}
+	const args = [cliPath, projectName, '--flavor', flavor, '--database', database, '--no-install'];
 
 	execFileSync('node', args, {
 		cwd: targetDir,
@@ -263,7 +351,11 @@ function verifyProject(projectDir: string, flavor: Flavor, database: Database): 
 			'src/momentum.config.ts',
 			'src/app/app.ts',
 			'src/app/app.config.ts',
+			'src/app/app.config.server.ts',
 			'src/app/app.routes.ts',
+			'src/app/app.routes.server.ts',
+			'src/app/pages/welcome.ts',
+			'src/main.server.ts',
 			'src/collections/posts.ts',
 		],
 		analog: [
@@ -293,7 +385,7 @@ function verifyProject(projectDir: string, flavor: Flavor, database: Database): 
 	// Verify package.json has correct @momentum-cms dependencies
 	const pkgJson = JSON.parse(fs.readFileSync(path.join(projectDir, 'package.json'), 'utf-8'));
 	const deps = { ...pkgJson.dependencies, ...pkgJson.devDependencies };
-	const requiredDeps = ['@momentum-cms/core', '@momentum-cms/db-drizzle', '@momentum-cms/auth'];
+	const requiredDeps = ['@momentumcms/core', '@momentumcms/db-drizzle', '@momentumcms/auth'];
 	const missingDeps: string[] = [];
 	for (const dep of requiredDeps) {
 		if (!deps[dep]) {
@@ -348,11 +440,21 @@ function verifyProject(projectDir: string, flavor: Flavor, database: Database): 
 }
 
 /**
- * Run npm install in the generated project against local registry
+ * Run npm install in the generated project against local registry.
+ * Writes a .npmrc in the project directory that routes @momentumcms packages
+ * to local Verdaccio while all other packages use the real npm registry.
  */
-function installDeps(projectDir: string, registryUrl: string): void {
+function installDeps(projectDir: string, port: number): void {
 	console.log(`${LOG_PREFIX} Running npm install in ${path.basename(projectDir)}...`);
-	execFileSync('npm', ['install', '--registry', registryUrl], {
+
+	// Write project-level .npmrc to route scoped packages to Verdaccio
+	const projectNpmrc = path.join(projectDir, '.npmrc');
+	fs.writeFileSync(
+		projectNpmrc,
+		`@momentumcms:registry=http://localhost:${port}\n//localhost:${port}/:_authToken=test-token\n`,
+	);
+
+	execFileSync('npm', ['install'], {
 		cwd: projectDir,
 		stdio: 'inherit',
 		timeout: 120000,
@@ -371,6 +473,315 @@ function verifyTypeScript(projectDir: string): void {
 		timeout: 60000,
 	});
 	console.log(`${LOG_PREFIX} TypeScript compilation succeeded.`);
+}
+
+/**
+ * Start the dev server briefly to verify esbuild dependency optimization passes.
+ * This catches missing peer dependencies (like @angular/aria) that production
+ * builds miss because they only bundle actually-imported code, while the dev
+ * server eagerly pre-bundles ALL packages in node_modules.
+ */
+async function verifyDevServer(projectDir: string, flavor: Flavor): Promise<void> {
+	console.log(`${LOG_PREFIX} Starting dev server to verify dependency optimization...`);
+
+	const port = await findFreePort();
+	const cmd = flavor === 'angular' ? 'npx' : 'npx';
+	const args =
+		flavor === 'angular'
+			? ['ng', 'serve', '--port', String(port)]
+			: ['vite', '--port', String(port)];
+
+	const proc = spawn(cmd, args, {
+		cwd: projectDir,
+		stdio: ['ignore', 'pipe', 'pipe'],
+		shell: true,
+		detached: true,
+		env: { ...process.env, NODE_ENV: 'development' },
+	});
+
+	let output = '';
+	proc.stdout?.on('data', (data: Buffer) => {
+		output += data.toString();
+	});
+	proc.stderr?.on('data', (data: Buffer) => {
+		output += data.toString();
+	});
+
+	try {
+		const timeoutMs = 60000;
+		const start = Date.now();
+
+		await new Promise<void>((resolve, reject) => {
+			const checkInterval = setInterval(() => {
+				// Check for successful compilation indicators
+				if (
+					output.includes('Application bundle generation complete') ||
+					output.includes('Local:') ||
+					output.includes('ready in')
+				) {
+					clearInterval(checkInterval);
+					resolve();
+				}
+				// Check for esbuild errors (missing dependencies)
+				if (output.includes('Could not resolve') || output.includes('ERROR')) {
+					clearInterval(checkInterval);
+					reject(new Error(`Dev server dependency optimization failed:\n${output}`));
+				}
+				if (Date.now() - start > timeoutMs) {
+					clearInterval(checkInterval);
+					reject(new Error(`Dev server did not start within ${timeoutMs}ms:\n${output}`));
+				}
+			}, 500);
+		});
+
+		console.log(`${LOG_PREFIX} Dev server started successfully (dependency optimization passed).`);
+	} finally {
+		killProcess(proc);
+		// Give it a moment to shut down
+		await new Promise((r) => setTimeout(r, 1000));
+	}
+}
+
+/**
+ * Run `npm run generate-types` and verify the output file is created
+ * with expected content (collection interfaces).
+ */
+function verifyGenerateTypes(projectDir: string): void {
+	console.log(`${LOG_PREFIX} Running npm run generate-types...`);
+	execFileSync('npm', ['run', 'generate-types'], {
+		cwd: projectDir,
+		stdio: 'inherit',
+		timeout: 30000,
+	});
+
+	const outputPath = path.join(projectDir, 'src', 'types', 'momentum.generated.ts');
+	if (!fs.existsSync(outputPath)) {
+		throw new Error(`generate-types did not create output file: ${outputPath}`);
+	}
+
+	const content = fs.readFileSync(outputPath, 'utf-8');
+	if (!content.includes('Posts')) {
+		throw new Error(
+			'generate-types output does not contain expected "Posts" interface.\n' +
+				`Content:\n${content.substring(0, 500)}`,
+		);
+	}
+
+	console.log(`${LOG_PREFIX} generate-types verified: ${outputPath}`);
+}
+
+/**
+ * Build the scaffolded project using its own build script.
+ * Angular: ng build, Analog: analog build
+ */
+function buildProject(projectDir: string): void {
+	console.log(`${LOG_PREFIX} Running npm run build in ${path.basename(projectDir)}...`);
+	execFileSync('npm', ['run', 'build'], {
+		cwd: projectDir,
+		stdio: 'inherit',
+		timeout: 300000, // 5 min — Angular SSR builds can be slow
+	});
+	console.log(`${LOG_PREFIX} Build succeeded.`);
+}
+
+/**
+ * Start the built server and verify health + admin endpoints respond.
+ * Only runs for SQLite projects (postgres needs an external DB).
+ */
+async function startAndVerifyServer(
+	projectDir: string,
+	flavor: Flavor,
+	projectName: string,
+	database: Database,
+): Promise<void> {
+	if (database !== 'sqlite') {
+		console.log(
+			`${LOG_PREFIX} Skipping server verification for ${database} (requires external DB)`,
+		);
+		return;
+	}
+
+	const port = await findFreePort();
+
+	// Determine the server entry point based on flavor
+	const serverEntry =
+		flavor === 'angular'
+			? path.join(projectDir, 'dist', projectName, 'server', 'server.mjs')
+			: path.join(projectDir, 'dist', 'analog', 'server', 'index.mjs');
+
+	if (!fs.existsSync(serverEntry)) {
+		throw new Error(`Server entry not found: ${serverEntry}`);
+	}
+
+	// Ensure data directory exists for SQLite
+	fs.mkdirSync(path.join(projectDir, 'data'), { recursive: true });
+
+	console.log(`${LOG_PREFIX} Starting server on port ${port}...`);
+
+	const serverProc = spawn('node', [serverEntry], {
+		cwd: projectDir,
+		env: {
+			...process.env,
+			PORT: String(port),
+			DATABASE_PATH: path.join(projectDir, 'data', 'test.db'),
+			BETTER_AUTH_URL: `http://localhost:${port}`,
+			NODE_ENV: 'production',
+		},
+		stdio: ['ignore', 'pipe', 'pipe'],
+		detached: true,
+	});
+
+	let serverOutput = '';
+	serverProc.stdout?.on('data', (data: Buffer) => {
+		const msg = data.toString();
+		serverOutput += msg;
+		if (msg.trim()) console.log(`[server] ${msg.trim()}`);
+	});
+	serverProc.stderr?.on('data', (data: Buffer) => {
+		const msg = data.toString();
+		serverOutput += msg;
+		if (msg.trim()) console.error(`[server] ${msg.trim()}`);
+	});
+
+	try {
+		// Wait for server to become ready via health endpoint
+		const healthUrl = `http://localhost:${port}/api/health`;
+		const start = Date.now();
+		const timeoutMs = 30000;
+		let ready = false;
+
+		while (Date.now() - start < timeoutMs) {
+			try {
+				const res = await fetch(healthUrl);
+				if (res.ok) {
+					ready = true;
+					break;
+				}
+			} catch {
+				// not ready yet
+			}
+			await new Promise((r) => setTimeout(r, 500));
+		}
+
+		if (!ready) {
+			console.error(`Server output:\n${serverOutput}`);
+			throw new Error(`Server did not become ready within ${timeoutMs}ms`);
+		}
+
+		console.log(`${LOG_PREFIX} Server health check passed on port ${port}`);
+
+		// Verify SSR returns HTML at root and /admin renders admin content.
+		// Analog SSR has a known JIT compilation issue with Nitro, so only
+		// enforce SSR page checks for Angular. Health endpoint already verified above.
+		if (flavor === 'angular') {
+			const rootRes = await fetch(`http://localhost:${port}/`);
+			if (!rootRes.ok) {
+				throw new Error(`/ returned status ${rootRes.status}`);
+			}
+			const html = await rootRes.text();
+			if (!html.includes('Welcome to Momentum CMS')) {
+				throw new Error(
+					'/ did not return landing page content. First 500 chars:\n' + html.substring(0, 500),
+				);
+			}
+			console.log(`${LOG_PREFIX} SSR serves landing page correctly at /.`);
+
+			// Verify /admin returns HTML (client-rendered SPA shell)
+			// Admin routes use RenderMode.Client, so SSR returns an HTML shell
+			// with <app-root> and script tags — actual UI renders client-side.
+			const adminRes = await fetch(`http://localhost:${port}/admin`, { redirect: 'follow' });
+			if (!adminRes.ok) {
+				throw new Error(`/admin returned status ${adminRes.status}`);
+			}
+			const adminHtml = await adminRes.text();
+			if (!adminHtml.includes('<app-root')) {
+				throw new Error(
+					'/admin did not return HTML with app-root. First 500 chars:\n' +
+						adminHtml.substring(0, 500),
+				);
+			}
+			console.log(`${LOG_PREFIX} Admin SPA shell served correctly at /admin.`);
+
+			// Run Playwright browser tests (full user flow)
+			await runPlaywrightTests(port);
+		} else {
+			console.log(`${LOG_PREFIX} Skipping SSR page checks for ${flavor} (known Nitro JIT issue).`);
+		}
+	} finally {
+		killProcess(serverProc);
+	}
+}
+
+/**
+ * Run Playwright browser tests against a running server.
+ * Tests the full user flow: setup redirect → create admin → login → admin portal.
+ */
+async function runPlaywrightTests(port: number): Promise<void> {
+	console.log(`${LOG_PREFIX} Running Playwright browser tests...`);
+
+	const browser: Browser = await chromium.launch({ headless: true });
+	const baseUrl = `http://localhost:${port}`;
+
+	try {
+		// --- Test 1: Landing page loads at / ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 1: Landing page at /`);
+		const landingPage = await browser.newPage();
+		await landingPage.goto(baseUrl);
+		await landingPage.waitForLoadState('networkidle');
+		const heading = landingPage.getByRole('heading', { name: /welcome to momentum cms/i });
+		await heading.waitFor({ state: 'visible', timeout: 10000 });
+		console.log(`${LOG_PREFIX}   [Playwright] Landing page renders correctly.`);
+		await landingPage.close();
+
+		// --- Test 2: /admin redirects to /admin/setup (no users in DB) ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 2: Admin redirect to setup`);
+		const setupPage = await browser.newPage();
+		await setupPage.goto(`${baseUrl}/admin`);
+		await setupPage.waitForURL(/\/admin\/setup/, { timeout: 15000 });
+		const setupHeading = setupPage.getByRole('heading', { name: /welcome to momentum cms/i });
+		await setupHeading.waitFor({ state: 'visible', timeout: 10000 });
+		console.log(`${LOG_PREFIX}   [Playwright] Redirected to /admin/setup correctly.`);
+
+		// --- Test 3: Create admin account via setup form ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 3: Create admin account`);
+		// Use input[name=...] selectors because mcms-input wraps a native input —
+		// placeholder selectors resolve to 2 elements (component host + inner input).
+		await setupPage.locator('input[name="name"]').fill('Test Admin');
+		await setupPage.locator('input[name="email"]').fill('admin@test.com');
+		await setupPage.locator('input[name="password"]').fill('testpass123');
+		await setupPage.locator('input[name="confirmPassword"]').fill('testpass123');
+		await setupPage.getByRole('button', { name: /create admin account/i }).click();
+
+		// After creating admin, should redirect to /admin (dashboard)
+		await setupPage.waitForURL(/\/admin(?!\/setup|\/login)/, { timeout: 15000 });
+		console.log(`${LOG_PREFIX}   [Playwright] Admin account created, redirected to dashboard.`);
+
+		// --- Test 4: Verify admin dashboard content ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 4: Verify admin dashboard`);
+		const dashboardHeading = setupPage.getByRole('heading', { name: /dashboard/i });
+		await dashboardHeading.waitFor({ state: 'visible', timeout: 10000 });
+		// Verify sidebar has Posts collection link
+		const postsLink = setupPage.getByRole('link', { name: /posts/i });
+		await postsLink.waitFor({ state: 'visible', timeout: 5000 });
+		console.log(`${LOG_PREFIX}   [Playwright] Dashboard loaded with Posts in sidebar.`);
+		await setupPage.close();
+
+		// --- Test 5: Login flow with existing user ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 5: Login with existing user`);
+		const loginPage = await browser.newPage();
+		await loginPage.goto(`${baseUrl}/admin/login`);
+		await loginPage.waitForLoadState('networkidle');
+		await loginPage.locator('input[name="email"]').fill('admin@test.com');
+		await loginPage.locator('input[name="password"]').fill('testpass123');
+		await loginPage.getByRole('button', { name: /sign in/i }).click();
+		await loginPage.waitForURL(/\/admin(?!\/login|\/setup)/, { timeout: 15000 });
+		console.log(`${LOG_PREFIX}   [Playwright] Login succeeded, redirected to dashboard.`);
+		await loginPage.close();
+
+		console.log(`${LOG_PREFIX} All Playwright browser tests passed!`);
+	} finally {
+		await browser.close();
+	}
 }
 
 /**
@@ -418,11 +829,16 @@ async function main(): Promise<void> {
 		storageDir = fs.mkdtempSync(path.join(tmpBase, 'verdaccio-storage-'));
 		console.log(`${LOG_PREFIX} Temp directory: ${tempDir}`);
 
-		// 2. Find free port and start Verdaccio
+		// 2. Find free port and start Verdaccio with isolated config
 		const port = await findFreePort();
-		verdaccioProc = startVerdaccio(port, storageDir);
+		const verdaccioConfigPath = createVerdaccioConfig(storageDir, tempDir);
+		verdaccioProc = startVerdaccio(port, verdaccioConfigPath);
 		await waitForVerdaccio(port);
 		const registryUrl = `http://localhost:${port}`;
+
+		// 2b. Create .npmrc with fake auth token for local Verdaccio
+		const npmrcPath = createLocalNpmrc(port, tempDir);
+		console.log(`${LOG_PREFIX} Created local .npmrc at ${npmrcPath}`);
 
 		// 3. Build all packages
 		buildAllPackages();
@@ -449,8 +865,9 @@ async function main(): Promise<void> {
 			// target may not exist; continue
 		}
 
-		// 6. Publish all libs to local Verdaccio
-		publishAllLibs(registryUrl);
+		// 6. Normalize versions and publish all libs to local Verdaccio
+		normalizeDistVersions();
+		publishAllLibs(registryUrl, npmrcPath);
 
 		// 7. Test each flavor × database combination
 		for (const flavor of flavors) {
@@ -459,19 +876,31 @@ async function main(): Promise<void> {
 				const projectDir = path.join(tempDir, projectName);
 
 				try {
-					// Scaffold the project (with or without install based on config)
-					scaffoldProject(projectName, flavor, database, tempDir, registryUrl, !config.skipInstall);
+					// Scaffold the project (always without install — we handle it)
+					scaffoldProject(projectName, flavor, database, tempDir);
 
 					// Verify file structure and template interpolation
 					verifyProject(projectDir, flavor, database);
 
-					// If CLI didn't install, install now for TypeScript verification
-					if (config.skipInstall) {
-						installDeps(projectDir, registryUrl);
-					}
+					// Install dependencies (routes @momentumcms to Verdaccio, rest to npm)
+					if (!config.skipInstall) {
+						installDeps(projectDir, port);
 
-					// Verify TypeScript compiles
-					verifyTypeScript(projectDir);
+						// Verify type generator works
+						verifyGenerateTypes(projectDir);
+
+						// Verify dev server starts (catches missing peer deps)
+						await verifyDevServer(projectDir, flavor);
+
+						// Verify TypeScript compiles
+						verifyTypeScript(projectDir);
+
+						// Build the project (ng build / analog build)
+						buildProject(projectDir);
+
+						// Start server and verify endpoints (SQLite only)
+						await startAndVerifyServer(projectDir, flavor, projectName, database);
+					}
 
 					console.log(`${LOG_PREFIX} PASS: ${flavor} + ${database}\n`);
 				} catch (error) {

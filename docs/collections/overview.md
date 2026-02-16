@@ -5,7 +5,7 @@ Collections are the core data model in Momentum CMS. Each collection defines a d
 ## defineCollection
 
 ```typescript
-import { defineCollection, text, richText } from '@momentum-cms/core';
+import { defineCollection, text, richText } from '@momentumcms/core';
 
 export const Posts = defineCollection({
 	slug: 'posts',

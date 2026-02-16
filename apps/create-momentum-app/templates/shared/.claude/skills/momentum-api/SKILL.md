@@ -17,7 +17,7 @@ Guide for using `injectMomentumAPI()` in Angular components.
 ### Inject the API
 
 ```typescript
-import { injectMomentumAPI } from '@momentum-cms/admin';
+import { injectMomentumAPI } from '@momentumcms/admin';
 
 @Component({...})
 export class MyComponent {
@@ -77,7 +77,7 @@ interface FindOptions {
 
 ```typescript
 import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
-import { injectMomentumAPI } from '@momentum-cms/admin';
+import { injectMomentumAPI } from '@momentumcms/admin';
 
 @Component({
 	selector: 'app-posts',

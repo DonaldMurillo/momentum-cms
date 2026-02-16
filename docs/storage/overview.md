@@ -5,14 +5,14 @@ Momentum CMS uses a storage adapter pattern for file uploads. Choose between loc
 ## Package
 
 ```bash
-npm install @momentum-cms/storage
+npm install @momentumcms/storage
 ```
 
 ## Configuration
 
 ```typescript
-import { defineMomentumConfig } from '@momentum-cms/core';
-import { localStorageAdapter } from '@momentum-cms/storage';
+import { defineMomentumConfig } from '@momentumcms/core';
+import { localStorageAdapter } from '@momentumcms/storage';
 
 export default defineMomentumConfig({
 	storage: {
@@ -77,7 +77,7 @@ Uploads go through a validation pipeline:
 ## MIME Type Utilities
 
 ```typescript
-import { validateMimeType, isMimeTypeAllowed, detectMimeType } from '@momentum-cms/storage';
+import { validateMimeType, isMimeTypeAllowed, detectMimeType } from '@momentumcms/storage';
 
 // Detect type from file contents
 const detected = detectMimeType(buffer); // 'image/png'

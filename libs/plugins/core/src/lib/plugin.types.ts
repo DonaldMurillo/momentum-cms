@@ -1,7 +1,7 @@
 /**
- * Plugin System Types — Re-exported from @momentum-cms/core
+ * Plugin System Types — Re-exported from @momentumcms/core
  *
- * Canonical definitions now live in @momentum-cms/core.
+ * Canonical definitions now live in @momentumcms/core.
  * This file re-exports them for backward compatibility.
  */
 export type {
@@ -15,4 +15,4 @@ export type {
 	PluginProviderDescriptor,
 	PluginAdminRouteDescriptor,
 	PluginLogger,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';

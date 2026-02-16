@@ -3,13 +3,6 @@
 	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
 	"sourceRoot": "libs/plugins/analytics/src",
 	"projectType": "library",
-	"release": {
-		"version": {
-			"manifestRootsToUpdate": ["dist/{projectRoot}"],
-			"currentVersionResolver": "git-tag",
-			"fallbackCurrentVersionResolver": "disk"
-		}
-	},
 	"tags": ["scope:plugin"],
 	"targets": {
 		"test": {
@@ -26,12 +19,13 @@
 				"outputPath": "dist/libs/plugins/analytics",
 				"main": "libs/plugins/analytics/src/index.ts",
 				"tsConfig": "libs/plugins/analytics/tsconfig.lib.json",
-				"external": ["@angular/*", "@ng-icons/*", "@momentum-cms/ui"]
+				"external": ["@angular/*", "@ng-icons/*", "@momentumcms/ui"]
 			}
 		},
 		"nx-release-publish": {
 			"options": {
-				"packageRoot": "dist/{projectRoot}"
+				"packageRoot": "dist/{projectRoot}",
+				"access": "public"
 			}
 		}
 	}

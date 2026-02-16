@@ -7,7 +7,7 @@
 
 import { Router } from 'express';
 import type { Request, Response } from 'express';
-import type { MomentumAPI } from '@momentum-cms/core';
+import type { MomentumAPI } from '@momentumcms/core';
 import { isRecord } from '../utils/type-guards';
 import { isSelectorBlocked } from '../utils/selector-security';
 

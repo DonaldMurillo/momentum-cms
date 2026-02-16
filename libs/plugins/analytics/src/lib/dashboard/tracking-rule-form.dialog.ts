@@ -29,7 +29,7 @@ import {
 	Switch,
 	Button,
 	McmsFormField,
-} from '@momentum-cms/ui';
+} from '@momentumcms/ui';
 
 /** Data passed to the dialog via DIALOG_DATA. */
 export interface TrackingRuleFormData {

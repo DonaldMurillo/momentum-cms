@@ -4,13 +4,6 @@
 	"sourceRoot": "libs/admin/src",
 	"prefix": "lib",
 	"projectType": "library",
-	"release": {
-		"version": {
-			"manifestRootsToUpdate": ["dist/{projectRoot}"],
-			"currentVersionResolver": "git-tag",
-			"fallbackCurrentVersionResolver": "disk"
-		}
-	},
 	"tags": ["scope:lib"],
 	"targets": {
 		"build": {
@@ -34,7 +27,8 @@
 			"options": {
 				"commands": [
 					"cp LICENSE dist/libs/admin/",
-					"cp libs/admin/tailwind.preset.js dist/libs/admin/"
+					"cp libs/admin/tailwind.preset.js dist/libs/admin/",
+					"node -e \"const fs=require('fs'),p=JSON.parse(fs.readFileSync('dist/libs/admin/package.json','utf8'));p.exports['./tailwind.preset']={default:'./tailwind.preset.js'};fs.writeFileSync('dist/libs/admin/package.json',JSON.stringify(p,null,2)+'\\n');\""
 				]
 			},
 			"dependsOn": ["build"]
@@ -42,7 +36,8 @@
 		"nx-release-publish": {
 			"dependsOn": ["copy-assets"],
 			"options": {
-				"packageRoot": "dist/{projectRoot}"
+				"packageRoot": "dist/{projectRoot}",
+				"access": "public"
 			}
 		},
 		"test": {

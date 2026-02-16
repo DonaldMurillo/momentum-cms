@@ -104,7 +104,7 @@ export class McmsButtonComponent {
 Use `McmsThemeService` for dark mode:
 
 ```typescript
-import { McmsThemeService } from '@momentum-cms/admin';
+import { McmsThemeService } from '@momentumcms/admin';
 
 @Component({...})
 export class MyComponent {
@@ -158,7 +158,7 @@ module.exports = {
 }
 ```
 
-## Libraries (@momentum-cms/\*)
+## Libraries (@momentumcms/\*)
 
 | Package        | Path                | Purpose                                  |
 | -------------- | ------------------- | ---------------------------------------- |
@@ -173,7 +173,7 @@ module.exports = {
 ## Collection Pattern
 
 ```typescript
-import { defineCollection, text, richText, relationship } from '@momentum-cms/core';
+import { defineCollection, text, richText, relationship } from '@momentumcms/core';
 
 export const Posts = defineCollection({
 	slug: 'posts',

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createMomentumHandlers, type MomentumRequest } from './server-core';
 import { resetMomentumAPI } from './momentum-api';
-import type { CollectionConfig, MomentumConfig, DatabaseAdapter } from '@momentum-cms/core';
+import type { CollectionConfig, MomentumConfig, DatabaseAdapter } from '@momentumcms/core';
 
 // Mock collection for testing
 const mockPostsCollection: CollectionConfig = {

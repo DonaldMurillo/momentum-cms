@@ -9,7 +9,7 @@ import {
 	send,
 	getHeaders,
 } from 'h3';
-import { createComprehensiveMomentumHandler } from '@momentum-cms/server-analog';
+import { createComprehensiveMomentumHandler } from '@momentumcms/server-analog';
 import { ensureInitialized, getAuth } from '../../utils/momentum-init';
 import momentumConfig from '../../../momentum.config';
 

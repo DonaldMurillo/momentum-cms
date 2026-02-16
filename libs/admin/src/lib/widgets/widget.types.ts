@@ -4,7 +4,7 @@
  * Common types used across admin widgets.
  */
 
-import type { CollectionConfig } from '@momentum-cms/core';
+import type { CollectionConfig } from '@momentumcms/core';
 
 /**
  * Branding configuration for admin sidebar.

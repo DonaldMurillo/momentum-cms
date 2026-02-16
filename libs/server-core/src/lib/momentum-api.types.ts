@@ -15,7 +15,7 @@ import type {
 	RestoreVersionOptions,
 	PublishOptions,
 	SchedulePublishResult,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';
 
 // ============================================
 // Context

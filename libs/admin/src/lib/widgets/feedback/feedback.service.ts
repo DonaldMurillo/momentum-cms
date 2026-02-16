@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { ToastService, ConfirmationService } from '@momentum-cms/ui';
+import { ToastService, ConfirmationService } from '@momentumcms/ui';
 
 /**
  * Feedback Service

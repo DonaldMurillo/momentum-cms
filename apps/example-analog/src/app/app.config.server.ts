@@ -1,6 +1,6 @@
 import { mergeApplicationConfig, ApplicationConfig } from '@angular/core';
 import { provideServerRendering } from '@angular/platform-server';
-import { MOMENTUM_API, MOMENTUM_API_CONTEXT } from '@momentum-cms/admin';
+import { MOMENTUM_API, MOMENTUM_API_CONTEXT } from '@momentumcms/admin';
 
 import { appConfig } from './app.config';
 

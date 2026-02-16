@@ -5,7 +5,7 @@ Globals are singleton collections — a single document with no list view. Use t
 ## defineGlobal
 
 ```typescript
-import { defineGlobal, text, array, group } from '@momentum-cms/core';
+import { defineGlobal, text, array, group } from '@momentumcms/core';
 
 export const SiteSettings = defineGlobal({
 	slug: 'site-settings',

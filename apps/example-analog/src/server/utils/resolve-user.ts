@@ -6,7 +6,7 @@
  * - resolveUserFromRequest() — API key first, then session fallback (e.g., API key management)
  */
 
-import { isValidApiKeyFormat, hashApiKey } from '@momentum-cms/server-core';
+import { isValidApiKeyFormat, hashApiKey } from '@momentumcms/server-core';
 import { getAuth } from './momentum-init';
 
 /** Minimal interface for the API key store operations needed during user resolution. */

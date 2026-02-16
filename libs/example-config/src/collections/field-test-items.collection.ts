@@ -1,5 +1,5 @@
-import { defineCollection, text, email, number, select, array, allowAll } from '@momentum-cms/core';
-import type { FieldHookFunction } from '@momentum-cms/core';
+import { defineCollection, text, email, number, select, array, allowAll } from '@momentumcms/core';
+import type { FieldHookFunction } from '@momentumcms/core';
 
 /**
  * In-memory field hook invocation log for E2E testing.

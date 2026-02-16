@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { sqliteAdapter } from './db-drizzle';
 import { existsSync, unlinkSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import type { CollectionConfig } from '@momentum-cms/core';
+import type { CollectionConfig } from '@momentumcms/core';
 
 const TEST_DB_DIR = './test-data';
 const TEST_DB_PATH = join(TEST_DB_DIR, 'test.db');

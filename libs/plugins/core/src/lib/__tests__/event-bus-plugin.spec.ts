@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { eventBusPlugin } from '../event-bus/event-bus-plugin';
-import type { CollectionConfig, MomentumConfig } from '@momentum-cms/core';
+import type { CollectionConfig, MomentumConfig } from '@momentumcms/core';
 import type { CollectionEvent, PluginContext } from '../plugin.types';
-import { resetMomentumLogger, createLogger } from '@momentum-cms/logger';
+import { resetMomentumLogger, createLogger } from '@momentumcms/logger';
 
 function createMockConfig(): MomentumConfig {
 	return {

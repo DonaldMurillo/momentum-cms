@@ -15,7 +15,7 @@ import type {
 	SchedulePublishResult,
 	AccessArgs,
 	RequestContext,
-} from '@momentum-cms/core';
+} from '@momentumcms/core';
 import type {
 	MomentumAPIContext,
 	VersionOperations,

@@ -10,12 +10,12 @@ export default defineEventHandler(async (event) => {
 	const method = getMethod(event);
 
 	if (method === 'GET') {
-		const { getFieldHookLog } = await import('@momentum-cms/example-config');
+		const { getFieldHookLog } = await import('@momentumcms/example-config');
 		const invocations = getFieldHookLog();
 		return { invocations, count: invocations.length };
 	}
 	if (method === 'DELETE') {
-		const { clearFieldHookLog } = await import('@momentum-cms/example-config');
+		const { clearFieldHookLog } = await import('@momentumcms/example-config');
 		clearFieldHookLog();
 		return { cleared: true };
 	}

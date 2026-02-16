@@ -1,4 +1,4 @@
-import { type TestUserCredentials } from '@momentum-cms/e2e-fixtures';
+import { type TestUserCredentials } from '@momentumcms/e2e-fixtures';
 import {
 	TEST_ADMIN,
 	TEST_EDITOR,
@@ -7,12 +7,12 @@ import {
 	TEST_AUTHOR_2,
 	TEST_AUTHOR_3,
 	ADDITIONAL_TEST_USERS,
-} from '@momentum-cms/example-config';
+} from '@momentumcms/example-config';
 
 /**
  * Worker server configuration resolved from E2E_SERVER_FLAVOR.
  * Both flavors use the same collections, seeding, and test users
- * from @momentum-cms/example-config.
+ * from @momentumcms/example-config.
  */
 
 export const TEST_CREDENTIALS: TestUserCredentials = TEST_ADMIN;

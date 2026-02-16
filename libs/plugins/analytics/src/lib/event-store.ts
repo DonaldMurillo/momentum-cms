@@ -9,7 +9,7 @@
 
 import type { AnalyticsEvent } from './analytics-event.types';
 import type { AnalyticsAdapter } from './analytics-config.types';
-import { createLogger, type MomentumLogger } from '@momentum-cms/logger';
+import { createLogger, type MomentumLogger } from '@momentumcms/logger';
 
 /**
  * Options for the event store.

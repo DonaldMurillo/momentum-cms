@@ -12,8 +12,8 @@ import {
 	viewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import type { CollectionConfig, Field } from '@momentum-cms/core';
-import { humanizeFieldName, getSoftDeleteField } from '@momentum-cms/core';
+import type { CollectionConfig, Field } from '@momentumcms/core';
+import { humanizeFieldName, getSoftDeleteField } from '@momentumcms/core';
 import {
 	DataTable,
 	Button,
@@ -26,8 +26,8 @@ import {
 	type DataTableRowAction,
 	type DataTableRowActionEvent,
 	type DataTableCellContext,
-} from '@momentum-cms/ui';
-import type { FieldDisplayFieldMeta } from '@momentum-cms/ui';
+} from '@momentumcms/ui';
+import type { FieldDisplayFieldMeta } from '@momentumcms/ui';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { heroEye } from '@ng-icons/heroicons/outline';
 import { injectMomentumAPI, type FindResult } from '../../services/momentum-api.service';

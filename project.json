@@ -1,5 +1,5 @@
 {
-	"name": "@momentum-cms/source",
+	"name": "@momentumcms/source",
 	"$schema": "node_modules/nx/schemas/project-schema.json",
 	"targets": {
 		"local-registry": {

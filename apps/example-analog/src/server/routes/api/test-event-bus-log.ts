@@ -5,7 +5,7 @@ import {
 	eventBusListenerRegistered,
 	markEventBusListenerRegistered,
 } from '../../utils/test-state';
-import type { CollectionEvent } from '@momentum-cms/plugins/core';
+import type { CollectionEvent } from '@momentumcms/plugins/core';
 
 export default defineEventHandler(async (event) => {
 	if (process.env['NODE_ENV'] === 'production') {

@@ -13,7 +13,7 @@ import {
 import { DOCUMENT } from '@angular/common';
 import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { inject } from '@angular/core';
-import { Button } from '@momentum-cms/ui';
+import { Button } from '@momentumcms/ui';
 
 /** Device size preset for the preview iframe. */
 export type DeviceSize = 'desktop' | 'tablet' | 'mobile';

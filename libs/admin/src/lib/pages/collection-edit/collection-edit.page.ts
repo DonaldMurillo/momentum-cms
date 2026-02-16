@@ -7,8 +7,8 @@ import {
 	viewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import type { CollectionConfig } from '@momentum-cms/core';
-import { Button, DialogService } from '@momentum-cms/ui';
+import type { CollectionConfig } from '@momentumcms/core';
+import { Button, DialogService } from '@momentumcms/ui';
 import { CollectionAccessService } from '../../services/collection-access.service';
 import { getCollectionsFromRouteData } from '../../utils/route-data';
 import { EntityFormWidget } from '../../widgets/entity-form/entity-form.component';

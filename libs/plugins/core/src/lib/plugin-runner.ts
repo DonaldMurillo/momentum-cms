@@ -6,8 +6,8 @@
  * Errors are logged and skipped unless PluginFatalError is thrown.
  */
 
-import type { CollectionConfig, MomentumConfig } from '@momentum-cms/core';
-import { createLogger, type MomentumLogger } from '@momentum-cms/logger';
+import type { CollectionConfig, MomentumConfig } from '@momentumcms/core';
+import { createLogger, type MomentumLogger } from '@momentumcms/logger';
 import { PluginFatalError } from './plugin-fatal-error';
 import type {
 	MomentumAPI,

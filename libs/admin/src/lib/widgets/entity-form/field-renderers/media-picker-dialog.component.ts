@@ -18,8 +18,8 @@ import {
 	DIALOG_DATA,
 	Spinner,
 	Pagination,
-} from '@momentum-cms/ui';
-import { SearchInput } from '@momentum-cms/ui';
+} from '@momentumcms/ui';
+import { SearchInput } from '@momentumcms/ui';
 import { injectMomentumAPI } from '../../../services/momentum-api.service';
 import { MediaPreviewComponent } from '../../../widgets/media-preview/media-preview.component';
 

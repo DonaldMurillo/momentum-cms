@@ -8,7 +8,7 @@ import {
 	output,
 	signal,
 } from '@angular/core';
-import { Badge, Button } from '@momentum-cms/ui';
+import { Badge, Button } from '@momentumcms/ui';
 import { VersionService, type DocumentStatus } from '../../services/version.service';
 import { FeedbackService } from '../feedback/feedback.service';
 
