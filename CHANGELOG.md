@@ -1,3 +1,25 @@
+## 0.1.9 (2026-02-16)
+
+### 🩹 Fixes
+
+- **create-momentum-app:** add shell option to execFileSync for Windows compatibility ([5576ea8](https://github.com/DonaldMurillo/momentum-cms/commit/5576ea8))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
+## 0.1.8 (2026-02-16)
+
+### 🩹 Fixes
+
+- correct repository URLs and add GitHub link to CLI ([#26](https://github.com/DonaldMurillo/momentum-cms/pull/26))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.1.7 (2026-02-16)
 
 ### 🩹 Fixes

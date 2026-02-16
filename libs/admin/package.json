@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/admin",
-	"version": "0.1.7",
+	"version": "0.1.9",
 	"description": "Angular admin dashboard UI for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
