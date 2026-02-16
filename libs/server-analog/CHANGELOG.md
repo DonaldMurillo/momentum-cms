@@ -1,3 +1,14 @@
+## 0.1.1 (2026-02-16)
+
+### 🩹 Fixes
+
+- **create-app:** fix E2E test and template bugs for full pipeline validation ([4d7e3a9](https://github.com/DonaldMurillo/momentum-cms/commit/4d7e3a9))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.1.0 (2026-02-16)
 
 ### 🚀 Features
