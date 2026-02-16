@@ -147,7 +147,8 @@
 		],
 		"version": {
 			"preVersionCommand": "npx nx run-many -t build",
-			"conventionalCommits": true
+			"conventionalCommits": true,
+			"manifestRootsToUpdate": ["{projectRoot}", "dist/{projectRoot}"]
 		},
 		"changelog": {
 			"projectChangelogs": true

@@ -3,13 +3,6 @@
 	"$schema": "../../node_modules/nx/schemas/project-schema.json",
 	"sourceRoot": "libs/auth/src",
 	"projectType": "library",
-	"release": {
-		"version": {
-			"manifestRootsToUpdate": ["dist/{projectRoot}"],
-			"currentVersionResolver": "git-tag",
-			"fallbackCurrentVersionResolver": "disk"
-		}
-	},
 	"tags": ["scope:lib"],
 	"targets": {
 		"test": {

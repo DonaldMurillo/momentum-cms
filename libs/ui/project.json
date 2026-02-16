@@ -4,13 +4,6 @@
 	"sourceRoot": "libs/ui/src",
 	"prefix": "lib",
 	"projectType": "library",
-	"release": {
-		"version": {
-			"manifestRootsToUpdate": ["dist/{projectRoot}"],
-			"currentVersionResolver": "git-tag",
-			"fallbackCurrentVersionResolver": "disk"
-		}
-	},
 	"tags": ["scope:lib"],
 	"targets": {
 		"build": {

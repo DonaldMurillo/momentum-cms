@@ -3,13 +3,6 @@
 	"$schema": "../../node_modules/nx/schemas/project-schema.json",
 	"sourceRoot": "apps/create-momentum-app/src",
 	"projectType": "application",
-	"release": {
-		"version": {
-			"manifestRootsToUpdate": ["dist/{projectRoot}"],
-			"currentVersionResolver": "git-tag",
-			"fallbackCurrentVersionResolver": "disk"
-		}
-	},
 	"tags": ["scope:cli"],
 	"targets": {
 		"build": {
