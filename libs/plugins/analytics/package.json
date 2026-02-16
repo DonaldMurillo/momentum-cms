@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/plugins-analytics",
-	"version": "0.0.1",
+	"version": "0.1.2",
 	"description": "Analytics and content tracking plugin for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
@@ -26,10 +26,10 @@
 	"main": "./index.cjs",
 	"types": "./src/index.d.ts",
 	"dependencies": {
-		"@momentumcms/core": "0.0.1",
-		"@momentumcms/logger": "0.0.1",
-		"@momentumcms/plugins-core": "0.0.1",
-		"@momentumcms/server-core": "0.0.1",
+		"@momentumcms/core": "0.1.2",
+		"@momentumcms/logger": "0.1.2",
+		"@momentumcms/plugins-core": "0.1.2",
+		"@momentumcms/server-core": "0.1.2",
 		"express": "^4.21.0"
 	},
 	"peerDependencies": {

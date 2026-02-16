@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/ui",
-	"version": "0.0.1",
+	"version": "0.1.2",
 	"description": "Base UI component library for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
