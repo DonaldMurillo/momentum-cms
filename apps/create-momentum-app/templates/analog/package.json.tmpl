@@ -6,7 +6,8 @@
 	"scripts": {
 		"dev": "vite",
 		"build": "vite build",
-		"start": "node dist/analog/server/index.mjs"
+		"start": "node dist/analog/server/index.mjs",
+		"generate-types": "tsx node_modules/@momentumcms/core/generators/types/generator.cjs src/momentum.config.ts src/types/momentum.generated.ts"
 	},
 	"dependencies": {
 		"@analogjs/platform": "^2.2.3",
@@ -50,6 +51,7 @@
 		"vite": "^7.0.0",
 		"tailwindcss": "^3.4.19",
 		"postcss": "^8.5.6",
-		"autoprefixer": "^10.4.24"
+		"autoprefixer": "^10.4.24",
+		"tsx": "^4.0.0"
 	}
 }

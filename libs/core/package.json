@@ -27,5 +27,8 @@
 	},
 	"main": "./index.cjs",
 	"types": "./src/index.d.ts",
+	"bin": {
+		"momentum-generate-types": "./generators/types/generator.cjs"
+	},
 	"dependencies": {}
 }

@@ -26,6 +26,7 @@ import * as net from 'net';
 import * as path from 'path';
 import * as fs from 'fs';
 import { fileURLToPath } from 'url';
+import { chromium, type Browser } from 'playwright';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -353,6 +354,7 @@ function verifyProject(projectDir: string, flavor: Flavor, database: Database): 
 			'src/app/app.config.server.ts',
 			'src/app/app.routes.ts',
 			'src/app/app.routes.server.ts',
+			'src/app/pages/welcome.ts',
 			'src/main.server.ts',
 			'src/collections/posts.ts',
 		],
@@ -541,6 +543,34 @@ async function verifyDevServer(projectDir: string, flavor: Flavor): Promise<void
 }
 
 /**
+ * Run `npm run generate-types` and verify the output file is created
+ * with expected content (collection interfaces).
+ */
+function verifyGenerateTypes(projectDir: string): void {
+	console.log(`${LOG_PREFIX} Running npm run generate-types...`);
+	execFileSync('npm', ['run', 'generate-types'], {
+		cwd: projectDir,
+		stdio: 'inherit',
+		timeout: 30000,
+	});
+
+	const outputPath = path.join(projectDir, 'src', 'types', 'momentum.generated.ts');
+	if (!fs.existsSync(outputPath)) {
+		throw new Error(`generate-types did not create output file: ${outputPath}`);
+	}
+
+	const content = fs.readFileSync(outputPath, 'utf-8');
+	if (!content.includes('Posts')) {
+		throw new Error(
+			'generate-types output does not contain expected "Posts" interface.\n' +
+				`Content:\n${content.substring(0, 500)}`,
+		);
+	}
+
+	console.log(`${LOG_PREFIX} generate-types verified: ${outputPath}`);
+}
+
+/**
  * Build the scaffolded project using its own build script.
  * Angular: ng build, Analog: analog build
  */
@@ -649,35 +679,108 @@ async function startAndVerifyServer(
 				throw new Error(`/ returned status ${rootRes.status}`);
 			}
 			const html = await rootRes.text();
-			if (!html.includes('<html') && !html.includes('<!DOCTYPE') && !html.includes('<!doctype')) {
-				throw new Error('/ did not return HTML content');
+			if (!html.includes('Welcome to Momentum CMS')) {
+				throw new Error(
+					'/ did not return landing page content. First 500 chars:\n' + html.substring(0, 500),
+				);
 			}
-			console.log(`${LOG_PREFIX} SSR serves HTML correctly at /.`);
+			console.log(`${LOG_PREFIX} SSR serves landing page correctly at /.`);
 
-			// Verify /admin returns admin UI content (login/setup page)
+			// Verify /admin returns HTML (client-rendered SPA shell)
+			// Admin routes use RenderMode.Client, so SSR returns an HTML shell
+			// with <app-root> and script tags — actual UI renders client-side.
 			const adminRes = await fetch(`http://localhost:${port}/admin`, { redirect: 'follow' });
 			if (!adminRes.ok) {
 				throw new Error(`/admin returned status ${adminRes.status}`);
 			}
 			const adminHtml = await adminRes.text();
-			// Admin shell should render with mcms-* components or Momentum-related content
-			const hasAdminContent =
-				adminHtml.includes('mcms-') ||
-				adminHtml.includes('Momentum') ||
-				adminHtml.includes('momentum') ||
-				adminHtml.includes('admin-shell');
-			if (!hasAdminContent) {
+			if (!adminHtml.includes('<app-root')) {
 				throw new Error(
-					'/admin did not return admin UI content. First 500 chars:\n' +
+					'/admin did not return HTML with app-root. First 500 chars:\n' +
 						adminHtml.substring(0, 500),
 				);
 			}
-			console.log(`${LOG_PREFIX} Admin UI renders correctly at /admin.`);
+			console.log(`${LOG_PREFIX} Admin SPA shell served correctly at /admin.`);
+
+			// Run Playwright browser tests (full user flow)
+			await runPlaywrightTests(port);
 		} else {
 			console.log(`${LOG_PREFIX} Skipping SSR page checks for ${flavor} (known Nitro JIT issue).`);
 		}
 	} finally {
 		killProcess(serverProc);
+	}
+}
+
+/**
+ * Run Playwright browser tests against a running server.
+ * Tests the full user flow: setup redirect → create admin → login → admin portal.
+ */
+async function runPlaywrightTests(port: number): Promise<void> {
+	console.log(`${LOG_PREFIX} Running Playwright browser tests...`);
+
+	const browser: Browser = await chromium.launch({ headless: true });
+	const baseUrl = `http://localhost:${port}`;
+
+	try {
+		// --- Test 1: Landing page loads at / ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 1: Landing page at /`);
+		const landingPage = await browser.newPage();
+		await landingPage.goto(baseUrl);
+		await landingPage.waitForLoadState('networkidle');
+		const heading = landingPage.getByRole('heading', { name: /welcome to momentum cms/i });
+		await heading.waitFor({ state: 'visible', timeout: 10000 });
+		console.log(`${LOG_PREFIX}   [Playwright] Landing page renders correctly.`);
+		await landingPage.close();
+
+		// --- Test 2: /admin redirects to /admin/setup (no users in DB) ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 2: Admin redirect to setup`);
+		const setupPage = await browser.newPage();
+		await setupPage.goto(`${baseUrl}/admin`);
+		await setupPage.waitForURL(/\/admin\/setup/, { timeout: 15000 });
+		const setupHeading = setupPage.getByRole('heading', { name: /welcome to momentum cms/i });
+		await setupHeading.waitFor({ state: 'visible', timeout: 10000 });
+		console.log(`${LOG_PREFIX}   [Playwright] Redirected to /admin/setup correctly.`);
+
+		// --- Test 3: Create admin account via setup form ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 3: Create admin account`);
+		// Use input[name=...] selectors because mcms-input wraps a native input —
+		// placeholder selectors resolve to 2 elements (component host + inner input).
+		await setupPage.locator('input[name="name"]').fill('Test Admin');
+		await setupPage.locator('input[name="email"]').fill('admin@test.com');
+		await setupPage.locator('input[name="password"]').fill('testpass123');
+		await setupPage.locator('input[name="confirmPassword"]').fill('testpass123');
+		await setupPage.getByRole('button', { name: /create admin account/i }).click();
+
+		// After creating admin, should redirect to /admin (dashboard)
+		await setupPage.waitForURL(/\/admin(?!\/setup|\/login)/, { timeout: 15000 });
+		console.log(`${LOG_PREFIX}   [Playwright] Admin account created, redirected to dashboard.`);
+
+		// --- Test 4: Verify admin dashboard content ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 4: Verify admin dashboard`);
+		const dashboardHeading = setupPage.getByRole('heading', { name: /dashboard/i });
+		await dashboardHeading.waitFor({ state: 'visible', timeout: 10000 });
+		// Verify sidebar has Posts collection link
+		const postsLink = setupPage.getByRole('link', { name: /posts/i });
+		await postsLink.waitFor({ state: 'visible', timeout: 5000 });
+		console.log(`${LOG_PREFIX}   [Playwright] Dashboard loaded with Posts in sidebar.`);
+		await setupPage.close();
+
+		// --- Test 5: Login flow with existing user ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 5: Login with existing user`);
+		const loginPage = await browser.newPage();
+		await loginPage.goto(`${baseUrl}/admin/login`);
+		await loginPage.waitForLoadState('networkidle');
+		await loginPage.locator('input[name="email"]').fill('admin@test.com');
+		await loginPage.locator('input[name="password"]').fill('testpass123');
+		await loginPage.getByRole('button', { name: /sign in/i }).click();
+		await loginPage.waitForURL(/\/admin(?!\/login|\/setup)/, { timeout: 15000 });
+		console.log(`${LOG_PREFIX}   [Playwright] Login succeeded, redirected to dashboard.`);
+		await loginPage.close();
+
+		console.log(`${LOG_PREFIX} All Playwright browser tests passed!`);
+	} finally {
+		await browser.close();
 	}
 }
 
@@ -782,6 +885,9 @@ async function main(): Promise<void> {
 					// Install dependencies (routes @momentumcms to Verdaccio, rest to npm)
 					if (!config.skipInstall) {
 						installDeps(projectDir, port);
+
+						// Verify type generator works
+						verifyGenerateTypes(projectDir);
 
 						// Verify dev server starts (catches missing peer deps)
 						await verifyDevServer(projectDir, flavor);

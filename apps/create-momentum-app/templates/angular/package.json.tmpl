@@ -6,7 +6,8 @@
 		"dev": "ng serve",
 		"build": "ng build",
 		"start": "node dist/{{projectName}}/server/server.mjs",
-		"lint": "ng lint"
+		"lint": "ng lint",
+		"generate-types": "tsx node_modules/@momentumcms/core/generators/types/generator.cjs src/momentum.config.ts src/types/momentum.generated.ts"
 	},
 	"dependencies": {
 		"@angular/animations": "^21.1.0",
@@ -52,6 +53,7 @@
 		"autoprefixer": "^10.4.21",
 		"postcss": "^8.5.4",
 		"tailwindcss": "^3.4.17",
+		"tsx": "^4.0.0",
 		"typescript": "~5.9.2"
 	}
 }

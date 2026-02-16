@@ -18,6 +18,7 @@
 			"options": {
 				"outputPath": "dist/libs/core",
 				"main": "libs/core/src/index.ts",
+				"additionalEntryPoints": ["libs/core/src/generators/types/generator.ts"],
 				"tsConfig": "libs/core/tsconfig.lib.json"
 			}
 		},
