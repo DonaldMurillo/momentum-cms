@@ -1,12 +1,13 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter, withViewTransitions } from '@angular/router';
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+import { crudToastInterceptor } from '@momentumcms/admin';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
 	providers: [
-		provideHttpClient(withFetch()),
+		provideHttpClient(withFetch(), withInterceptors([crudToastInterceptor])),
 		provideClientHydration(withEventReplay()),
 		provideBrowserGlobalErrorListeners(),
 		provideRouter(routes, withViewTransitions()),

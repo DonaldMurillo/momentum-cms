@@ -640,7 +640,9 @@ async function startAndVerifyServer(
 
 		console.log(`${LOG_PREFIX} Server health check passed on port ${port}`);
 
-		// For Angular: verify SSR returns HTML at root
+		// Verify SSR returns HTML at root and /admin renders admin content.
+		// Analog SSR has a known JIT compilation issue with Nitro, so only
+		// enforce SSR page checks for Angular. Health endpoint already verified above.
 		if (flavor === 'angular') {
 			const rootRes = await fetch(`http://localhost:${port}/`);
 			if (!rootRes.ok) {
@@ -650,7 +652,29 @@ async function startAndVerifyServer(
 			if (!html.includes('<html') && !html.includes('<!DOCTYPE') && !html.includes('<!doctype')) {
 				throw new Error('/ did not return HTML content');
 			}
-			console.log(`${LOG_PREFIX} Angular SSR serves HTML correctly.`);
+			console.log(`${LOG_PREFIX} SSR serves HTML correctly at /.`);
+
+			// Verify /admin returns admin UI content (login/setup page)
+			const adminRes = await fetch(`http://localhost:${port}/admin`, { redirect: 'follow' });
+			if (!adminRes.ok) {
+				throw new Error(`/admin returned status ${adminRes.status}`);
+			}
+			const adminHtml = await adminRes.text();
+			// Admin shell should render with mcms-* components or Momentum-related content
+			const hasAdminContent =
+				adminHtml.includes('mcms-') ||
+				adminHtml.includes('Momentum') ||
+				adminHtml.includes('momentum') ||
+				adminHtml.includes('admin-shell');
+			if (!hasAdminContent) {
+				throw new Error(
+					'/admin did not return admin UI content. First 500 chars:\n' +
+						adminHtml.substring(0, 500),
+				);
+			}
+			console.log(`${LOG_PREFIX} Admin UI renders correctly at /admin.`);
+		} else {
+			console.log(`${LOG_PREFIX} Skipping SSR page checks for ${flavor} (known Nitro JIT issue).`);
 		}
 	} finally {
 		killProcess(serverProc);
