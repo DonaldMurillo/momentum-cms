@@ -157,6 +157,7 @@ export type {
 	CollectionWithCount,
 	EntityAction,
 	Entity,
+	CollectionGroup,
 } from './lib/widgets/widget.types';
 
 export type {

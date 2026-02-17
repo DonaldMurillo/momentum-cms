@@ -56,25 +56,63 @@ The shell component provides:
 - **Toast notifications** for user feedback
 - **Keyboard shortcuts** (Cmd/Ctrl+B to toggle sidebar)
 
-## Sidebar Navigation
+## Collection Grouping
 
-Collections and globals are grouped by their `admin.group` property:
+Collections are grouped by their `admin.group` property in both the **dashboard** and the **sidebar**:
 
 ```typescript
 export const Posts = defineCollection({
 	slug: 'posts',
 	admin: {
-		group: 'Content',
-		icon: 'heroNewspaper',
+		group: 'Content', // Appears under a "Content" section everywhere in the admin
 		hidden: false,
 	},
 	fields: [],
 });
 ```
 
-The sidebar also shows:
+**Ordering rules:**
+
+- Named groups appear in the order their first member was defined
+- Collections without a group fall into a default **"Collections"** section at the bottom
+- Hidden collections (`admin.hidden: true`) are excluded entirely
+
+```typescript
+// These two collections share the same group
+export const Articles = defineCollection({
+	slug: 'articles',
+	admin: { group: 'Content' } /* ... */,
+});
+export const Categories = defineCollection({
+	slug: 'categories',
+	admin: { group: 'Content' } /* ... */,
+});
+
+// This collection gets its own group after "Content"
+export const Users = defineCollection({
+	slug: 'users',
+	admin: { group: 'Authentication' } /* ... */,
+});
+
+// This collection has no group — falls into the default "Collections" section
+export const Tags = defineCollection({ slug: 'tags', /* no admin.group */ fields: [] });
+
+// Result on the dashboard and sidebar:
+// ┌─ Content ─────────────┐
+// │  Articles  Categories │
+// ├─ Authentication ──────┤
+// │  Users                │
+// ├─ Collections ─────────┤  ← default fallback
+// │  Tags                 │
+// └───────────────────────┘
+```
+
+## Sidebar Navigation
+
+The sidebar shows:
 
 - Dashboard link at the top
+- Collections and globals grouped by `admin.group` (see above)
 - Plugin-registered routes
 - User menu with theme toggle and sign out
 

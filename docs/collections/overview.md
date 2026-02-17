@@ -58,7 +58,7 @@ export const Posts = defineCollection({
 admin: {
   useAsTitle: 'title',              // Field to display as document title
   defaultColumns: ['title', 'status', 'createdAt'],
-  group: 'Content',                 // Sidebar group
+  group: 'Content',                 // Dashboard and sidebar group
   listSearchableFields: ['title', 'content'],
   description: 'Blog posts',
   hidden: false,                    // Hide from navigation
