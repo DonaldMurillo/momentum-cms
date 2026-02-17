@@ -107,3 +107,15 @@ export interface Entity {
 	updatedAt?: string;
 	[key: string]: unknown;
 }
+
+/**
+ * A named group of collections for display in admin UI.
+ * Used by the dashboard and sidebar to render grouped sections.
+ */
+export interface CollectionGroup {
+	/** Slugified identifier safe for use as an HTML id attribute */
+	id: string;
+	/** Original display name */
+	name: string;
+	collections: CollectionConfig[];
+}

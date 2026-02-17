@@ -10,6 +10,93 @@ import { test, expect } from '../fixtures';
  * Auth collections (Users, API Keys) are injected by the auth plugin.
  */
 
+test.describe('Admin Dashboard - Collection Grouping', () => {
+	test('should render a section heading for each admin.group', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		// The example-config has admin.group: 'Content' on Articles + Categories
+		// and the auth plugin contributes an 'Authentication' group
+		await expect(
+			authenticatedPage.getByRole('heading', { name: 'Content', level: 2 }),
+		).toBeVisible();
+		await expect(
+			authenticatedPage.getByRole('heading', { name: 'Authentication', level: 2 }),
+		).toBeVisible();
+	});
+
+	test('should NOT render a generic "Collections" heading when all collections have a named group', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		// Every example-config collection has an explicit admin.group, so the default
+		// 'Collections' fallback group must not appear on the dashboard
+		await expect(
+			authenticatedPage.getByRole('heading', { name: 'Collections', level: 2 }),
+		).not.toBeVisible();
+	});
+
+	test('should place Categories and Articles cards inside the Content group section', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		// <section aria-labelledby="group-Content"> is a named region
+		const contentSection = authenticatedPage.getByRole('region', { name: 'Content' });
+		await expect(contentSection).toBeVisible();
+		await expect(contentSection.getByRole('heading', { name: 'Categories' })).toBeVisible();
+		await expect(contentSection.getByRole('heading', { name: 'Articles' })).toBeVisible();
+	});
+
+	test('should place Users and Auth Api Keys cards inside the Authentication group section', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		const authSection = authenticatedPage.getByRole('region', { name: 'Authentication' });
+		await expect(authSection).toBeVisible();
+		await expect(authSection.getByRole('heading', { name: 'Users' })).toBeVisible();
+		await expect(authSection.getByRole('heading', { name: 'Auth Api Keys' })).toBeVisible();
+	});
+
+	test('should NOT show Content collection cards inside the Authentication section', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		const authSection = authenticatedPage.getByRole('region', { name: 'Authentication' });
+		await expect(authSection.getByRole('heading', { name: 'Categories' })).not.toBeVisible();
+		await expect(authSection.getByRole('heading', { name: 'Articles' })).not.toBeVisible();
+	});
+
+	test('should render the Content group section before the Authentication group section', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		const contentHeading = authenticatedPage.getByRole('heading', { name: 'Content', level: 2 });
+		const authHeading = authenticatedPage.getByRole('heading', {
+			name: 'Authentication',
+			level: 2,
+		});
+
+		const contentBox = await contentHeading.boundingBox();
+		const authBox = await authHeading.boundingBox();
+
+		// Content group must appear above Authentication group in document order
+		if (!contentBox || !authBox) {
+			throw new Error('Group section headings must be in the viewport to compare positions');
+		}
+		expect(contentBox.y).toBeLessThan(authBox.y);
+	});
+});
+
 test.describe('Admin Dashboard', () => {
 	test('should display dashboard with correct heading', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');

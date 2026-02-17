@@ -32,11 +32,7 @@ import type { AdminBranding, AdminUser } from '../widget.types';
 import { humanizeFieldName } from '@momentumcms/core';
 import { McmsThemeService } from '../../ui/theme/theme.service';
 import type { AdminPluginRoute } from '../../routes/momentum-admin-routes';
-
-interface CollectionGroup {
-	name: string;
-	collections: CollectionConfig[];
-}
+import { groupCollections } from '../../utils/group-collections';
 
 interface GlobalGroup {
 	name: string;
@@ -148,7 +144,7 @@ interface PluginRouteGroup {
 					/>
 
 					<!-- Collection Sections (grouped by admin.group) -->
-					@for (group of collectionGroups(); track group.name) {
+					@for (group of collectionGroups(); track group.id) {
 						<mcms-sidebar-section [title]="group.name">
 							@for (collection of group.collections; track collection.slug) {
 								<mcms-sidebar-nav-item
@@ -273,27 +269,7 @@ export class AdminSidebarWidget {
 	readonly collectionsBasePath = computed(() => `${this.basePath()}/collections`);
 
 	/** Collections grouped by admin.group field */
-	readonly collectionGroups = computed((): CollectionGroup[] => {
-		const collections = this.collections();
-		const DEFAULT_GROUP = 'Collections';
-		const groupMap = new Map<string, CollectionConfig[]>();
-
-		for (const c of collections) {
-			const name = c.admin?.group ?? DEFAULT_GROUP;
-			const list = groupMap.get(name) ?? [];
-			list.push(c);
-			groupMap.set(name, list);
-		}
-
-		// Named groups first (in order of first appearance), default last
-		const groups: CollectionGroup[] = [];
-		for (const [name, colls] of groupMap) {
-			if (name !== DEFAULT_GROUP) groups.push({ name, collections: colls });
-		}
-		const defaultGroup = groupMap.get(DEFAULT_GROUP);
-		if (defaultGroup) groups.push({ name: DEFAULT_GROUP, collections: defaultGroup });
-		return groups;
-	});
+	readonly collectionGroups = computed(() => groupCollections(this.collections()));
 
 	/** Globals grouped by admin.group field */
 	readonly globalGroups = computed((): GlobalGroup[] => {
