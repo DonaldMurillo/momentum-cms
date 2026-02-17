@@ -21,8 +21,37 @@ export default [
 				'error',
 				{
 					enforceBuildableLibDependency: true,
-					allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$'],
+					allow: [
+						'^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$',
+						// Browser-safe sub-paths from server-tagged libs
+						'@momentumcms/auth/core',
+						'@momentumcms/auth/collections',
+						'@momentumcms/plugins/analytics',
+						'@momentumcms/plugins/analytics/dashboard',
+						'@momentumcms/plugins/analytics/admin-routes',
+						'@momentumcms/plugins/analytics/client',
+						'@momentumcms/plugins/analytics/block-fields',
+						// Example config sub-paths (mixed lazy/static usage in apps)
+						'@momentumcms/example-config',
+						'@momentumcms/example-config/collections',
+						'@momentumcms/example-config/globals',
+						'@momentumcms/example-config/pages',
+					],
 					depConstraints: [
+						// Environment boundaries
+						{
+							sourceTag: 'env:browser',
+							onlyDependOnLibsWithTags: ['env:browser', 'env:universal'],
+						},
+						{
+							sourceTag: 'env:server',
+							onlyDependOnLibsWithTags: ['env:server', 'env:universal'],
+						},
+						{
+							sourceTag: 'env:universal',
+							onlyDependOnLibsWithTags: ['env:universal'],
+						},
+						// Scope rules
 						{
 							sourceTag: 'scope:app',
 							onlyDependOnLibsWithTags: ['*'],

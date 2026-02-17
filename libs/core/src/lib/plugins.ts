@@ -196,4 +196,30 @@ export interface MomentumPlugin {
 
 	/** Called on graceful shutdown. Clean up resources. */
 	onShutdown?(context: PluginContext): void | Promise<void>;
+
+	/** Browser-safe import descriptors for the admin config generator.
+	 *  Tells the generator where to import collections, admin routes, and
+	 *  modifyCollections from browser-safe sub-paths instead of the main
+	 *  server-only entry point. */
+	browserImports?: PluginBrowserImports;
+}
+
+/** A single browser-safe import descriptor for a plugin export. */
+export interface PluginBrowserImport {
+	/** The import path (e.g., '@momentumcms/auth/collections') */
+	path: string;
+	/** The named export to import (e.g., 'BASE_AUTH_COLLECTIONS') */
+	exportName: string;
+}
+
+/** Browser-safe import map for the admin config generator.
+ *  Plugins declare which sub-paths expose browser-safe versions
+ *  of their collections, admin routes, and modifyCollections. */
+export interface PluginBrowserImports {
+	/** Import path for browser-safe plugin collections */
+	collections?: PluginBrowserImport;
+	/** Import path for browser-safe plugin admin routes */
+	adminRoutes?: PluginBrowserImport;
+	/** Import path for browser-safe modifyCollections function */
+	modifyCollections?: PluginBrowserImport;
 }

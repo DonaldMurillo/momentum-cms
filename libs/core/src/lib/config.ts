@@ -7,7 +7,7 @@ import type {
 	VersionCountOptions,
 	CreateVersionOptions,
 } from './versions';
-import type { MomentumPlugin } from './plugins';
+import type { MomentumPlugin, PluginAdminRouteDescriptor } from './plugins';
 import type { StorageAdapter } from './storage';
 
 /**
@@ -320,6 +320,37 @@ export interface LoggingConfig {
  * Resolved logging config with defaults applied.
  */
 export type ResolvedLoggingConfig = Required<LoggingConfig>;
+
+/**
+ * Browser-safe plugin descriptor for admin UI.
+ * Contains only static data needed for admin route generation.
+ */
+export interface AdminPluginDescriptor {
+	/** Unique plugin name */
+	name: string;
+	/** Static collections declared by this plugin */
+	collections?: CollectionConfig[];
+	/** Static admin routes declared by this plugin */
+	adminRoutes?: PluginAdminRouteDescriptor[];
+	/** Synchronously transform the merged collections at config time */
+	modifyCollections?(collections: CollectionConfig[]): void;
+}
+
+/**
+ * Browser-safe config for admin route generation.
+ * Contains only the data needed by `momentumAdminRoutes()` — no db/storage/server.
+ * This is the output type of the unified `generate` Nx executor (--config output).
+ */
+export interface MomentumAdminConfig<CS extends string = string, GS extends string = string> {
+	/** Collection definitions */
+	collections: Array<CollectionConfig & { slug: CS }>;
+	/** Global definitions (singleton documents) */
+	globals?: Array<GlobalConfig & { slug: GS }>;
+	/** Admin panel configuration */
+	admin?: AdminPanelConfig;
+	/** Browser-safe plugin descriptors */
+	plugins?: AdminPluginDescriptor[];
+}
 
 /**
  * Momentum CMS configuration.

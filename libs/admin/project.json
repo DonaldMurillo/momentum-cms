@@ -4,7 +4,7 @@
 	"sourceRoot": "libs/admin/src",
 	"prefix": "lib",
 	"projectType": "library",
-	"tags": ["scope:lib"],
+	"tags": ["scope:lib", "env:browser"],
 	"targets": {
 		"build": {
 			"executor": "@nx/angular:package",

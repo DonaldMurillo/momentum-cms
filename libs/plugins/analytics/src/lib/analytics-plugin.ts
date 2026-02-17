@@ -135,6 +135,18 @@ export function analyticsPlugin(config: AnalyticsConfig): AnalyticsPluginInstanc
 		analyticsConfig: config,
 		adminRoutes,
 
+		// Browser-safe import paths for the admin config generator
+		browserImports: {
+			adminRoutes: {
+				path: '@momentumcms/plugins/analytics/admin-routes',
+				exportName: 'analyticsAdminRoutes',
+			},
+			modifyCollections: {
+				path: '@momentumcms/plugins/analytics/block-fields',
+				exportName: 'injectBlockAnalyticsFields',
+			},
+		},
+
 		modifyCollections(collections) {
 			if (config.enabled !== false && config.blockTracking !== false) {
 				injectBlockAnalyticsFields(collections);

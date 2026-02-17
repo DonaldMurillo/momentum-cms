@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, forwardRef, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import {
 	CdkDropList,
 	CdkDrag,
@@ -44,7 +44,7 @@ import { FieldRenderer } from './field-renderer.component';
 		CdkDropList,
 		CdkDrag,
 		CdkDragHandle,
-		forwardRef(() => FieldRenderer),
+		FieldRenderer,
 	],
 	providers: [provideIcons({ heroPlus, heroTrash, heroBars2 })],
 	changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,4 +1,7 @@
-// Better Auth integration
+// Browser-safe types and constants (re-exported for backward compatibility)
+export * from './core';
+
+// Better Auth integration (server-only)
 export * from './lib/auth';
 export * from './lib/email';
 export * from './lib/email-templates';

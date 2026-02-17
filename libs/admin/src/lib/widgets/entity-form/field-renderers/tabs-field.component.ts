@@ -1,11 +1,4 @@
-import {
-	ChangeDetectionStrategy,
-	Component,
-	computed,
-	forwardRef,
-	input,
-	signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@momentumcms/ui';
 import type { Field, TabConfig } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form.types';
@@ -21,7 +14,7 @@ import { FieldRenderer } from './field-renderer.component';
  */
 @Component({
 	selector: 'mcms-tabs-field-renderer',
-	imports: [Tabs, TabsList, TabsTrigger, TabsContent, forwardRef(() => FieldRenderer)],
+	imports: [Tabs, TabsList, TabsTrigger, TabsContent, FieldRenderer],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `

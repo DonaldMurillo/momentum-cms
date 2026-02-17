@@ -60,7 +60,7 @@ import { RouterLink } from '@angular/router';
 							definitions.
 						</p>
 						<code class="block rounded bg-muted px-3 py-2 text-xs text-muted-foreground">
-							npm run generate-types
+							npm run generate
 						</code>
 					</div>
 				</section>

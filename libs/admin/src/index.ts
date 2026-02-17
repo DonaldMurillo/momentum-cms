@@ -127,6 +127,13 @@ export {
 	type BlockEditDialogData,
 } from './lib/widgets/visual-block-editor/block-edit-dialog.component';
 
+// Field Renderer Registry (lazy loading + custom field types)
+export { FieldRendererRegistry } from './lib/services/field-renderer-registry.service';
+export {
+	provideMomentumFieldRenderers,
+	provideFieldRenderer,
+} from './lib/services/provide-field-renderers';
+
 // Field Renderers (for custom forms)
 export { FieldRenderer } from './lib/widgets/entity-form/field-renderers/field-renderer.component';
 export { TextFieldRenderer } from './lib/widgets/entity-form/field-renderers/text-field.component';

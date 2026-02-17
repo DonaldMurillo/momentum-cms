@@ -543,31 +543,58 @@ async function verifyDevServer(projectDir: string, flavor: Flavor): Promise<void
 }
 
 /**
- * Run `npm run generate-types` and verify the output file is created
- * with expected content (collection interfaces).
+ * Run `npm run generate` and verify both output files are created
+ * with expected content (types + admin config).
  */
 function verifyGenerateTypes(projectDir: string): void {
-	console.log(`${LOG_PREFIX} Running npm run generate-types...`);
-	execFileSync('npm', ['run', 'generate-types'], {
+	console.log(`${LOG_PREFIX} Running npm run generate...`);
+	execFileSync('npm', ['run', 'generate'], {
 		cwd: projectDir,
 		stdio: 'inherit',
 		timeout: 30000,
+		shell: true,
 	});
 
-	const outputPath = path.join(projectDir, 'src', 'types', 'momentum.generated.ts');
-	if (!fs.existsSync(outputPath)) {
-		throw new Error(`generate-types did not create output file: ${outputPath}`);
+	const typesPath = path.join(projectDir, 'src', 'generated', 'momentum.types.ts');
+	if (!fs.existsSync(typesPath)) {
+		throw new Error(`generate did not create types file: ${typesPath}`);
 	}
 
-	const content = fs.readFileSync(outputPath, 'utf-8');
-	if (!content.includes('Posts')) {
+	const typesContent = fs.readFileSync(typesPath, 'utf-8');
+	if (!typesContent.includes('CollectionSlug')) {
 		throw new Error(
-			'generate-types output does not contain expected "Posts" interface.\n' +
-				`Content:\n${content.substring(0, 500)}`,
+			'generate types output does not contain expected "CollectionSlug" type.\n' +
+				`Content:\n${typesContent.substring(0, 500)}`,
 		);
 	}
 
-	console.log(`${LOG_PREFIX} generate-types verified: ${outputPath}`);
+	const configPath = path.join(projectDir, 'src', 'generated', 'momentum.config.ts');
+	if (!fs.existsSync(configPath)) {
+		throw new Error(`generate did not create admin config file: ${configPath}`);
+	}
+
+	const configContent = fs.readFileSync(configPath, 'utf-8');
+	if (!configContent.includes('adminConfig')) {
+		throw new Error(
+			'generate admin config does not contain expected "adminConfig" export.\n' +
+				`Content:\n${configContent.substring(0, 500)}`,
+		);
+	}
+	if (!configContent.includes('MomentumAdminConfig')) {
+		throw new Error(
+			'generate admin config does not contain expected "MomentumAdminConfig" type.\n' +
+				`Content:\n${configContent.substring(0, 500)}`,
+		);
+	}
+	// Verify collections are inlined (not imported from user files)
+	if (!configContent.includes('slug: "posts"')) {
+		throw new Error(
+			'generate admin config does not contain inlined Posts collection.\n' +
+				`Content:\n${configContent.substring(0, 1000)}`,
+		);
+	}
+
+	console.log(`${LOG_PREFIX} generate verified: ${typesPath}, ${configPath}`);
 }
 
 /**

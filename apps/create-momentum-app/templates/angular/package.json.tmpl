@@ -7,7 +7,7 @@
 		"build": "ng build",
 		"start": "node dist/{{projectName}}/server/server.mjs",
 		"lint": "ng lint",
-		"generate-types": "tsx node_modules/@momentumcms/core/generators/types/generator.cjs src/momentum.config.ts src/types/momentum.generated.ts"
+		"generate": "tsx node_modules/@momentumcms/core/generators/generator.cjs src/momentum.config.ts --types src/generated/momentum.types.ts --config src/generated/momentum.config.ts"
 	},
 	"dependencies": {
 		"@angular/animations": "^21.1.0",

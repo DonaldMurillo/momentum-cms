@@ -3,7 +3,7 @@
 	"$schema": "../../node_modules/nx/schemas/project-schema.json",
 	"sourceRoot": "libs/core/src",
 	"projectType": "library",
-	"tags": ["scope:lib"],
+	"tags": ["scope:lib", "env:universal"],
 	"targets": {
 		"test": {
 			"executor": "@nx/vitest:test",
@@ -18,7 +18,7 @@
 			"options": {
 				"outputPath": "dist/libs/core",
 				"main": "libs/core/src/index.ts",
-				"additionalEntryPoints": ["libs/core/src/generators/types/generator.ts"],
+				"additionalEntryPoints": ["libs/core/src/generators/generator.ts"],
 				"tsConfig": "libs/core/tsconfig.lib.json"
 			}
 		},

@@ -7,7 +7,7 @@
 		"dev": "vite",
 		"build": "vite build",
 		"start": "node dist/analog/server/index.mjs",
-		"generate-types": "tsx node_modules/@momentumcms/core/generators/types/generator.cjs src/momentum.config.ts src/types/momentum.generated.ts"
+		"generate": "tsx node_modules/@momentumcms/core/generators/generator.cjs src/momentum.config.ts --types src/generated/momentum.types.ts --config src/generated/momentum.config.ts"
 	},
 	"dependencies": {
 		"@analogjs/platform": "^2.2.3",

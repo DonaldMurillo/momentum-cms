@@ -132,8 +132,12 @@ module.exports = {
 				}
 
 				// Skip class property/method definitions: private readonly document = inject(DOCUMENT)
+				// Skip TS interface/type property signatures: { location?: string }
 				if (
-					(node.parent.type === 'PropertyDefinition' || node.parent.type === 'MethodDefinition') &&
+					(node.parent.type === 'PropertyDefinition' ||
+						node.parent.type === 'MethodDefinition' ||
+						node.parent.type === 'TSPropertySignature' ||
+						node.parent.type === 'TSMethodSignature') &&
 					node.parent.key === node
 				) {
 					return;

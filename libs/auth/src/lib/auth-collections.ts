@@ -19,18 +19,11 @@ import {
 	select,
 	relationship,
 } from '@momentumcms/core';
-import type { CollectionConfig, SelectOption } from '@momentumcms/core';
+import type { CollectionConfig } from '@momentumcms/core';
+import { AUTH_ROLES } from './auth-core';
 
-/**
- * Canonical list of auth roles, ordered by privilege (highest first).
- * Used by both server middleware and admin UI for role validation and display.
- */
-export const AUTH_ROLES: SelectOption[] = [
-	{ label: 'Admin', value: 'admin' },
-	{ label: 'Editor', value: 'editor' },
-	{ label: 'User', value: 'user' },
-	{ label: 'Viewer', value: 'viewer' },
-];
+// Re-export AUTH_ROLES so existing consumers of `@momentumcms/auth/collections` still work
+export { AUTH_ROLES };
 
 // ============================================
 // auth-user — Better Auth "user" table

@@ -15,7 +15,6 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createMomentumServer } from '@momentumcms/server-express';
 import { provideMomentumAPI } from '@momentumcms/admin';
-// eslint-disable-next-line @nx/enforce-module-boundaries -- server-side import, does not affect client bundle
 import { mountTestEndpoints } from '@momentumcms/example-config';
 import momentumConfig, { authPlugin, analytics, analyticsAdapter, events } from './momentum.config';
 

@@ -6,14 +6,7 @@
  * using the standard FieldRenderer.
  */
 
-import {
-	ChangeDetectionStrategy,
-	Component,
-	computed,
-	forwardRef,
-	input,
-	output,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
 	heroChevronUp,
@@ -30,7 +23,7 @@ import { FieldRenderer } from '../entity-form/field-renderers/field-renderer.com
 
 @Component({
 	selector: 'mcms-block-wrapper',
-	imports: [forwardRef(() => FieldRenderer), NgIcon, Badge, Button],
+	imports: [FieldRenderer, NgIcon, Badge, Button],
 	providers: [provideIcons({ heroChevronUp, heroChevronDown, heroChevronRight, heroTrash })],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: {

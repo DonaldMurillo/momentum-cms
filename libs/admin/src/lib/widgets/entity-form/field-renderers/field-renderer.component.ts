@@ -1,220 +1,52 @@
-import { ChangeDetectionStrategy, Component, computed, forwardRef, input } from '@angular/core';
+import {
+	ChangeDetectionStrategy,
+	Component,
+	computed,
+	effect,
+	inject,
+	input,
+	signal,
+	Type,
+} from '@angular/core';
+import { NgComponentOutlet } from '@angular/common';
 import type { Field } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form.types';
-import { TextFieldRenderer } from './text-field.component';
-import { NumberFieldRenderer } from './number-field.component';
-import { SelectFieldRenderer } from './select-field.component';
-import { CheckboxFieldRenderer } from './checkbox-field.component';
-import { DateFieldRenderer } from './date-field.component';
-import { UploadFieldRenderer } from './upload-field.component';
-import { GroupFieldRenderer } from './group-field.component';
-import { ArrayFieldRenderer } from './array-field.component';
-import { BlocksFieldRenderer } from './blocks-field.component';
-import { RelationshipFieldRenderer } from './relationship-field.component';
-import { RichTextFieldRenderer } from './rich-text-field.component';
-import { TabsFieldRenderer } from './tabs-field.component';
-import { CollapsibleFieldRenderer } from './collapsible-field.component';
-import { RowFieldRenderer } from './row-field.component';
-import { VisualBlockEditorComponent } from '../../visual-block-editor/visual-block-editor.component';
+import { FieldRendererRegistry } from '../../../services/field-renderer-registry.service';
 
 /**
- * Dynamic field renderer that switches based on field type.
+ * Dynamic field renderer that resolves components lazily from the registry.
  *
- * Uses Angular Signal Forms bridge pattern: each renderer receives
- * its formNode (FieldTree) and reads/writes values via FieldState.
+ * Uses `NgComponentOutlet` to render the appropriate field renderer component
+ * based on the field type, resolved from `FieldRendererRegistry`.
+ * Falls back to the `text` renderer for unknown types.
  */
 @Component({
 	selector: 'mcms-field-renderer',
-	imports: [
-		TextFieldRenderer,
-		NumberFieldRenderer,
-		SelectFieldRenderer,
-		CheckboxFieldRenderer,
-		DateFieldRenderer,
-		UploadFieldRenderer,
-		GroupFieldRenderer,
-		ArrayFieldRenderer,
-		BlocksFieldRenderer,
-		RelationshipFieldRenderer,
-		RichTextFieldRenderer,
-		TabsFieldRenderer,
-		CollapsibleFieldRenderer,
-		RowFieldRenderer,
-		forwardRef(() => VisualBlockEditorComponent),
-	],
+	imports: [NgComponentOutlet],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `
-		@switch (fieldType()) {
-			@case ('text') {
-				<mcms-text-field-renderer
-					[field]="field()"
-					[formNode]="formNode()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
-			@case ('textarea') {
-				<mcms-text-field-renderer
-					[field]="field()"
-					[formNode]="formNode()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
-			@case ('richText') {
-				<mcms-rich-text-field-renderer
-					[field]="field()"
-					[formNode]="formNode()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
-			@case ('email') {
-				<mcms-text-field-renderer
-					[field]="field()"
-					[formNode]="formNode()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
-			@case ('slug') {
-				<mcms-text-field-renderer
-					[field]="field()"
-					[formNode]="formNode()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
-			@case ('number') {
-				<mcms-number-field-renderer
-					[field]="field()"
-					[formNode]="formNode()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
-			@case ('select') {
-				<mcms-select-field-renderer
-					[field]="field()"
-					[formNode]="formNode()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
-			@case ('checkbox') {
-				<mcms-checkbox-field-renderer
-					[field]="field()"
-					[formNode]="formNode()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
-			@case ('date') {
-				<mcms-date-field-renderer
-					[field]="field()"
-					[formNode]="formNode()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
-			@case ('upload') {
-				<mcms-upload-field-renderer
-					[field]="field()"
-					[formNode]="formNode()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
-			@case ('group') {
-				<mcms-group-field-renderer
-					[field]="field()"
-					[formNode]="formNode()"
-					[formTree]="formTree()"
-					[formModel]="formModel()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
-			@case ('array') {
-				<mcms-array-field-renderer
-					[field]="field()"
-					[formNode]="formNode()"
-					[formTree]="formTree()"
-					[formModel]="formModel()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
-			@case ('blocks') {
-				@if (field().admin?.editor === 'visual') {
-					<mcms-visual-block-editor
-						[field]="field()"
-						[formNode]="formNode()"
-						[formTree]="formTree()"
-						[formModel]="formModel()"
-						[mode]="mode()"
-						[path]="path()"
-					/>
-				} @else {
-					<mcms-blocks-field-renderer
-						[field]="field()"
-						[formNode]="formNode()"
-						[formTree]="formTree()"
-						[formModel]="formModel()"
-						[mode]="mode()"
-						[path]="path()"
-					/>
-				}
-			}
-			@case ('relationship') {
-				<mcms-relationship-field-renderer
-					[field]="field()"
-					[formNode]="formNode()"
-					[formModel]="formModel()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
-			@case ('tabs') {
-				<mcms-tabs-field-renderer
-					[field]="field()"
-					[formTree]="formTree()"
-					[formModel]="formModel()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
-			@case ('collapsible') {
-				<mcms-collapsible-field-renderer
-					[field]="field()"
-					[formTree]="formTree()"
-					[formModel]="formModel()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
-			@case ('row') {
-				<mcms-row-field-renderer
-					[field]="field()"
-					[formTree]="formTree()"
-					[formModel]="formModel()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
-			@default {
-				<mcms-text-field-renderer
-					[field]="field()"
-					[formNode]="formNode()"
-					[mode]="mode()"
-					[path]="path()"
-				/>
-			}
+		@if (resolvedComponent()) {
+			<ng-container *ngComponentOutlet="resolvedComponent(); inputs: rendererInputs()" />
+		} @else if (loadError()) {
+			<div
+				role="alert"
+				class="rounded-md border border-destructive/50 bg-destructive/10 p-2 text-sm text-destructive"
+			>
+				Failed to load field renderer
+			</div>
+		} @else {
+			<div
+				role="status"
+				aria-label="Loading field"
+				class="h-10 animate-pulse rounded-md bg-muted"
+			></div>
 		}
 	`,
 })
 export class FieldRenderer {
+	private readonly registry = inject(FieldRendererRegistry);
+
 	/** Field definition */
 	readonly field = input.required<Field>();
 
@@ -233,6 +65,43 @@ export class FieldRenderer {
 	/** Field path (for nested fields) */
 	readonly path = input.required<string>();
 
-	/** Field type for template switching */
-	readonly fieldType = computed(() => this.field().type);
+	/** Resolved component type, set after lazy loading completes */
+	readonly resolvedComponent = signal<Type<unknown> | null>(null);
+
+	/** Error from lazy loading failure */
+	readonly loadError = signal<Error | null>(null);
+
+	/** Registry key: 'blocks-visual' when blocks field has visual editor, otherwise field.type */
+	readonly registryKey = computed(() => {
+		const f = this.field();
+		if (f.type === 'blocks' && f.admin?.editor === 'visual') {
+			return 'blocks-visual';
+		}
+		return f.type;
+	});
+
+	/** Inputs to pass to the dynamically loaded component via NgComponentOutlet */
+	readonly rendererInputs = computed(() => ({
+		field: this.field(),
+		formNode: this.formNode(),
+		formTree: this.formTree(),
+		formModel: this.formModel(),
+		mode: this.mode(),
+		path: this.path(),
+	}));
+
+	constructor() {
+		effect(() => {
+			const key = this.registryKey();
+			const loader = this.registry.get(key) ?? this.registry.get('text');
+
+			if (loader) {
+				loader()
+					.then((component) => this.resolvedComponent.set(component))
+					.catch((error: unknown) => {
+						this.loadError.set(error instanceof Error ? error : new Error(String(error)));
+					});
+			}
+		});
+	}
 }
