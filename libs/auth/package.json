@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/auth",
-	"version": "0.1.10",
+	"version": "0.2.0",
 	"description": "Better Auth integration for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
