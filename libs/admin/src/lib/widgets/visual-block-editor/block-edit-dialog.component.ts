@@ -6,7 +6,7 @@
  * forms tree nodes so edits are reflected live in the preview.
  */
 
-import { ChangeDetectionStrategy, Component, forwardRef, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import type { BlockConfig, Field } from '@momentumcms/core';
 import {
 	Button,
@@ -44,7 +44,7 @@ export interface BlockEditDialogData {
 		DialogContent,
 		DialogFooter,
 		DialogClose,
-		forwardRef(() => FieldRenderer),
+		FieldRenderer,
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { style: 'display: block; width: 100%' },

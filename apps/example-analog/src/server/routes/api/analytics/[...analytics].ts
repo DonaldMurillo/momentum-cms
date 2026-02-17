@@ -25,7 +25,6 @@ import type {
 	AnalyticsQueryOptions,
 } from '@momentumcms/plugins/analytics';
 
-// eslint-disable-next-line @nx/enforce-module-boundaries -- server-side import, does not affect client bundle
 import { parseUserAgent } from '@momentumcms/plugins/analytics';
 import { getMomentumAPI, RateLimiter } from '@momentumcms/server-core';
 import { ensureInitialized, analytics, analyticsAdapter } from '../../../utils/momentum-init';

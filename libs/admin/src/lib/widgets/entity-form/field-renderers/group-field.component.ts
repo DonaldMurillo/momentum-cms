@@ -1,12 +1,4 @@
-import {
-	ChangeDetectionStrategy,
-	Component,
-	computed,
-	effect,
-	forwardRef,
-	input,
-	signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, input, signal } from '@angular/core';
 import {
 	Card,
 	CardHeader,
@@ -41,7 +33,7 @@ import { FieldRenderer } from './field-renderer.component';
 		AccordionItem,
 		AccordionTrigger,
 		AccordionContent,
-		forwardRef(() => FieldRenderer),
+		FieldRenderer,
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `

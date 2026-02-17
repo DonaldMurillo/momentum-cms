@@ -6,6 +6,15 @@ import { createEmailService, type EmailConfig, type EmailService } from './email
 import { getPasswordResetEmail, getVerificationEmail } from './email-templates';
 import { createLogger } from '@momentumcms/logger';
 import type { Field } from '@momentumcms/core';
+import type { OAuthProviderConfig, OAuthProvidersConfig } from './auth-core';
+
+// Re-export browser-safe types from auth-core for backward compatibility
+export type {
+	MomentumUser,
+	MomentumSession,
+	OAuthProviderConfig,
+	OAuthProvidersConfig,
+} from './auth-core';
 
 /**
  * Database configuration for Better Auth.
@@ -25,23 +34,6 @@ export interface MomentumEmailOptions extends EmailConfig {
 	appName?: string;
 	/** Require email verification on signup. Default: false */
 	requireEmailVerification?: boolean;
-}
-
-/**
- * OAuth provider configuration.
- */
-export interface OAuthProviderConfig {
-	clientId: string;
-	clientSecret: string;
-	redirectURI?: string;
-}
-
-/**
- * Supported OAuth providers.
- */
-export interface OAuthProvidersConfig {
-	google?: OAuthProviderConfig;
-	github?: OAuthProviderConfig;
 }
 
 /**
@@ -86,33 +78,6 @@ export interface MomentumAuthConfigLegacy {
 	socialProviders?: OAuthProvidersConfig;
 	/** Enable two-factor authentication (TOTP). Default: false */
 	twoFactorAuth?: boolean;
-}
-
-/**
- * User type from Better Auth with additional role field.
- */
-export interface MomentumUser {
-	id: string;
-	email: string;
-	name: string;
-	role: string;
-	emailVerified: boolean;
-	twoFactorEnabled?: boolean;
-	image?: string | null;
-	createdAt: Date;
-	updatedAt: Date;
-}
-
-/**
- * Session type from Better Auth.
- */
-export interface MomentumSession {
-	id: string;
-	userId: string;
-	token: string;
-	expiresAt: Date;
-	ipAddress?: string | null;
-	userAgent?: string | null;
 }
 
 /**

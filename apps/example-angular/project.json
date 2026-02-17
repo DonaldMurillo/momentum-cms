@@ -8,7 +8,7 @@
 	"targets": {
 		"build": {
 			"executor": "@angular/build:application",
-			"dependsOn": ["ui:build-storybook"],
+			"dependsOn": ["ui:build-storybook", "generate"],
 			"outputs": ["{options.outputPath}"],
 			"options": {
 				"outputPath": "dist/apps/example-angular",
@@ -93,16 +93,16 @@
 				"command": "npx tsc --noEmit -p apps/example-angular/tsconfig.app.json"
 			}
 		},
-		"generate-types": {
+		"generate": {
 			"executor": "nx:run-commands",
 			"options": {
-				"command": "npx tsx --tsconfig apps/example-angular/tsconfig.app.json libs/core/src/generators/types/generator.ts apps/example-angular/src/momentum.config.ts apps/example-angular/src/types/momentum.generated.ts"
+				"command": "npx tsx --tsconfig apps/example-angular/tsconfig.app.json libs/core/src/generators/generator.ts apps/example-angular/src/momentum.config.ts --types apps/example-angular/src/generated/momentum.types.ts --config apps/example-angular/src/generated/momentum.config.ts"
 			}
 		},
-		"generate-types:watch": {
+		"generate:watch": {
 			"executor": "nx:run-commands",
 			"options": {
-				"command": "npx tsx --tsconfig apps/example-angular/tsconfig.app.json libs/core/src/generators/types/generator.ts apps/example-angular/src/momentum.config.ts apps/example-angular/src/types/momentum.generated.ts --watch"
+				"command": "npx tsx --tsconfig apps/example-angular/tsconfig.app.json libs/core/src/generators/generator.ts apps/example-angular/src/momentum.config.ts --types apps/example-angular/src/generated/momentum.types.ts --config apps/example-angular/src/generated/momentum.config.ts --watch"
 			}
 		}
 	}

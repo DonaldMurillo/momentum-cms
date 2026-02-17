@@ -3,7 +3,7 @@
 	"$schema": "../../node_modules/nx/schemas/project-schema.json",
 	"sourceRoot": "libs/server-express/src",
 	"projectType": "library",
-	"tags": ["scope:lib"],
+	"tags": ["scope:lib", "env:server"],
 	"targets": {
 		"test": {
 			"executor": "@nx/vitest:test",

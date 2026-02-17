@@ -6,13 +6,13 @@
  *
  * @example
  * ```typescript
- * import type { Users } from './types/momentum.generated';
+ * import type { AuthUser } from './generated/momentum.types';
  * import { injectUser } from '@momentumcms/admin';
  *
  * @Component({...})
  * export class MyComponent {
  *   // Typed user from your generated types
- *   readonly user = injectUser<Users>();
+ *   readonly user = injectUser<AuthUser>();
  *
  *   // Or use convenience functions
  *   readonly isAdmin = injectIsAdmin();
@@ -51,11 +51,11 @@ export interface BaseUser {
  *
  * @example
  * ```typescript
- * import type { Users } from './types/momentum.generated';
+ * import type { AuthUser } from './generated/momentum.types';
  *
  * @Component({...})
  * export class ProfileComponent {
- *   readonly user = injectUser<Users>();
+ *   readonly user = injectUser<AuthUser>();
  *
  *   constructor() {
  *     effect(() => {

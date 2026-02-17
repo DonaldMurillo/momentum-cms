@@ -145,6 +145,14 @@ export function momentumAuth(config: MomentumAuthPluginConfig): MomentumAuthPlug
 		// Static collections for admin UI route data (read at config time)
 		collections: finalAuthCollections,
 
+		// Browser-safe import paths for the admin config generator
+		browserImports: {
+			collections: {
+				path: '@momentumcms/auth/collections',
+				exportName: 'BASE_AUTH_COLLECTIONS',
+			},
+		},
+
 		getAuth(): MomentumAuth {
 			if (!authInstance) {
 				throw new Error('Auth not initialized. Call onInit first (via initializeMomentum).');

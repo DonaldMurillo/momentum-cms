@@ -3,6 +3,6 @@
 	"$schema": "../../node_modules/nx/schemas/project-schema.json",
 	"sourceRoot": "libs/e2e-fixtures/src",
 	"projectType": "library",
-	"tags": ["scope:lib"],
+	"tags": ["scope:lib", "env:server"],
 	"targets": {}
 }

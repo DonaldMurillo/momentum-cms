@@ -3,7 +3,6 @@ import {
 	Component,
 	computed,
 	effect,
-	forwardRef,
 	input,
 	untracked,
 } from '@angular/core';
@@ -68,7 +67,7 @@ interface BlockItem {
 		CdkDropList,
 		CdkDrag,
 		CdkDragHandle,
-		forwardRef(() => FieldRenderer),
+		FieldRenderer,
 	],
 	providers: [provideIcons({ heroPlus, heroTrash, heroBars2 })],
 	changeDetection: ChangeDetectionStrategy.OnPush,

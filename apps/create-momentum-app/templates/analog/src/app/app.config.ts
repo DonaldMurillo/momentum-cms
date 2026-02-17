@@ -2,17 +2,14 @@ import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { provideFileRouter, requestContextInterceptor, withExtraRoutes } from '@analogjs/router';
-import { momentumAdminRoutes, crudToastInterceptor } from '@momentumcms/admin';
-import { BASE_AUTH_COLLECTIONS } from '@momentumcms/auth';
-import { Posts } from '../collections/posts';
+import {
+	momentumAdminRoutes,
+	crudToastInterceptor,
+	provideMomentumFieldRenderers,
+} from '@momentumcms/admin';
+import { adminConfig } from '../generated/momentum.config';
 
-const adminRoutes = momentumAdminRoutes({
-	basePath: '/admin',
-	collections: [Posts, ...BASE_AUTH_COLLECTIONS],
-	branding: {
-		title: 'Momentum CMS',
-	},
-});
+const adminRoutes = momentumAdminRoutes(adminConfig);
 
 export const appConfig: ApplicationConfig = {
 	providers: [
@@ -23,5 +20,6 @@ export const appConfig: ApplicationConfig = {
 			withInterceptors([crudToastInterceptor, requestContextInterceptor]),
 		),
 		provideClientHydration(withEventReplay()),
+		provideMomentumFieldRenderers(),
 	],
 };

@@ -3,7 +3,11 @@ import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/
 import { provideClientHydration } from '@angular/platform-browser';
 import { provideFileRouter, requestContextInterceptor, withExtraRoutes } from '@analogjs/router';
 import type { Routes } from '@angular/router';
-import { momentumAdminRoutes, crudToastInterceptor } from '@momentumcms/admin';
+import {
+	momentumAdminRoutes,
+	crudToastInterceptor,
+	provideMomentumFieldRenderers,
+} from '@momentumcms/admin';
 
 import { collections } from '@momentumcms/example-config/collections';
 
@@ -66,6 +70,7 @@ export const appConfig: ApplicationConfig = {
 			// (http://host/api/...), which breaks the toast interceptor's URL matching regex.
 			withInterceptors([crudToastInterceptor, requestContextInterceptor]),
 		),
+		provideMomentumFieldRenderers(),
 		...providePageBlocks(),
 	],
 };

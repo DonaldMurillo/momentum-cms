@@ -1,12 +1,4 @@
-import {
-	ChangeDetectionStrategy,
-	Component,
-	computed,
-	effect,
-	forwardRef,
-	input,
-	signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, input, signal } from '@angular/core';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@momentumcms/ui';
 import { humanizeFieldName } from '@momentumcms/core';
 import type { Field } from '@momentumcms/core';
@@ -24,13 +16,7 @@ import { FieldRenderer } from './field-renderer.component';
  */
 @Component({
 	selector: 'mcms-collapsible-field-renderer',
-	imports: [
-		Accordion,
-		AccordionItem,
-		AccordionTrigger,
-		AccordionContent,
-		forwardRef(() => FieldRenderer),
-	],
+	imports: [Accordion, AccordionItem, AccordionTrigger, AccordionContent, FieldRenderer],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `

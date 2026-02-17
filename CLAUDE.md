@@ -160,15 +160,37 @@ module.exports = {
 
 ## Libraries (@momentumcms/\*)
 
-| Package        | Path                | Purpose                                  |
-| -------------- | ------------------- | ---------------------------------------- |
-| core           | libs/core           | Collection config, fields, hooks, access |
-| server-core    | libs/server-core    | Framework-agnostic handlers              |
-| server-express | libs/server-express | Express adapter (Angular SSR)            |
-| server-analog  | libs/server-analog  | Nitro/h3 adapter (Analog.js)             |
-| admin          | libs/admin          | Angular admin UI components              |
-| db-drizzle     | libs/db-drizzle     | Drizzle adapter, schema generator        |
-| auth           | libs/auth           | Better Auth integration                  |
+| Package        | Path                | Env       | Purpose                                  |
+| -------------- | ------------------- | --------- | ---------------------------------------- |
+| core           | libs/core           | universal | Collection config, fields, hooks, access |
+| logger         | libs/logger         | universal | Shared logging utilities                 |
+| ui             | libs/ui             | browser   | Shared UI components                     |
+| admin          | libs/admin          | browser   | Angular admin UI components              |
+| server-core    | libs/server-core    | server    | Framework-agnostic handlers              |
+| server-express | libs/server-express | server    | Express adapter (Angular SSR)            |
+| server-analog  | libs/server-analog  | server    | Nitro/h3 adapter (Analog.js)             |
+| db-drizzle     | libs/db-drizzle     | server    | Drizzle adapter, schema generator        |
+| auth           | libs/auth           | server    | Better Auth integration                  |
+| storage        | libs/storage        | server    | File storage adapters                    |
+| plugins/core   | libs/plugins/core   | server    | Plugin infrastructure (runner, events)   |
+| plugins/\*     | libs/plugins/\*     | server    | Individual plugins (analytics, otel)     |
+
+### Environment Boundary Rules (ESLint)
+
+- `env:browser` can only import from `env:browser` or `env:universal`
+- `env:server` can only import from `env:server` or `env:universal`
+- `env:universal` can only import from `env:universal`
+- Server-tagged libs expose browser-safe sub-paths via `allow` patterns (see below)
+
+### Auth Sub-path Imports
+
+`@momentumcms/auth` is `env:server` but exposes browser-safe sub-paths:
+
+| Import Path                     | Use Case                                                            |
+| ------------------------------- | ------------------------------------------------------------------- |
+| `@momentumcms/auth`             | Server-only: `momentumAuth()`, `createMomentumAuth()`               |
+| `@momentumcms/auth/core`        | Browser-safe types: `MomentumUser`, `MomentumSession`, `AUTH_ROLES` |
+| `@momentumcms/auth/collections` | Browser-safe collection definitions: `BASE_AUTH_COLLECTIONS`        |
 
 ## Collection Pattern
 
@@ -196,6 +218,63 @@ nx run db-drizzle:generate-schema  # Generate schema from collections
 npx drizzle-kit generate           # Create SQL migrations
 npx drizzle-kit migrate            # Apply migrations
 npx drizzle-kit push               # Direct push (dev only)
+```
+
+## Admin Config Generator
+
+The admin config generator reads `momentum.config.ts` (server-side, Node) and outputs a browser-safe TypeScript file with proper imports. This eliminates manual wiring of collections, auth collections, and plugin routes in app routing.
+
+```bash
+nx run example-angular:generate-admin-config  # Generate browser-safe admin config
+```
+
+Usage in app routes:
+
+```typescript
+import { momentumAdminRoutes } from '@momentumcms/admin';
+import { adminConfig } from '../generated/momentum.config';
+
+export const appRoutes: Route[] = [
+	...momentumAdminRoutes(adminConfig),
+	// app-specific routes...
+];
+```
+
+Plugins declare browser-safe imports via `browserImports` on `MomentumPlugin`:
+
+```typescript
+browserImports: {
+	collections: { path: '@momentumcms/auth/collections', exportName: 'BASE_AUTH_COLLECTIONS' },
+	adminRoutes: { path: '@momentumcms/plugins/analytics/admin-routes', exportName: 'analyticsAdminRoutes' },
+	modifyCollections: { path: '@momentumcms/plugins/analytics/block-fields', exportName: 'injectBlockAnalyticsFields' },
+}
+```
+
+## Custom Field Renderers
+
+Field renderers are lazily loaded via `FieldRendererRegistry`. Built-in renderers are registered with `provideMomentumFieldRenderers()`. Apps must include this provider:
+
+```typescript
+import { provideMomentumFieldRenderers } from '@momentumcms/admin';
+
+export const appConfig: ApplicationConfig = {
+	providers: [provideMomentumFieldRenderers()],
+};
+```
+
+To add a custom field type:
+
+```typescript
+import { provideFieldRenderer } from '@momentumcms/admin';
+
+export const appConfig: ApplicationConfig = {
+	providers: [
+		provideMomentumFieldRenderers(),
+		provideFieldRenderer('color', () =>
+			import('./renderers/color-field.component').then((m) => m.ColorFieldRenderer),
+		),
+	],
+};
 ```
 
 ## Important Constraints

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, forwardRef, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import type { Field } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form.types';
 import { getSubNode } from '../entity-form.types';
@@ -14,7 +14,7 @@ import { FieldRenderer } from './field-renderer.component';
  */
 @Component({
 	selector: 'mcms-row-field-renderer',
-	imports: [forwardRef(() => FieldRenderer)],
+	imports: [FieldRenderer],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `
