@@ -476,4 +476,117 @@ describe('field-hooks', () => {
 			expect(hasFieldHooks(fields)).toBe(true);
 		});
 	});
+
+	describe('hooks inside named tabs', () => {
+		it('should run hooks on fields inside named tabs with nested data', async () => {
+			const fields: Field[] = [
+				tabs('content', {
+					tabs: [
+						{
+							name: 'seo',
+							label: 'SEO',
+							fields: [
+								text('metaTitle', {
+									hooks: {
+										beforeChange: [
+											({ value }) => (typeof value === 'string' ? value.trim() : value),
+										],
+									},
+								}),
+							],
+						},
+					],
+				}),
+			];
+			const data = { seo: { metaTitle: '  padded  ' } };
+
+			const result = await runFieldHooks('beforeChange', fields, data, req, 'create');
+			const seo = result.seo as Record<string, unknown>;
+			expect(seo.metaTitle).toBe('padded');
+		});
+
+		it('should run hooks on fields inside unnamed tabs at parent level', async () => {
+			const fields: Field[] = [
+				tabs('content', {
+					tabs: [
+						{
+							label: 'General',
+							fields: [
+								text('title', {
+									hooks: {
+										beforeChange: [
+											({ value }) => (typeof value === 'string' ? value.trim() : value),
+										],
+									},
+								}),
+							],
+						},
+					],
+				}),
+			];
+			const data = { title: '  padded  ' };
+
+			const result = await runFieldHooks('beforeChange', fields, data, req, 'create');
+			expect(result.title).toBe('padded');
+		});
+
+		it('should handle mixed named and unnamed tabs', async () => {
+			const fields: Field[] = [
+				tabs('settings', {
+					tabs: [
+						{
+							label: 'General',
+							fields: [
+								text('title', {
+									hooks: {
+										beforeChange: [
+											({ value }) => (typeof value === 'string' ? value.toUpperCase() : value),
+										],
+									},
+								}),
+							],
+						},
+						{
+							name: 'seo',
+							label: 'SEO',
+							fields: [
+								text('metaTitle', {
+									hooks: {
+										beforeChange: [
+											({ value }) => (typeof value === 'string' ? value.toLowerCase() : value),
+										],
+									},
+								}),
+							],
+						},
+					],
+				}),
+			];
+			const data = { title: 'hello', seo: { metaTitle: 'HELLO WORLD' } };
+
+			const result = await runFieldHooks('beforeChange', fields, data, req, 'create');
+			expect(result.title).toBe('HELLO');
+			const seo = result.seo as Record<string, unknown>;
+			expect(seo.metaTitle).toBe('hello world');
+		});
+
+		it('should detect hooks inside named tabs for hasFieldHooks', () => {
+			const fields: Field[] = [
+				tabs('content', {
+					tabs: [
+						{
+							name: 'seo',
+							label: 'SEO',
+							fields: [
+								text('metaTitle', {
+									hooks: { beforeChange: [({ value }) => value] },
+								}),
+							],
+						},
+					],
+				}),
+			];
+			expect(hasFieldHooks(fields)).toBe(true);
+		});
+	});
 });

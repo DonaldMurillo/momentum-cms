@@ -13,8 +13,8 @@ import {
  * Settings collection for testing layout field renderers (tabs, collapsible, row).
  *
  * Layout fields organize form UI but don't store data themselves.
- * All data fields (siteName, siteDescription, etc.) are stored at the
- * top level in the database, not nested under layout field names.
+ * Unnamed tabs hoist data fields to the top level.
+ * Named tabs (with a `name` property) create nested data, like group fields.
  */
 export const Settings = defineCollection({
 	slug: 'settings',
@@ -44,6 +44,15 @@ export const Settings = defineCollection({
 							],
 						}),
 						text('linkedinUrl', { label: 'LinkedIn URL' }),
+					],
+				},
+				{
+					name: 'notifications',
+					label: 'Notifications',
+					description: 'Configure notification preferences.',
+					fields: [
+						checkbox('emailEnabled', { label: 'Email Notifications Enabled' }),
+						text('emailFrom', { label: 'Sender Email Address' }),
 					],
 				},
 			],

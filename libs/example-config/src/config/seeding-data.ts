@@ -50,6 +50,10 @@ interface SettingsDoc {
 	linkedinUrl?: string;
 	analyticsId?: string;
 	maintenanceMode?: boolean;
+	notifications?: {
+		emailEnabled?: boolean;
+		emailFrom?: string;
+	};
 }
 
 /**
@@ -161,6 +165,10 @@ export const exampleSeedingConfig: SeedingConfig = {
 			linkedinUrl: 'https://linkedin.com/company/testcms',
 			analyticsId: 'GA-12345',
 			maintenanceMode: false,
+			notifications: {
+				emailEnabled: true,
+				emailFrom: 'noreply@test.com',
+			},
 		}),
 		collection<SettingsDoc>('settings').create('settings-minimal', {
 			siteName: 'Minimal Site',

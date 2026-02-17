@@ -391,6 +391,46 @@ describe('generateTypes', () => {
 		expect(output).not.toMatch(/advanced\??:/);
 	});
 
+	it('should generate nested type for named tabs (like a group)', () => {
+		const config = {
+			collections: [
+				{
+					slug: 'pages',
+					fields: [
+						{ name: 'title', type: 'text', required: true },
+						{
+							name: 'content',
+							type: 'tabs',
+							tabs: [
+								{
+									label: 'General',
+									fields: [{ name: 'subtitle', type: 'text' }],
+								},
+								{
+									name: 'seo',
+									label: 'SEO',
+									fields: [
+										{ name: 'metaTitle', type: 'text' },
+										{ name: 'metaDescription', type: 'textarea' },
+									],
+								},
+							],
+						},
+					],
+				},
+			],
+		};
+		const output = generateTypes(config);
+		// Unnamed tab fields should be at root level
+		expect(output).toContain('subtitle?: string;');
+		// Named tab should produce a nested type (like a group)
+		expect(output).toContain('seo?: {');
+		expect(output).toContain('metaTitle?: string;');
+		expect(output).toContain('metaDescription?: string;');
+		// The layout field name should NOT appear
+		expect(output).not.toMatch(/content\??:/);
+	});
+
 	it('should generate block discriminated union types', () => {
 		const config = {
 			collections: [
@@ -978,6 +1018,46 @@ describe('serializeField', () => {
 		expect(result).toContain('tabs:');
 		expect(result).toContain('label: "General"');
 		expect(result).toContain('name: "siteName"');
+	});
+
+	it('should serialize named tabs with name property', () => {
+		const result = serializeField({
+			name: 'settings',
+			type: 'tabs',
+			tabs: [
+				{
+					name: 'seo',
+					label: 'SEO',
+					fields: [{ name: 'metaTitle', type: 'text' }],
+				},
+			],
+		});
+		expect(result).toContain('tabs:');
+		expect(result).toContain('name: "seo"');
+		expect(result).toContain('label: "SEO"');
+		expect(result).toContain('name: "metaTitle"');
+	});
+
+	it('should omit name property for unnamed tabs', () => {
+		const result = serializeField({
+			name: 'settings',
+			type: 'tabs',
+			tabs: [
+				{
+					label: 'General',
+					fields: [{ name: 'siteName', type: 'text' }],
+				},
+			],
+		});
+		// The tab itself should have label but no 'name: "General"' — only the field has 'name: "siteName"'
+		const lines = result.split('\n');
+		const tabLabelLine = lines.find((l) => l.includes('label: "General"'));
+		expect(tabLabelLine).toBeTruthy();
+		// The tab name property should NOT appear right before label (it's unnamed)
+		const tabNameLine = lines.find(
+			(l) => l.includes('name: "General"') || l.includes("name: 'General'"),
+		);
+		expect(tabNameLine).toBeUndefined();
 	});
 
 	it('should keep primitive defaultValue and skip function defaultValue', () => {

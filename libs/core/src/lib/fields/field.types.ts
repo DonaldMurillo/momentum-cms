@@ -341,9 +341,16 @@ export interface SlugField extends BaseField {
 
 /** Tab definition within a tabs layout field */
 export interface TabConfig {
+	/** When present, creates a nested data structure (like a group). Omit for layout-only tabs. */
+	name?: string;
 	label: string;
 	description?: string;
 	fields: Field[];
+}
+
+/** Type guard: returns true if the tab has a non-empty name (stores nested data). */
+export function isNamedTab(tab: TabConfig): tab is TabConfig & { name: string } {
+	return typeof tab.name === 'string' && tab.name.length > 0;
 }
 
 /** Tabs layout field - organizes fields into tabbed sections */
@@ -405,7 +412,20 @@ export function flattenDataFields(fields: Field[]): Field[] {
 	for (const field of fields) {
 		if (field.type === 'tabs') {
 			for (const tab of field.tabs) {
-				result.push(...flattenDataFields(tab.fields));
+				if (isNamedTab(tab)) {
+					// Named tab → synthetic GroupField (nested data, like a group)
+					const syntheticGroup: GroupField = {
+						name: tab.name,
+						type: 'group',
+						label: tab.label,
+						description: tab.description,
+						fields: tab.fields,
+					};
+					result.push(syntheticGroup);
+				} else {
+					// Unnamed tab → hoist children to parent level (layout-only)
+					result.push(...flattenDataFields(tab.fields));
+				}
 			}
 		} else if (field.type === 'collapsible' || field.type === 'row') {
 			result.push(...flattenDataFields(field.fields));

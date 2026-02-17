@@ -17,6 +17,10 @@ interface SettingsDoc {
 	linkedinUrl?: string | null;
 	analyticsId?: string | null;
 	maintenanceMode?: boolean | null;
+	notifications?: {
+		emailEnabled?: boolean | null;
+		emailFrom?: string | null;
+	} | null;
 }
 
 test.describe('Layout fields (tabs, collapsible, row)', () => {
@@ -223,6 +227,7 @@ test.describe('Layout fields (tabs, collapsible, row)', () => {
 			'linkedinUrl',
 			'analyticsId',
 			'maintenanceMode',
+			'notifications', // Named tab — creates nested data (not layout-only)
 		]);
 		for (const key of Object.keys(fetched)) {
 			expect(expectedKeys.has(key), `Unexpected key "${key}" in response`).toBe(true);
