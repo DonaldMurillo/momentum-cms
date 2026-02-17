@@ -8,6 +8,7 @@
 /* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions needed to narrow processedData[field.name] from unknown to Record/array */
 
 import type { Field, FieldHookFunction, RequestContext } from '@momentumcms/core';
+import { isNamedTab } from '@momentumcms/core';
 
 type FieldHookType = 'beforeValidate' | 'beforeChange' | 'afterChange' | 'afterRead';
 
@@ -55,9 +56,25 @@ export async function runFieldHooks(
 	for (const field of fields) {
 		// Layout fields (tabs, collapsible, row) don't store data themselves.
 		// Their children's data lives at the same level, so recurse into them.
+		// Named tabs are an exception: they store nested data (like groups).
 		if (field.type === 'tabs') {
 			for (const tab of field.tabs) {
-				processedData = await runFieldHooks(hookType, tab.fields, processedData, req, operation);
+				if (isNamedTab(tab)) {
+					// Named tab: recurse into nested data (like a group)
+					const nested = processedData[tab.name];
+					if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+						processedData[tab.name] = await runFieldHooks(
+							hookType,
+							tab.fields,
+							nested as Record<string, unknown>,
+							req,
+							operation,
+						);
+					}
+				} else {
+					// Unnamed tab: fields live at same level (layout-only)
+					processedData = await runFieldHooks(hookType, tab.fields, processedData, req, operation);
+				}
 			}
 			continue;
 		}

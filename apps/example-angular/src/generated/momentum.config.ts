@@ -388,6 +388,24 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 								},
 							],
 						},
+						{
+							name: 'notifications',
+							label: 'Notifications',
+							description: 'Configure notification preferences.',
+							fields: [
+								{
+									name: 'emailEnabled',
+									type: 'checkbox',
+									label: 'Email Notifications Enabled',
+									defaultValue: false,
+								},
+								{
+									name: 'emailFrom',
+									type: 'text',
+									label: 'Sender Email Address',
+								},
+							],
+						},
 					],
 				},
 				{

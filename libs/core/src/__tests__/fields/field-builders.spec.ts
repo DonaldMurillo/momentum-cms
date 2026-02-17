@@ -22,11 +22,8 @@ import {
 	collapsible,
 	row,
 } from '../../lib/fields';
-import {
-	isLayoutField,
-	flattenDataFields,
-	LAYOUT_FIELD_TYPES,
-} from '../../lib/fields';
+import { isLayoutField, isNamedTab, flattenDataFields, LAYOUT_FIELD_TYPES } from '../../lib/fields';
+import type { TabConfig, GroupField } from '../../lib/fields';
 
 describe('Field Builders', () => {
 	describe('text()', () => {
@@ -303,6 +300,57 @@ describe('Field Builders', () => {
 			expect(field.label).toBe('Configuration');
 			expect(field.description).toBe('Organize settings into tabs');
 		});
+
+		it('should create tabs with unnamed tabs (no name property)', () => {
+			const field = tabs('settings', {
+				tabs: [{ label: 'General', fields: [text('title')] }],
+			});
+			expect(field.tabs[0].name).toBeUndefined();
+		});
+
+		it('should create tabs with named tabs (with name property)', () => {
+			const field = tabs('settings', {
+				tabs: [
+					{ name: 'seo', label: 'SEO', fields: [text('metaTitle')] },
+					{ label: 'General', fields: [text('title')] },
+				],
+			});
+			expect(field.tabs[0].name).toBe('seo');
+			expect(field.tabs[1].name).toBeUndefined();
+		});
+
+		it('should support mixed named and unnamed tabs', () => {
+			const field = tabs('content', {
+				tabs: [
+					{ label: 'General', fields: [text('title')] },
+					{ name: 'seo', label: 'SEO', fields: [text('metaTitle')] },
+					{ name: 'social', label: 'Social', fields: [text('ogImage')] },
+					{ label: 'Advanced', fields: [checkbox('debug')] },
+				],
+			});
+			expect(field.tabs).toHaveLength(4);
+			expect(field.tabs[0].name).toBeUndefined();
+			expect(field.tabs[1].name).toBe('seo');
+			expect(field.tabs[2].name).toBe('social');
+			expect(field.tabs[3].name).toBeUndefined();
+		});
+	});
+
+	describe('isNamedTab()', () => {
+		it('should return true for a TabConfig with a name', () => {
+			const tab: TabConfig = { name: 'seo', label: 'SEO', fields: [text('title')] };
+			expect(isNamedTab(tab)).toBe(true);
+		});
+
+		it('should return false for a TabConfig without a name', () => {
+			const tab: TabConfig = { label: 'General', fields: [text('title')] };
+			expect(isNamedTab(tab)).toBe(false);
+		});
+
+		it('should return false for an empty string name', () => {
+			const tab: TabConfig = { name: '', label: 'Empty', fields: [] };
+			expect(isNamedTab(tab)).toBe(false);
+		});
 	});
 
 	describe('collapsible()', () => {
@@ -410,7 +458,12 @@ describe('Field Builders', () => {
 			];
 			const result = flattenDataFields(fields);
 			expect(result).toHaveLength(4);
-			expect(result.map((f) => f.name)).toEqual(['name', 'metaTitle', 'metaDescription', 'ogImage']);
+			expect(result.map((f) => f.name)).toEqual([
+				'name',
+				'metaTitle',
+				'metaDescription',
+				'ogImage',
+			]);
 		});
 
 		it('should flatten collapsible fields into their child data fields', () => {
@@ -480,6 +533,85 @@ describe('Field Builders', () => {
 
 		it('should return empty array for empty input', () => {
 			expect(flattenDataFields([])).toEqual([]);
+		});
+
+		it('should treat named tabs as data fields (synthetic group)', () => {
+			const fields = [
+				text('title'),
+				tabs('content', {
+					tabs: [
+						{
+							name: 'seo',
+							label: 'SEO',
+							fields: [text('metaTitle'), textarea('metaDescription')],
+						},
+					],
+				}),
+			];
+			const result = flattenDataFields(fields);
+			expect(result).toHaveLength(2);
+			expect(result[0].name).toBe('title');
+			expect(result[1].name).toBe('seo');
+			expect(result[1].type).toBe('group');
+			expect((result[1] as GroupField).fields).toHaveLength(2);
+		});
+
+		it('should handle mixed named and unnamed tabs', () => {
+			const fields = [
+				tabs('settings', {
+					tabs: [
+						{ label: 'General', fields: [text('title'), text('subtitle')] },
+						{ name: 'seo', label: 'SEO', fields: [text('metaTitle')] },
+						{ label: 'Advanced', fields: [checkbox('debug')] },
+					],
+				}),
+			];
+			const result = flattenDataFields(fields);
+			// unnamed 'title' + unnamed 'subtitle' + named 'seo' group + unnamed 'debug'
+			expect(result).toHaveLength(4);
+			expect(result.map((f) => f.name)).toEqual(['title', 'subtitle', 'seo', 'debug']);
+			expect(result[2].type).toBe('group');
+		});
+
+		it('should preserve label and description on synthetic group from named tab', () => {
+			const fields = [
+				tabs('content', {
+					tabs: [
+						{
+							name: 'seo',
+							label: 'SEO Settings',
+							description: 'Search engine optimization',
+							fields: [text('metaTitle')],
+						},
+					],
+				}),
+			];
+			const result = flattenDataFields(fields);
+			expect(result[0].label).toBe('SEO Settings');
+			expect(result[0].description).toBe('Search engine optimization');
+		});
+
+		it('should preserve nested layout fields inside named tabs', () => {
+			const fields = [
+				tabs('content', {
+					tabs: [
+						{
+							name: 'seo',
+							label: 'SEO',
+							fields: [
+								text('metaTitle'),
+								row('social', { fields: [text('ogTitle'), text('ogImage')] }),
+							],
+						},
+					],
+				}),
+			];
+			const result = flattenDataFields(fields);
+			expect(result).toHaveLength(1);
+			expect(result[0].name).toBe('seo');
+			expect(result[0].type).toBe('group');
+			// The group's fields should be the original tab fields (preserved as-is)
+			expect((result[0] as GroupField).fields).toHaveLength(2);
 		});
 	});
 

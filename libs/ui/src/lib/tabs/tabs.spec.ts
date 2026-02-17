@@ -184,6 +184,18 @@ describe('TabsTrigger', () => {
 		const disabledTrigger = fixture.nativeElement.querySelector('mcms-tabs-trigger[value="tab3"]');
 		expect(disabledTrigger.getAttribute('aria-disabled')).toBe('true');
 	});
+
+	it('should have cursor-pointer for interactive feedback', () => {
+		const trigger = fixture.nativeElement.querySelector('mcms-tabs-trigger');
+		expect(trigger.classList.contains('cursor-pointer')).toBe(true);
+	});
+
+	it('should have hover styles for non-selected tabs', () => {
+		// Tab2 is not selected (tab1 is selected by default)
+		const trigger = fixture.nativeElement.querySelector('mcms-tabs-trigger[value="tab2"]');
+		expect(trigger.classList.contains('hover:bg-background/50')).toBe(true);
+		expect(trigger.classList.contains('hover:text-foreground')).toBe(true);
+	});
 });
 
 describe('TabsContent', () => {

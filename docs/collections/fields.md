@@ -280,7 +280,7 @@ Options: `from` (required) — source field name
 
 ## Layout Fields
 
-Layout fields organize the admin form visually. They do **not** store data.
+Layout fields organize the admin form visually. By default they do **not** store data — child fields are hoisted to the parent level.
 
 ### tabs
 
@@ -301,6 +301,33 @@ tabs('mainTabs', {
 	],
 });
 ```
+
+#### Named Tabs
+
+Adding a `name` property to a tab creates a **nested data structure**, similar to a group field. Fields inside a named tab are stored under the tab's name rather than hoisted to the parent level.
+
+```typescript
+tabs('settingsTabs', {
+	tabs: [
+		// Unnamed tab — fields stored at root level
+		{ label: 'General', fields: [text('title')] },
+		// Named tab — fields stored nested under 'seo'
+		{
+			name: 'seo',
+			label: 'SEO',
+			fields: [text('metaTitle'), textarea('metaDescription')],
+		},
+	],
+});
+// Data shape: { title: 'Hello', seo: { metaTitle: 'Page Title', metaDescription: '...' } }
+```
+
+You can mix named and unnamed tabs in the same tabs field. Unnamed tabs behave as layout-only containers (fields hoisted to root), while named tabs group their fields into a nested object.
+
+| Tab Type            | Data Storage               | Use Case                          |
+| ------------------- | -------------------------- | --------------------------------- |
+| Unnamed (no `name`) | Fields at parent level     | Visual organization only          |
+| Named (with `name`) | Nested object under `name` | Logical grouping with nested data |
 
 ### collapsible
 

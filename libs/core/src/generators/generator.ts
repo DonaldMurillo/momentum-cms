@@ -47,7 +47,7 @@ interface FieldDefinition {
 		labels?: { singular?: string; plural?: string };
 		editor?: Record<string, unknown>;
 	}>;
-	tabs?: Array<{ label: string; description?: string; fields: FieldDefinition[] }>;
+	tabs?: Array<{ name?: string; label: string; description?: string; fields: FieldDefinition[] }>;
 	collection?: () => unknown;
 	relationTo?: string | Array<() => unknown>;
 	from?: string;
@@ -618,13 +618,16 @@ function serializeBlocksArray(
  * Serialize an array of tab definitions.
  */
 function serializeTabsArray(
-	tabs: Array<{ label: string; description?: string; fields: FieldDefinition[] }>,
+	tabs: Array<{ name?: string; label: string; description?: string; fields: FieldDefinition[] }>,
 	indent: string,
 ): string {
 	if (tabs.length === 0) return '[]';
 	const items = tabs
 		.map((tab) => {
 			const parts: string[] = [];
+			if (tab.name) {
+				parts.push(`${indent}\t\tname: ${JSON.stringify(tab.name)}`);
+			}
 			parts.push(`${indent}\t\tlabel: ${JSON.stringify(tab.label)}`);
 			if (tab.description) {
 				parts.push(`${indent}\t\tdescription: ${JSON.stringify(tab.description)}`);

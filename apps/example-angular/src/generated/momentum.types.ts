@@ -94,6 +94,10 @@ export interface Settings {
 	twitterHandle?: string;
 	facebookUrl?: string;
 	linkedinUrl?: string;
+	notifications?: {
+		emailEnabled?: boolean;
+		emailFrom?: string;
+	};
 	analyticsId?: string;
 	maintenanceMode?: boolean;
 	createdAt: string;
