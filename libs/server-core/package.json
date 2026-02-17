@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/server-core",
-	"version": "0.1.9",
+	"version": "0.1.10",
 	"description": "Framework-agnostic server handlers for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",

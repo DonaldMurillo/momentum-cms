@@ -1,3 +1,14 @@
+## 0.1.10 (2026-02-17)
+
+### 🩹 Fixes
+
+- **create-momentum-app:** add shell option to execFileSync for Windows ([#28](https://github.com/DonaldMurillo/momentum-cms/pull/28))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.1.9 (2026-02-16)
 
 This was a version bump only for plugins-analytics to align it with other projects, there were no code changes.

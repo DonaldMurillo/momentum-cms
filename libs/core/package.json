@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/core",
-	"version": "0.1.9",
+	"version": "0.1.10",
 	"description": "Core collection config, fields, hooks, and access control for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
@@ -28,7 +28,7 @@
 	"main": "./index.cjs",
 	"types": "./src/index.d.ts",
 	"bin": {
-		"momentum-generate-types": "./generators/types/generator.cjs"
+		"momentum-generate": "./generators/generator.cjs"
 	},
 	"dependencies": {}
 }
