@@ -112,12 +112,16 @@ export {
 // Upload Handler
 export {
 	handleUpload,
+	handleCollectionUpload,
 	handleFileDelete,
 	handleFileGet,
 	getUploadConfig,
+	validateMimeType,
 	type UploadRequest,
 	type UploadResponse,
 	type UploadConfig,
+	type CollectionUploadRequest,
+	type CollectionUploadResponse,
 } from './lib/upload-handler';
 
 // OpenAPI

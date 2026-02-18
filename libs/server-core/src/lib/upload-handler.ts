@@ -9,6 +9,7 @@ import type {
 	StoredFile,
 	MomentumConfig,
 	MediaDocument,
+	UploadCollectionConfig,
 } from '@momentumcms/core';
 import { validateMimeType as validateMimeByMagicBytes } from '@momentumcms/storage';
 import { getMomentumAPI, type MomentumAPIContext } from './momentum-api';
@@ -84,9 +85,10 @@ function validateFileSize(file: UploadedFile, maxSize: number): string | null {
 }
 
 /**
- * Validate MIME type.
+ * Validate claimed MIME type against an allow-list.
+ * Returns an error message if the type is not allowed, or null if OK.
  */
-function validateMimeType(mimeType: string, allowedTypes: string[]): string | null {
+export function validateMimeType(mimeType: string, allowedTypes: string[]): string | null {
 	if (allowedTypes.length === 0) {
 		return null; // No restrictions
 	}
@@ -204,6 +206,131 @@ export async function handleUpload(
 			status: 500,
 			error: 'Upload failed: Unknown error',
 		};
+	}
+}
+
+// ============================================
+// Collection-Level Upload (Payload pattern)
+// ============================================
+
+/**
+ * Upload request for a collection-level upload.
+ * Used when POST /api/{slug} with multipart/form-data hits an upload collection.
+ */
+export interface CollectionUploadRequest {
+	/** The uploaded file */
+	file: UploadedFile;
+	/** User context for access control */
+	user?: MomentumAPIContext['user'];
+	/** Non-file form fields from multipart body (e.g., alt, title) */
+	fields: Record<string, unknown>;
+	/** Target collection slug */
+	collectionSlug: string;
+	/** Collection-level upload config */
+	collectionUpload: UploadCollectionConfig;
+}
+
+/**
+ * Response from a collection-level upload.
+ */
+export interface CollectionUploadResponse {
+	/** Created document (with auto-populated file metadata) */
+	doc?: Record<string, unknown>;
+	/** Error message if upload failed */
+	error?: string;
+	/** HTTP status code */
+	status: number;
+}
+
+/**
+ * Handle file upload for an upload collection.
+ * Stores the file, auto-populates metadata fields, merges with user-provided fields,
+ * and creates the document in the target collection.
+ *
+ * Collection-level config overrides global config for mimeTypes and maxFileSize.
+ *
+ * @param globalConfig - Global upload configuration (storage adapter, defaults)
+ * @param request - Collection upload request with file, user fields, and collection config
+ * @returns Response with created document or error
+ */
+export async function handleCollectionUpload(
+	globalConfig: UploadConfig,
+	request: CollectionUploadRequest,
+): Promise<CollectionUploadResponse> {
+	const { adapter } = globalConfig;
+	const { file, user, fields, collectionSlug, collectionUpload } = request;
+
+	// Resolve limits: collection overrides global
+	const maxFileSize =
+		collectionUpload.maxFileSize ?? globalConfig.maxFileSize ?? 10 * 1024 * 1024;
+	const allowedMimeTypes =
+		collectionUpload.mimeTypes ?? globalConfig.allowedMimeTypes ?? [];
+
+	try {
+		// 1. Auth check
+		if (!user) {
+			return {
+				status: 401,
+				error: 'Authentication required to upload files',
+			};
+		}
+
+		// 2. Validate file size
+		const sizeError = validateFileSize(file, maxFileSize);
+		if (sizeError) {
+			return { status: 400, error: sizeError };
+		}
+
+		// 3. Validate claimed MIME type
+		const mimeError = validateMimeType(file.mimeType, allowedMimeTypes);
+		if (mimeError) {
+			return { status: 400, error: mimeError };
+		}
+
+		// 4. Validate actual file content via magic bytes
+		if (file.buffer && file.buffer.length > 0) {
+			const magicByteResult = validateMimeByMagicBytes(
+				file.buffer,
+				file.mimeType,
+				allowedMimeTypes,
+			);
+			if (!magicByteResult.valid) {
+				return {
+					status: 400,
+					error: magicByteResult.error ?? 'File content does not match claimed type',
+				};
+			}
+		}
+
+		// 5. Store file via adapter
+		const storedFile: StoredFile = await adapter.upload(file);
+
+		// 6. Build document data: user fields first, then auto-populated metadata wins
+		const docData: Record<string, unknown> = {
+			...fields,
+			filename: file.originalName,
+			mimeType: file.mimeType,
+			filesize: file.size,
+			path: storedFile.path,
+			url: storedFile.url,
+		};
+
+		// 7. Create document in the target collection
+		const api = getMomentumAPI().setContext({ user });
+		const doc = await api.collection(collectionSlug).create(docData);
+
+		return {
+			status: 201,
+			doc: doc as Record<string, unknown>,
+		};
+	} catch (error) {
+		if (error instanceof Error) {
+			if (error.message.includes('Access denied')) {
+				return { status: 403, error: error.message };
+			}
+			return { status: 500, error: `Upload failed: ${error.message}` };
+		}
+		return { status: 500, error: 'Upload failed: Unknown error' };
 	}
 }
 

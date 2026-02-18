@@ -93,6 +93,40 @@ export function getSoftDeleteField(config: CollectionConfig): string | null {
 }
 
 /**
+ * Check whether a collection is configured as an upload collection.
+ */
+export function isUploadCollection(config: CollectionConfig): boolean {
+	return config.upload != null;
+}
+
+/**
+ * Resolved field name mapping for upload collection metadata fields.
+ */
+export interface UploadFieldMapping {
+	filename: string;
+	mimeType: string;
+	filesize: string;
+	path: string;
+	url: string;
+}
+
+/**
+ * Get the resolved upload field mapping for an upload collection.
+ * Returns field names used for auto-populating file metadata, or null for non-upload collections.
+ */
+export function getUploadFieldMapping(config: CollectionConfig): UploadFieldMapping | null {
+	if (!isUploadCollection(config)) return null;
+	const u = config.upload!;
+	return {
+		filename: u.filenameField ?? 'filename',
+		mimeType: u.mimeTypeField ?? 'mimeType',
+		filesize: u.filesizeField ?? 'filesize',
+		path: u.pathField ?? 'path',
+		url: u.urlField ?? 'url',
+	};
+}
+
+/**
  * Helper type to extract the document type from a collection
  * Useful for typing API responses and database queries
  */

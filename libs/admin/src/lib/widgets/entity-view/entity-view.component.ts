@@ -630,7 +630,7 @@ export class EntityViewWidget<T extends Entity = Entity> {
 	}
 
 	/**
-	 * Resolve relationship field values from IDs to display labels.
+	 * Resolve relationship and upload field values from IDs to display labels.
 	 */
 	private resolveRelationships(entity: T): void {
 		const fields = this.collection().fields;
@@ -639,39 +639,60 @@ export class EntityViewWidget<T extends Entity = Entity> {
 		const promises: Promise<void>[] = [];
 
 		for (const field of fields) {
-			if (field.type !== 'relationship') continue;
+			if (field.type === 'relationship') {
+				const rawValue = entity[field.name];
+				if (!rawValue || typeof rawValue !== 'string') continue;
 
-			const rawValue = entity[field.name];
-			if (!rawValue || typeof rawValue !== 'string') continue;
+				const config = field.collection();
+				if (!isRecord(config) || typeof config['slug'] !== 'string') continue;
 
-			const config = field.collection();
-			if (!isRecord(config) || typeof config['slug'] !== 'string') continue;
+				const relSlug = config['slug'];
+				const titleField = getTitleField(config);
 
-			const relSlug = config['slug'];
-			const titleField = getTitleField(config);
-
-			promises.push(
-				this.api
-					.collection<Record<string, unknown>>(relSlug)
-					.findById(rawValue)
-					.then((doc) => {
-						if (doc) {
-							if (titleField !== 'id') {
-								const titleValue = doc[titleField];
-								if (typeof titleValue === 'string') {
-									resolved.set(field.name, titleValue);
-									return;
+				promises.push(
+					this.api
+						.collection<Record<string, unknown>>(relSlug)
+						.findById(rawValue)
+						.then((doc) => {
+							if (doc) {
+								if (titleField !== 'id') {
+									const titleValue = doc[titleField];
+									if (typeof titleValue === 'string') {
+										resolved.set(field.name, titleValue);
+										return;
+									}
 								}
+								resolved.set(field.name, String(doc['id'] ?? rawValue));
+							} else {
+								resolved.set(field.name, 'Unknown');
 							}
-							resolved.set(field.name, String(doc['id'] ?? rawValue));
-						} else {
+						})
+						.catch(() => {
 							resolved.set(field.name, 'Unknown');
-						}
-					})
-					.catch(() => {
-						resolved.set(field.name, 'Unknown');
-					}),
-			);
+						}),
+				);
+			} else if (field.type === 'upload') {
+				const rawValue = entity[field.name];
+				if (!rawValue || typeof rawValue !== 'string') continue;
+
+				const relSlug = field.relationTo;
+
+				promises.push(
+					this.api
+						.collection<Record<string, unknown>>(relSlug)
+						.findById(rawValue)
+						.then((doc) => {
+							if (doc && typeof doc['filename'] === 'string') {
+								resolved.set(field.name, doc['filename']);
+							} else {
+								resolved.set(field.name, rawValue);
+							}
+						})
+						.catch(() => {
+							resolved.set(field.name, rawValue);
+						}),
+				);
+			}
 		}
 
 		if (promises.length > 0) {

@@ -16,6 +16,9 @@ export const MediaCollection = defineCollection({
 		singular: 'Media',
 		plural: 'Media',
 	},
+	upload: {
+		mimeTypes: ['image/*', 'application/pdf', 'video/*', 'audio/*'],
+	},
 	admin: {
 		useAsTitle: 'filename',
 		defaultColumns: ['filename', 'mimeType', 'filesize', 'createdAt'],
@@ -36,7 +39,6 @@ export const MediaCollection = defineCollection({
 			description: 'File size in bytes',
 		}),
 		text('path', {
-			required: true,
 			label: 'Storage Path',
 			description: 'Path/key where the file is stored',
 			admin: {

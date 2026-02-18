@@ -216,47 +216,46 @@ export class MediaPickerDialog {
 
 		try {
 			const collection = this.api.collection(this.collectionSlug());
-			const whereClause: Record<string, unknown> = {};
 
-			// Add search filter
-			if (search) {
-				whereClause['filename'] = { contains: search };
-			}
-
-			// Add MIME type filter
-			const mimeTypes = this.data?.mimeTypes;
-			if (mimeTypes && mimeTypes.length > 0) {
-				// For simple types like 'image/*', filter by prefix
-				const prefixes = mimeTypes.filter((t) => t.endsWith('/*')).map((t) => t.slice(0, -2));
-				const exactTypes = mimeTypes.filter((t) => !t.endsWith('/*'));
-
-				if (prefixes.length > 0 || exactTypes.length > 0) {
-					const orConditions: Array<Record<string, unknown>> = [];
-
-					for (const prefix of prefixes) {
-						orConditions.push({ mimeType: { startsWith: prefix } });
-					}
-
-					for (const type of exactTypes) {
-						orConditions.push({ mimeType: { equals: type } });
-					}
-
-					if (orConditions.length > 0) {
-						whereClause['or'] = orConditions;
-					}
-				}
-			}
-
+			// Fetch all media — DB adapter does not support complex where operators
 			const result = await collection.find({
-				where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
 				page,
 				limit: this.limit(),
-				sort: '-createdAt',
 			});
 
-			this.mediaItems.set(toMediaItems(result.docs));
-			this.totalDocs.set(result.totalDocs);
-			this.totalPages.set(result.totalPages);
+			let items = toMediaItems(result.docs);
+
+			// Client-side search filter
+			if (search) {
+				const lowerSearch = search.toLowerCase();
+				items = items.filter((m) => m.filename.toLowerCase().includes(lowerSearch));
+			}
+
+			// Client-side MIME type filter
+			const mimeTypes = this.data?.mimeTypes;
+			if (mimeTypes && mimeTypes.length > 0) {
+				items = items.filter((m) =>
+					mimeTypes.some((pattern) => {
+						if (pattern.endsWith('/*')) {
+							return m.mimeType.startsWith(pattern.slice(0, -1));
+						}
+						return m.mimeType === pattern;
+					}),
+				);
+			}
+
+			this.mediaItems.set(items);
+
+			// When client-side filtering is active, use filtered counts
+			// to avoid pagination showing incorrect totals
+			const hasClientFilter = !!search || (mimeTypes && mimeTypes.length > 0);
+			if (hasClientFilter) {
+				this.totalDocs.set(items.length);
+				this.totalPages.set(1); // Client-filtered results are always a single page
+			} else {
+				this.totalDocs.set(result.totalDocs);
+				this.totalPages.set(result.totalPages);
+			}
 		} catch (error) {
 			console.error('Failed to load media:', error);
 			this.mediaItems.set([]);

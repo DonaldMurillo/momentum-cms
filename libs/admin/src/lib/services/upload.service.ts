@@ -159,6 +159,106 @@ export class UploadService {
 	}
 
 	/**
+	 * Upload a file to a specific upload collection.
+	 * POSTs multipart/form-data to /api/{collectionSlug} with file + additional fields.
+	 *
+	 * @param collectionSlug - Target collection (e.g., 'media', 'documents')
+	 * @param file - The file to upload
+	 * @param fields - Additional form fields to include (e.g., alt, title)
+	 * @returns Observable emitting upload progress
+	 */
+	uploadToCollection(
+		collectionSlug: string,
+		file: File,
+		fields?: Record<string, string>,
+	): Observable<UploadProgress> {
+		const subject = new Subject<UploadProgress>();
+
+		const formData = new FormData();
+		formData.append('file', file);
+		if (fields) {
+			for (const [key, value] of Object.entries(fields)) {
+				formData.append(key, value);
+			}
+		}
+
+		const initialProgress: UploadProgress = {
+			status: 'pending',
+			progress: 0,
+			file,
+		};
+
+		this.updateActiveUpload(file, initialProgress);
+		subject.next(initialProgress);
+
+		const url = `/api/${collectionSlug}`;
+		const request = new HttpRequest('POST', url, formData, {
+			reportProgress: true,
+		});
+
+		this.http
+			.request<UploadApiResponse>(request)
+			.pipe(
+				finalize(() => {
+					const uploads = new Map(this.activeUploadsSignal());
+					uploads.delete(file);
+					this.activeUploadsSignal.set(uploads);
+					subject.complete();
+				}),
+			)
+			.subscribe({
+				next: (event) => {
+					if (event.type === HttpEventType.UploadProgress) {
+						const progress = event.total
+							? Math.round((100 * event.loaded) / event.total)
+							: 0;
+						const uploadingProgress: UploadProgress = {
+							status: 'uploading',
+							progress,
+							file,
+						};
+						this.updateActiveUpload(file, uploadingProgress);
+						subject.next(uploadingProgress);
+					} else if (event.type === HttpEventType.Response) {
+						const body = event.body;
+						if (body?.doc) {
+							const completeProgress: UploadProgress = {
+								status: 'complete',
+								progress: 100,
+								file,
+								result: body.doc,
+							};
+							this.updateActiveUpload(file, completeProgress);
+							subject.next(completeProgress);
+						} else {
+							const errorProgress: UploadProgress = {
+								status: 'error',
+								progress: 0,
+								file,
+								error: body?.error ?? 'Upload failed',
+							};
+							this.updateActiveUpload(file, errorProgress);
+							subject.next(errorProgress);
+						}
+					}
+				},
+				error: (error: Error) => {
+					const errorProgress: UploadProgress = {
+						status: 'error',
+						progress: 0,
+						file,
+						error: error.message ?? 'Upload failed',
+					};
+					this.updateActiveUpload(file, errorProgress);
+					subject.next(errorProgress);
+					subject.error(error);
+				},
+			});
+
+		return subject.asObservable();
+	}
+
+	/**
 	 * Upload multiple files.
 	 *
 	 * @param files - Array of files to upload

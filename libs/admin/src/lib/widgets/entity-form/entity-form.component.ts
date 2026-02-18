@@ -15,7 +15,7 @@ import { Router } from '@angular/router';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { form, submit } from '@angular/forms/signals';
 import type { CollectionConfig, Field } from '@momentumcms/core';
-import { humanizeFieldName } from '@momentumcms/core';
+import { humanizeFieldName, isUploadCollection } from '@momentumcms/core';
 import {
 	Card,
 	CardContent,
@@ -28,6 +28,7 @@ import {
 	BreadcrumbSeparator,
 } from '@momentumcms/ui';
 import { injectMomentumAPI } from '../../services/momentum-api.service';
+import { UploadService, type UploadProgress } from '../../services/upload.service';
 import { VersionService } from '../../services/version.service';
 import { CollectionAccessService } from '../../services/collection-access.service';
 import { FeedbackService } from '../feedback/feedback.service';
@@ -36,6 +37,7 @@ import { type EntityFormMode, createInitialFormData } from './entity-form.types'
 import { applyCollectionSchema } from './form-schema-builder';
 import { FieldRenderer } from './field-renderers/field-renderer.component';
 import { VersionHistoryWidget } from '../version-history/version-history.component';
+import { CollectionUploadZoneComponent } from './collection-upload-zone.component';
 
 /**
  * Entity Form Widget
@@ -67,6 +69,7 @@ import { VersionHistoryWidget } from '../version-history/version-history.compone
 		BreadcrumbItem,
 		BreadcrumbSeparator,
 		VersionHistoryWidget,
+		CollectionUploadZoneComponent,
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
@@ -126,6 +129,20 @@ import { VersionHistoryWidget } from '../version-history/version-history.compone
 							<mcms-alert variant="destructive" class="mb-6" role="alert" aria-live="assertive">
 								{{ formError() }}
 							</mcms-alert>
+						}
+
+						@if (isUploadCol()) {
+							<mcms-collection-upload-zone
+								[uploadConfig]="collection().upload"
+								[pendingFile]="pendingFile()"
+								[existingMedia]="mode() === 'edit' && !pendingFile() ? formModel() : null"
+								[disabled]="mode() === 'view'"
+								[isUploading]="isUploadingFile()"
+								[uploadProgress]="uploadFileProgress()"
+								[error]="uploadFileError()"
+								(fileSelected)="onFileSelected($event)"
+								(fileRemoved)="onFileRemoved()"
+							/>
 						}
 
 						<div class="space-y-6">
@@ -201,6 +218,7 @@ import { VersionHistoryWidget } from '../version-history/version-history.compone
 export class EntityFormWidget<T extends Entity = Entity> {
 	private readonly api = injectMomentumAPI();
 	private readonly injector = inject(Injector);
+	private readonly uploadService = inject(UploadService);
 	private readonly versionService = inject(VersionService);
 	private readonly collectionAccess = inject(CollectionAccessService);
 	private readonly feedback = inject(FeedbackService);
@@ -255,6 +273,15 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	readonly isSubmitting = signal(false);
 	readonly isSavingDraft = signal(false);
 	readonly formError = signal<string | null>(null);
+
+	/** Upload collection state */
+	readonly pendingFile = signal<File | null>(null);
+	readonly isUploadingFile = signal(false);
+	readonly uploadFileProgress = signal(0);
+	readonly uploadFileError = signal<string | null>(null);
+
+	/** Whether the collection is an upload collection */
+	readonly isUploadCol = computed(() => isUploadCollection(this.collection()));
 
 	/** Whether the form has been set up */
 	private formCreated = false;
@@ -450,8 +477,69 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	}
 
 	/**
+	 * Handle file selected in the upload zone.
+	 * Auto-populates metadata fields in the form model.
+	 */
+	onFileSelected(file: File): void {
+		this.pendingFile.set(file);
+		this.uploadFileError.set(null);
+
+		// Validate file against collection upload config
+		const uploadConfig = this.collection().upload;
+		if (uploadConfig) {
+			// Validate size
+			if (uploadConfig.maxFileSize && file.size > uploadConfig.maxFileSize) {
+				this.uploadFileError.set(
+					`File size exceeds maximum allowed size`,
+				);
+				this.pendingFile.set(null);
+				return;
+			}
+
+			// Validate MIME type
+			if (uploadConfig.mimeTypes && uploadConfig.mimeTypes.length > 0) {
+				const isAllowed = uploadConfig.mimeTypes.some((pattern) => {
+					if (pattern.endsWith('/*')) {
+						const prefix = pattern.slice(0, -1);
+						return file.type.startsWith(prefix);
+					}
+					return file.type === pattern;
+				});
+				if (!isAllowed) {
+					this.uploadFileError.set(`File type "${file.type}" is not allowed`);
+					this.pendingFile.set(null);
+					return;
+				}
+			}
+		}
+
+		// Auto-populate metadata fields in form model
+		const data = { ...this.formModel() };
+		data['filename'] = file.name;
+		data['mimeType'] = file.type;
+		data['filesize'] = file.size;
+		this.formModel.set(data);
+	}
+
+	/**
+	 * Handle file removed from the upload zone.
+	 */
+	onFileRemoved(): void {
+		this.pendingFile.set(null);
+		this.uploadFileError.set(null);
+
+		// Clear auto-populated metadata
+		const data = { ...this.formModel() };
+		data['filename'] = '';
+		data['mimeType'] = '';
+		data['filesize'] = null;
+		this.formModel.set(data);
+	}
+
+	/**
 	 * Handle form submission using Angular Signal Forms submit().
 	 * submit() marks all fields as touched, then only calls the callback if valid.
+	 * For upload collections with a pending file, uses multipart upload via UploadService.
 	 */
 	async onSubmit(): Promise<void> {
 		const ef = this.entityForm();
@@ -466,7 +554,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 
 			try {
 				const slug = this.collection().slug;
-				const data = this.formModel();
+				const data = this.normalizeUploadFieldValues(this.formModel());
 				let result: T;
 
 				if (this.isGlobal()) {
@@ -474,6 +562,9 @@ export class EntityFormWidget<T extends Entity = Entity> {
 					const gSlug = this.globalSlug() ?? slug;
 					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 					result = await this.api.global<T>(gSlug).update(data as Partial<T>);
+				} else if (this.isUploadCol() && this.pendingFile()) {
+					// Upload collection with a pending file: multipart upload
+					result = await this.submitUploadCollection(slug, data);
 				} else if (this.mode() === 'create') {
 					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 					result = await this.api.collection<T>(slug).create(data as Partial<T>);
@@ -486,6 +577,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 
 				this.originalData.set(result);
 				this.formModel.set({ ...result });
+				this.pendingFile.set(null);
 				ef().reset();
 				this.saved.emit(result);
 
@@ -500,6 +592,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 				this.saveError.emit(err instanceof Error ? err : new Error(errorMessage));
 			} finally {
 				this.isSubmitting.set(false);
+				this.isUploadingFile.set(false);
 			}
 		});
 
@@ -511,6 +604,91 @@ export class EntityFormWidget<T extends Entity = Entity> {
 				'assertive',
 			);
 		}
+	}
+
+	/**
+	 * For upload/relationship fields, the form may store a full document object
+	 * (e.g., after upload completes) but the DB expects just the UUID.
+	 * Extract the `id` property from any upload field values that are objects.
+	 */
+	private normalizeUploadFieldValues(data: Record<string, unknown>): Record<string, unknown> {
+		const fields = this.collection().fields;
+		const result = { ...data };
+
+		for (const field of fields) {
+			if (field.type === 'upload' && result[field.name] != null) {
+				const val = result[field.name];
+				if (typeof val === 'object' && val !== null) {
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+					const obj = val as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions
+					if (typeof obj['id'] === 'string') {
+						result[field.name] = obj['id'];
+					}
+				}
+			}
+		}
+
+		return result;
+	}
+
+	/**
+	 * Submit an upload collection form with file via multipart.
+	 * Converts non-file form fields to string key-value pairs for the FormData.
+	 */
+	private submitUploadCollection(
+		slug: string,
+		data: Record<string, unknown>,
+	): Promise<T> {
+		return new Promise<T>((resolve, reject) => {
+			const file = this.pendingFile();
+			if (!file) {
+				reject(new Error('No file selected'));
+				return;
+			}
+
+			// Convert form data to string fields for FormData
+			// Exclude auto-populated file metadata fields (they come from the server)
+			const excludeFields = new Set([
+				'filename', 'mimeType', 'filesize', 'path', 'url',
+				'id', 'createdAt', 'updatedAt',
+			]);
+			const fields: Record<string, string> = {};
+			for (const [key, value] of Object.entries(data)) {
+				if (excludeFields.has(key)) continue;
+				if (value === null || value === undefined || value === '') continue;
+				if (typeof value === 'object') {
+					// Skip empty objects/arrays; serialize non-empty ones as JSON
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+					const isEmptyObject = !Array.isArray(value) && Object.keys(value as Record<string, unknown>).length === 0;
+					if ((Array.isArray(value) && value.length === 0) || isEmptyObject) continue;
+					fields[key] = JSON.stringify(value);
+				} else {
+					fields[key] = String(value);
+				}
+			}
+
+			this.isUploadingFile.set(true);
+			this.uploadFileProgress.set(0);
+
+			this.uploadService.uploadToCollection(slug, file, fields).subscribe({
+				next: (progress: UploadProgress) => {
+					this.uploadFileProgress.set(progress.progress);
+
+					if (progress.status === 'complete' && progress.result) {
+						this.isUploadingFile.set(false);
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+						resolve(progress.result as unknown as T);
+					} else if (progress.status === 'error') {
+						this.isUploadingFile.set(false);
+						reject(new Error(progress.error ?? 'Upload failed'));
+					}
+				},
+				error: (err: Error) => {
+					this.isUploadingFile.set(false);
+					reject(err);
+				},
+			});
+		});
 	}
 
 	/**
