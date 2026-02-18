@@ -181,6 +181,36 @@ export interface SoftDeleteConfig {
 }
 
 // ============================================
+// Upload Collection
+// ============================================
+
+export interface UploadCollectionConfig {
+	/** Allowed MIME types for uploads to this collection (e.g., ['image/*', 'application/pdf']) */
+	mimeTypes?: string[];
+
+	/** Maximum file size in bytes (overrides global storage.maxFileSize) */
+	maxFileSize?: number;
+
+	/** Subdirectory within the upload dir for this collection's files */
+	directory?: string;
+
+	/** Field name for the original filename. @default 'filename' */
+	filenameField?: string;
+
+	/** Field name for the MIME type. @default 'mimeType' */
+	mimeTypeField?: string;
+
+	/** Field name for the file size in bytes. @default 'filesize' */
+	filesizeField?: string;
+
+	/** Field name for the storage path. @default 'path' */
+	pathField?: string;
+
+	/** Field name for the public URL. @default 'url' */
+	urlField?: string;
+}
+
+// ============================================
 // Timestamps
 // ============================================
 
@@ -280,6 +310,13 @@ export interface CollectionConfig {
 
 	/** Webhook subscriptions for this collection */
 	webhooks?: WebhookConfig[];
+
+	/**
+	 * Upload configuration. When present, this collection becomes an "upload collection"
+	 * where POST /api/{slug} accepts multipart/form-data and auto-populates file metadata fields.
+	 * Similar to Payload CMS's upload collection pattern.
+	 */
+	upload?: UploadCollectionConfig;
 }
 
 // ============================================

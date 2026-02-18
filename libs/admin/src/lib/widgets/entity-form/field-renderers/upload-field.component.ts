@@ -1,5 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
+import {
+	ChangeDetectionStrategy,
+	Component,
+	computed,
+	effect,
+	ElementRef,
+	inject,
+	input,
+	signal,
+	untracked,
+	viewChild,
+} from '@angular/core';
 import { McmsFormField, Button, Progress, DialogService } from '@momentumcms/ui';
 import type { ValidationError } from '@momentumcms/ui';
 import { humanizeFieldName } from '@momentumcms/core';
@@ -7,6 +17,7 @@ import type { Field, UploadField } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form.types';
 import { getFieldNodeState } from '../entity-form.types';
 import { UploadService, type UploadProgress } from '../../../services/upload.service';
+import { injectMomentumAPI } from '../../../services/momentum-api.service';
 import {
 	MediaPreviewComponent,
 	type MediaPreviewData,
@@ -189,9 +200,10 @@ function getInputFromEvent(event: Event): HTMLInputElement | null {
 	`,
 })
 export class UploadFieldRenderer {
-	private readonly document = inject(DOCUMENT);
+	private readonly fileInputRef = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 	private readonly uploadService = inject(UploadService);
 	private readonly dialogService = inject(DialogService);
+	private readonly api = injectMomentumAPI();
 
 	/** Field definition */
 	readonly field = input.required<Field>();
@@ -220,6 +232,42 @@ export class UploadFieldRenderer {
 	readonly uploadingFilename = signal('');
 	readonly uploadError = signal<string | null>(null);
 	readonly uploadingFile = signal<File | null>(null);
+
+	/** Resolved media document fetched from API when value is just an ID string */
+	private readonly resolvedMedia = signal<Record<string, unknown> | null>(null);
+	private resolvedMediaId: string | null = null;
+
+	constructor() {
+		// When the value is a string (media ID), fetch the full media document for preview
+		effect(() => {
+			const val = this.currentValue();
+			if (typeof val === 'string' && val !== '') {
+				// Avoid re-fetching the same ID
+				const id = val;
+				if (untracked(() => this.resolvedMediaId) === id) return;
+				this.resolvedMediaId = id;
+				const relationTo = untracked(() => this.uploadField().relationTo);
+				this.api
+					.collection(relationTo)
+					.findById(id)
+					.then((doc) => {
+						if (doc) {
+							this.resolvedMedia.set(doc);
+						}
+					})
+					.catch(() => {
+						// Silently fail — preview will show placeholder
+					});
+			} else if (typeof val === 'object' && val !== null) {
+				// Already a full document, clear any stale resolved data
+				this.resolvedMedia.set(null);
+				this.resolvedMediaId = null;
+			} else {
+				this.resolvedMedia.set(null);
+				this.resolvedMediaId = null;
+			}
+		});
+	}
 
 	/** Unique field ID */
 	readonly fieldId = computed(() => `field-${this.path().replace(/\./g, '-')}`);
@@ -257,34 +305,37 @@ export class UploadFieldRenderer {
 		return val !== null && val !== undefined && val !== '';
 	});
 
+	/** Effective media document — full object from value, or resolved from API */
+	private readonly effectiveMedia = computed((): unknown => {
+		const val = this.currentValue();
+		if (typeof val === 'object' && val !== null) return val;
+		// Value is a string ID — use resolved media if available
+		return this.resolvedMedia();
+	});
+
 	/** Media preview data from value */
 	readonly mediaPreviewData = computed((): MediaPreviewData | null => {
-		const val = this.currentValue();
-		if (!val) return null;
+		const media = this.effectiveMedia();
+		if (!media) return null;
 
-		// If value is a full document object
-		if (typeof val === 'object' && val !== null) {
+		if (typeof media === 'object' && media !== null) {
 			return {
-				url: getStringProp(val, 'url'),
-				path: getStringProp(val, 'path'),
-				mimeType: getStringProp(val, 'mimeType'),
-				filename: getStringProp(val, 'filename'),
-				alt: getStringProp(val, 'alt'),
+				url: getStringProp(media, 'url'),
+				path: getStringProp(media, 'path'),
+				mimeType: getStringProp(media, 'mimeType'),
+				filename: getStringProp(media, 'filename'),
+				alt: getStringProp(media, 'alt'),
 			};
 		}
 
-		// If value is just an ID, we can't preview without fetching
-		// Return a placeholder
-		return {
-			path: String(val),
-		};
+		return null;
 	});
 
 	/** Media filename from value */
 	readonly mediaFilename = computed(() => {
-		const val = this.currentValue();
-		if (typeof val === 'object' && val !== null) {
-			return getStringProp(val, 'filename') ?? 'Selected media';
+		const media = this.effectiveMedia();
+		if (typeof media === 'object' && media !== null) {
+			return getStringProp(media, 'filename') ?? 'Selected media';
 		}
 		return 'Selected media';
 	});
@@ -390,9 +441,9 @@ export class UploadFieldRenderer {
 	triggerFileInput(): void {
 		if (this.isDisabled()) return;
 
-		const input = this.document.querySelector(`#${this.fieldId()} input[type="file"]`);
-		if (input instanceof HTMLInputElement) {
-			input.click();
+		const ref = this.fileInputRef();
+		if (ref) {
+			ref.nativeElement.click();
 		}
 	}
 
@@ -444,7 +495,8 @@ export class UploadFieldRenderer {
 		this.uploadingFilename.set(file.name);
 		this.uploadingFile.set(file);
 
-		this.uploadService.upload(file).subscribe({
+		const relationTo = this.uploadField().relationTo;
+		this.uploadService.uploadToCollection(relationTo, file).subscribe({
 			next: (progress: UploadProgress) => {
 				this.uploadProgress.set(progress.progress);
 

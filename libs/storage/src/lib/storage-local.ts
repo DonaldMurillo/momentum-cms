@@ -34,7 +34,11 @@ export function localStorageAdapter(options: LocalStorageOptions): StorageAdapte
 	 * Resolves the path relative to the upload root and verifies it stays within bounds.
 	 */
 	function safePath(unsafePath: string): string {
-		const normalized = normalize(unsafePath).replace(/^(\.\.(\/|\\|$))+/, '');
+		const normalized = normalize(unsafePath);
+		// Reject any path containing '..' components — don't silently strip them
+		if (normalized.includes('..')) {
+			throw new Error('Invalid path: directory traversal not allowed');
+		}
 		const full = resolve(resolvedRoot, normalized);
 		if (!full.startsWith(resolvedRoot)) {
 			throw new Error('Invalid path: directory traversal not allowed');

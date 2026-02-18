@@ -95,6 +95,16 @@ interface CollectionDefinition {
 	defaultWhere?: unknown;
 	endpoints?: unknown[];
 	webhooks?: unknown[];
+	upload?: {
+		mimeTypes?: string[];
+		maxFileSize?: number;
+		directory?: string;
+		filenameField?: string;
+		mimeTypeField?: string;
+		filesizeField?: string;
+		pathField?: string;
+		urlField?: string;
+	};
 }
 
 interface GlobalDefinition {
@@ -695,6 +705,11 @@ export function serializeCollection(collection: CollectionDefinition, indent = '
 	// Default sort
 	if (collection.defaultSort) {
 		parts.push(`${indent}\tdefaultSort: ${JSON.stringify(collection.defaultSort)}`);
+	}
+
+	// Upload config (browser-safe — only contains primitives, no functions)
+	if (collection.upload !== undefined) {
+		parts.push(`${indent}\tupload: ${serializeValue(collection.upload, indent + '\t')}`);
 	}
 
 	// Skip all COLLECTION_STRIP_KEYS: access, hooks, endpoints, webhooks, defaultWhere, dbName, indexes, graphQL

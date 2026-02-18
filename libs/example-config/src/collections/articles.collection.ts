@@ -1,4 +1,4 @@
-import { defineCollection, text, richText, relationship, allowAll } from '@momentumcms/core';
+import { defineCollection, text, richText, relationship, upload, allowAll } from '@momentumcms/core';
 import { Categories } from './categories.collection';
 
 /**
@@ -15,6 +15,12 @@ export const Articles = defineCollection({
 	admin: { group: 'Content' },
 	fields: [
 		text('title', { required: true, label: 'Title' }),
+		upload('coverImage', {
+			label: 'Cover Image',
+			relationTo: 'media',
+			mimeTypes: ['image/*'],
+			maxSize: 5 * 1024 * 1024, // 5MB
+		}),
 		richText('content', { label: 'Content' }),
 		relationship('category', {
 			label: 'Category',

@@ -7,6 +7,7 @@ import {
 	getMomentumAPI,
 	GlobalNotFoundError,
 	handleUpload,
+	handleCollectionUpload,
 	handleFileGet,
 	getUploadConfig,
 	buildGraphQLSchema,
@@ -27,6 +28,7 @@ import {
 	sanitizeErrorMessage,
 	parseWhereParam,
 	sanitizeFilename,
+	validateMimeType,
 } from '@momentumcms/server-core';
 import type {
 	MomentumConfig,
@@ -36,6 +38,7 @@ import type {
 	DatabaseAdapter,
 	EndpointQueryHelper,
 } from '@momentumcms/core';
+import { isUploadCollection } from '@momentumcms/core';
 import { createLogger } from '@momentumcms/logger';
 import { getPluginMiddleware } from './plugin-middleware-registry';
 
@@ -679,7 +682,65 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		},
 	});
 
-	// Route: POST /media/upload - Upload a file
+	// Build set of upload collection slugs for conditional multer routing
+	const uploadCollectionSlugs = new Set(
+		config.collections.filter((c) => isUploadCollection(c)).map((c) => c.slug),
+	);
+
+	/**
+	 * Handle POST for an upload collection: extract file + fields, delegate to handleCollectionUpload.
+	 */
+	async function handleUploadCollectionPost(req: Request, res: Response): Promise<void> {
+		const slug = req.params['collection'];
+		const collectionConfig = config.collections.find((c) => c.slug === slug);
+		if (!collectionConfig?.upload) {
+			res.status(400).json({ error: 'Not an upload collection' });
+			return;
+		}
+
+		const uploadConfig = getUploadConfig(config);
+		if (!uploadConfig) {
+			res.status(500).json({ error: 'Storage not configured' });
+			return;
+		}
+
+		const multerFile = req.file;
+		if (!multerFile) {
+			res.status(400).json({ error: 'No file provided' });
+			return;
+		}
+
+		const file: UploadedFile = {
+			originalName: multerFile.originalname,
+			mimeType: multerFile.mimetype,
+			size: multerFile.size,
+			buffer: multerFile.buffer,
+		};
+
+		// Extract non-file fields from multipart body
+		const fields: Record<string, unknown> = {};
+		if (typeof req.body === 'object' && req.body !== null) {
+			for (const [key, value] of Object.entries(
+				req.body as Record<string, unknown>,
+			)) {
+				if (key !== 'file') {
+					fields[key] = value;
+				}
+			}
+		}
+
+		const response = await handleCollectionUpload(uploadConfig, {
+			file,
+			user: extractUserFromRequest(req),
+			fields,
+			collectionSlug: slug,
+			collectionUpload: collectionConfig.upload,
+		});
+
+		res.status(response.status).json(response);
+	}
+
+	// Route: POST /media/upload - Upload a file (legacy endpoint)
 	// Auth check runs BEFORE multer to reject unauthenticated requests before file processing
 	router.post(
 		'/media/upload',
@@ -751,7 +812,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			res.status(400).json({ error: 'Invalid path encoding' });
 			return;
 		}
-		const filePath = normalize(decodedPath).replace(/^(\.\.(\/|\\|$))+/, '');
+		const filePath = normalize(decodedPath);
 		if (isAbsolute(filePath) || filePath.includes('..') || filePath.includes(`${sep}..`)) {
 			res.status(403).json({ error: 'Invalid file path' });
 			return;
@@ -1167,7 +1228,35 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		res.status(response.status ?? 200).json(response);
 	});
 
-	// Route: POST /:collection - Create document
+	// Route: POST /:collection - Create document (with upload support for upload collections)
+	router.post('/:collection', (req: Request, res: Response, next: NextFunction) => {
+		const slug = req.params['collection'];
+
+		if (uploadCollectionSlugs.has(slug)) {
+			// Upload collection: auth check before multer to reject early
+			const user = extractUserFromRequest(req);
+			if (!user) {
+				res.status(401).json({ error: 'Authentication required to upload files' });
+				return;
+			}
+			// Use multer for multipart/form-data
+			upload.single('file')(req, res, (err) => {
+				if (err) {
+					res.status(400).json({ error: err.message });
+					return;
+				}
+				handleUploadCollectionPost(req, res).catch((e) => {
+					const message = sanitizeErrorMessage(e, 'Upload failed');
+					res.status(500).json({ error: message });
+				});
+			});
+		} else {
+			// Non-upload collection: standard JSON create
+			next();
+		}
+	});
+
+	// Fallback POST /:collection for non-upload collections (standard JSON)
 	router.post('/:collection', async (req: Request, res: Response) => {
 		if (isManagedCollection(req.params['collection'])) {
 			res.status(403).json({ error: 'Managed collection is read-only' });
@@ -1184,7 +1273,148 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		res.status(response.status ?? 200).json(response);
 	});
 
-	// Route: PATCH /:collection/:id - Update document
+	// Route: PATCH /:collection/:id - Update document (with optional file replacement for upload collections)
+	router.patch('/:collection/:id', (req: Request, res: Response, next: NextFunction) => {
+		const slug = req.params['collection'];
+
+		if (uploadCollectionSlugs.has(slug)) {
+			// Upload collection: auth check before multer to reject early
+			const user = extractUserFromRequest(req);
+			if (!user) {
+				res.status(401).json({ error: 'Authentication required to upload files' });
+				return;
+			}
+			// Try multer to parse optional file from multipart
+			upload.single('file')(req, res, async (err) => {
+				if (err) {
+					res.status(400).json({ error: err.message });
+					return;
+				}
+
+				if (req.file) {
+					// File replacement: store new file, merge metadata, update doc
+					const collectionConfig = config.collections.find((c) => c.slug === slug);
+					if (!collectionConfig?.upload) {
+						res.status(400).json({ error: 'Not an upload collection' });
+						return;
+					}
+
+					const uploadConfig = getUploadConfig(config);
+					if (!uploadConfig) {
+						res.status(500).json({ error: 'Storage not configured' });
+						return;
+					}
+
+					const file: UploadedFile = {
+						originalName: req.file.originalname,
+						mimeType: req.file.mimetype,
+						size: req.file.size,
+						buffer: req.file.buffer,
+					};
+
+					// Extract non-file fields from multipart body
+					const fields: Record<string, unknown> = {};
+					if (typeof req.body === 'object' && req.body !== null) {
+						for (const [key, value] of Object.entries(
+							req.body as Record<string, unknown>,
+						)) {
+							if (key !== 'file') {
+								fields[key] = value;
+							}
+						}
+					}
+
+					// Store new file
+					try {
+						const { validateMimeType: validateMimeByMagicBytes } = await import(
+							'@momentumcms/storage'
+						);
+						const maxFileSize =
+							collectionConfig.upload.maxFileSize ??
+							uploadConfig.maxFileSize ??
+							10 * 1024 * 1024;
+						const allowedMimeTypes =
+							collectionConfig.upload.mimeTypes ??
+							uploadConfig.allowedMimeTypes ??
+							[];
+
+						// Validate size
+						if (file.size > maxFileSize) {
+							const maxMB = (maxFileSize / (1024 * 1024)).toFixed(1);
+							const fileMB = (file.size / (1024 * 1024)).toFixed(1);
+							res.status(400).json({
+								error: `File size ${fileMB}MB exceeds maximum allowed size of ${maxMB}MB`,
+							});
+							return;
+						}
+
+						// Validate claimed MIME type against allowed list
+						const mimeError = validateMimeType(file.mimeType, allowedMimeTypes);
+						if (mimeError) {
+							res.status(400).json({ error: mimeError });
+							return;
+						}
+
+						// Validate magic bytes
+						if (file.buffer && file.buffer.length > 0) {
+							const magicByteResult = validateMimeByMagicBytes(
+								file.buffer,
+								file.mimeType,
+								allowedMimeTypes,
+							);
+							if (!magicByteResult.valid) {
+								res.status(400).json({
+									error: magicByteResult.error ?? 'File content does not match claimed type',
+								});
+								return;
+							}
+						}
+
+						// Store file
+						const storedFile = await uploadConfig.adapter.upload(file);
+
+						// Merge metadata with user fields
+						const updateData: Record<string, unknown> = {
+							...fields,
+							filename: file.originalName,
+							mimeType: file.mimeType,
+							filesize: file.size,
+							path: storedFile.path,
+							url: storedFile.url,
+						};
+
+						// user already extracted and validated before multer
+						const api = getMomentumAPI();
+						const contextApi = api.setContext({ user });
+						const doc = await contextApi.collection(slug).update(req.params['id'], updateData);
+						res.json({ doc });
+					} catch (error) {
+						const message = sanitizeErrorMessage(error, 'Upload update failed');
+						res.status(500).json({ error: message });
+					}
+				} else {
+					// No file: standard JSON update with multipart fields
+					const body =
+						typeof req.body === 'object' && req.body !== null
+							? (req.body as Record<string, unknown>)
+							: {};
+					const request: MomentumRequest = {
+						method: 'PATCH',
+						collectionSlug: slug,
+						id: req.params['id'],
+						body,
+						user, // already extracted and validated before multer
+					};
+					const response = await handlers.routeRequest(request);
+					res.status(response.status ?? 200).json(response);
+				}
+			});
+		} else {
+			next();
+		}
+	});
+
+	// Fallback PATCH for non-upload collections (standard JSON)
 	router.patch('/:collection/:id', async (req: Request, res: Response) => {
 		if (isManagedCollection(req.params['collection'])) {
 			res.status(403).json({ error: 'Managed collection is read-only' });
