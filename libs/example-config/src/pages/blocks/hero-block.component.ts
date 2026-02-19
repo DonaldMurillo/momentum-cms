@@ -8,22 +8,26 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 		'[attr.data-testid]': '"block-hero"',
 	},
 	template: `
-		<section
-			class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-20 px-8 text-center rounded-lg"
-		>
-			<h1 class="text-4xl font-bold mb-4" data-testid="hero-heading">{{ heading() }}</h1>
-			@if (subheading()) {
-				<p class="text-xl opacity-90 mb-8" data-testid="hero-subheading">{{ subheading() }}</p>
-			}
-			@if (ctaText()) {
-				<a
-					class="inline-block bg-white text-indigo-600 font-semibold px-6 py-3 rounded-lg hover:bg-gray-100 transition-colors"
-					[href]="ctaLink() || '#'"
-					data-testid="hero-cta"
-				>
-					{{ ctaText() }}
-				</a>
-			}
+		<section class="bg-primary text-primary-foreground py-12 px-4 md:py-20 md:px-8 text-center">
+			<div class="mx-auto max-w-4xl">
+				<h1 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-4" data-testid="hero-heading">
+					{{ heading() }}
+				</h1>
+				@if (subheading()) {
+					<p class="text-lg md:text-xl text-primary-foreground mb-8" data-testid="hero-subheading">
+						{{ subheading() }}
+					</p>
+				}
+				@if (ctaText()) {
+					<a
+						class="inline-block bg-primary-foreground text-primary font-semibold px-6 py-3 rounded-lg hover:bg-primary-foreground/90 transition-colors"
+						[href]="ctaLink() || '#'"
+						data-testid="hero-cta"
+					>
+						{{ ctaText() }}
+					</a>
+				}
+			</div>
 		</section>
 	`,
 })

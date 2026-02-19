@@ -5,10 +5,11 @@ import { test, expect } from '../fixtures';
  *
  * Verifies that frontend pages render block content from the CMS.
  * Seeded pages: "Home Page" (slug: home, 3 blocks), "About Page" (slug: about, 1 block),
- * "Empty Page" (slug: empty, 0 blocks).
+ * "Empty Page" (slug: empty, 0 blocks), "Services Page" (slug: services, 4 blocks),
+ * "Showcase Page" (slug: showcase, 4 blocks), "Contact Page" (slug: contact, 3 blocks).
  */
 
-test.describe('Page Rendering', () => {
+test.describe('Page Rendering', { tag: ['@frontend', '@blocks'] }, () => {
 	test('renders home page at / with all seeded blocks', async ({ authenticatedPage: page }) => {
 		await page.goto('/');
 
@@ -88,5 +89,110 @@ test.describe('Page Rendering', () => {
 		expect(html).toContain('Welcome to Our Site');
 		expect(html).toContain('About Us');
 		expect(html).toContain('Fast Testing');
+	});
+
+	test('renders services page with new block types', async ({ authenticatedPage: page }) => {
+		await page.goto('/services');
+
+		await expect(page.locator('[data-testid="page-content"]')).toBeVisible({ timeout: 10000 });
+
+		// Hero block
+		await expect(page.locator('[data-testid="hero-heading"]')).toContainText('Our Services');
+
+		// ImageText block
+		await expect(page.locator('[data-testid="image-text-heading"]')).toContainText(
+			'Custom Development',
+		);
+		await expect(page.locator('[data-testid="image-text-body"]')).toContainText(
+			'tailor-made solutions',
+		);
+
+		// Stats block
+		await expect(page.locator('[data-testid="stats-heading"]')).toContainText('By the Numbers');
+		await expect(page.locator('[data-testid="stat-item"]')).toHaveCount(4);
+
+		// CTA block
+		await expect(page.locator('[data-testid="cta-heading"]')).toContainText('Ready to Get Started');
+		await expect(page.locator('[data-testid="cta-primary-button"]')).toContainText('Contact Us');
+		await expect(page.locator('[data-testid="cta-secondary-button"]')).toContainText(
+			'View Portfolio',
+		);
+	});
+
+	test('renders showcase page with testimonials and feature grid', async ({
+		authenticatedPage: page,
+	}) => {
+		await page.goto('/showcase');
+
+		await expect(page.locator('[data-testid="page-content"]')).toBeVisible({ timeout: 10000 });
+
+		// Hero
+		await expect(page.locator('[data-testid="hero-heading"]')).toContainText('Our Work');
+
+		// Testimonials (2 on this page)
+		const testimonials = page.locator('[data-testid="testimonial-quote"]');
+		await expect(testimonials.first()).toBeVisible();
+		await expect(testimonials).toHaveCount(2);
+
+		// Feature grid
+		await expect(page.locator('[data-testid="feature-grid-heading"]')).toContainText(
+			'Why Choose Us',
+		);
+		await expect(page.locator('[data-testid="feature-grid-item"]')).toHaveCount(6);
+	});
+
+	test('renders contact page with text block and CTA', async ({ authenticatedPage: page }) => {
+		await page.goto('/contact');
+
+		await expect(page.locator('[data-testid="page-content"]')).toBeVisible({ timeout: 10000 });
+
+		// Hero
+		await expect(page.locator('[data-testid="hero-heading"]')).toContainText('Get in Touch');
+
+		// Text block
+		await expect(page.locator('[data-testid="text-heading"]')).toContainText('Contact Information');
+
+		// CTA
+		await expect(page.locator('[data-testid="cta-heading"]')).toContainText('Send Us a Message');
+		await expect(page.locator('[data-testid="cta-primary-button"]')).toContainText('Open Admin');
+	});
+
+	test('app layout renders header and footer', async ({ authenticatedPage: page }) => {
+		await page.goto('/');
+
+		await expect(page.locator('[data-testid="app-header"]')).toBeVisible({ timeout: 10000 });
+		await expect(page.locator('[data-testid="app-footer"]')).toBeVisible();
+		await expect(page.locator('[data-testid="app-logo"]')).toContainText('Momentum');
+	});
+
+	test('navigation links are visible in header', async ({ authenticatedPage: page }) => {
+		await page.goto('/');
+
+		await expect(page.locator('[data-testid="app-header"]')).toBeVisible({ timeout: 10000 });
+
+		// Desktop nav links (visible on wide viewport)
+		await expect(page.locator('[data-testid="nav-home"]')).toBeVisible();
+		await expect(page.locator('[data-testid="nav-services"]')).toBeVisible();
+		await expect(page.locator('[data-testid="nav-showcase"]')).toBeVisible();
+		await expect(page.locator('[data-testid="nav-articles"]')).toBeVisible();
+		await expect(page.locator('[data-testid="nav-admin"]')).toBeVisible();
+	});
+
+	test('theme toggle is present and clickable', async ({ authenticatedPage: page }) => {
+		await page.goto('/');
+
+		const toggle = page.locator('[data-testid="theme-toggle"]');
+		await expect(toggle).toBeVisible({ timeout: 10000 });
+
+		// Get initial state
+		const initialClass = await page.locator('html').getAttribute('class');
+
+		// Click theme toggle
+		await toggle.click();
+
+		// Verify class changed (dark added or removed)
+		await expect
+			.poll(() => page.locator('html').getAttribute('class'), { timeout: 5000 })
+			.not.toBe(initialClass);
 	});
 });

@@ -146,6 +146,119 @@ export const exampleSeedingConfig: SeedingConfig = {
 			slug: 'empty',
 			content: [],
 		}),
+		// Showcase pages with distinctive block combinations
+		collection<PageDoc>('pages').create('page-services', {
+			title: 'Services Page',
+			slug: 'services',
+			content: [
+				{
+					blockType: 'hero',
+					heading: 'Our Services',
+					subheading: 'Delivering excellence across every project.',
+					ctaText: 'Get in Touch',
+					ctaLink: '/contact',
+				},
+				{
+					blockType: 'imageText',
+					heading: 'Custom Development',
+					body: 'We build tailor-made solutions designed to scale with your business needs. From content management to full-stack applications.',
+					imageUrl: 'https://placehold.co/600x400/1e3a5f/ffffff?text=Development',
+					imageAlt: 'Custom development illustration',
+					imagePosition: 'left',
+				},
+				{
+					blockType: 'stats',
+					heading: 'By the Numbers',
+					description: 'Our track record speaks for itself.',
+					items: [
+						{ value: '150', label: 'Projects Delivered', suffix: '+' },
+						{ value: '99', label: 'Client Satisfaction', suffix: '%' },
+						{ value: '24', label: 'Support Available', suffix: '/7' },
+						{ value: '10', label: 'Years Experience', suffix: '+' },
+					],
+				},
+				{
+					blockType: 'callToAction',
+					heading: 'Ready to Get Started?',
+					description: 'Let us help you build something great.',
+					primaryButtonText: 'Contact Us',
+					primaryButtonLink: '/contact',
+					secondaryButtonText: 'View Portfolio',
+					secondaryButtonLink: '/showcase',
+				},
+			],
+		}),
+		collection<PageDoc>('pages').create('page-showcase', {
+			title: 'Showcase Page',
+			slug: 'showcase',
+			content: [
+				{
+					blockType: 'hero',
+					heading: 'Our Work',
+					subheading: 'See what we have built for our clients.',
+				},
+				{
+					blockType: 'testimonial',
+					quote:
+						'Momentum CMS transformed how we manage our content. The Angular integration is seamless.',
+					authorName: 'Jane Smith',
+					authorRole: 'CTO',
+					authorCompany: 'TechForward Inc.',
+				},
+				{
+					blockType: 'featureGrid',
+					heading: 'Why Choose Us',
+					description: 'Our platform stands out in every dimension.',
+					features: [
+						{
+							title: 'Type-Safe',
+							description: 'Full TypeScript from schema to UI.',
+							icon: 'shield',
+						},
+						{ title: 'Fast', description: 'SSR and edge-ready deployment.', icon: 'bolt' },
+						{
+							title: 'Extensible',
+							description: 'Plugin system for custom functionality.',
+							icon: 'puzzle',
+						},
+						{ title: 'Modern', description: 'Built on Angular 21 with signals.', icon: 'sparkles' },
+						{ title: 'Accessible', description: 'WCAG 2.1 compliant components.', icon: 'eye' },
+						{ title: 'Open Source', description: 'Community-driven development.', icon: 'heart' },
+					],
+				},
+				{
+					blockType: 'testimonial',
+					quote:
+						'The developer experience is outstanding. We shipped our redesign in half the time.',
+					authorName: 'Alex Chen',
+					authorRole: 'Engineering Lead',
+					authorCompany: 'DataFlow Labs',
+				},
+			],
+		}),
+		collection<PageDoc>('pages').create('page-contact', {
+			title: 'Contact Page',
+			slug: 'contact',
+			content: [
+				{
+					blockType: 'hero',
+					heading: 'Get in Touch',
+					subheading: 'We would love to hear from you.',
+				},
+				{
+					blockType: 'textBlock',
+					heading: 'Contact Information',
+					body: 'Reach out to us via email at hello@momentum-cms.dev or visit our offices during business hours. We typically respond within 24 hours.',
+				},
+				{
+					blockType: 'callToAction',
+					heading: 'Send Us a Message',
+					description: 'Fill out the form in the admin panel to get started.',
+					primaryButtonText: 'Open Admin',
+					primaryButtonLink: '/admin',
+				},
+			],
+		}),
 		collection<ProductDoc>('products').create('product-phone', {
 			name: 'Test Phone',
 			description: 'A phone for E2E testing.',
@@ -211,6 +324,32 @@ export const exampleSeedingConfig: SeedingConfig = {
 					title: 'Breaking News',
 					content: '<p>Important news article for testing.</p>',
 					category: newsCategory.id,
+					_status: 'published',
+				},
+			});
+
+			await ctx.seed<ArticleDoc>({
+				seedId: 'article-news-cms',
+				collection: 'articles',
+				data: {
+					title: 'The Future of CMS Platforms',
+					content:
+						'<p>The CMS landscape is evolving rapidly with headless architectures leading the charge.</p><h2>What to Expect</h2><p>AI-powered content workflows, composable architectures, and developer-first tooling are redefining how teams build digital experiences.</p>',
+					category: newsCategory.id,
+					_status: 'published',
+				},
+			});
+		}
+
+		if (techCategory) {
+			await ctx.seed<ArticleDoc>({
+				seedId: 'article-tech-angular',
+				collection: 'articles',
+				data: {
+					title: 'Getting Started with Angular 21',
+					content:
+						'<p>Angular 21 brings exciting new features including improved signal-based reactivity and streamlined SSR.</p><h2>Key Features</h2><p>Signal inputs, the new control flow syntax, and incremental hydration make Angular faster and more ergonomic than ever.</p>',
+					category: techCategory.id,
 					_status: 'published',
 				},
 			});
