@@ -4,470 +4,614 @@
  */
 
 export interface Categories {
-  id: string;
-  name: string;
-  slug: string;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	name: string;
+	slug: string;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface Articles {
-  id: string;
-  title: string;
-  coverImage?: string;
-  content?: string;
-  category?: string;
-  _status?: 'draft' | 'published';
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	title: string;
+	content?: string;
+	category?: string;
+	_status?: 'draft' | 'published';
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface Products {
-  id: string;
-  name: string;
-  description?: string;
-  price?: number;
-  seo?: {
-    metaTitle?: string;
-    metaDescription?: string;
-    ogImage?: string;
-  };
-  features?: Array<{
-    label: string;
-    description?: string;
-    highlighted?: boolean;
-  }>;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	name: string;
+	description?: string;
+	price?: number;
+	seo?: {
+		metaTitle?: string;
+		metaDescription?: string;
+		ogImage?: string;
+	};
+	features?: Array<{
+		label: string;
+		description?: string;
+		highlighted?: boolean;
+	}>;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface PagesContentHeroBlock {
-  blockType: "hero";
-  heading: string;
-  subheading?: string;
-  ctaText?: string;
-  ctaLink?: string;
-  _analytics?: {
-    trackImpressions?: boolean;
-    trackHover?: boolean;
-  };
+	blockType: 'hero';
+	heading: string;
+	subheading?: string;
+	ctaText?: string;
+	ctaLink?: string;
+	_analytics?: {
+		trackImpressions?: boolean;
+		trackHover?: boolean;
+	};
 }
 
 export interface PagesContentTextBlockBlock {
-  blockType: "textBlock";
-  heading?: string;
-  body: string;
-  _analytics?: {
-    trackImpressions?: boolean;
-    trackHover?: boolean;
-  };
+	blockType: 'textBlock';
+	heading?: string;
+	body: string;
+	_analytics?: {
+		trackImpressions?: boolean;
+		trackHover?: boolean;
+	};
 }
 
 export interface PagesContentFeatureBlock {
-  blockType: "feature";
-  title: string;
-  description?: string;
-  icon?: string;
-  _analytics?: {
-    trackImpressions?: boolean;
-    trackHover?: boolean;
-  };
+	blockType: 'feature';
+	title: string;
+	description?: string;
+	icon?: string;
+	_analytics?: {
+		trackImpressions?: boolean;
+		trackHover?: boolean;
+	};
 }
 
 export type PagesContentBlock =
-  | PagesContentHeroBlock
-  | PagesContentTextBlockBlock
-  | PagesContentFeatureBlock;
+	| PagesContentHeroBlock
+	| PagesContentTextBlockBlock
+	| PagesContentFeatureBlock;
 
 export interface Pages {
-  id: string;
-  title: string;
-  slug: string;
-  content?: PagesContentBlock[];
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	title: string;
+	slug: string;
+	content?: PagesContentBlock[];
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface Settings {
-  id: string;
-  siteName: string;
-  siteDescription?: string;
-  twitterHandle?: string;
-  facebookUrl?: string;
-  linkedinUrl?: string;
-  notifications?: {
-    emailEnabled?: boolean;
-    emailFrom?: string;
-  };
-  analyticsId?: string;
-  maintenanceMode?: boolean;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	siteName: string;
+	siteDescription?: string;
+	twitterHandle?: string;
+	facebookUrl?: string;
+	linkedinUrl?: string;
+	notifications?: {
+		emailEnabled?: boolean;
+		emailFrom?: string;
+	};
+	analyticsId?: string;
+	maintenanceMode?: boolean;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface Events {
-  id: string;
-  title: string;
-  description?: string;
-  location?: string;
-  eventDate?: string;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	title: string;
+	description?: string;
+	location?: string;
+	eventDate?: string;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface Media {
-  id: string;
-  filename: string;
-  mimeType: string;
-  filesize?: number;
-  path?: string;
-  url?: string;
-  alt?: string;
-  width?: number;
-  height?: number;
-  focalPoint?: Record<string, unknown>;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	filename: string;
+	mimeType: string;
+	filesize?: number;
+	path: string;
+	url?: string;
+	alt?: string;
+	width?: number;
+	height?: number;
+	focalPoint?: Record<string, unknown>;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface HookTestItems {
-  id: string;
-  title: string;
-  slug?: string;
-  status?: string;
-  priority?: number;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	title: string;
+	slug?: string;
+	status?: string;
+	priority?: number;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface FieldTestItems {
-  id: string;
-  title: string;
-  code: string;
-  contactEmail?: string;
-  rating?: number;
-  price?: number;
-  status: "active" | "draft" | "archived";
-  tags?: Array<{
-    label: string;
-  }>;
-  adminNotes?: string;
-  internalCode?: string;
-  internalScore?: number;
-  slug?: string;
-  normalizedTitle?: string;
-  viewCount?: number;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	title: string;
+	code: string;
+	contactEmail?: string;
+	rating?: number;
+	price?: number;
+	status: 'active' | 'draft' | 'archived';
+	tags?: Array<{
+		label: string;
+	}>;
+	adminNotes?: string;
+	internalCode?: string;
+	internalScore?: number;
+	slug?: string;
+	normalizedTitle?: string;
+	viewCount?: number;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface Tags {
-  id: string;
-  name: string;
-  category: string;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	name: string;
+	category: string;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface UserNotes {
-  id: string;
-  title: string;
-  ownerId?: string;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	title: string;
+	ownerId?: string;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface AuthUser {
-  id: string;
-  name: string;
-  email: string;
-  emailVerified?: boolean;
-  image?: string;
-  role?: "admin" | "editor" | "user" | "viewer";
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	name: string;
+	email: string;
+	emailVerified?: boolean;
+	image?: string;
+	role?: 'admin' | 'editor' | 'user' | 'viewer';
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface AuthSession {
-  id: string;
-  userId: string;
-  token: string;
-  expiresAt: string;
-  ipAddress?: string;
-  userAgent?: string;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	userId: string;
+	token: string;
+	expiresAt: string;
+	ipAddress?: string;
+	userAgent?: string;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface AuthAccount {
-  id: string;
-  userId: string;
-  accountId: string;
-  providerId: string;
-  accessToken?: string;
-  refreshToken?: string;
-  accessTokenExpiresAt?: string;
-  refreshTokenExpiresAt?: string;
-  scope?: string;
-  idToken?: string;
-  password?: string;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	userId: string;
+	accountId: string;
+	providerId: string;
+	accessToken?: string;
+	refreshToken?: string;
+	accessTokenExpiresAt?: string;
+	refreshTokenExpiresAt?: string;
+	scope?: string;
+	idToken?: string;
+	password?: string;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface AuthVerification {
-  id: string;
-  identifier: string;
-  value: string;
-  expiresAt: string;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	identifier: string;
+	value: string;
+	expiresAt: string;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface AuthApiKeys {
-  id: string;
-  name: string;
-  keyHash: string;
-  keyPrefix: string;
-  createdBy: string;
-  role?: "admin" | "editor" | "user" | "viewer";
-  expiresAt?: string;
-  lastUsedAt?: string;
-  createdAt: string;
-  updatedAt: string;
+	id: string;
+	name: string;
+	keyHash: string;
+	keyPrefix: string;
+	createdBy: string;
+	role?: 'admin' | 'editor' | 'user' | 'viewer';
+	expiresAt?: string;
+	lastUsedAt?: string;
+	createdAt: string;
+	updatedAt: string;
 }
 
 // ── Global Types ───────────────────────────────
 
 export interface SiteSettingsGlobal {
-  "site-name": string;
-  description?: string;
-  "maintenance-mode"?: boolean;
-  updatedAt: string;
+	'site-name': string;
+	description?: string;
+	'maintenance-mode'?: boolean;
+	updatedAt: string;
 }
 
 // ── Where Clauses ──────────────────────────────
 
 export interface CategoriesWhereClause {
-  id?: string | { equals?: string; not?: string; in?: string[] };
-  name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  slug?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	slug?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
 export interface ArticlesWhereClause {
-  id?: string | { equals?: string; not?: string; in?: string[] };
-  title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  coverImage?: string | { equals?: string; not?: string; in?: string[] };
-  content?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  category?: string | { equals?: string; not?: string; in?: string[] };
-  createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	content?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	category?: string | { equals?: string; not?: string; in?: string[] };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
 export interface ProductsWhereClause {
-  id?: string | { equals?: string; not?: string; in?: string[] };
-  name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  description?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  price?: number | { equals?: number; not?: number; gt?: number; gte?: number; lt?: number; lte?: number; in?: number[] };
-  createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	description?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	price?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
 export interface PagesWhereClause {
-  id?: string | { equals?: string; not?: string; in?: string[] };
-  title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  slug?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	slug?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
 export interface SettingsWhereClause {
-  id?: string | { equals?: string; not?: string; in?: string[] };
-  siteName?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  siteDescription?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  twitterHandle?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  facebookUrl?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  linkedinUrl?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  analyticsId?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  maintenanceMode?: boolean | { equals?: boolean };
-  createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	siteName?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	siteDescription?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	twitterHandle?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	facebookUrl?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	linkedinUrl?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	analyticsId?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	maintenanceMode?: boolean | { equals?: boolean };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
 export interface EventsWhereClause {
-  id?: string | { equals?: string; not?: string; in?: string[] };
-  title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  description?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  location?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  eventDate?: string | { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	description?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	location?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	eventDate?:
+		| string
+		| { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
 export interface MediaWhereClause {
-  id?: string | { equals?: string; not?: string; in?: string[] };
-  filename?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  mimeType?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  filesize?: number | { equals?: number; not?: number; gt?: number; gte?: number; lt?: number; lte?: number; in?: number[] };
-  path?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  url?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  alt?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  width?: number | { equals?: number; not?: number; gt?: number; gte?: number; lt?: number; lte?: number; in?: number[] };
-  height?: number | { equals?: number; not?: number; gt?: number; gte?: number; lt?: number; lte?: number; in?: number[] };
-  createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	filename?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	mimeType?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	filesize?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	path?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	url?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	alt?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	width?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	height?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
 export interface HookTestItemsWhereClause {
-  id?: string | { equals?: string; not?: string; in?: string[] };
-  title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  slug?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  status?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  priority?: number | { equals?: number; not?: number; gt?: number; gte?: number; lt?: number; lte?: number; in?: number[] };
-  createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	slug?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	status?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	priority?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
 export interface FieldTestItemsWhereClause {
-  id?: string | { equals?: string; not?: string; in?: string[] };
-  title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  code?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  contactEmail?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  rating?: number | { equals?: number; not?: number; gt?: number; gte?: number; lt?: number; lte?: number; in?: number[] };
-  price?: number | { equals?: number; not?: number; gt?: number; gte?: number; lt?: number; lte?: number; in?: number[] };
-  status?: "active" | "draft" | "archived" | { equals?: "active" | "draft" | "archived"; not?: "active" | "draft" | "archived"; in?: ("active" | "draft" | "archived")[] };
-  adminNotes?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  internalCode?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  internalScore?: number | { equals?: number; not?: number; gt?: number; gte?: number; lt?: number; lte?: number; in?: number[] };
-  slug?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  normalizedTitle?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  viewCount?: number | { equals?: number; not?: number; gt?: number; gte?: number; lt?: number; lte?: number; in?: number[] };
-  createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	code?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	contactEmail?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	rating?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	price?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	status?:
+		| 'active'
+		| 'draft'
+		| 'archived'
+		| {
+				equals?: 'active' | 'draft' | 'archived';
+				not?: 'active' | 'draft' | 'archived';
+				in?: ('active' | 'draft' | 'archived')[];
+		  };
+	adminNotes?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	internalCode?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	internalScore?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	slug?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	normalizedTitle?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	viewCount?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
 export interface TagsWhereClause {
-  id?: string | { equals?: string; not?: string; in?: string[] };
-  name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  category?: string | { equals?: string; not?: string; in?: string[] };
-  createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	category?: string | { equals?: string; not?: string; in?: string[] };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
 export interface UserNotesWhereClause {
-  id?: string | { equals?: string; not?: string; in?: string[] };
-  title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  ownerId?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	ownerId?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
 export interface AuthUserWhereClause {
-  id?: string | { equals?: string; not?: string; in?: string[] };
-  name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  email?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  emailVerified?: boolean | { equals?: boolean };
-  image?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  role?: "admin" | "editor" | "user" | "viewer" | { equals?: "admin" | "editor" | "user" | "viewer"; not?: "admin" | "editor" | "user" | "viewer"; in?: ("admin" | "editor" | "user" | "viewer")[] };
-  createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	email?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	emailVerified?: boolean | { equals?: boolean };
+	image?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	role?:
+		| 'admin'
+		| 'editor'
+		| 'user'
+		| 'viewer'
+		| {
+				equals?: 'admin' | 'editor' | 'user' | 'viewer';
+				not?: 'admin' | 'editor' | 'user' | 'viewer';
+				in?: ('admin' | 'editor' | 'user' | 'viewer')[];
+		  };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
 export interface AuthSessionWhereClause {
-  id?: string | { equals?: string; not?: string; in?: string[] };
-  userId?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  token?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  expiresAt?: string | { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  ipAddress?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  userAgent?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	userId?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	token?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	expiresAt?:
+		| string
+		| { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	ipAddress?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	userAgent?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
 export interface AuthAccountWhereClause {
-  id?: string | { equals?: string; not?: string; in?: string[] };
-  userId?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  accountId?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  providerId?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  accessToken?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  refreshToken?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  accessTokenExpiresAt?: string | { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  refreshTokenExpiresAt?: string | { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  scope?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  idToken?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  password?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	userId?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	accountId?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	providerId?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	accessToken?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	refreshToken?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	accessTokenExpiresAt?:
+		| string
+		| { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	refreshTokenExpiresAt?:
+		| string
+		| { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	scope?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	idToken?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	password?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
 export interface AuthVerificationWhereClause {
-  id?: string | { equals?: string; not?: string; in?: string[] };
-  identifier?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  value?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  expiresAt?: string | { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	identifier?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	value?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	expiresAt?:
+		| string
+		| { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
 export interface AuthApiKeysWhereClause {
-  id?: string | { equals?: string; not?: string; in?: string[] };
-  name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  keyHash?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  keyPrefix?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  createdBy?: string | { equals?: string; not?: string; in?: string[] };
-  role?: "admin" | "editor" | "user" | "viewer" | { equals?: "admin" | "editor" | "user" | "viewer"; not?: "admin" | "editor" | "user" | "viewer"; in?: ("admin" | "editor" | "user" | "viewer")[] };
-  expiresAt?: string | { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  lastUsedAt?: string | { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
-  updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	keyHash?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	keyPrefix?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	createdBy?: string | { equals?: string; not?: string; in?: string[] };
+	role?:
+		| 'admin'
+		| 'editor'
+		| 'user'
+		| 'viewer'
+		| {
+				equals?: 'admin' | 'editor' | 'user' | 'viewer';
+				not?: 'admin' | 'editor' | 'user' | 'viewer';
+				in?: ('admin' | 'editor' | 'user' | 'viewer')[];
+		  };
+	expiresAt?:
+		| string
+		| { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	lastUsedAt?:
+		| string
+		| { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
-export type CollectionSlug = "categories" | "articles" | "products" | "pages" | "settings" | "events" | "media" | "hook-test-items" | "field-test-items" | "tags" | "user-notes" | "auth-user" | "auth-session" | "auth-account" | "auth-verification" | "auth-api-keys";
+export type CollectionSlug =
+	| 'categories'
+	| 'articles'
+	| 'products'
+	| 'pages'
+	| 'settings'
+	| 'events'
+	| 'media'
+	| 'hook-test-items'
+	| 'field-test-items'
+	| 'tags'
+	| 'user-notes'
+	| 'auth-user'
+	| 'auth-session'
+	| 'auth-account'
+	| 'auth-verification'
+	| 'auth-api-keys';
 
-export type GlobalSlug = "site-settings";
+export type GlobalSlug = 'site-settings';
 
 export interface MomentumCollections {
-  "categories": Categories;
-  "articles": Articles;
-  "products": Products;
-  "pages": Pages;
-  "settings": Settings;
-  "events": Events;
-  "media": Media;
-  "hook-test-items": HookTestItems;
-  "field-test-items": FieldTestItems;
-  "tags": Tags;
-  "user-notes": UserNotes;
-  "auth-user": AuthUser;
-  "auth-session": AuthSession;
-  "auth-account": AuthAccount;
-  "auth-verification": AuthVerification;
-  "auth-api-keys": AuthApiKeys;
+	categories: Categories;
+	articles: Articles;
+	products: Products;
+	pages: Pages;
+	settings: Settings;
+	events: Events;
+	media: Media;
+	'hook-test-items': HookTestItems;
+	'field-test-items': FieldTestItems;
+	tags: Tags;
+	'user-notes': UserNotes;
+	'auth-user': AuthUser;
+	'auth-session': AuthSession;
+	'auth-account': AuthAccount;
+	'auth-verification': AuthVerification;
+	'auth-api-keys': AuthApiKeys;
 }
 
 export interface MomentumGlobals {
-  "site-settings": SiteSettingsGlobal;
+	'site-settings': SiteSettingsGlobal;
 }
 
 export type TypedMomentumCollections = {
-  "categories": { doc: Categories; where: CategoriesWhereClause };
-  "articles": { doc: Articles; where: ArticlesWhereClause };
-  "products": { doc: Products; where: ProductsWhereClause };
-  "pages": { doc: Pages; where: PagesWhereClause };
-  "settings": { doc: Settings; where: SettingsWhereClause };
-  "events": { doc: Events; where: EventsWhereClause };
-  "media": { doc: Media; where: MediaWhereClause };
-  "hook-test-items": { doc: HookTestItems; where: HookTestItemsWhereClause };
-  "field-test-items": { doc: FieldTestItems; where: FieldTestItemsWhereClause };
-  "tags": { doc: Tags; where: TagsWhereClause };
-  "user-notes": { doc: UserNotes; where: UserNotesWhereClause };
-  "auth-user": { doc: AuthUser; where: AuthUserWhereClause };
-  "auth-session": { doc: AuthSession; where: AuthSessionWhereClause };
-  "auth-account": { doc: AuthAccount; where: AuthAccountWhereClause };
-  "auth-verification": { doc: AuthVerification; where: AuthVerificationWhereClause };
-  "auth-api-keys": { doc: AuthApiKeys; where: AuthApiKeysWhereClause };
+	categories: { doc: Categories; where: CategoriesWhereClause };
+	articles: { doc: Articles; where: ArticlesWhereClause };
+	products: { doc: Products; where: ProductsWhereClause };
+	pages: { doc: Pages; where: PagesWhereClause };
+	settings: { doc: Settings; where: SettingsWhereClause };
+	events: { doc: Events; where: EventsWhereClause };
+	media: { doc: Media; where: MediaWhereClause };
+	'hook-test-items': { doc: HookTestItems; where: HookTestItemsWhereClause };
+	'field-test-items': { doc: FieldTestItems; where: FieldTestItemsWhereClause };
+	tags: { doc: Tags; where: TagsWhereClause };
+	'user-notes': { doc: UserNotes; where: UserNotesWhereClause };
+	'auth-user': { doc: AuthUser; where: AuthUserWhereClause };
+	'auth-session': { doc: AuthSession; where: AuthSessionWhereClause };
+	'auth-account': { doc: AuthAccount; where: AuthAccountWhereClause };
+	'auth-verification': { doc: AuthVerification; where: AuthVerificationWhereClause };
+	'auth-api-keys': { doc: AuthApiKeys; where: AuthApiKeysWhereClause };
 };
 
 export type DocumentType<S extends CollectionSlug> = MomentumCollections[S];
