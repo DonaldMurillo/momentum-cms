@@ -5,7 +5,7 @@ import { test, expect, TEST_CREDENTIALS } from '../fixtures';
  * Verifies that relationship fields store document IDs correctly
  * and that CRUD operations with relationships work through the API.
  */
-test.describe('Relationship field', () => {
+test.describe('Relationship field', { tag: ['@relationship', '@admin'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },

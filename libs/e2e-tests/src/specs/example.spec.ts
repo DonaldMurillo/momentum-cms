@@ -6,7 +6,7 @@ import { test, expect } from '../fixtures';
  * Tests basic navigation and auth redirects.
  */
 
-test.describe('App Routing', () => {
+test.describe('App Routing', { tag: ['@smoke'] }, () => {
 	test('should load the landing page at root', async ({ page }) => {
 		await page.goto('/');
 

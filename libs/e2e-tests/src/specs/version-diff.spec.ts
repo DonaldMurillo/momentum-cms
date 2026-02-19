@@ -6,7 +6,7 @@ import { test, expect, TEST_AUTHOR2_CREDENTIALS } from '../fixtures';
  *
  * Versions are created by explicit publish/draft operations, not by standard CRUD.
  */
-test.describe('Version diff', () => {
+test.describe('Version diff', { tag: ['@versioning', '@admin'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },

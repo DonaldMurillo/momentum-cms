@@ -5,7 +5,7 @@ import { test, expect } from '../fixtures';
  *
  * Verifies that seeded data is accessible via the API and relationships work correctly.
  */
-test.describe('Seeding Basic Tests', () => {
+test.describe('Seeding Basic Tests', { tag: ['@seeding'] }, () => {
 	test('seeded categories are accessible via API', async ({ request }) => {
 		const response = await request.get('/api/categories');
 		expect(response.ok()).toBe(true);

@@ -5,7 +5,7 @@ import { test, expect, TEST_AUTHOR2_CREDENTIALS } from '../fixtures';
  * Verifies that richText content (HTML) is stored and retrieved correctly via the API,
  * and that the TipTap editor renders in the admin UI.
  */
-test.describe('Rich text field', () => {
+test.describe('Rich text field', { tag: ['@field', '@admin'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },

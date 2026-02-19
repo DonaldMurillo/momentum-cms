@@ -7,7 +7,7 @@ import { test, expect } from '../fixtures';
  * and contains the expected structure based on the configured collections.
  */
 
-test.describe('OpenAPI Documentation', () => {
+test.describe('OpenAPI Documentation', { tag: ['@api'] }, () => {
 	test('GET /api/docs/openapi.json returns valid OpenAPI 3.0 spec', async ({ request }) => {
 		const response = await request.get('/api/docs/openapi.json');
 		expect(response.ok()).toBe(true);

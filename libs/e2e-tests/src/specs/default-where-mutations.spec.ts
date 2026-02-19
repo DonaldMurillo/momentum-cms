@@ -27,7 +27,7 @@ async function signIn(context: APIRequestContext, email: string, password: strin
 	expect(response.ok()).toBe(true);
 }
 
-test.describe('defaultWhere mutation enforcement', () => {
+test.describe('defaultWhere mutation enforcement', { tag: ['@api', '@security'] }, () => {
 	let editorContext: APIRequestContext;
 	let author1Context: APIRequestContext;
 	let adminContext: APIRequestContext;

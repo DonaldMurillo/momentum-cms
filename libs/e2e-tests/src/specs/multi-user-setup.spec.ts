@@ -10,7 +10,7 @@ import {
  * Multi-user setup verification tests.
  * Verifies all test users were created and can authenticate via API.
  */
-test.describe('Multi-user setup', () => {
+test.describe('Multi-user setup', { tag: ['@auth', '@api'] }, () => {
 	const allUsers: TestUserCredentials[] = [TEST_CREDENTIALS, ...ADDITIONAL_TEST_USERS];
 
 	for (const user of allUsers) {

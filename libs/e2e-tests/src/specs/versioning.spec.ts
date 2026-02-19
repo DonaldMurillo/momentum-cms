@@ -11,7 +11,7 @@ import { test, expect } from '../fixtures';
  * - Draft saving
  * - Status endpoints
  */
-test.describe.serial('Versioning API Tests', () => {
+test.describe.serial('Versioning API Tests', { tag: ['@versioning', '@api'] }, () => {
 	let testArticleId: string;
 
 	test('should create a versioned article', async ({ request }) => {
@@ -184,7 +184,7 @@ test.describe.serial('Versioning API Tests', () => {
 	});
 });
 
-test.describe('Versioning with Seeded Data', () => {
+test.describe('Versioning with Seeded Data', { tag: ['@versioning', '@api'] }, () => {
 	test('should be able to publish seeded article', async ({ request }) => {
 		// Get the seeded "Welcome Article"
 		const listResponse = await request.get('/api/articles?limit=100');

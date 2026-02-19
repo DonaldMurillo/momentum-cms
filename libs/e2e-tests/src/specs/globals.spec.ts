@@ -15,7 +15,7 @@ import { test, expect } from '../fixtures';
 // Globals API - Basic Operations
 // ============================================
 
-test.describe('Globals API - Basic Operations', () => {
+test.describe('Globals API - Basic Operations', { tag: ['@api', '@crud'] }, () => {
 	test('GET /api/globals/:slug returns the global (auto-creates on first read)', async ({
 		request,
 	}) => {
@@ -46,7 +46,7 @@ test.describe('Globals API - Basic Operations', () => {
 // Globals API - Authenticated Operations
 // ============================================
 
-test.describe('Globals API - Authenticated Operations', () => {
+test.describe('Globals API - Authenticated Operations', { tag: ['@api', '@crud'] }, () => {
 	test('admin can update a global', async ({ authenticatedPage }) => {
 		const timestamp = Date.now();
 		const response = await authenticatedPage.request.patch('/api/globals/site-settings', {
@@ -111,7 +111,7 @@ test.describe('Globals API - Authenticated Operations', () => {
 // Globals API - Access Control
 // ============================================
 
-test.describe('Globals API - Access Control', () => {
+test.describe('Globals API - Access Control', { tag: ['@api', '@security'] }, () => {
 	test('viewer cannot update globals (403)', async ({ viewerPage }) => {
 		const response = await viewerPage.request.patch('/api/globals/site-settings', {
 			data: { 'site-name': 'Viewer Attempt' },
@@ -148,7 +148,7 @@ test.describe('Globals API - Access Control', () => {
 // Globals Admin UI
 // ============================================
 
-test.describe('Globals Admin UI', () => {
+test.describe('Globals Admin UI', { tag: ['@admin', '@crud'] }, () => {
 	test('sidebar shows globals section with Site Settings link', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');

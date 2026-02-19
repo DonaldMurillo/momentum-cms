@@ -10,7 +10,7 @@ import { test, expect } from '../fixtures';
  * is not available in E2E tests. The tracking table behavior is validated
  * by observing seed idempotency and skip behavior.
  */
-test.describe('Seed Tracking Tests', () => {
+test.describe('Seed Tracking Tests', { tag: ['@seeding'] }, () => {
 	test('seeds are tracked with stable IDs', async ({ request }) => {
 		// The fact that idempotency works proves tracking is functioning
 		// Get categories to verify they weren't duplicated

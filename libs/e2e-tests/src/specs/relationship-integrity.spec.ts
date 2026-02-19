@@ -7,7 +7,7 @@ import { test, expect, TEST_CREDENTIALS } from '../fixtures';
  * - Default behavior (set-null): deleting a referenced document nullifies the FK column
  * - Articles → Categories uses ON DELETE SET NULL
  */
-test.describe('Relationship integrity on delete', () => {
+test.describe('Relationship integrity on delete', { tag: ['@relationship', '@api'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },

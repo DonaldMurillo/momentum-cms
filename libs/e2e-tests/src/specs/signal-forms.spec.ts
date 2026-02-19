@@ -45,7 +45,7 @@ async function replaceFieldText(
 	await locator.pressSequentially(text, { delay: 20 });
 }
 
-test.describe('Signal Forms - Validation Behavior', () => {
+test.describe('Signal Forms - Validation Behavior', { tag: ['@admin', '@field'] }, () => {
 	test('should show humanized labels in error messages', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/field-test-items/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
@@ -175,7 +175,7 @@ test.describe('Signal Forms - Validation Behavior', () => {
 	});
 });
 
-test.describe('Signal Forms - Submit Behavior', () => {
+test.describe('Signal Forms - Submit Behavior', { tag: ['@admin', '@field'] }, () => {
 	test('should show form-level error when submitting with validation errors', async ({
 		authenticatedPage,
 	}) => {
@@ -260,7 +260,7 @@ test.describe('Signal Forms - Submit Behavior', () => {
 	});
 });
 
-test.describe('Signal Forms - Edit Flow', () => {
+test.describe('Signal Forms - Edit Flow', { tag: ['@admin', '@field'] }, () => {
 	test('should load existing data and save edits', async ({ authenticatedPage }) => {
 		const timestamp = Date.now();
 

@@ -5,7 +5,7 @@ import { test, expect, TEST_CREDENTIALS } from '../fixtures';
  * Verifies that analytics tracks server-side collection events,
  * API request timing, and client-side ingest endpoint.
  */
-test.describe('Analytics', () => {
+test.describe('Analytics', { tag: ['@analytics', '@api'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		// Sign in as admin
 		const signIn = await request.post('/api/auth/sign-in/email', {

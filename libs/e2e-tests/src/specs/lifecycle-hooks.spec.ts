@@ -13,7 +13,7 @@ import { test, expect, TEST_AUTHOR1_CREDENTIALS } from '../fixtures';
  * - Hook chaining: multiple invocations accumulate in order
  * - Batch operations: hooks fire per item in batch create
  */
-test.describe('Lifecycle hooks', () => {
+test.describe('Lifecycle hooks', { tag: ['@api', '@hooks'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		// Sign in as author1
 		const signInResponse = await request.post('/api/auth/sign-in/email', {

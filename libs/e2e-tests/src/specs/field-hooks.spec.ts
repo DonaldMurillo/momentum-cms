@@ -11,7 +11,7 @@ import { test, expect, TEST_CREDENTIALS } from '../fixtures';
  * - normalizedTitle (beforeChange): trims whitespace and lowercases
  * - viewCount (afterRead): defaults to 0 when null/undefined
  */
-test.describe('Field-level hooks', () => {
+test.describe('Field-level hooks', { tag: ['@field', '@hooks'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		// Sign in as admin
 		const signInResponse = await request.post('/api/auth/sign-in/email', {

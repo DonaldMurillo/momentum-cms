@@ -3,7 +3,7 @@ import { test, expect, TEST_CREDENTIALS } from '../fixtures';
 // Configure ALL tests in this file to run serially (shared state across tests)
 test.describe.configure({ mode: 'serial' });
 
-test.describe('Route handler security', () => {
+test.describe('Route handler security', { tag: ['@security', '@api'] }, () => {
 	test.beforeAll(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },

@@ -23,7 +23,7 @@ const VERIFY_USER_EMAIL = `verify-test-${Date.now()}@test.com`;
 const VERIFY_USER_PASSWORD = 'VerifyTest123!';
 const VERIFY_USER_NAME = 'Verify Test User';
 
-test.describe('Email Verification Flow', () => {
+test.describe('Email Verification Flow', { tag: ['@auth', '@api'] }, () => {
 	let mailpitRunning = false;
 
 	test.beforeAll(async () => {

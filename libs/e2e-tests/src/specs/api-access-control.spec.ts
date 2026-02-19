@@ -131,7 +131,7 @@ async function authenticatedRequest(
 // Test Setup - Sign In Users
 // ============================================
 
-test.describe('API Access Control - Setup', () => {
+test.describe('API Access Control - Setup', { tag: ['@security', '@api'] }, () => {
 	test('sign in as admin', async ({ request }) => {
 		sessions.admin = await signIn(request, TEST_USERS.admin.email, TEST_USERS.admin.password);
 		expect(sessions.admin.length).toBeGreaterThan(0);
@@ -152,80 +152,84 @@ test.describe('API Access Control - Setup', () => {
 // User Notes Collection - Auth Required
 // ============================================
 
-test.describe('API Access Control - User Notes (Auth Required)', () => {
-	test('unauthenticated: cannot read user-notes (403)', async ({ request }) => {
-		const response = await request.get('/api/user-notes');
-		expect(response.status()).toBe(403);
-	});
-
-	test('unauthenticated: cannot create user-notes (403)', async ({ request }) => {
-		const response = await request.post('/api/user-notes', {
-			data: { title: 'Unauthorized' },
+test.describe(
+	'API Access Control - User Notes (Auth Required)',
+	{ tag: ['@security', '@api'] },
+	() => {
+		test('unauthenticated: cannot read user-notes (403)', async ({ request }) => {
+			const response = await request.get('/api/user-notes');
+			expect(response.status()).toBe(403);
 		});
-		expect(response.status()).toBe(403);
-	});
 
-	test('viewer: can read user-notes (authenticated)', async ({ request }) => {
-		expect(sessions.viewer, 'Viewer session must exist from setup').toBeTruthy();
-		const { status, body } = await authenticatedRequest(
-			request,
-			sessions.viewer,
-			'GET',
-			'/api/user-notes',
-		);
-		expect(status).toBe(200);
-		expect((body as { docs: unknown[] }).docs).toBeDefined();
-	});
+		test('unauthenticated: cannot create user-notes (403)', async ({ request }) => {
+			const response = await request.post('/api/user-notes', {
+				data: { title: 'Unauthorized' },
+			});
+			expect(response.status()).toBe(403);
+		});
 
-	test('editor: can create user-notes', async ({ request }) => {
-		expect(sessions.editor, 'Editor session must exist from setup').toBeTruthy();
-		const { status, body } = await authenticatedRequest(
-			request,
-			sessions.editor,
-			'POST',
-			'/api/user-notes',
-			{
-				title: `Editor Note ${Date.now()}`,
-			},
-		);
-		expect(status).toBe(201);
-		const doc = (body as { doc: { id: string; title: string } }).doc;
-		expect(doc.title).toContain('Editor Note');
-	});
+		test('viewer: can read user-notes (authenticated)', async ({ request }) => {
+			expect(sessions.viewer, 'Viewer session must exist from setup').toBeTruthy();
+			const { status, body } = await authenticatedRequest(
+				request,
+				sessions.viewer,
+				'GET',
+				'/api/user-notes',
+			);
+			expect(status).toBe(200);
+			expect((body as { docs: unknown[] }).docs).toBeDefined();
+		});
 
-	test('admin: can create and delete user-notes', async ({ request }) => {
-		expect(sessions.admin, 'Admin session must exist from setup').toBeTruthy();
+		test('editor: can create user-notes', async ({ request }) => {
+			expect(sessions.editor, 'Editor session must exist from setup').toBeTruthy();
+			const { status, body } = await authenticatedRequest(
+				request,
+				sessions.editor,
+				'POST',
+				'/api/user-notes',
+				{
+					title: `Editor Note ${Date.now()}`,
+				},
+			);
+			expect(status).toBe(201);
+			const doc = (body as { doc: { id: string; title: string } }).doc;
+			expect(doc.title).toContain('Editor Note');
+		});
 
-		// Create
-		const createResult = await authenticatedRequest(
-			request,
-			sessions.admin,
-			'POST',
-			'/api/user-notes',
-			{
-				title: `Admin Note ${Date.now()}`,
-			},
-		);
-		expect(createResult.status).toBe(201);
-		const noteId = (createResult.body as { doc: { id: string } }).doc.id;
+		test('admin: can create and delete user-notes', async ({ request }) => {
+			expect(sessions.admin, 'Admin session must exist from setup').toBeTruthy();
 
-		// Delete
-		const { status, body } = await authenticatedRequest(
-			request,
-			sessions.admin,
-			'DELETE',
-			`/api/user-notes/${noteId}`,
-		);
-		expect(status).toBe(200);
-		expect((body as { deleted: boolean }).deleted).toBe(true);
-	});
-});
+			// Create
+			const createResult = await authenticatedRequest(
+				request,
+				sessions.admin,
+				'POST',
+				'/api/user-notes',
+				{
+					title: `Admin Note ${Date.now()}`,
+				},
+			);
+			expect(createResult.status).toBe(201);
+			const noteId = (createResult.body as { doc: { id: string } }).doc.id;
+
+			// Delete
+			const { status, body } = await authenticatedRequest(
+				request,
+				sessions.admin,
+				'DELETE',
+				`/api/user-notes/${noteId}`,
+			);
+			expect(status).toBe(200);
+			expect((body as { deleted: boolean }).deleted).toBe(true);
+		});
+	},
+);
 
 // ============================================
 // Categories Collection - Public Access
 // ============================================
 
-test.describe('API Access Control - Categories (Public)', () => {
+test.describe('API Access Control - Categories (Public)', { tag: ['@security', '@api'] }, () => {
 	test('unauthenticated: can read categories', async ({ request }) => {
 		const response = await request.get('/api/categories');
 		expect(response.status()).toBe(200);
@@ -248,7 +252,7 @@ test.describe('API Access Control - Categories (Public)', () => {
 // Users Collection - Admin Only
 // ============================================
 
-test.describe('API Access Control - Users Collection', () => {
+test.describe('API Access Control - Users Collection', { tag: ['@security', '@api'] }, () => {
 	test('unauthenticated: cannot read users (403)', async ({ request }) => {
 		const response = await request.get('/api/auth-user');
 		expect(response.status()).toBe(403);
@@ -299,7 +303,7 @@ test.describe('API Access Control - Users Collection', () => {
 // /api/access Endpoint - Permission Checks
 // ============================================
 
-test.describe('API Access Control - /api/access Endpoint', () => {
+test.describe('API Access Control - /api/access Endpoint', { tag: ['@security', '@api'] }, () => {
 	test('returns correct permissions for unauthenticated user', async ({ request }) => {
 		const response = await request.get('/api/access');
 		expect(response.status()).toBe(200);
@@ -376,7 +380,7 @@ test.describe('API Access Control - /api/access Endpoint', () => {
 // Error Response Format
 // ============================================
 
-test.describe('API Access Control - Error Responses', () => {
+test.describe('API Access Control - Error Responses', { tag: ['@security', '@api'] }, () => {
 	test('403 response includes error message', async ({ request }) => {
 		const response = await request.post('/api/user-notes', {
 			data: { title: 'Unauthorized' },

@@ -29,7 +29,7 @@ async function getHomePageId(request: APIRequestContext): Promise<string> {
 	return body.docs[0].id;
 }
 
-test.describe('Live Preview', () => {
+test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 	test('preview iframe appears when editing a page', async ({
 		authenticatedPage: page,
 		request,

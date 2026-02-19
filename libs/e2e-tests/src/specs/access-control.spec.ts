@@ -15,7 +15,7 @@ import { test, expect } from '../fixtures';
  * - Auth Users: admin-only for all operations
  */
 
-test.describe('Backend Access Control', () => {
+test.describe('Backend Access Control', { tag: ['@security', '@api'] }, () => {
 	test.describe('Unauthenticated API Access', () => {
 		test('GET /api/categories should allow unauthenticated read (public)', async ({ request }) => {
 			const response = await request.get('/api/categories');
@@ -83,7 +83,7 @@ test.describe('Backend Access Control', () => {
 	});
 });
 
-test.describe('Authenticated Access Control', () => {
+test.describe('Authenticated Access Control', { tag: ['@security', '@api'] }, () => {
 	test.describe('API Access', () => {
 		test('authenticated user can read user-notes', async ({ authenticatedPage }) => {
 			const response = await authenticatedPage.request.get('/api/user-notes');
@@ -125,7 +125,7 @@ test.describe('Authenticated Access Control', () => {
 	});
 });
 
-test.describe('Frontend Access Control', () => {
+test.describe('Frontend Access Control', { tag: ['@security', '@admin'] }, () => {
 	test('unauthenticated user redirected to login from protected route', async ({ page }) => {
 		// Clear any cookies
 		await page.context().clearCookies();
@@ -153,7 +153,7 @@ test.describe('Frontend Access Control', () => {
 	});
 });
 
-test.describe('Authenticated Frontend Access Control', () => {
+test.describe('Authenticated Frontend Access Control', { tag: ['@security', '@admin'] }, () => {
 	test('admin user sees collections in sidebar', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('networkidle');
@@ -198,7 +198,7 @@ test.describe('Authenticated Frontend Access Control', () => {
 	});
 });
 
-test.describe('Access Control Edge Cases', () => {
+test.describe('Access Control Edge Cases', { tag: ['@security', '@api'] }, () => {
 	test('API returns proper error structure on access denied', async ({ request }) => {
 		// Try to create a user-note without auth
 		const response = await request.post('/api/user-notes', {
@@ -221,7 +221,7 @@ test.describe('Access Control Edge Cases', () => {
 	});
 });
 
-test.describe('Role-Based Access Control', () => {
+test.describe('Role-Based Access Control', { tag: ['@security', '@api'] }, () => {
 	test.describe('Admin Role Permissions', () => {
 		test('admin user can access users collection via API', async ({ authenticatedPage }) => {
 			const response = await authenticatedPage.request.get('/api/auth-user');

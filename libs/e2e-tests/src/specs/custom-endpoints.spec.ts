@@ -5,7 +5,7 @@ import { test, expect, TEST_CREDENTIALS } from '../fixtures';
  * Verifies that collections with custom endpoint configurations
  * expose those endpoints via the Express API.
  */
-test.describe('Custom collection endpoints', () => {
+test.describe('Custom collection endpoints', { tag: ['@api', '@crud'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },

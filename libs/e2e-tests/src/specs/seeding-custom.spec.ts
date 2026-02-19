@@ -6,7 +6,7 @@ import { test, expect } from '../fixtures';
  * Verifies that the custom seed function works correctly with getSeeded()
  * for dependency resolution and relationship seeding.
  */
-test.describe('Custom Seed Function Tests', () => {
+test.describe('Custom Seed Function Tests', { tag: ['@seeding'] }, () => {
 	test('custom seed function creates article with category relationship', async ({ request }) => {
 		// Get the tech article created by custom seed function
 		const articlesResponse = await request.get('/api/articles?limit=100');

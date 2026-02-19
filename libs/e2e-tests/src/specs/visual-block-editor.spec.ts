@@ -63,7 +63,7 @@ async function getPageByTitle(request: APIRequestContext, title: string): Promis
 	return page!;
 }
 
-test.describe('Visual Block Editor', () => {
+test.describe('Visual Block Editor', { tag: ['@admin', '@blocks'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },

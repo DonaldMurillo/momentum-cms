@@ -5,7 +5,7 @@ import { test, expect, TEST_AUTHOR3_CREDENTIALS } from '../fixtures';
  * Verifies the auto-generated GraphQL schema, queries, and mutations
  * at the POST /api/graphql endpoint.
  */
-test.describe('GraphQL API', () => {
+test.describe('GraphQL API', { tag: ['@graphql', '@api'] }, () => {
 	const createdIds: string[] = [];
 
 	test.beforeAll(async ({ request }) => {

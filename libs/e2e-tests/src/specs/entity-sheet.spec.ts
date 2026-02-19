@@ -61,7 +61,7 @@ async function openSheetViaNewButton(page: Page, relationshipField: Locator): Pr
 	return sheetDialog;
 }
 
-test.describe('Entity Sheet', () => {
+test.describe('Entity Sheet', { tag: ['@admin', '@crud'] }, () => {
 	test.describe('Sheet from relationship field', () => {
 		test('should show New button on relationship field', async ({ authenticatedPage }) => {
 			const relationshipField = await navigateToArticlesForm(authenticatedPage);
