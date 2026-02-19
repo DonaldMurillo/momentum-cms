@@ -48,6 +48,14 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 					label: 'Title',
 				},
 				{
+					name: 'coverImage',
+					type: 'upload',
+					relationTo: 'media',
+					label: 'Cover Image',
+					mimeTypes: ['image/*'],
+					maxSize: 5242880,
+				},
+				{
 					name: 'content',
 					type: 'richText',
 					label: 'Content',
@@ -330,6 +338,7 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			],
 			admin: {
 				group: 'Content',
+				preview: '/{slug}',
 			},
 			timestamps: true,
 		},
@@ -495,7 +504,6 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 				{
 					name: 'path',
 					type: 'text',
-					required: true,
 					label: 'Storage Path',
 					description: 'Path/key where the file is stored',
 					admin: {
@@ -541,6 +549,9 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 				defaultColumns: ['filename', 'mimeType', 'filesize', 'createdAt'],
 			},
 			timestamps: true,
+			upload: {
+				mimeTypes: ['image/*', 'application/pdf', 'video/*', 'audio/*'],
+			},
 		},
 		{
 			slug: 'hook-test-items',
