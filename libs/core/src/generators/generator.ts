@@ -418,6 +418,37 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * Convert a preview function to a URL template string by evaluating it with
+ * sentinel placeholder values and replacing them with {fieldName} tokens.
+ * Falls back to `true` if the function can't be converted.
+ *
+ * Example: `(doc) => '/' + String(doc['slug'] ?? '')` → `'/{slug}'`
+ */
+function previewFunctionToTemplate(
+	fn: (...args: unknown[]) => unknown,
+	fields: FieldDefinition[],
+): string | true {
+	try {
+		const sentinel = '__MCMS_FIELD_';
+		const mockDoc: Record<string, string> = {};
+		for (const field of fields) {
+			mockDoc[field.name] = `${sentinel}${field.name}__`;
+		}
+		const result = fn(mockDoc);
+		if (typeof result !== 'string') return true;
+
+		// Replace sentinel placeholders with {fieldName} template tokens
+		const template = result.replace(
+			new RegExp(`${sentinel}(\\w+)__`, 'g'),
+			(_match, fieldName: string) => `{${fieldName}}`,
+		);
+		return template;
+	} catch {
+		return true;
+	}
+}
+
+/**
  * Serialize a value to a TypeScript literal string.
  * Skips functions and undefined values.
  */
@@ -666,11 +697,19 @@ export function serializeCollection(collection: CollectionDefinition, indent = '
 	// Fields (serialized with stripping)
 	parts.push(`${indent}\tfields: ${serializeFieldsArray(collection.fields, indent + '\t')}`);
 
-	// Admin config (strip preview when it's a function)
+	// Admin config (convert function-type preview to URL template, strip other functions)
 	if (collection.admin) {
-		const adminEntries = Object.entries(collection.admin).filter(
-			([, v]) => v !== undefined && typeof v !== 'function',
-		);
+		const adminEntries = Object.entries(collection.admin)
+			.filter(([, v]) => v !== undefined)
+			.map(([k, v]): [string, unknown] => {
+				if (k === 'preview' && typeof v === 'function') {
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowed by typeof check
+					const fn = v as (...args: unknown[]) => unknown;
+					return [k, previewFunctionToTemplate(fn, collection.fields)];
+				}
+				return [k, v];
+			})
+			.filter(([, v]) => typeof v !== 'function');
 		if (adminEntries.length > 0) {
 			const adminObj = Object.fromEntries(adminEntries);
 			parts.push(`${indent}\tadmin: ${serializeValue(adminObj, indent + '\t')}`);
@@ -895,6 +934,20 @@ function parseArgs(args: string[]): GeneratorOptions {
 	return { configPath, typesOutputPath, configOutputPath, watch: watchMode };
 }
 
+/**
+ * Format generated files with prettier to match pre-commit hook formatting.
+ * Uses the project's .prettierrc so generated output is commit-ready.
+ */
+function formatWithPrettier(...filePaths: string[]): void {
+	try {
+		execFileSync('npx', ['prettier', '--write', ...filePaths], {
+			stdio: 'pipe',
+		});
+	} catch {
+		console.warn('prettier not available — skipping formatting of generated files');
+	}
+}
+
 export default async function runGenerator(
 	options: GeneratorOptions,
 ): Promise<{ success: boolean }> {
@@ -924,6 +977,9 @@ export default async function runGenerator(
 			mkdirSync(dirname(configOutputPath), { recursive: true });
 			writeFileSync(configOutputPath, adminConfigContent, 'utf-8');
 			console.info(`Admin config generated: ${configOutputPath}`);
+
+			// Format with prettier so output matches pre-commit formatting
+			formatWithPrettier(typesOutputPath, configOutputPath);
 		} catch (error) {
 			console.error(`Error generating:`, error);
 			throw error;

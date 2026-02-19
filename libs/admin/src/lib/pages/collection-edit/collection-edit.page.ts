@@ -142,7 +142,7 @@ export class CollectionEditPage implements HasUnsavedChanges {
 
 	/** Preview config from collection admin settings (false-y when not configured) */
 	readonly previewConfig = computed(
-		(): boolean | ((doc: Record<string, unknown>) => string) | undefined => {
+		(): boolean | string | ((doc: Record<string, unknown>) => string) | undefined => {
 			const col = this.collection();
 			return col?.admin?.preview || undefined;
 		},

@@ -1,10 +1,43 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
-import { signal } from '@angular/core';
+import { provideRouter, Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import type { CollectionConfig } from '@momentumcms/core';
 import { AdminSidebarWidget } from './admin-sidebar.component';
 import type { AdminBranding, AdminUser } from '../widget.types';
 import { McmsThemeService } from '../../ui/theme/theme.service';
+import type { AdminPluginRoute } from '../../routes/momentum-admin-routes';
+
+@Component({ template: '', changeDetection: ChangeDetectionStrategy.OnPush })
+class DummyRouteComponent {}
+
+function createMockThemeService(): Partial<McmsThemeService> {
+	return {
+		theme: signal<'light' | 'dark' | 'system'>('light'),
+		isDark: signal(false),
+		toggleTheme: vi.fn(),
+		setTheme: vi.fn(),
+	};
+}
+
+/** Find the <a> element inside a nav item whose text contains `label`. Throws if not found. */
+function findNavLink(
+	fixture: ComponentFixture<AdminSidebarWidget>,
+	label: string,
+): HTMLAnchorElement {
+	const anchors: HTMLAnchorElement[] = Array.from(
+		fixture.nativeElement.querySelectorAll('mcms-sidebar-nav-item a'),
+	);
+	const match = anchors.find((a) => a.textContent?.trim().includes(label));
+	if (!match) {
+		throw new Error(`Nav link with label "${label}" not found`);
+	}
+	return match;
+}
+
+/** Whether Angular's routerLinkActive directive has applied the active class. */
+function isHighlighted(element: HTMLElement): boolean {
+	return element.classList.contains('bg-sidebar-accent');
+}
 
 describe('AdminSidebarWidget', () => {
 	let fixture: ComponentFixture<AdminSidebarWidget>;
@@ -28,12 +61,7 @@ describe('AdminSidebarWidget', () => {
 	};
 
 	beforeEach(async () => {
-		mockThemeService = {
-			theme: signal<'light' | 'dark' | 'system'>('light'),
-			isDark: signal(false),
-			toggleTheme: vi.fn(),
-			setTheme: vi.fn(),
-		};
+		mockThemeService = createMockThemeService();
 
 		await TestBed.configureTestingModule({
 			imports: [AdminSidebarWidget],
@@ -161,5 +189,158 @@ describe('AdminSidebarWidget', () => {
 		const collectionNoLabel: CollectionConfig = { slug: 'items', fields: [] };
 		const labelFromSlug = component.getCollectionLabel(collectionNoLabel);
 		expect(labelFromSlug).toBe('Items');
+	});
+});
+
+describe('AdminSidebarWidget — plugin route active link highlighting', () => {
+	let fixture: ComponentFixture<AdminSidebarWidget>;
+	let router: Router;
+
+	const analyticsPluginRoutes: AdminPluginRoute[] = [
+		{
+			path: 'analytics',
+			label: 'Analytics',
+			icon: 'heroChartBarSquare',
+			group: 'Analytics',
+			loadComponent: () => Promise.resolve(DummyRouteComponent),
+		},
+		{
+			path: 'analytics/content',
+			label: 'Content Perf.',
+			icon: 'heroDocumentText',
+			group: 'Analytics',
+			loadComponent: () => Promise.resolve(DummyRouteComponent),
+		},
+		{
+			path: 'analytics/tracking-rules',
+			label: 'Tracking Rules',
+			icon: 'heroCursorArrowRays',
+			group: 'Analytics',
+			loadComponent: () => Promise.resolve(DummyRouteComponent),
+		},
+	];
+
+	beforeEach(async () => {
+		const mockThemeService = createMockThemeService();
+
+		await TestBed.configureTestingModule({
+			imports: [AdminSidebarWidget],
+			providers: [
+				provideRouter([
+					{
+						path: 'admin',
+						children: [
+							{ path: 'analytics', component: DummyRouteComponent },
+							{ path: 'analytics/content', component: DummyRouteComponent },
+							{ path: 'analytics/tracking-rules', component: DummyRouteComponent },
+						],
+					},
+				]),
+				{ provide: McmsThemeService, useValue: mockThemeService },
+			],
+		}).compileComponents();
+
+		router = TestBed.inject(Router);
+		fixture = TestBed.createComponent(AdminSidebarWidget);
+		fixture.componentRef.setInput('pluginRoutes', analyticsPluginRoutes);
+		fixture.componentRef.setInput('basePath', '/admin');
+		fixture.detectChanges();
+		await fixture.whenStable();
+	});
+
+	it('should highlight only Content Perf. when navigated to /admin/analytics/content', async () => {
+		await router.navigateByUrl('/admin/analytics/content');
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const analyticsLink = findNavLink(fixture, 'Analytics');
+		const contentLink = findNavLink(fixture, 'Content Perf.');
+		const trackingLink = findNavLink(fixture, 'Tracking Rules');
+
+		expect(isHighlighted(analyticsLink)).toBe(false);
+		expect(isHighlighted(contentLink)).toBe(true);
+		expect(isHighlighted(trackingLink)).toBe(false);
+	});
+
+	it('should highlight only Analytics when navigated to /admin/analytics', async () => {
+		await router.navigateByUrl('/admin/analytics');
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const analyticsLink = findNavLink(fixture, 'Analytics');
+		const contentLink = findNavLink(fixture, 'Content Perf.');
+		const trackingLink = findNavLink(fixture, 'Tracking Rules');
+
+		expect(isHighlighted(analyticsLink)).toBe(true);
+		expect(isHighlighted(contentLink)).toBe(false);
+		expect(isHighlighted(trackingLink)).toBe(false);
+	});
+
+	it('should highlight only Tracking Rules when navigated to /admin/analytics/tracking-rules', async () => {
+		await router.navigateByUrl('/admin/analytics/tracking-rules');
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const analyticsLink = findNavLink(fixture, 'Analytics');
+		const contentLink = findNavLink(fixture, 'Content Perf.');
+		const trackingLink = findNavLink(fixture, 'Tracking Rules');
+
+		expect(isHighlighted(analyticsLink)).toBe(false);
+		expect(isHighlighted(contentLink)).toBe(false);
+		expect(isHighlighted(trackingLink)).toBe(true);
+	});
+});
+
+describe('AdminSidebarWidget — collection route prefix matching', () => {
+	let fixture: ComponentFixture<AdminSidebarWidget>;
+	let router: Router;
+
+	const collections: CollectionConfig[] = [
+		{ slug: 'posts', fields: [], labels: { singular: 'Post', plural: 'Posts' } },
+		{ slug: 'users', fields: [], labels: { singular: 'User', plural: 'Users' } },
+	];
+
+	beforeEach(async () => {
+		const mockThemeService = createMockThemeService();
+
+		await TestBed.configureTestingModule({
+			imports: [AdminSidebarWidget],
+			providers: [
+				provideRouter([
+					{
+						path: 'admin',
+						children: [
+							{ path: 'collections/posts', component: DummyRouteComponent },
+							{ path: 'collections/posts/:id', component: DummyRouteComponent },
+							{ path: 'collections/users', component: DummyRouteComponent },
+						],
+					},
+				]),
+				{ provide: McmsThemeService, useValue: mockThemeService },
+			],
+		}).compileComponents();
+
+		router = TestBed.inject(Router);
+		fixture = TestBed.createComponent(AdminSidebarWidget);
+		fixture.componentRef.setInput('collections', collections);
+		fixture.componentRef.setInput('basePath', '/admin');
+		fixture.detectChanges();
+		await fixture.whenStable();
+	});
+
+	it('should keep collection nav item highlighted on sub-routes via prefix matching', async () => {
+		await router.navigateByUrl('/admin/collections/posts/123');
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const postsLink = findNavLink(fixture, 'Posts');
+		const usersLink = findNavLink(fixture, 'Users');
+
+		expect(isHighlighted(postsLink)).toBe(true);
+		expect(isHighlighted(usersLink)).toBe(false);
 	});
 });

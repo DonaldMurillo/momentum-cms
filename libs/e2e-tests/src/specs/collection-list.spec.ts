@@ -232,8 +232,18 @@ test.describe('Collection List Page - Auth API Keys', () => {
 	});
 
 	test('should generate an API key via dialog', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/auth-api-keys');
+		// Use client-side navigation to avoid SSR hydration timing issues.
+		// Direct navigation can leave click handlers unattached when the button is rendered by SSR.
+		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		await authenticatedPage
+			.getByLabel('Main navigation')
+			.getByRole('link', { name: 'Auth Api Keys' })
+			.click();
+		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/auth-api-keys/, {
+			timeout: 10000,
+		});
 
 		// Click the Generate API Key button
 		const generateButton = authenticatedPage.getByTestId('header-action-generate-key');

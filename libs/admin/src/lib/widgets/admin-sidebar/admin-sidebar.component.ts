@@ -182,6 +182,7 @@ interface PluginRouteGroup {
 									[label]="route.label"
 									[href]="basePath() + '/' + route.path"
 									[icon]="route.icon"
+									[exact]="true"
 								/>
 							}
 						</mcms-sidebar-section>

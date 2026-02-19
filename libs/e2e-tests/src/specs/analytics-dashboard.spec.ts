@@ -86,6 +86,77 @@ test.describe('Plugin Admin Routes in Sidebar', { tag: ['@analytics', '@smoke'] 
 	});
 });
 
+test.describe(
+	'Plugin route sidebar active link highlighting',
+	{ tag: ['@analytics', '@sidebar'] },
+	() => {
+		// Use lookbehind to match "bg-sidebar-accent" but NOT "hover:bg-sidebar-accent"
+		const activeClass = /(?<![:\w-])bg-sidebar-accent/;
+
+		test('should highlight only Content Perf. when navigated to /admin/analytics/content', async ({
+			authenticatedPage,
+		}) => {
+			await authenticatedPage.goto('/admin/analytics/content');
+			await authenticatedPage.waitForLoadState('domcontentloaded');
+
+			const sidebar = authenticatedPage.getByLabel('Main navigation');
+
+			// "Content Perf." should be highlighted (exact match)
+			const contentLink = sidebar.getByRole('link', { name: 'Content Perf.' });
+			await expect(contentLink).toBeVisible();
+			await expect(contentLink).toHaveClass(activeClass);
+
+			// "Analytics" parent link should NOT be highlighted (no prefix match)
+			const analyticsLink = sidebar.getByRole('link', { name: 'Analytics', exact: true });
+			await expect(analyticsLink).toBeVisible();
+			await expect(analyticsLink).not.toHaveClass(activeClass);
+
+			// "Tracking Rules" should NOT be highlighted
+			const trackingLink = sidebar.getByRole('link', { name: 'Tracking Rules' });
+			await expect(trackingLink).toBeVisible();
+			await expect(trackingLink).not.toHaveClass(activeClass);
+		});
+
+		test('should highlight only Analytics when navigated to /admin/analytics', async ({
+			authenticatedPage,
+		}) => {
+			await authenticatedPage.goto('/admin/analytics');
+			await authenticatedPage.waitForLoadState('domcontentloaded');
+
+			const sidebar = authenticatedPage.getByLabel('Main navigation');
+
+			const analyticsLink = sidebar.getByRole('link', { name: 'Analytics', exact: true });
+			await expect(analyticsLink).toBeVisible();
+			await expect(analyticsLink).toHaveClass(activeClass);
+
+			const contentLink = sidebar.getByRole('link', { name: 'Content Perf.' });
+			await expect(contentLink).not.toHaveClass(activeClass);
+
+			const trackingLink = sidebar.getByRole('link', { name: 'Tracking Rules' });
+			await expect(trackingLink).not.toHaveClass(activeClass);
+		});
+
+		test('should highlight only Tracking Rules when navigated to /admin/analytics/tracking-rules', async ({
+			authenticatedPage,
+		}) => {
+			await authenticatedPage.goto('/admin/analytics/tracking-rules');
+			await authenticatedPage.waitForLoadState('domcontentloaded');
+
+			const sidebar = authenticatedPage.getByLabel('Main navigation');
+
+			const trackingLink = sidebar.getByRole('link', { name: 'Tracking Rules' });
+			await expect(trackingLink).toBeVisible();
+			await expect(trackingLink).toHaveClass(activeClass);
+
+			const analyticsLink = sidebar.getByRole('link', { name: 'Analytics', exact: true });
+			await expect(analyticsLink).not.toHaveClass(activeClass);
+
+			const contentLink = sidebar.getByRole('link', { name: 'Content Perf.' });
+			await expect(contentLink).not.toHaveClass(activeClass);
+		});
+	},
+);
+
 test.describe('Analytics API Endpoints', { tag: ['@analytics', '@api'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		// Sign in as admin
