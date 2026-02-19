@@ -140,7 +140,7 @@ export class CollectionViewPage {
 
 	/** Preview config from collection admin settings */
 	readonly previewConfig = computed(
-		(): boolean | ((doc: Record<string, unknown>) => string) | undefined => {
+		(): boolean | string | ((doc: Record<string, unknown>) => string) | undefined => {
 			const col = this.collection();
 			return col?.admin?.preview || undefined;
 		},

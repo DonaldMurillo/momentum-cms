@@ -25,17 +25,17 @@ test.describe('Admin Dashboard - Collection Grouping', () => {
 		).toBeVisible();
 	});
 
-	test('should NOT render a generic "Collections" heading when all collections have a named group', async ({
+	test('should render a "Collections" fallback heading for ungrouped collections', async ({
 		authenticatedPage,
 	}) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		// Every example-config collection has an explicit admin.group, so the default
-		// 'Collections' fallback group must not appear on the dashboard
+		// Several example-config collections (products, settings, events, media, etc.)
+		// have no explicit admin.group, so the default 'Collections' fallback group appears
 		await expect(
 			authenticatedPage.getByRole('heading', { name: 'Collections', level: 2 }),
-		).not.toBeVisible();
+		).toBeVisible();
 	});
 
 	test('should place Categories and Articles cards inside the Content group section', async ({

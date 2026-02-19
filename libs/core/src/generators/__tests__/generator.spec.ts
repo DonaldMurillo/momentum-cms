@@ -1155,7 +1155,21 @@ describe('serializeCollection', () => {
 		expect(result).not.toContain('tokenExpiration');
 	});
 
-	it('should strip admin.preview when it is a function', () => {
+	it('should convert admin.preview function to URL template string', () => {
+		const result = serializeCollection({
+			slug: 'pages',
+			fields: [{ name: 'slug', type: 'text' }],
+			admin: {
+				useAsTitle: 'title',
+				preview: (doc: Record<string, unknown>) => '/' + String(doc['slug'] ?? ''),
+			},
+		});
+		expect(result).toContain('useAsTitle');
+		expect(result).toContain('preview');
+		expect(result).toContain('/{slug}');
+	});
+
+	it('should fall back to true when preview function cannot be templated', () => {
 		const result = serializeCollection({
 			slug: 'posts',
 			fields: [],
@@ -1165,7 +1179,9 @@ describe('serializeCollection', () => {
 			},
 		});
 		expect(result).toContain('useAsTitle');
-		expect(result).not.toContain('preview');
+		// No fields referenced → result is a static URL, stored as-is
+		expect(result).toContain('preview');
+		expect(result).toContain('https://example.com');
 	});
 
 	it('should keep admin.preview when it is a boolean', () => {

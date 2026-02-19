@@ -36,6 +36,7 @@ import { SidebarService } from './sidebar.service';
 			<a
 				[routerLink]="href()"
 				routerLinkActive="bg-sidebar-accent text-sidebar-accent-foreground before:absolute before:left-0 before:top-1 before:bottom-1 before:w-1 before:bg-sidebar-primary before:rounded-full"
+				ariaCurrentWhenActive="page"
 				[routerLinkActiveOptions]="{ exact: exact() }"
 				[class]="linkClasses()"
 				[attr.aria-disabled]="disabled() || null"

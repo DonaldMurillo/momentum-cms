@@ -155,6 +155,10 @@ test.describe('Authentication Flow', () => {
 				page.getByLabel(/full name/i).or(page.getByRole('heading', { name: /sign in|log in/i })),
 			).toBeVisible({ timeout: 10000 });
 
+			// Route guard is async (API call to check user count). Wait for network to settle
+			// so any pending redirect completes before we check the URL.
+			await page.waitForLoadState('networkidle');
+
 			// If users already exist, router redirected to /login — test is N/A
 			if (!page.url().includes('/setup')) return;
 

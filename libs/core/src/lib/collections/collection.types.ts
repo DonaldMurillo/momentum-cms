@@ -109,8 +109,8 @@ export interface AdminConfig {
 	/** Hide from admin navigation */
 	hidden?: boolean;
 
-	/** Enable preview mode */
-	preview?: boolean | ((doc: Record<string, unknown>) => string);
+	/** Enable preview mode. String values are URL templates with {fieldName} placeholders. */
+	preview?: boolean | string | ((doc: Record<string, unknown>) => string);
 
 	/** Custom action buttons displayed in the collection list header (alongside Create button) */
 	headerActions?: Array<{

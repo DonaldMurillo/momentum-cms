@@ -121,7 +121,9 @@ export class LivePreviewComponent {
 	private readonly destroyRef = inject(DestroyRef);
 
 	/** Preview configuration from collection admin config */
-	readonly preview = input.required<boolean | ((doc: Record<string, unknown>) => string)>();
+	readonly preview = input.required<
+		boolean | string | ((doc: Record<string, unknown>) => string)
+	>();
 
 	/** Current document data from the form */
 	readonly documentData = input.required<Record<string, unknown>>();
@@ -160,6 +162,14 @@ export class LivePreviewComponent {
 			} catch {
 				return null;
 			}
+		}
+
+		// URL template string: interpolate {fieldName} placeholders with form data
+		if (typeof previewConfig === 'string') {
+			return previewConfig.replace(/\{(\w+)\}/g, (_, field: string) => {
+				const val = data[field];
+				return val != null ? String(val) : '';
+			});
 		}
 
 		if (previewConfig === true && id) {

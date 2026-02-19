@@ -182,6 +182,14 @@ test.describe('Signal Forms - Submit Behavior', () => {
 		await authenticatedPage.goto('/admin/collections/field-test-items/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
+		// Wait for Angular hydration so the (click) handler on Create is attached.
+		// Other tests interact with fields first (typing takes time), but this test
+		// clicks Create immediately — without hydration the click does nothing.
+		await authenticatedPage.waitForFunction(() => {
+			const appRoot = document.querySelector('app-root');
+			return appRoot && appRoot.hasAttribute('ng-version');
+		});
+
 		const createButton = authenticatedPage.getByRole('button', {
 			name: 'Create',
 			exact: true,
