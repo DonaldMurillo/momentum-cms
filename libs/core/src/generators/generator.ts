@@ -934,6 +934,20 @@ function parseArgs(args: string[]): GeneratorOptions {
 	return { configPath, typesOutputPath, configOutputPath, watch: watchMode };
 }
 
+/**
+ * Format generated files with prettier to match pre-commit hook formatting.
+ * Uses the project's .prettierrc so generated output is commit-ready.
+ */
+function formatWithPrettier(...filePaths: string[]): void {
+	try {
+		execFileSync('npx', ['prettier', '--write', ...filePaths], {
+			stdio: 'pipe',
+		});
+	} catch {
+		console.warn('prettier not available — skipping formatting of generated files');
+	}
+}
+
 export default async function runGenerator(
 	options: GeneratorOptions,
 ): Promise<{ success: boolean }> {
@@ -963,6 +977,9 @@ export default async function runGenerator(
 			mkdirSync(dirname(configOutputPath), { recursive: true });
 			writeFileSync(configOutputPath, adminConfigContent, 'utf-8');
 			console.info(`Admin config generated: ${configOutputPath}`);
+
+			// Format with prettier so output matches pre-commit formatting
+			formatWithPrettier(typesOutputPath, configOutputPath);
 		} catch (error) {
 			console.error(`Error generating:`, error);
 			throw error;
