@@ -14,7 +14,6 @@ export interface Categories {
 export interface Articles {
   id: string;
   title: string;
-  coverImage?: string;
   content?: string;
   category?: string;
   _status?: 'draft' | 'published';
@@ -120,7 +119,7 @@ export interface Media {
   filename: string;
   mimeType: string;
   filesize?: number;
-  path?: string;
+  path: string;
   url?: string;
   alt?: string;
   width?: number;
@@ -259,7 +258,6 @@ export interface CategoriesWhereClause {
 export interface ArticlesWhereClause {
   id?: string | { equals?: string; not?: string; in?: string[] };
   title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
-  coverImage?: string | { equals?: string; not?: string; in?: string[] };
   content?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
   category?: string | { equals?: string; not?: string; in?: string[] };
   createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
