@@ -1,0 +1,12 @@
+{
+	"name": "@momentumcms/migrations",
+	"version": "0.0.1",
+	"description": "Database migration system for Momentum CMS",
+	"license": "MIT",
+	"main": "./index.cjs",
+	"types": "./src/index.d.ts",
+	"peerDependencies": {
+		"@momentumcms/core": ">=0.0.1",
+		"pg": "^8.0.0"
+	}
+}

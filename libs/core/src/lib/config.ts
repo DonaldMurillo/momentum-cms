@@ -9,6 +9,8 @@ import type {
 } from './versions';
 import type { MomentumPlugin, PluginAdminRouteDescriptor } from './plugins';
 import type { StorageAdapter } from './storage';
+import type { MigrationConfig, ResolvedMigrationConfig } from './migrations';
+import { resolveMigrationConfig } from './migrations';
 
 /**
  * Minimum password length for user accounts.
@@ -21,6 +23,13 @@ export const MIN_PASSWORD_LENGTH = 8;
  * This is a placeholder type - actual adapters implement this interface.
  */
 export interface DatabaseAdapter {
+	/**
+	 * Database dialect identifier.
+	 * Set by the adapter factory (e.g., postgresAdapter sets 'postgresql', sqliteAdapter sets 'sqlite').
+	 * Used by the migration CLI to select the correct introspection and SQL generation strategy.
+	 */
+	dialect?: 'postgresql' | 'sqlite';
+
 	find(collection: string, query: Record<string, unknown>): Promise<Record<string, unknown>[]>;
 	findById(collection: string, id: string): Promise<Record<string, unknown> | null>;
 	create(collection: string, data: Record<string, unknown>): Promise<Record<string, unknown>>;
@@ -199,6 +208,44 @@ export interface DatabaseAdapter {
 	 * @returns The full global record after update
 	 */
 	updateGlobal?(slug: string, data: Record<string, unknown>): Promise<Record<string, unknown>>;
+
+	// ============================================
+	// Migration Support (optional, for @momentumcms/migrations)
+	// ============================================
+
+	/**
+	 * Introspect the current database schema.
+	 * Returns table/column metadata for diffing against collection config.
+	 */
+	introspect?(): Promise<Record<string, unknown>>;
+
+	/**
+	 * Execute a raw SQL statement (DDL or DML).
+	 * Returns the number of affected rows.
+	 */
+	executeRaw?(sql: string, params?: unknown[]): Promise<number>;
+
+	/**
+	 * Execute a raw SQL query and return rows.
+	 */
+	queryRaw?<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]>;
+
+	/**
+	 * Clone the database for migration testing.
+	 * Returns a connection string or path for the clone.
+	 */
+	cloneDatabase?(targetName: string): Promise<string>;
+
+	/**
+	 * Drop a cloned database.
+	 */
+	dropClone?(targetName: string): Promise<void>;
+
+	/**
+	 * Acquire an advisory lock for migration safety.
+	 * Returns a release function.
+	 */
+	acquireMigrationLock?(): Promise<() => Promise<void>>;
 }
 
 /**
@@ -403,6 +450,12 @@ export interface MomentumConfig {
 	 * Plugins run in array order during init/ready, reverse during shutdown.
 	 */
 	plugins?: MomentumPlugin[];
+
+	/**
+	 * Migration system configuration.
+	 * When set, enables the schema migration system.
+	 */
+	migrations?: MigrationConfig;
 }
 
 /**
@@ -425,6 +478,7 @@ export interface ResolvedMomentumConfig extends MomentumConfig {
 	server: Required<ServerConfig>;
 	seeding?: ResolvedSeedingConfig;
 	logging: ResolvedLoggingConfig;
+	migrations?: ResolvedMigrationConfig;
 }
 
 /**
@@ -484,6 +538,7 @@ export function defineMomentumConfig(config: MomentumConfig): ResolvedMomentumCo
 			format: config.logging?.format ?? 'pretty',
 			timestamps: config.logging?.timestamps ?? true,
 		},
+		migrations: resolveMigrationConfig(config.migrations),
 	};
 }
 

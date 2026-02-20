@@ -28,3 +28,6 @@ export * from './lib/seeding';
 
 // Versions
 export * from './lib/versions';
+
+// Migrations
+export * from './lib/migrations';
