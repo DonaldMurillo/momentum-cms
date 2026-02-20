@@ -1,3 +1,23 @@
+## 0.3.0 (2026-02-20)
+
+### 🚀 Features
+
+- add article slugs, detail pages, live preview, and fix PATCH field hooks ([454b61c](https://github.com/DonaldMurillo/momentum-cms/commit/454b61c))
+- add named tabs support with nested data grouping and UI improvements ([#30](https://github.com/DonaldMurillo/momentum-cms/pull/30))
+
+### 🩹 Fixes
+
+- address code review issues across admin, server-core, and e2e ([4664463](https://github.com/DonaldMurillo/momentum-cms/commit/4664463))
+- fix nav highlighting and resolve pre-existing E2E test failures ([#34](https://github.com/DonaldMurillo/momentum-cms/pull/34))
+- add auth guard and MIME validation to PATCH upload route; fix pagination with client-side filtering ([#32](https://github.com/DonaldMurillo/momentum-cms/pull/32))
+- add safe HTML id generation for collection groups with spaces in names ([#31](https://github.com/DonaldMurillo/momentum-cms/pull/31))
+
+### ❤️ Thank You
+
+- Claude Haiku 4.5
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.2.0 (2026-02-17)
 
 ### 🚀 Features
