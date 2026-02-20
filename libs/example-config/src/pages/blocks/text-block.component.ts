@@ -8,11 +8,15 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 		'[attr.data-testid]': '"block-textBlock"',
 	},
 	template: `
-		<section class="py-12 px-8 max-w-3xl mx-auto">
+		<section class="py-8 px-4 md:py-12 md:px-8 max-w-3xl mx-auto">
 			@if (heading()) {
-				<h2 class="text-2xl font-bold mb-4" data-testid="text-heading">{{ heading() }}</h2>
+				<h2 class="text-2xl font-bold text-foreground mb-4" data-testid="text-heading">
+					{{ heading() }}
+				</h2>
 			}
-			<p class="text-lg text-gray-600 leading-relaxed" data-testid="text-body">{{ body() }}</p>
+			<p class="text-lg text-muted-foreground leading-relaxed" data-testid="text-body">
+				{{ body() }}
+			</p>
 		</section>
 	`,
 })

@@ -1,3 +1,21 @@
+## 0.3.0 (2026-02-20)
+
+### 🚀 Features
+
+- implement Payload-style migration CLI workflow with clone-test-apply safety ([#35](https://github.com/DonaldMurillo/momentum-cms/pull/35))
+- add named tabs support with nested data grouping and UI improvements ([#30](https://github.com/DonaldMurillo/momentum-cms/pull/30))
+
+### 🩹 Fixes
+
+- fix nav highlighting and resolve pre-existing E2E test failures ([#34](https://github.com/DonaldMurillo/momentum-cms/pull/34))
+- add auth guard and MIME validation to PATCH upload route; fix pagination with client-side filtering ([#32](https://github.com/DonaldMurillo/momentum-cms/pull/32))
+
+### ❤️ Thank You
+
+- Claude Haiku 4.5
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.2.0 (2026-02-17)
 
 ### 🚀 Features

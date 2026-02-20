@@ -7,7 +7,7 @@ import { test, expect } from '../fixtures';
  * via TransferState, eliminating duplicate API calls on hydration.
  */
 
-test.describe('TransferState SSR Hydration', () => {
+test.describe('TransferState SSR Hydration', { tag: ['@ssr', '@frontend'] }, () => {
 	test('should transfer data from SSR without duplicate API calls', async ({ page }) => {
 		// Track API requests to /api/auth-user
 		const apiCalls: string[] = [];

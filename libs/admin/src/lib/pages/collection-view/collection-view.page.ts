@@ -1,104 +1,35 @@
-import {
-	Component,
-	ChangeDetectionStrategy,
-	inject,
-	computed,
-	signal,
-	viewChild,
-} from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, computed } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs/operators';
 import type { CollectionConfig } from '@momentumcms/core';
-import { Button } from '@momentumcms/ui';
 import { getCollectionsFromRouteData } from '../../utils/route-data';
 import { EntityViewWidget } from '../../widgets/entity-view/entity-view.component';
-import { LivePreviewComponent } from '../../widgets/live-preview/live-preview.component';
 import type { Entity } from '../../widgets/widget.types';
 
 /**
  * Collection View Page Component
  *
  * Displays a read-only view of a document using the EntityViewWidget.
- * When preview is enabled, shows a toggleable live preview panel.
+ * Preview is available via the "Open Page" link in the entity header
+ * (opens in a new tab). Live preview iframe is only on the edit page,
+ * since the view page is read-only and has no changes to preview live.
  */
 @Component({
 	selector: 'mcms-collection-view',
-	imports: [EntityViewWidget, LivePreviewComponent, Button],
+	imports: [EntityViewWidget],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `
 		@if (collection(); as col) {
 			@if (entityId(); as id) {
-				@if (previewConfig(); as preview) {
-					@if (showPreview()) {
-						<!-- Split layout: entity view + preview -->
-						<div class="flex gap-0 h-[calc(100vh-64px)]" data-testid="preview-layout">
-							<div class="flex-1 overflow-y-auto p-6">
-								<mcms-entity-view
-									#entityView
-									[collection]="col"
-									[entityId]="id"
-									[basePath]="basePath"
-									(edit)="onEdit($event)"
-									(delete_)="onDelete($event)"
-								>
-									<div entityViewHeaderExtra class="mt-3">
-										<button
-											mcms-button
-											variant="ghost"
-											size="sm"
-											data-testid="preview-toggle"
-											(click)="showPreview.set(false)"
-										>
-											Hide Preview
-										</button>
-									</div>
-								</mcms-entity-view>
-							</div>
-							<div class="w-[50%] min-w-[400px] max-w-[720px]">
-								<mcms-live-preview
-									[preview]="preview"
-									[documentData]="viewEntityData()"
-									[collectionSlug]="col.slug"
-									[entityId]="id"
-								/>
-							</div>
-						</div>
-					} @else {
-						<!-- Full-width view (preview hidden) -->
-						<mcms-entity-view
-							#entityView
-							[collection]="col"
-							[entityId]="id"
-							[basePath]="basePath"
-							(edit)="onEdit($event)"
-							(delete_)="onDelete($event)"
-						>
-							<div entityViewHeaderExtra class="mt-3">
-								<button
-									mcms-button
-									variant="ghost"
-									size="sm"
-									data-testid="preview-toggle"
-									(click)="showPreview.set(true)"
-								>
-									Show Preview
-								</button>
-							</div>
-						</mcms-entity-view>
-					}
-				} @else {
-					<!-- No preview configured -->
-					<mcms-entity-view
-						#entityView
-						[collection]="col"
-						[entityId]="id"
-						[basePath]="basePath"
-						(edit)="onEdit($event)"
-						(delete_)="onDelete($event)"
-					/>
-				}
+				<mcms-entity-view
+					[collection]="col"
+					[entityId]="id"
+					[basePath]="basePath"
+					(edit)="onEdit($event)"
+					(delete_)="onDelete($event)"
+				/>
 			} @else {
 				<div class="p-12 text-center text-muted-foreground">Entity ID not provided</div>
 			}
@@ -112,12 +43,6 @@ export class CollectionViewPage {
 	private readonly router = inject(Router);
 
 	readonly basePath = '/admin/collections';
-
-	/** Whether the live preview panel is visible */
-	readonly showPreview = signal(true);
-
-	/** Reference to the entity view widget to read its entity data */
-	private readonly entityViewRef = viewChild<EntityViewWidget>('entityView');
 
 	// Reactive slug signal that updates when route params change
 	private readonly slug = toSignal(
@@ -136,22 +61,6 @@ export class CollectionViewPage {
 
 		const collections = getCollectionsFromRouteData(this.route.parent?.snapshot.data);
 		return collections.find((c) => c.slug === currentSlug);
-	});
-
-	/** Preview config from collection admin settings */
-	readonly previewConfig = computed(
-		(): boolean | string | ((doc: Record<string, unknown>) => string) | undefined => {
-			const col = this.collection();
-			return col?.admin?.preview || undefined;
-		},
-	);
-
-	/** Entity data from the entity view widget (for live preview) */
-	readonly viewEntityData = computed((): Record<string, unknown> => {
-		const view = this.entityViewRef();
-		const entity = view?.entity();
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T extends Entity with index signature
-		return (entity as Record<string, unknown>) ?? {};
 	});
 
 	onEdit(entity: Entity): void {

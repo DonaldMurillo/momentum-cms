@@ -5,7 +5,7 @@ import { test, expect, TEST_AUTHOR3_CREDENTIALS } from '../fixtures';
  * Verifies the GET /:collection/search?q=term endpoint against the Articles collection.
  * Uses PostgreSQL tsvector/tsquery with ILIKE fallback for partial matches.
  */
-test.describe('Full-text search', () => {
+test.describe('Full-text search', { tag: ['@api', '@crud'] }, () => {
 	const createdIds: string[] = [];
 
 	test.beforeAll(async ({ request }) => {

@@ -5,7 +5,7 @@ import { test, expect, TEST_CREDENTIALS } from '../fixtures';
  * Verifies that array fields store data as arrays of objects
  * and that CRUD operations on array items work correctly.
  */
-test.describe('Array field renderer', () => {
+test.describe('Array field renderer', { tag: ['@field', '@admin'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },

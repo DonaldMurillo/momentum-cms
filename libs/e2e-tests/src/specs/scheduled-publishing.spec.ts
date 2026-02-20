@@ -4,7 +4,7 @@ import { test, expect, TEST_AUTHOR2_CREDENTIALS } from '../fixtures';
  * Scheduled Publishing E2E tests.
  * Verifies scheduling, cancellation, and automatic publishing via the background scheduler.
  */
-test.describe('Scheduled publishing', () => {
+test.describe('Scheduled publishing', { tag: ['@api', '@versioning'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },

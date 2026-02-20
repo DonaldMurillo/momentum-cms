@@ -8,14 +8,20 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 		'[attr.data-testid]': '"block-feature"',
 	},
 	template: `
-		<section class="py-8 px-8">
-			<div class="bg-white border rounded-lg p-6 shadow-sm">
+		<section class="py-6 px-4 md:py-8 md:px-8">
+			<div class="bg-card border border-border rounded-lg p-6 shadow-sm">
 				@if (icon()) {
-					<div class="text-3xl mb-3" data-testid="feature-icon">{{ icon() }}</div>
+					<div class="text-3xl mb-3 text-primary" data-testid="feature-icon">
+						{{ icon() }}
+					</div>
 				}
-				<h3 class="text-xl font-semibold mb-2" data-testid="feature-title">{{ title() }}</h3>
+				<h3 class="text-xl font-semibold text-card-foreground mb-2" data-testid="feature-title">
+					{{ title() }}
+				</h3>
 				@if (description()) {
-					<p class="text-gray-600" data-testid="feature-description">{{ description() }}</p>
+					<p class="text-muted-foreground" data-testid="feature-description">
+						{{ description() }}
+					</p>
 				}
 			</div>
 		</section>

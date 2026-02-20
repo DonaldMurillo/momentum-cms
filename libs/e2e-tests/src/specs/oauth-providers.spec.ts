@@ -11,7 +11,7 @@ import { test, expect } from '../fixtures';
  * These tests verify the configuration and UI wiring.
  */
 
-test.describe('OAuth Provider Infrastructure', () => {
+test.describe('OAuth Provider Infrastructure', { tag: ['@auth', '@api'] }, () => {
 	test('GET /api/auth/providers returns provider list', async ({ request }) => {
 		const response = await request.get(`/api/auth/providers`);
 		expect(response.ok()).toBe(true);

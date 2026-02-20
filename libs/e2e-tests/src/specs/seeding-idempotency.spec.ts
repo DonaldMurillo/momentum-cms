@@ -6,7 +6,7 @@ import { test, expect } from '../fixtures';
  * Verifies that running seeding multiple times does not create duplicates.
  * The seeding system should skip existing seeds based on their seedId.
  */
-test.describe('Seeding Idempotency Tests', () => {
+test.describe('Seeding Idempotency Tests', { tag: ['@seeding'] }, () => {
 	test('no duplicate categories after multiple runs', async ({ request }) => {
 		const response = await request.get('/api/categories');
 		expect(response.ok()).toBe(true);

@@ -9,7 +9,7 @@ import { test, expect, TEST_CREDENTIALS } from '../fixtures';
  * - CORS includes Vary: Origin header
  */
 
-test.describe('Security hardening @security @api', () => {
+test.describe('Security hardening @security @api', { tag: ['@security', '@api'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },

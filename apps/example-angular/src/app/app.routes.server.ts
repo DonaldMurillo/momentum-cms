@@ -6,10 +6,11 @@ export const serverRoutes: ServerRoute[] = [
 		path: '',
 		renderMode: RenderMode.Prerender,
 	},
-	// Admin routes use server-side rendering
+	// Admin routes are client-only (no SSR) — behind auth, not indexed by search engines,
+	// and contain dynamic widgets (live preview, forms) that cause hydration mismatches
 	{
 		path: 'admin/**',
-		renderMode: RenderMode.Server,
+		renderMode: RenderMode.Client,
 	},
 	// Default to server rendering
 	{

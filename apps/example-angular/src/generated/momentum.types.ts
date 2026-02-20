@@ -14,6 +14,7 @@ export interface Categories {
 export interface Articles {
 	id: string;
 	title: string;
+	slug?: string;
 	coverImage?: string;
 	content?: string;
 	category?: string;
@@ -74,10 +75,84 @@ export interface PagesContentFeatureBlock {
 	};
 }
 
+export interface PagesContentCallToActionBlock {
+	blockType: 'callToAction';
+	heading: string;
+	description?: string;
+	primaryButtonText?: string;
+	primaryButtonLink?: string;
+	secondaryButtonText?: string;
+	secondaryButtonLink?: string;
+	_analytics?: {
+		trackImpressions?: boolean;
+		trackHover?: boolean;
+	};
+}
+
+export interface PagesContentImageTextBlock {
+	blockType: 'imageText';
+	heading: string;
+	body: string;
+	imageUrl?: string;
+	imageAlt?: string;
+	imagePosition?: 'left' | 'right';
+	_analytics?: {
+		trackImpressions?: boolean;
+		trackHover?: boolean;
+	};
+}
+
+export interface PagesContentStatsBlock {
+	blockType: 'stats';
+	heading?: string;
+	description?: string;
+	items?: Array<{
+		value: string;
+		label: string;
+		suffix?: string;
+	}>;
+	_analytics?: {
+		trackImpressions?: boolean;
+		trackHover?: boolean;
+	};
+}
+
+export interface PagesContentTestimonialBlock {
+	blockType: 'testimonial';
+	quote: string;
+	authorName: string;
+	authorRole?: string;
+	authorCompany?: string;
+	_analytics?: {
+		trackImpressions?: boolean;
+		trackHover?: boolean;
+	};
+}
+
+export interface PagesContentFeatureGridBlock {
+	blockType: 'featureGrid';
+	heading?: string;
+	description?: string;
+	features?: Array<{
+		title: string;
+		description?: string;
+		icon?: string;
+	}>;
+	_analytics?: {
+		trackImpressions?: boolean;
+		trackHover?: boolean;
+	};
+}
+
 export type PagesContentBlock =
 	| PagesContentHeroBlock
 	| PagesContentTextBlockBlock
-	| PagesContentFeatureBlock;
+	| PagesContentFeatureBlock
+	| PagesContentCallToActionBlock
+	| PagesContentImageTextBlock
+	| PagesContentStatsBlock
+	| PagesContentTestimonialBlock
+	| PagesContentFeatureGridBlock;
 
 export interface Pages {
 	id: string;
@@ -259,6 +334,7 @@ export interface CategoriesWhereClause {
 export interface ArticlesWhereClause {
 	id?: string | { equals?: string; not?: string; in?: string[] };
 	title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	slug?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
 	coverImage?: string | { equals?: string; not?: string; in?: string[] };
 	content?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
 	category?: string | { equals?: string; not?: string; in?: string[] };

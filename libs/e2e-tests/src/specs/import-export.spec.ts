@@ -6,7 +6,7 @@ import { test, expect, TEST_AUTHOR1_CREDENTIALS } from '../fixtures';
  * Tests the collection data export (JSON, CSV) and import endpoints.
  * Uses the categories collection for testing since it has simple, predictable data.
  */
-test.describe('Import/Export', () => {
+test.describe('Import/Export', { tag: ['@api', '@crud'] }, () => {
 	// Track IDs of documents created during import tests for cleanup
 	const importedIds: string[] = [];
 

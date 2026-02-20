@@ -14,7 +14,7 @@ import { test, expect } from '../fixtures';
  * Each test describes the expected behavior for the auth flow.
  */
 
-test.describe('Authentication Flow', () => {
+test.describe('Authentication Flow', { tag: ['@auth', '@admin'] }, () => {
 	test.describe('Setup Page', () => {
 		test('should show setup page when no users exist', async ({ page }) => {
 			// Navigate to admin - should redirect to setup if no users
@@ -348,7 +348,7 @@ test.describe('Authentication Flow', () => {
 	});
 });
 
-test.describe('Authentication State Transitions', () => {
+test.describe('Authentication State Transitions', { tag: ['@auth', '@admin'] }, () => {
 	test('authenticated user should see user info in sidebar', async ({ page }) => {
 		await page.goto('/admin');
 		await page.waitForLoadState('domcontentloaded');

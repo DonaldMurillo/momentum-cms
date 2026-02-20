@@ -370,13 +370,31 @@ export class EntityViewWidget<T extends Entity = Entity> {
 		const col = this.collection();
 		const e = this.entity();
 		if (!e || !col.admin?.preview) return null;
-		if (typeof col.admin.preview === 'function') {
+		const preview = col.admin.preview;
+		if (typeof preview === 'function') {
 			try {
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T extends Entity with index signature
-				return col.admin.preview(e as Record<string, unknown>);
+				return preview(e as Record<string, unknown>);
 			} catch {
 				return null;
 			}
+		}
+		// String template: interpolate {fieldName} placeholders with entity data
+		if (typeof preview === 'string') {
+			let hasEmpty = false;
+			const url = preview.replace(/\{(\w+)\}/g, (_, field: string) => {
+				const val = e[field];
+				if (val == null || val === '') {
+					hasEmpty = true;
+					return '';
+				}
+				return String(val);
+			});
+			return hasEmpty ? null : url;
+		}
+		// Boolean true: use the server-rendered preview API endpoint
+		if (preview === true) {
+			return `/api/${col.slug}/${String(e.id)}/preview`;
 		}
 		return null;
 	});

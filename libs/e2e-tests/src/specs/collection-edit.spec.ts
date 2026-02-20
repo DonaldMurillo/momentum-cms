@@ -12,7 +12,7 @@ import { test, expect } from '../fixtures';
  * Field IDs use pattern: field-{fieldName}
  */
 
-test.describe('Collection Create Form - Articles', () => {
+test.describe('Collection Create Form - Articles', { tag: ['@admin', '@crud'] }, () => {
 	test('should display Create heading', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/articles/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
@@ -138,7 +138,7 @@ test.describe('Collection Create Form - Articles', () => {
 	});
 });
 
-test.describe('Collection Create Form - Categories', () => {
+test.describe('Collection Create Form - Categories', { tag: ['@admin', '@crud'] }, () => {
 	test('should display Create heading', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/categories/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
@@ -173,7 +173,7 @@ test.describe('Collection Create Form - Categories', () => {
 	});
 });
 
-test.describe('Collection Edit Form - Auth User', () => {
+test.describe('Collection Edit Form - Auth User', { tag: ['@admin', '@crud'] }, () => {
 	test('should display create form with expected fields', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/auth-user/new');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
@@ -195,7 +195,7 @@ test.describe('Collection Edit Form - Auth User', () => {
 	});
 });
 
-test.describe('Collection Edit Form - Cancel Navigation', () => {
+test.describe('Collection Edit Form - Cancel Navigation', { tag: ['@admin', '@crud'] }, () => {
 	test('should navigate back to list when clicking Cancel on Articles', async ({
 		authenticatedPage,
 	}) => {

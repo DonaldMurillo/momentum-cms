@@ -5,7 +5,7 @@ import { test, expect, TEST_CREDENTIALS } from '../fixtures';
  * Verifies that the event bus plugin captures events when
  * collections are mutated via the API.
  */
-test.describe('Event Bus', () => {
+test.describe('Event Bus', { tag: ['@api', '@hooks'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		// Sign in as admin
 		const signIn = await request.post('/api/auth/sign-in/email', {

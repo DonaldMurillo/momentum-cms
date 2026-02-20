@@ -86,6 +86,7 @@ export async function runFieldHooks(
 		// Run hooks on this field if it has any for this hook type
 		const hooks: FieldHookFunction[] | undefined = field.hooks?.[hookType];
 		if (hooks && hooks.length > 0) {
+			const fieldExistsInData = field.name in processedData;
 			let value = processedData[field.name];
 
 			for (const hook of hooks) {
@@ -103,7 +104,11 @@ export async function runFieldHooks(
 				}
 			}
 
-			processedData[field.name] = value;
+			// Only set the field if it was already in the data or a hook produced a value.
+			// This prevents hooks from injecting undefined/null for fields not in a PATCH payload.
+			if (fieldExistsInData || value !== undefined) {
+				processedData[field.name] = value;
+			}
 		}
 
 		// Recurse into group fields (child data is nested under field.name)

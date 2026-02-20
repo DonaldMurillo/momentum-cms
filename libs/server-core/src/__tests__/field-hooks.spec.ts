@@ -286,6 +286,70 @@ describe('field-hooks', () => {
 		});
 	});
 
+	describe('PATCH safety: hook deriving from sibling field on update', () => {
+		const autoSlug: (args: {
+			value: unknown;
+			data: Record<string, unknown>;
+			req: unknown;
+			operation: 'create' | 'update' | 'read';
+		}) => unknown = ({ value, data, operation }) => {
+			if (value) return value;
+			if (operation === 'update' && value === undefined) return undefined;
+			const title = data['title'];
+			if (typeof title === 'string') {
+				return title
+					.toLowerCase()
+					.replace(/[^a-z0-9]+/g, '-')
+					.replace(/^-|-$/g, '');
+			}
+			return value;
+		};
+
+		it('should not inject derived value into update when field is absent from payload', async () => {
+			const fields: Field[] = [
+				text('title'),
+				text('slug', {
+					hooks: { beforeValidate: [autoSlug] },
+				}),
+			];
+
+			// PATCH payload: only title is sent, slug is absent
+			const data = { title: 'New Title' };
+			const result = await runFieldHooks('beforeValidate', fields, data, req, 'update');
+
+			// slug should NOT appear — it was not in the payload
+			expect('slug' in result).toBe(false);
+		});
+
+		it('should derive slug on create when field is absent from payload', async () => {
+			const fields: Field[] = [
+				text('title'),
+				text('slug', {
+					hooks: { beforeValidate: [autoSlug] },
+				}),
+			];
+
+			const data = { title: 'My First Post' };
+			const result = await runFieldHooks('beforeValidate', fields, data, req, 'create');
+
+			expect(result.slug).toBe('my-first-post');
+		});
+
+		it('should preserve explicitly provided slug on update', async () => {
+			const fields: Field[] = [
+				text('title'),
+				text('slug', {
+					hooks: { beforeValidate: [autoSlug] },
+				}),
+			];
+
+			const data = { title: 'New Title', slug: 'custom-slug' };
+			const result = await runFieldHooks('beforeValidate', fields, data, req, 'update');
+
+			expect(result.slug).toBe('custom-slug');
+		});
+	});
+
 	describe('hook error propagation', () => {
 		it('should propagate errors from throwing hooks', async () => {
 			const fields: Field[] = [

@@ -26,7 +26,7 @@ async function signIn(
 	expect(response.ok(), `Sign-in for ${credentials.email} must succeed`).toBe(true);
 }
 
-test.describe('Accessibility: Login page', () => {
+test.describe('Accessibility: Login page', { tag: ['@a11y', '@admin'] }, () => {
 	test('form fields have unique IDs and labels reference inputs correctly', async ({ page }) => {
 		await page.goto('/admin/login');
 		await page.waitForLoadState('domcontentloaded');
@@ -74,7 +74,7 @@ test.describe('Accessibility: Login page', () => {
 	});
 });
 
-test.describe('Accessibility: Admin sidebar', () => {
+test.describe('Accessibility: Admin sidebar', { tag: ['@a11y', '@admin'] }, () => {
 	test('sidebar nav has role="navigation" and aria-label', async ({ page }) => {
 		await signIn(page, TEST_CREDENTIALS);
 		await page.goto('/admin');
@@ -115,7 +115,7 @@ test.describe('Accessibility: Admin sidebar', () => {
 	});
 });
 
-test.describe('Accessibility: Dashboard', () => {
+test.describe('Accessibility: Dashboard', { tag: ['@a11y', '@admin'] }, () => {
 	test('empty state SVG is aria-hidden', async ({ page }) => {
 		await signIn(page, TEST_CREDENTIALS);
 		await page.goto('/admin');
@@ -152,7 +152,7 @@ test.describe('Accessibility: Dashboard', () => {
 	});
 });
 
-test.describe('Accessibility: Entity form', () => {
+test.describe('Accessibility: Entity form', { tag: ['@a11y', '@admin'] }, () => {
 	test('error alert has role="alert" and aria-live="assertive" after validation failure', async ({
 		page,
 	}) => {
@@ -178,7 +178,7 @@ test.describe('Accessibility: Entity form', () => {
 	});
 });
 
-test.describe('Accessibility: Rich text editor', () => {
+test.describe('Accessibility: Rich text editor', { tag: ['@a11y', '@admin'] }, () => {
 	let articleId: string;
 
 	test.beforeAll(async ({ request }) => {
@@ -281,7 +281,7 @@ test.describe('Accessibility: Rich text editor', () => {
 	});
 });
 
-test.describe('Accessibility: Live preview', () => {
+test.describe('Accessibility: Live preview', { tag: ['@a11y', '@admin'] }, () => {
 	let eventId: string;
 
 	test.beforeAll(async ({ request }) => {
@@ -383,7 +383,7 @@ test.describe('Accessibility: Live preview', () => {
 	});
 });
 
-test.describe('Accessibility: Media library', () => {
+test.describe('Accessibility: Media library', { tag: ['@a11y', '@admin'] }, () => {
 	test('search input has aria-label', async ({ page }) => {
 		await signIn(page, TEST_CREDENTIALS);
 		await page.goto('/admin/media');
@@ -466,7 +466,7 @@ test.describe('Accessibility: Media library', () => {
 	});
 });
 
-test.describe('Accessibility: Upload field', () => {
+test.describe('Accessibility: Upload field', { tag: ['@a11y', '@admin'] }, () => {
 	test('media upload button has accessible label', async ({ page }) => {
 		await signIn(page, TEST_CREDENTIALS);
 		await page.goto('/admin/media');
@@ -483,7 +483,7 @@ test.describe('Accessibility: Upload field', () => {
 	});
 });
 
-test.describe('Accessibility: Keyboard navigation', () => {
+test.describe('Accessibility: Keyboard navigation', { tag: ['@a11y', '@admin'] }, () => {
 	test('login form is navigable via Tab key', async ({ page }) => {
 		await page.goto('/admin/login');
 		await page.waitForLoadState('domcontentloaded');
@@ -593,7 +593,7 @@ test.describe('Accessibility: Keyboard navigation', () => {
 // Phase 5: Automated axe-core WCAG 2.1 AA scans
 // ─────────────────────────────────────────────────────────
 
-test.describe('Accessibility: axe-core WCAG 2.1 AA scans', () => {
+test.describe('Accessibility: axe-core WCAG 2.1 AA scans', { tag: ['@a11y', '@admin'] }, () => {
 	test('login page has no WCAG 2.1 AA violations', async ({ page }) => {
 		await page.goto('/admin/login');
 		await page.waitForLoadState('domcontentloaded');
@@ -674,7 +674,8 @@ test.describe('Accessibility: axe-core WCAG 2.1 AA scans', () => {
 		const heading = page.locator('main h1');
 		await expect(heading).toBeVisible({ timeout: 15000 });
 
-		const results = await checkA11y(page);
+		// Exclude preview iframe — axe-core crashes when analyzing cross-origin iframe content
+		const results = await checkA11y(page, { exclude: ['[data-testid="preview-iframe"]'] });
 
 		// Clean up
 		await page.request.delete(`/api/articles/${articleId}`);
@@ -706,7 +707,7 @@ test.describe('Accessibility: axe-core WCAG 2.1 AA scans', () => {
 // Phase 6: Remaining a11y gap fixes verification
 // ─────────────────────────────────────────────────────────
 
-test.describe('Accessibility: Phase 6 remaining gaps', () => {
+test.describe('Accessibility: Phase 6 remaining gaps', { tag: ['@a11y', '@admin'] }, () => {
 	test('dropdown menu focuses first menu item on open', async ({ page }) => {
 		await signIn(page, TEST_CREDENTIALS);
 		await page.goto('/admin');

@@ -8,10 +8,10 @@ import {
 	input,
 	output,
 	signal,
+	untracked,
 	viewChild,
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
-import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 import { inject } from '@angular/core';
 import { Button } from '@momentumcms/ui';
 
@@ -22,7 +22,17 @@ export type DeviceSize = 'desktop' | 'tablet' | 'mobile';
  * Live Preview Widget
  *
  * Displays an iframe that shows a live preview of the document being edited.
- * Sends form data to the iframe via postMessage on each change.
+ *
+ * Two modes based on preview config type:
+ * - `preview: true` (server-rendered HTML): iframe loads API endpoint with scripts enabled
+ *   for postMessage live updates.
+ * - `preview: string/function` (URL-based): iframe loads the page URL with scripts DISABLED.
+ *   This prevents loading a second Angular app instance (with Vite HMR, SSR hydration, etc.)
+ *   which causes tab crashes in dev mode. The SSR-rendered HTML displays correctly without JS.
+ *   Use the Refresh button to see form changes reflected in the preview.
+ *
+ * The iframe is declared statically in the template (no dynamic bindings) to avoid NG0910.
+ * Its src/sandbox attributes are set via nativeElement in an effect().
  */
 @Component({
 	selector: 'mcms-live-preview',
@@ -97,15 +107,14 @@ export type DeviceSize = 'desktop' | 'tablet' | 'mobile';
 
 		<!-- Preview iframe container -->
 		<div class="flex-1 overflow-auto bg-muted/30 flex justify-center p-4">
-			@if (safePreviewUrl(); as url) {
+			@if (previewUrl()) {
+				<!-- Static iframe with no dynamic bindings (avoids NG0910).
+				     src/sandbox/width are set via nativeElement in an effect(). -->
 				<iframe
-					#previewFrame
-					[src]="url"
-					[style.width]="iframeWidth()"
-					class="h-full bg-white border border-border rounded-md shadow-sm transition-[width] duration-300"
-					sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+					#previewIframe
 					title="Live document preview"
 					data-testid="preview-iframe"
+					class="h-full bg-white border border-border rounded-md shadow-sm transition-[width] duration-300"
 				></iframe>
 			} @else {
 				<div class="flex items-center justify-center h-full text-muted-foreground text-sm">
@@ -117,7 +126,6 @@ export type DeviceSize = 'desktop' | 'tablet' | 'mobile';
 })
 export class LivePreviewComponent {
 	private readonly document = inject(DOCUMENT);
-	private readonly sanitizer = inject(DomSanitizer);
 	private readonly destroyRef = inject(DestroyRef);
 
 	/** Preview configuration from collection admin config */
@@ -143,8 +151,8 @@ export class LivePreviewComponent {
 	/** Refresh counter to force iframe reload */
 	private readonly refreshCounter = signal(0);
 
-	/** Reference to the iframe element */
-	readonly previewFrame = viewChild<ElementRef<HTMLIFrameElement>>('previewFrame');
+	/** Reference to the static iframe element (available when previewUrl is non-null) */
+	private readonly previewIframe = viewChild<ElementRef<HTMLIFrameElement>>('previewIframe');
 
 	/** Compute the raw preview URL */
 	readonly previewUrl = computed((): string | null => {
@@ -165,11 +173,18 @@ export class LivePreviewComponent {
 		}
 
 		// URL template string: interpolate {fieldName} placeholders with form data
+		// Return null if any placeholder resolves to empty (data not yet loaded)
 		if (typeof previewConfig === 'string') {
-			return previewConfig.replace(/\{(\w+)\}/g, (_, field: string) => {
+			let hasEmptyField = false;
+			const url = previewConfig.replace(/\{(\w+)\}/g, (_, field: string) => {
 				const val = data[field];
-				return val != null ? String(val) : '';
+				if (val == null || val === '') {
+					hasEmptyField = true;
+					return '';
+				}
+				return String(val);
 			});
+			return hasEmptyField ? null : url;
 		}
 
 		if (previewConfig === true && id) {
@@ -177,13 +192,6 @@ export class LivePreviewComponent {
 		}
 
 		return null;
-	});
-
-	/** Sanitized preview URL for iframe binding */
-	readonly safePreviewUrl = computed((): SafeResourceUrl | null => {
-		const url = this.previewUrl();
-		if (!url) return null;
-		return this.sanitizer.bypassSecurityTrustResourceUrl(url);
 	});
 
 	/** Computed iframe width based on device size */
@@ -198,15 +206,54 @@ export class LivePreviewComponent {
 		}
 	});
 
+	/** Sandbox attribute value based on preview mode */
+	private readonly sandboxValue = computed((): string => {
+		const previewConfig = this.preview();
+		if (previewConfig === true) {
+			// Server-rendered HTML: scripts needed for postMessage live updates
+			return 'allow-same-origin allow-scripts allow-popups allow-forms';
+		}
+		// URL-based preview: no scripts to prevent full Angular app from loading
+		return 'allow-same-origin allow-popups allow-forms';
+	});
+
 	/** Debounce timer for postMessage updates */
 	private debounceTimer: number | undefined = undefined;
 
 	constructor() {
-		// Send form data to iframe via postMessage whenever data changes
+		// Effect 1: Set iframe src and sandbox when URL or sandbox config changes.
+		// Uses untracked() for iframeWidth so device size toggles don't trigger a reload.
+		effect(() => {
+			const iframeRef = this.previewIframe();
+			if (!iframeRef) return;
+
+			const iframe = iframeRef.nativeElement;
+			const url = this.previewUrl();
+			if (!url) return;
+
+			iframe.setAttribute('sandbox', this.sandboxValue());
+			iframe.src = url;
+			// Set initial width without tracking the signal
+			iframe.style.width = untracked(() => this.iframeWidth());
+		});
+
+		// Effect 2: Update iframe width only (no reload).
+		// Changing CSS width on an iframe does not trigger navigation.
+		effect(() => {
+			const iframeRef = this.previewIframe();
+			if (!iframeRef) return;
+
+			iframeRef.nativeElement.style.width = this.iframeWidth();
+		});
+
+		// Send form data to iframe via postMessage whenever data changes.
+		// Only effective for server-rendered previews (preview: true) where
+		// allow-scripts is enabled. URL-based previews have scripts disabled
+		// so the postMessage is a no-op (which is fine).
 		effect(() => {
 			const data = this.documentData();
-			const frame = this.previewFrame();
-			if (!frame?.nativeElement?.contentWindow) return;
+			const iframeRef = this.previewIframe();
+			if (!iframeRef?.nativeElement.contentWindow) return;
 
 			// Debounce to avoid thrashing
 			if (this.debounceTimer) {
@@ -214,7 +261,7 @@ export class LivePreviewComponent {
 			}
 
 			this.debounceTimer = this.document.defaultView?.setTimeout(() => {
-				const iframeWindow = frame.nativeElement.contentWindow;
+				const iframeWindow = iframeRef.nativeElement.contentWindow;
 				if (iframeWindow) {
 					const targetOrigin = this.document.defaultView?.location?.origin ?? '';
 					iframeWindow.postMessage({ type: 'momentum-preview-update', data }, targetOrigin);

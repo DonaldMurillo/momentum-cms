@@ -14,7 +14,7 @@ import type { APIRequestContext } from '@playwright/test';
  * Uses the admin test user for management operations.
  */
 
-test.describe('API Key Management', () => {
+test.describe('API Key Management', { tag: ['@security', '@api'] }, () => {
 	let adminContext: APIRequestContext;
 
 	test.beforeAll(async ({ playwright, workerBaseURL }) => {
@@ -147,7 +147,7 @@ test.describe('API Key Management', () => {
 	});
 });
 
-test.describe('API Key Authentication', () => {
+test.describe('API Key Authentication', { tag: ['@security', '@api'] }, () => {
 	let adminContext: APIRequestContext;
 	let apiKey: string;
 
@@ -244,7 +244,7 @@ test.describe('API Key Authentication', () => {
 	});
 });
 
-test.describe('API Key Access Control', () => {
+test.describe('API Key Access Control', { tag: ['@security', '@api'] }, () => {
 	test('editor can create API keys at or below their role', async ({ playwright, baseURL }) => {
 		const editorContext = await playwright.request.newContext({
 			baseURL,
@@ -438,7 +438,7 @@ test.describe('API Key Access Control', () => {
 	});
 });
 
-test.describe('API Key Security', () => {
+test.describe('API Key Security', { tag: ['@security', '@api'] }, () => {
 	let adminContext: APIRequestContext;
 	let createdKeyId: string;
 
@@ -524,7 +524,7 @@ test.describe('API Key Security', () => {
 	});
 });
 
-test.describe('API Key Self-Replication Prevention', () => {
+test.describe('API Key Self-Replication Prevention', { tag: ['@security', '@api'] }, () => {
 	let adminContext: APIRequestContext;
 	let adminApiKey: string;
 

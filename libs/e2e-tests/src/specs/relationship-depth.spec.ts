@@ -9,7 +9,7 @@ import { test, expect, TEST_CREDENTIALS } from '../fixtures';
  * Uses the articles collection which has a `category` relationship field.
  * Seeded data includes articles with category references.
  */
-test.describe('Relationship depth population', () => {
+test.describe('Relationship depth population', { tag: ['@relationship', '@api'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		// Sign in as admin
 		const signInResponse = await request.post('/api/auth/sign-in/email', {

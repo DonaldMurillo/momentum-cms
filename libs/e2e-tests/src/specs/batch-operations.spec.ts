@@ -4,7 +4,7 @@ import { test, expect, TEST_AUTHOR1_CREDENTIALS } from '../fixtures';
  * Batch operations E2E tests.
  * Verifies batch create, update, and delete via the /batch endpoint.
  */
-test.describe('Batch operations', () => {
+test.describe('Batch operations', { tag: ['@api', '@crud'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },

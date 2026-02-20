@@ -24,7 +24,7 @@ const TEST_USER = {
 	newPassword: 'NewPassword456!',
 };
 
-test.describe('Password Reset Flow', () => {
+test.describe('Password Reset Flow', { tag: ['@auth', '@admin'] }, () => {
 	let mailpitRunning = false;
 
 	test.beforeAll(async () => {

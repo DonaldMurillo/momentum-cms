@@ -85,7 +85,14 @@ export interface MigrateRunnerOptions {
  */
 export async function runMigrations(options: MigrateRunnerOptions): Promise<MigrateResult> {
 	const { migrations, dialect, tracker, buildContext, skipDangerDetection, log } = options;
-	const noop = { info: (): void => { /* noop */ }, warn: (): void => { /* noop */ } };
+	const noop = {
+		info: (): void => {
+			/* noop */
+		},
+		warn: (): void => {
+			/* noop */
+		},
+	};
 	const logger = log ?? noop;
 
 	// Ensure tracking table exists
@@ -112,17 +119,14 @@ export async function runMigrations(options: MigrateRunnerOptions): Promise<Migr
 	// Danger detection on pending migrations
 	let dangers: DangerDetectionResult | null = null;
 	if (!skipDangerDetection) {
-		const allOps: MigrationOperation[] = pending.flatMap(
-			(m) => {
-				const ops = m.file.meta.operations;
-				if (!ops) return [];
-				// Operations from meta are structurally compatible with MigrationOperation
-				const typed: MigrationOperation[] = ops.filter(
-					(op): op is MigrationOperation => typeof op.type === 'string',
-				);
-				return typed;
-			},
-		);
+		const allOps: MigrationOperation[] = pending.flatMap((m) => {
+			const ops = m.file.meta.operations;
+			if (!ops) return [];
+			// Operations from meta are structurally compatible with MigrationOperation.
+			// Meta operations use an index-signature shape; cast via a helper that
+			// validates the type discriminant at runtime.
+			return ops.filter((op) => typeof op.type === 'string').map(toMigrationOperation);
+		});
 		if (allOps.length > 0) {
 			dangers = detectDangers(allOps, dialect);
 			if (dangers.hasErrors) {
@@ -181,9 +185,7 @@ export async function runMigrations(options: MigrateRunnerOptions): Promise<Migr
 	const successCount = results.filter((r) => r.success).length;
 	const failCount = results.filter((r) => !r.success).length;
 
-	logger.info(
-		`Batch ${batch}: ${successCount} applied, ${failCount} failed.`,
-	);
+	logger.info(`Batch ${batch}: ${successCount} applied, ${failCount} failed.`);
 
 	return { batch, results, successCount, failCount, dangers };
 }
@@ -193,7 +195,14 @@ export async function runMigrations(options: MigrateRunnerOptions): Promise<Migr
  */
 export async function rollbackBatch(options: MigrateRunnerOptions): Promise<MigrateResult> {
 	const { migrations, dialect, tracker, buildContext, log } = options;
-	const noop = { info: (): void => { /* noop */ }, warn: (): void => { /* noop */ } };
+	const noop = {
+		info: (): void => {
+			/* noop */
+		},
+		warn: (): void => {
+			/* noop */
+		},
+	};
 	const logger = log ?? noop;
 
 	await ensureTrackingTable(tracker, dialect);
@@ -210,9 +219,7 @@ export async function rollbackBatch(options: MigrateRunnerOptions): Promise<Migr
 		return { batch: 0, results: [], successCount: 0, failCount: 0, dangers: null };
 	}
 
-	logger.info(
-		`Rolling back batch ${latestBatch} (${batchMigrations.length} migration(s))...`,
-	);
+	logger.info(`Rolling back batch ${latestBatch} (${batchMigrations.length} migration(s))...`);
 
 	const migrationMap = new Map(migrations.map((m) => [m.name, m]));
 	const results: MigrationRunResult[] = [];
@@ -301,11 +308,23 @@ function extractErrorCode(err: unknown): string | undefined {
 }
 
 /**
+ * Convert a meta operation record to a MigrationOperation.
+ * Meta operations use `{ type: string; [key: string]: unknown }` while
+ * MigrationOperation is a strict discriminated union. The runtime shapes
+ * match because both are produced by the same diff engine.
+ */
+function toMigrationOperation(op: { type: string; [key: string]: unknown }): MigrationOperation {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- bridging index-sig to discriminated union; runtime shapes are identical
+	return op as unknown as MigrationOperation;
+}
+
+/**
  * Compute a checksum for a migration file (for drift detection).
  */
 function computeMigrationChecksum(migration: LoadedMigration): string {
 	// Hash the stringified up + down functions and meta
-	const content = JSON.stringify(migration.file.meta) +
+	const content =
+		JSON.stringify(migration.file.meta) +
 		migration.file.up.toString() +
 		migration.file.down.toString();
 	return createHash('sha256').update(content).digest('hex');

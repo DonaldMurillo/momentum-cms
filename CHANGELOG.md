@@ -1,3 +1,29 @@
+## 0.3.0 (2026-02-20)
+
+### 🚀 Features
+
+- add named tabs support with nested data grouping and UI improvements ([#30](https://github.com/DonaldMurillo/momentum-cms/pull/30))
+- add SEO plugin ([#33](https://github.com/DonaldMurillo/momentum-cms/pull/33))
+- add blocks showcase with theme-aware pages, articles listing, and app layout ([70c775a](https://github.com/DonaldMurillo/momentum-cms/commit/70c775a))
+- add article slugs, detail pages, live preview, and fix PATCH field hooks ([454b61c](https://github.com/DonaldMurillo/momentum-cms/commit/454b61c))
+- implement Payload-style migration CLI workflow with clone-test-apply safety ([#35](https://github.com/DonaldMurillo/momentum-cms/pull/35))
+
+### 🩹 Fixes
+
+- add safe HTML id generation for collection groups with spaces in names ([#31](https://github.com/DonaldMurillo/momentum-cms/pull/31))
+- add safe HTML id generation for collection groups with spaces in names ([#31](https://github.com/DonaldMurillo/momentum-cms/pull/31))
+- add auth guard and MIME validation to PATCH upload route; fix pagination with client-side filtering ([#32](https://github.com/DonaldMurillo/momentum-cms/pull/32))
+- fix nav highlighting and resolve pre-existing E2E test failures ([#34](https://github.com/DonaldMurillo/momentum-cms/pull/34))
+- move layout classes to host element in ArticlesPageComponent ([eb38f0e](https://github.com/DonaldMurillo/momentum-cms/commit/eb38f0e))
+- address code review issues across admin, server-core, and e2e ([4664463](https://github.com/DonaldMurillo/momentum-cms/commit/4664463))
+- resolve TypeScript build errors in migrations library and add to release ([8e9fda8](https://github.com/DonaldMurillo/momentum-cms/commit/8e9fda8))
+
+### ❤️ Thank You
+
+- Claude Haiku 4.5
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.2.0 (2026-02-17)
 
 ### 🚀 Features

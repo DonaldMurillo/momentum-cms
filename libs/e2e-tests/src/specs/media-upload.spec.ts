@@ -19,8 +19,8 @@ import { test, expect } from '../fixtures';
 
 // Minimal valid JPEG (1x1 pixel) — magic bytes match image/jpeg
 const JPEG_BUFFER = Buffer.from([
-	0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00,
-	0x01, 0x00, 0x01, 0x00, 0x00, 0xff, 0xd9,
+	0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01,
+	0x00, 0x01, 0x00, 0x00, 0xff, 0xd9,
 ]);
 
 // Minimal valid PNG (1x1 transparent pixel)
@@ -39,7 +39,7 @@ const EXE_BUFFER = Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00])
 // Part A: API-Level Tests
 // ============================================================
 
-test.describe('Media Upload API', () => {
+test.describe('Media Upload API', { tag: ['@media', '@api'] }, () => {
 	const uploadedMediaIds: string[] = [];
 
 	test.afterEach(async ({ authenticatedPage }) => {
@@ -263,7 +263,7 @@ test.describe('Media Upload API', () => {
 // Part B: Admin UI Upload Field Tests
 // ============================================================
 
-test.describe('Upload Field UI - Articles', () => {
+test.describe('Upload Field UI - Articles', { tag: ['@media', '@admin'] }, () => {
 	const createdArticleIds: string[] = [];
 	const createdMediaIds: string[] = [];
 
@@ -538,9 +538,9 @@ test.describe('Upload Field UI - Articles', () => {
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// Wait for entity view to load
-		await expect(
-			authenticatedPage.getByRole('heading', { name: 'View Page Article' }),
-		).toBeVisible({ timeout: 10000 });
+		await expect(authenticatedPage.getByRole('heading', { name: 'View Page Article' })).toBeVisible(
+			{ timeout: 10000 },
+		);
 
 		// The cover image field should show the media filename, NOT the raw UUID
 		await expect(authenticatedPage.getByText('view-page-test.jpg')).toBeVisible({
@@ -555,7 +555,7 @@ test.describe('Upload Field UI - Articles', () => {
 // Part C: Collection-Level Upload API (POST /api/media with multipart)
 // ============================================================
 
-test.describe('Collection-Level Upload API (POST /api/media)', () => {
+test.describe('Collection-Level Upload API (POST /api/media)', { tag: ['@media', '@api'] }, () => {
 	const uploadedMediaIds: string[] = [];
 
 	test.afterEach(async ({ authenticatedPage }) => {
@@ -619,9 +619,7 @@ test.describe('Collection-Level Upload API (POST /api/media)', () => {
 		expect(response.status()).toBe(400);
 	});
 
-	test('should reject collection upload with spoofed MIME type', async ({
-		authenticatedPage,
-	}) => {
+	test('should reject collection upload with spoofed MIME type', async ({ authenticatedPage }) => {
 		const response = await authenticatedPage.request.post('/api/media', {
 			multipart: {
 				file: {
@@ -705,9 +703,7 @@ test.describe('Collection-Level Upload API (POST /api/media)', () => {
 		uploadedMediaIds.push(data.doc.id);
 	});
 
-	test('should delete media uploaded via collection endpoint', async ({
-		authenticatedPage,
-	}) => {
+	test('should delete media uploaded via collection endpoint', async ({ authenticatedPage }) => {
 		// Upload
 		const uploadResponse = await authenticatedPage.request.post('/api/media', {
 			multipart: {
@@ -755,7 +751,7 @@ test.describe('Collection-Level Upload API (POST /api/media)', () => {
 // Part D: Admin UI — Media Collection Upload Zone
 // ============================================================
 
-test.describe('Media Collection Upload Zone UI', () => {
+test.describe('Media Collection Upload Zone UI', { tag: ['@media', '@admin'] }, () => {
 	const uploadedMediaIds: string[] = [];
 
 	test.afterEach(async ({ authenticatedPage }) => {
@@ -818,9 +814,7 @@ test.describe('Media Collection Upload Zone UI', () => {
 		await expect(mimeTypeInput).toHaveValue('image/jpeg');
 	});
 
-	test('should submit media form with file and create document', async ({
-		authenticatedPage,
-	}) => {
+	test('should submit media form with file and create document', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/media/new');
 		await expect(
 			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
@@ -968,7 +962,7 @@ test.describe('Media Collection Upload Zone UI', () => {
 // Part E: PATCH Upload Security & Validation
 // ============================================================
 
-test.describe('PATCH Upload Security', () => {
+test.describe('PATCH Upload Security', { tag: ['@media', '@security'] }, () => {
 	const uploadedMediaIds: string[] = [];
 
 	test.afterEach(async ({ authenticatedPage }) => {

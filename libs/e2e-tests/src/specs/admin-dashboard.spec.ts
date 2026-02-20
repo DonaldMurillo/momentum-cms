@@ -10,7 +10,7 @@ import { test, expect } from '../fixtures';
  * Auth collections (Users, API Keys) are injected by the auth plugin.
  */
 
-test.describe('Admin Dashboard - Collection Grouping', () => {
+test.describe('Admin Dashboard - Collection Grouping', { tag: ['@admin', '@smoke'] }, () => {
 	test('should render a section heading for each admin.group', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
@@ -97,7 +97,7 @@ test.describe('Admin Dashboard - Collection Grouping', () => {
 	});
 });
 
-test.describe('Admin Dashboard', () => {
+test.describe('Admin Dashboard', { tag: ['@admin', '@smoke'] }, () => {
 	test('should display dashboard with correct heading', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
@@ -214,7 +214,7 @@ test.describe('Admin Dashboard', () => {
 	});
 });
 
-test.describe('Admin Sidebar Navigation', () => {
+test.describe('Admin Sidebar Navigation', { tag: ['@admin', '@smoke'] }, () => {
 	test('should display sidebar with branding title', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');

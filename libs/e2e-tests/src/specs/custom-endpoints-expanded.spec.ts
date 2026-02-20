@@ -10,7 +10,7 @@ import { test, expect, TEST_AUTHOR1_CREDENTIALS } from '../fixtures';
  * - GET /error-test (error handling)
  * - POST /sequential-ops (multi-operation flow)
  */
-test.describe('Expanded custom collection endpoints', () => {
+test.describe('Expanded custom collection endpoints', { tag: ['@api', '@crud'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		// Sign in as author1
 		const signInResponse = await request.post('/api/auth/sign-in/email', {

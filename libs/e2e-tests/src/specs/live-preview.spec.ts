@@ -7,7 +7,7 @@ import { test, expect, TEST_AUTHOR3_CREDENTIALS } from '../fixtures';
  *
  * Uses the Events collection which has `admin.preview: true` enabled.
  */
-test.describe('Live Preview', () => {
+test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 	let eventId: string;
 
 	/** Sign in helper for page context */

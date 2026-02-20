@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/plugins-otel",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "OpenTelemetry observability plugin for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
@@ -28,9 +28,9 @@
 	"types": "./src/index.d.ts",
 	"peerDependencies": {
 		"@opentelemetry/api": "^1.0.0",
-		"@momentumcms/plugins-core": "0.2.0",
-		"@momentumcms/logger": "0.2.0",
-		"@momentumcms/core": "0.2.0"
+		"@momentumcms/plugins-core": "0.3.0",
+		"@momentumcms/logger": "0.3.0",
+		"@momentumcms/core": "0.3.0"
 	},
 	"dependencies": {}
 }

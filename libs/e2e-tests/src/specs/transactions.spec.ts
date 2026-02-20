@@ -5,7 +5,7 @@ import { test, expect, TEST_AUTHOR1_CREDENTIALS } from '../fixtures';
  * Verifies that database transactions correctly commit on success
  * and rollback on error, using custom endpoint helpers.
  */
-test.describe('Database transactions', () => {
+test.describe('Database transactions', { tag: ['@api', '@crud'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },

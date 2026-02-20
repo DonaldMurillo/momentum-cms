@@ -7,7 +7,7 @@ import { test, expect } from '../fixtures';
  * These tests ensure the Express static file serving integration works.
  */
 
-test.describe('Storybook Integration', () => {
+test.describe('Storybook Integration', { tag: ['@admin', '@smoke'] }, () => {
 	test('should serve Storybook at /storybook route', async ({ page }) => {
 		// Navigate to the integrated Storybook route
 		await page.goto('/storybook/');

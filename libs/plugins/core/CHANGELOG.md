@@ -1,3 +1,14 @@
+## 0.3.0 (2026-02-20)
+
+### 🚀 Features
+
+- add named tabs support with nested data grouping and UI improvements ([#30](https://github.com/DonaldMurillo/momentum-cms/pull/30))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.2.0 (2026-02-17)
 
 This was a version bump only for plugins-core to align it with other projects, there were no code changes.

@@ -10,7 +10,7 @@ import { test, expect, TEST_CREDENTIALS } from '../fixtures';
  *
  * Uses admin credentials because managed auth collections require admin access.
  */
-test.describe('GraphQL managed collection mutations', () => {
+test.describe('GraphQL managed collection mutations', { tag: ['@graphql', '@crud'] }, () => {
 	test.beforeAll(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },

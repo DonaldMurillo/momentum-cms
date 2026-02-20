@@ -15,7 +15,7 @@ import { test, expect, TEST_CREDENTIALS } from '../fixtures';
  * - status: select (active/draft/archived), required
  * - tags: array, minRows: 1, maxRows: 5
  */
-test.describe('Field-level validation', () => {
+test.describe('Field-level validation', { tag: ['@field', '@admin'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		// Sign in as admin
 		const signInResponse = await request.post('/api/auth/sign-in/email', {

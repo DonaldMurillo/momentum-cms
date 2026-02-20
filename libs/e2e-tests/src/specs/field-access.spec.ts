@@ -12,7 +12,7 @@ import { request as playwrightRequest } from '@playwright/test';
  * - internalCode: read restricted to admin, create allowed for all, update denied for all
  * - internalScore: read denied for everyone (always hidden from responses)
  */
-test.describe('Field-level access control', () => {
+test.describe('Field-level access control', { tag: ['@field', '@security'] }, () => {
 	let adminDocId: string;
 
 	test.beforeEach(async ({ request }) => {

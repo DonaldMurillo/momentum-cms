@@ -23,7 +23,7 @@ interface SettingsDoc {
 	} | null;
 }
 
-test.describe('Layout fields (tabs, collapsible, row)', () => {
+test.describe('Layout fields (tabs, collapsible, row)', { tag: ['@field', '@layout'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },

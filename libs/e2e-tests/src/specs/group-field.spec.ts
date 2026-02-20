@@ -5,7 +5,7 @@ import { test, expect, TEST_CREDENTIALS } from '../fixtures';
  * Verifies that group fields render as a card with sub-fields
  * and that changes to sub-fields are stored as nested objects.
  */
-test.describe('Group field renderer', () => {
+test.describe('Group field renderer', { tag: ['@field', '@admin'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		// Sign in as admin for API access
 		const signInResponse = await request.post('/api/auth/sign-in/email', {

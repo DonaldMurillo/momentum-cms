@@ -7,7 +7,7 @@ import { test, expect } from '../fixtures';
  * Verifies: selection checkboxes, bulk action toolbar, batch delete via API,
  * confirmation dialog, and list refresh after deletion.
  */
-test.describe('Bulk actions UI', () => {
+test.describe('Bulk actions UI', { tag: ['@admin', '@crud'] }, () => {
 	// Create test categories via API before each test
 	test.beforeEach(async ({ authenticatedPage }) => {
 		// authenticatedPage.request inherits cookies from the authenticated browser context

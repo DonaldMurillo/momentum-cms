@@ -10,7 +10,7 @@ import { test, expect } from '../fixtures';
  * Auth collections (Users as auth-user) are injected by the auth plugin.
  */
 
-test.describe('Collection List Page - Articles', () => {
+test.describe('Collection List Page - Articles', { tag: ['@admin', '@crud'] }, () => {
 	test('should display collection heading', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/articles');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
@@ -93,7 +93,7 @@ test.describe('Collection List Page - Articles', () => {
 	});
 });
 
-test.describe('Collection List Page - Categories', () => {
+test.describe('Collection List Page - Categories', { tag: ['@admin', '@crud'] }, () => {
 	test('should display collection heading', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/categories');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
@@ -129,7 +129,7 @@ test.describe('Collection List Page - Categories', () => {
 	});
 });
 
-test.describe('Collection List Page - Users (auth-user)', () => {
+test.describe('Collection List Page - Users (auth-user)', { tag: ['@admin', '@crud'] }, () => {
 	test('should display collection heading', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/auth-user');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
@@ -198,7 +198,7 @@ test.describe('Collection List Page - Users (auth-user)', () => {
 	});
 });
 
-test.describe('Collection List Page - Auth API Keys', () => {
+test.describe('Collection List Page - Auth API Keys', { tag: ['@admin', '@crud'] }, () => {
 	test('should navigate via sidebar and display heading', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
@@ -274,7 +274,7 @@ test.describe('Collection List Page - Auth API Keys', () => {
 	});
 });
 
-test.describe('Collection List Page - Navigation', () => {
+test.describe('Collection List Page - Navigation', { tag: ['@admin', '@crud'] }, () => {
 	test('should maintain sidebar visibility on collection list', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin/collections/articles');
 		await authenticatedPage.waitForLoadState('domcontentloaded');

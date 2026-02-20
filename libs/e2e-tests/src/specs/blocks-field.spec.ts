@@ -5,7 +5,7 @@ import { test, expect, TEST_CREDENTIALS } from '../fixtures';
  * Verifies that blocks fields store data as arrays of typed block objects
  * and that CRUD operations on blocks work correctly.
  */
-test.describe('Blocks field renderer', () => {
+test.describe('Blocks field renderer', { tag: ['@field', '@blocks'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },

@@ -5,7 +5,7 @@ import { test, expect, TEST_AUTHOR1_CREDENTIALS } from '../fixtures';
  * Verifies that webhooks are dispatched on collection CRUD events
  * and include correct payload/signature.
  */
-test.describe('Webhooks', () => {
+test.describe('Webhooks', { tag: ['@api', '@hooks'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		// Sign in
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
