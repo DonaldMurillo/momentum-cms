@@ -678,4 +678,84 @@ describe('EntityViewWidget', () => {
 			expect(trashBtn).toBeTruthy();
 		});
 	});
+
+	describe('Preview URL', () => {
+		it('should generate preview URL for preview: true config', async () => {
+			const col: CollectionConfig = {
+				...mockCollection,
+				admin: { preview: true },
+			};
+
+			createFixture({ collection: col });
+			fixture.detectChanges();
+
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
+			req.flush({ doc: mockEntity });
+			await fixture.whenStable();
+
+			expect(component.previewUrl()).toBe('/api/posts/123/preview');
+		});
+
+		it('should return null when no preview config', async () => {
+			createFixture();
+			fixture.detectChanges();
+
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
+			req.flush({ doc: mockEntity });
+			await fixture.whenStable();
+
+			expect(component.previewUrl()).toBeNull();
+		});
+
+		it('should generate preview URL for function preview config', async () => {
+			const col: CollectionConfig = {
+				...mockCollection,
+				admin: {
+					preview: (doc: Record<string, unknown>) => `/custom/${String(doc['id'])}`,
+				},
+			};
+
+			createFixture({ collection: col });
+			fixture.detectChanges();
+
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
+			req.flush({ doc: mockEntity });
+			await fixture.whenStable();
+
+			expect(component.previewUrl()).toBe('/custom/123');
+		});
+
+		it('should generate preview URL for string template preview config', async () => {
+			const col: CollectionConfig = {
+				...mockCollection,
+				admin: { preview: '/posts/{id}' },
+			};
+
+			createFixture({ collection: col });
+			fixture.detectChanges();
+
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
+			req.flush({ doc: mockEntity });
+			await fixture.whenStable();
+
+			expect(component.previewUrl()).toBe('/posts/123');
+		});
+
+		it('should return null for string template with empty field', async () => {
+			const col: CollectionConfig = {
+				...mockCollection,
+				admin: { preview: '/posts/{slug}' },
+			};
+
+			createFixture({ collection: col });
+			fixture.detectChanges();
+
+			// Entity has no slug field
+			const req = httpMock.expectOne((r) => r.url === '/api/posts/123');
+			req.flush({ doc: { id: '123', title: 'Test' } });
+			await fixture.whenStable();
+
+			expect(component.previewUrl()).toBeNull();
+		});
+	});
 });

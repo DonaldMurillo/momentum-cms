@@ -12,8 +12,11 @@ import { Categories } from './categories.collection';
 /**
  * Auto-generate slug from title if not explicitly provided.
  */
-const autoSlugFromTitle: FieldHookFunction = ({ value, data }) => {
+const autoSlugFromTitle: FieldHookFunction = ({ value, data, operation }) => {
 	if (value) return value;
+	// On update, if slug was not in the payload (value is undefined),
+	// do not derive a new slug — let the existing DB value persist.
+	if (operation === 'update' && value === undefined) return undefined;
 	const title = data['title'];
 	if (typeof title === 'string') {
 		return title

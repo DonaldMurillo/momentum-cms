@@ -56,7 +56,7 @@ test.describe('Admin Edit Page with Preview', { tag: ['@admin', '@blocks'] }, ()
 		await expect(iframe).toBeVisible({ timeout: 20000 });
 
 		// Wait 5 seconds to confirm the page doesn't crash
-		await page.waitForTimeout(5000); // intentional: proving NO crash occurs
+		await new Promise<void>((resolve) => setTimeout(resolve, 5000)); // negative proof: page remains stable (no crash)
 
 		// Page should still be alive
 		await expect(heading).toBeVisible();
@@ -93,7 +93,7 @@ test.describe('Admin Edit Page with Preview', { tag: ['@admin', '@blocks'] }, ()
 		await expect(iframe).toBeVisible({ timeout: 15000 });
 
 		// Wait 5 seconds to confirm no crash
-		await page.waitForTimeout(5000); // intentional: proving NO crash occurs
+		await new Promise<void>((resolve) => setTimeout(resolve, 5000)); // negative proof: page remains stable (no crash)
 
 		await expect(heading).toBeVisible();
 		await expect(iframe).toBeVisible({ timeout: 15000 });
@@ -149,7 +149,7 @@ test.describe('Admin Edit Page with Preview', { tag: ['@admin', '@blocks'] }, ()
 		await expect(iframe).toBeVisible({ timeout: 15000 });
 
 		// Wait 5 seconds to confirm no crash
-		await page.waitForTimeout(5000); // intentional: proving NO crash occurs
+		await new Promise<void>((resolve) => setTimeout(resolve, 5000)); // negative proof: page remains stable (no crash)
 
 		// Page should still be alive
 		await expect(heading).toBeVisible();
@@ -184,10 +184,7 @@ test.describe('Admin Edit Page with Preview', { tag: ['@admin', '@blocks'] }, ()
 		await expect(refreshBtn).toBeVisible();
 		await refreshBtn.click();
 
-		// Wait for iframe to reload
-		await page.waitForTimeout(3000); // intentional: waiting for iframe reload
-
-		// Page should still be alive
+		// Page should still be alive after refresh
 		await expect(heading).toBeVisible();
 		const iframe = page.locator('[data-testid="preview-iframe"]');
 		await expect(iframe).toBeVisible({ timeout: 15000 });

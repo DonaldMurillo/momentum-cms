@@ -75,6 +75,11 @@ interface CategoryDisplay {
 		<!-- Articles grid -->
 		@if (loading()) {
 			<p class="text-muted-foreground" data-testid="articles-loading">Loading articles...</p>
+		} @else if (error()) {
+			<div class="text-center py-12" data-testid="articles-error">
+				<p class="text-lg font-semibold text-foreground">Something went wrong</p>
+				<p class="text-muted-foreground mt-1">Failed to load articles. Please try again later.</p>
+			</div>
 		} @else if (filteredArticles().length === 0) {
 			<p class="text-muted-foreground" data-testid="articles-empty">No articles found.</p>
 		} @else {
@@ -115,6 +120,7 @@ export class ArticlesPageComponent {
 	readonly articles = signal<ArticleDisplay[]>([]);
 	readonly categories = signal<CategoryDisplay[]>([]);
 	readonly loading = signal(true);
+	readonly error = signal(false);
 	readonly searchQuery = signal('');
 	readonly selectedCategory = signal<string | null>(null);
 
@@ -214,6 +220,8 @@ export class ArticlesPageComponent {
 				};
 			});
 			this.articles.set(arts);
+		} catch {
+			this.error.set(true);
 		} finally {
 			this.loading.set(false);
 		}

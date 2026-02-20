@@ -126,7 +126,7 @@ function getInputFromEvent(event: Event): HTMLInputElement | null {
 					</div>
 				</div>
 			} @else {
-				<!-- Drop zone (no nested interactive elements) -->
+				<!-- Drop zone — keyboard-accessible for WCAG 2.1 SC 2.1.1 -->
 				<div
 					class="relative rounded-lg border-2 border-dashed transition-colors"
 					[class.border-mcms-border]="!isDragging()"
@@ -134,10 +134,16 @@ function getInputFromEvent(event: Event): HTMLInputElement | null {
 					[class.bg-mcms-primary/5]="isDragging()"
 					[class.cursor-pointer]="!isDisabled()"
 					[class.opacity-50]="isDisabled()"
+					role="button"
+					tabindex="0"
+					[attr.aria-label]="'Upload file for ' + label()"
+					[attr.aria-disabled]="isDisabled()"
 					(dragover)="onDragOver($event)"
 					(dragleave)="onDragLeave($event)"
 					(drop)="onDrop($event)"
 					(click)="triggerFileInput()"
+					(keydown.enter)="triggerFileInput()"
+					(keydown.space)="onDropZoneSpace($event)"
 				>
 					<div class="flex flex-col items-center justify-center gap-2 p-8">
 						<ng-icon [name]="uploadIcon" class="h-10 w-10 text-mcms-muted-foreground" aria-hidden="true" />
@@ -439,6 +445,15 @@ export class UploadFieldRenderer {
 		if (ref) {
 			ref.nativeElement.click();
 		}
+	}
+
+	/**
+	 * Handle Space keydown on drop zone.
+	 * Prevents default scroll behavior and triggers file input.
+	 */
+	onDropZoneSpace(event: Event): void {
+		event.preventDefault();
+		this.triggerFileInput();
 	}
 
 	/**

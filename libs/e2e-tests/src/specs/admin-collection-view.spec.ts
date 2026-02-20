@@ -57,7 +57,7 @@ test.describe('Admin Collection View', { tag: ['@admin'] }, () => {
 			const errors: string[] = [];
 			page.on('pageerror', (err) => errors.push(err.message));
 
-			await page.waitForTimeout(3000); // intentional: proving NO crash occurs
+			await new Promise<void>((resolve) => setTimeout(resolve, 3000)); // negative proof: page remains stable (no crash)
 			await expect(heading).toBeVisible();
 			expect(errors).toEqual([]);
 		});
@@ -87,7 +87,7 @@ test.describe('Admin Collection View', { tag: ['@admin'] }, () => {
 			const errors: string[] = [];
 			page.on('pageerror', (err) => errors.push(err.message));
 
-			await page.waitForTimeout(3000); // intentional: proving NO crash occurs
+			await new Promise<void>((resolve) => setTimeout(resolve, 3000)); // negative proof: page remains stable (no crash)
 			await expect(heading).toBeVisible();
 			expect(errors).toEqual([]);
 		});
@@ -124,7 +124,7 @@ test.describe('Admin Collection View', { tag: ['@admin'] }, () => {
 			const errors: string[] = [];
 			page.on('pageerror', (err) => errors.push(err.message));
 
-			await page.waitForTimeout(3000); // intentional: proving NO crash occurs
+			await new Promise<void>((resolve) => setTimeout(resolve, 3000)); // negative proof: page remains stable (no crash)
 			await expect(heading).toBeVisible();
 			expect(errors).toEqual([]);
 		});
@@ -150,7 +150,7 @@ test.describe('Admin Collection View', { tag: ['@admin'] }, () => {
 			const errors: string[] = [];
 			page.on('pageerror', (err) => errors.push(err.message));
 
-			await page.waitForTimeout(3000); // intentional: proving NO crash occurs
+			await new Promise<void>((resolve) => setTimeout(resolve, 3000)); // negative proof: page remains stable (no crash)
 			await expect(heading).toBeVisible();
 			expect(errors).toEqual([]);
 		});

@@ -392,6 +392,10 @@ export class EntityViewWidget<T extends Entity = Entity> {
 			});
 			return hasEmpty ? null : url;
 		}
+		// Boolean true: use the server-rendered preview API endpoint
+		if (preview === true) {
+			return `/api/${col.slug}/${String(e.id)}/preview`;
+		}
 		return null;
 	});
 

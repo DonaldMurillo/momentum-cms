@@ -8,6 +8,7 @@ import {
 	input,
 	output,
 	signal,
+	untracked,
 	viewChild,
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
@@ -220,9 +221,8 @@ export class LivePreviewComponent {
 	private debounceTimer: number | undefined = undefined;
 
 	constructor() {
-		// Set iframe src/sandbox/width via nativeElement when the iframe is available.
-		// The iframe is static in the template (no bindings) to avoid NG0910.
-		// Angular manages the element lifecycle via @if(previewUrl()).
+		// Effect 1: Set iframe src and sandbox when URL or sandbox config changes.
+		// Uses untracked() for iframeWidth so device size toggles don't trigger a reload.
 		effect(() => {
 			const iframeRef = this.previewIframe();
 			if (!iframeRef) return;
@@ -233,7 +233,17 @@ export class LivePreviewComponent {
 
 			iframe.setAttribute('sandbox', this.sandboxValue());
 			iframe.src = url;
-			iframe.style.width = this.iframeWidth();
+			// Set initial width without tracking the signal
+			iframe.style.width = untracked(() => this.iframeWidth());
+		});
+
+		// Effect 2: Update iframe width only (no reload).
+		// Changing CSS width on an iframe does not trigger navigation.
+		effect(() => {
+			const iframeRef = this.previewIframe();
+			if (!iframeRef) return;
+
+			iframeRef.nativeElement.style.width = this.iframeWidth();
 		});
 
 		// Send form data to iframe via postMessage whenever data changes.
