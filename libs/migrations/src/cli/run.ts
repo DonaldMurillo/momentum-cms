@@ -49,8 +49,7 @@ async function main(): Promise<void> {
 		warn: (msg: string): void => console.warn(`[migration:warn] ${msg}`),
 	};
 
-	const useCloneTest =
-		!args.skipCloneTest && migrationConfig.cloneTest && dialect === 'postgresql';
+	const useCloneTest = !args.skipCloneTest && migrationConfig.cloneTest && dialect === 'postgresql';
 
 	if (useCloneTest) {
 		// Clone-test-apply pipeline
@@ -68,23 +67,26 @@ async function main(): Promise<void> {
 			log,
 		});
 
-		console.warn(`\nClone test: ${result.cloneSuccess ? 'PASSED' : 'FAILED'}`);
+		const cloneSuccess = result.cloneResult ? result.cloneResult.failCount === 0 : false;
+		console.warn(`\nClone test: ${cloneSuccess ? 'PASSED' : 'FAILED'}`);
 
-		if (!result.cloneSuccess && result.cloneError) {
-			console.error(`Clone error: ${result.cloneError}`);
-			if (result.suggestion) {
-				console.warn(`Suggestion: ${result.suggestion}`);
+		if (!cloneSuccess && result.error) {
+			console.error(`Clone error: ${result.error}`);
+			if (result.suggestions.length > 0) {
+				console.warn(`Suggestion: ${result.suggestions[0]}`);
 			}
 		}
 
-		if (result.applied) {
-			console.warn(`Applied: ${result.applied.successCount} migration(s) in batch ${result.applied.batch}`);
-			if (result.applied.failCount > 0) {
-				console.error(`Failed: ${result.applied.failCount} migration(s)`);
+		if (result.applyResult) {
+			console.warn(
+				`Applied: ${result.applyResult.successCount} migration(s) in batch ${result.applyResult.batch}`,
+			);
+			if (result.applyResult.failCount > 0) {
+				console.error(`Failed: ${result.applyResult.failCount} migration(s)`);
 			}
 		}
 
-		if (!result.cloneSuccess) {
+		if (!cloneSuccess) {
 			process.exit(1);
 		}
 	} else {

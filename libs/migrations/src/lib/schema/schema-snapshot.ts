@@ -81,11 +81,7 @@ export interface DatabaseSchemaSnapshot {
 /**
  * Internal tables that should be excluded from schema snapshots.
  */
-export const INTERNAL_TABLES = new Set([
-	'_momentum_migrations',
-	'_momentum_seeds',
-	'_globals',
-]);
+export const INTERNAL_TABLES = new Set(['_momentum_migrations', '_momentum_seeds', '_globals']);
 
 /**
  * Compute a deterministic SHA-256 checksum for a schema snapshot.
@@ -147,7 +143,8 @@ export function deserializeSnapshot(json: string): DatabaseSchemaSnapshot {
  */
 function isSchemaSnapshot(value: unknown): value is DatabaseSchemaSnapshot {
 	if (typeof value !== 'object' || value === null) return false;
-	const obj: Record<string, unknown> = value;
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowing object to Record for property access in type guard
+	const obj = value as Record<string, unknown>;
 	return (
 		(obj['dialect'] === 'postgresql' || obj['dialect'] === 'sqlite') &&
 		Array.isArray(obj['tables']) &&

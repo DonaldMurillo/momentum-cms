@@ -69,7 +69,7 @@ async function main(): Promise<void> {
 
 	// 4. Danger detection
 	if (migrationConfig.dangerDetection) {
-		const dangers = detectDangers(diff.operations);
+		const dangers = detectDangers(diff.operations, dialect);
 		if (dangers.warnings.length > 0) {
 			console.warn('\n--- Danger Detection ---');
 			for (const w of dangers.warnings) {
@@ -78,7 +78,9 @@ async function main(): Promise<void> {
 			}
 			if (dangers.hasErrors) {
 				console.error('\nBlocked: migration contains error-severity dangers.');
-				console.error('Review the operations and adjust your collections, or disable danger detection.');
+				console.error(
+					'Review the operations and adjust your collections, or disable danger detection.',
+				);
 				process.exit(1);
 			}
 			console.warn('');
