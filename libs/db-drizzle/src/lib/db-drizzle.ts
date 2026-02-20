@@ -677,6 +677,8 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 	// ============================================
 
 	return {
+		dialect: 'sqlite' as const,
+
 		getRawDatabase(): Database.Database {
 			return sqlite;
 		},

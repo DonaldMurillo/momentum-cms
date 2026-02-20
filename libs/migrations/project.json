@@ -1,0 +1,31 @@
+{
+	"name": "migrations",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/migrations/src",
+	"projectType": "library",
+	"tags": ["scope:lib", "env:server"],
+	"targets": {
+		"test": {
+			"executor": "@nx/vitest:test",
+			"outputs": ["{workspaceRoot}/coverage/libs/migrations"],
+			"options": {
+				"config": "libs/migrations/vitest.config.ts"
+			}
+		},
+		"build": {
+			"executor": "@nx/esbuild:esbuild",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/libs/migrations",
+				"main": "libs/migrations/src/index.ts",
+				"tsConfig": "libs/migrations/tsconfig.lib.json"
+			}
+		},
+		"nx-release-publish": {
+			"options": {
+				"packageRoot": "dist/{projectRoot}",
+				"access": "public"
+			}
+		}
+	}
+}

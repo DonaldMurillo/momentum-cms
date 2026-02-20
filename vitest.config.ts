@@ -31,6 +31,12 @@ export default defineConfig({
 			'@momentumcms/plugins/core': resolve(__dirname, 'libs/plugins/core/src/index.ts'),
 			'@momentumcms/plugins/otel': resolve(__dirname, 'libs/plugins/otel/src/index.ts'),
 			'@momentumcms/plugins/analytics': resolve(__dirname, 'libs/plugins/analytics/src/index.ts'),
+			'@momentumcms/migrations': resolve(__dirname, 'libs/migrations/src/index.ts'),
+			'@momentumcms/example-config': resolve(__dirname, 'libs/example-config/src/index.ts'),
+			'@momentumcms/example-config/collections': resolve(
+				__dirname,
+				'libs/example-config/src/collections/index.ts',
+			),
 		},
 	},
 });
