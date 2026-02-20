@@ -261,10 +261,8 @@ export async function handleCollectionUpload(
 	const { file, user, fields, collectionSlug, collectionUpload } = request;
 
 	// Resolve limits: collection overrides global
-	const maxFileSize =
-		collectionUpload.maxFileSize ?? globalConfig.maxFileSize ?? 10 * 1024 * 1024;
-	const allowedMimeTypes =
-		collectionUpload.mimeTypes ?? globalConfig.allowedMimeTypes ?? [];
+	const maxFileSize = collectionUpload.maxFileSize ?? globalConfig.maxFileSize ?? 10 * 1024 * 1024;
+	const allowedMimeTypes = collectionUpload.mimeTypes ?? globalConfig.allowedMimeTypes ?? [];
 
 	try {
 		// 1. Auth check
@@ -319,9 +317,10 @@ export async function handleCollectionUpload(
 		const api = getMomentumAPI().setContext({ user });
 		const doc = await api.collection(collectionSlug).create(docData);
 
+		const result: Record<string, unknown> = doc;
 		return {
 			status: 201,
-			doc: doc as Record<string, unknown>,
+			doc: result,
 		};
 	} catch (error) {
 		if (error instanceof Error) {

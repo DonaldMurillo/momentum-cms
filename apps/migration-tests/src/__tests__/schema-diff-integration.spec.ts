@@ -17,7 +17,7 @@ import {
 	collectionToTableSnapshot,
 } from '@momentumcms/migrations';
 import type { MigrationOperation } from '@momentumcms/migrations';
-import { defineCollection, text, number, checkbox, select, relationship } from '@momentumcms/core';
+import { defineCollection, text, number, relationship } from '@momentumcms/core';
 
 function findOps(ops: MigrationOperation[], type: string): MigrationOperation[] {
 	return ops.filter((op) => op.type === type);
@@ -35,9 +35,7 @@ describe('schema diff integration', () => {
 
 			// 'status' was added (select field → VARCHAR(255))
 			const addOps = findOps(result.operations, 'addColumn');
-			const addedStatus = addOps.find(
-				(op) => op.type === 'addColumn' && op.column === 'status',
-			);
+			const addedStatus = addOps.find((op) => op.type === 'addColumn' && op.column === 'status');
 			expect(addedStatus).toBeDefined();
 			if (addedStatus?.type === 'addColumn') {
 				expect(addedStatus.columnType).toBe('VARCHAR(255)');
@@ -47,9 +45,7 @@ describe('schema diff integration', () => {
 			// 'order' (NUMERIC) and 'status' (VARCHAR) have different types,
 			// so it should be a clean drop
 			const dropOps = findOps(result.operations, 'dropColumn');
-			const droppedOrder = dropOps.find(
-				(op) => op.type === 'dropColumn' && op.column === 'order',
-			);
+			const droppedOrder = dropOps.find((op) => op.type === 'dropColumn' && op.column === 'order');
 			expect(droppedOrder).toBeDefined();
 
 			// 'description' changed from nullable to required
@@ -83,9 +79,7 @@ describe('schema diff integration', () => {
 
 			// FK should be added for the child table
 			const fkOps = findOps(result.operations, 'addForeignKey');
-			const childFk = fkOps.find(
-				(op) => op.type === 'addForeignKey' && op.table === 'rel-child',
-			);
+			const childFk = fkOps.find((op) => op.type === 'addForeignKey' && op.table === 'rel-child');
 			expect(childFk).toBeDefined();
 			if (childFk?.type === 'addForeignKey') {
 				expect(childFk.column).toBe('parent');
@@ -152,16 +146,12 @@ describe('schema diff integration', () => {
 			// articles_versions table should be created
 			const createOps = findOps(result.operations, 'createTable');
 			expect(
-				createOps.some(
-					(op) => op.type === 'createTable' && op.table === 'articles_versions',
-				),
+				createOps.some((op) => op.type === 'createTable' && op.table === 'articles_versions'),
 			).toBe(true);
 
 			// _status column should be added to main table
 			const addOps = findOps(result.operations, 'addColumn');
-			expect(
-				addOps.some((op) => op.type === 'addColumn' && op.column === '_status'),
-			).toBe(true);
+			expect(addOps.some((op) => op.type === 'addColumn' && op.column === '_status')).toBe(true);
 		});
 	});
 
@@ -187,26 +177,19 @@ describe('schema diff integration', () => {
 
 			// deletedAt column added
 			const addOps = findOps(result.operations, 'addColumn');
-			expect(
-				addOps.some((op) => op.type === 'addColumn' && op.column === 'deletedAt'),
-			).toBe(true);
+			expect(addOps.some((op) => op.type === 'addColumn' && op.column === 'deletedAt')).toBe(true);
 
 			// Index on deletedAt added
 			const idxOps = findOps(result.operations, 'createIndex');
 			expect(
-				idxOps.some(
-					(op) => op.type === 'createIndex' && op.indexName === 'idx_items_deletedAt',
-				),
+				idxOps.some((op) => op.type === 'createIndex' && op.indexName === 'idx_items_deletedAt'),
 			).toBe(true);
 		});
 	});
 
 	describe('no-op diff', () => {
 		it('should report no changes when collections are unchanged', () => {
-			const schema = collectionsToSchema(
-				[RelTestParent, RelTestChild],
-				'postgresql',
-			);
+			const schema = collectionsToSchema([RelTestParent, RelTestChild], 'postgresql');
 
 			const result = diffSchemas(schema, schema, 'postgresql');
 

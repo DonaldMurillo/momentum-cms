@@ -6,11 +6,7 @@
  */
 import { Pool } from 'pg';
 import Database from 'better-sqlite3';
-import {
-	runMigrations,
-	rollbackBatch,
-	getMigrationStatus,
-} from '@momentumcms/migrations';
+import { runMigrations, rollbackBatch, getMigrationStatus } from '@momentumcms/migrations';
 import type { LoadedMigration, MigrationContext } from '@momentumcms/migrations';
 import {
 	createTestPgDb,
@@ -18,7 +14,12 @@ import {
 	createTestSqliteDb,
 	dropTestSqliteDb,
 } from '../helpers/test-db';
-import { pgTracker, buildPgContext, sqliteTracker, buildSqliteContext } from '../helpers/adapter-wiring';
+import {
+	pgTracker,
+	buildPgContext,
+	sqliteTracker,
+	buildSqliteContext,
+} from '../helpers/adapter-wiring';
 import { isPgAvailable } from '../helpers/pg-availability';
 
 const pgAvailable = await isPgAvailable();
@@ -27,7 +28,10 @@ const pgAvailable = await isPgAvailable();
 // Migration factories
 // ============================================
 
-function createTableMigration(tableName: string, dialect: 'postgresql' | 'sqlite'): LoadedMigration {
+function createTableMigration(
+	tableName: string,
+	dialect: 'postgresql' | 'sqlite',
+): LoadedMigration {
 	const idType = dialect === 'postgresql' ? 'VARCHAR(36)' : 'TEXT';
 	const tsType = dialect === 'postgresql' ? 'TIMESTAMPTZ' : 'TEXT';
 
@@ -36,7 +40,9 @@ function createTableMigration(tableName: string, dialect: 'postgresql' | 'sqlite
 		file: {
 			meta: { name: `create_${tableName}`, description: `Create ${tableName} table` },
 			async up(ctx: MigrationContext): Promise<void> {
-				await ctx.sql(`CREATE TABLE "${tableName}" ("id" ${idType} PRIMARY KEY, "title" ${idType} NOT NULL, "createdAt" ${tsType} NOT NULL DEFAULT ${dialect === 'postgresql' ? 'NOW()' : "(datetime('now'))"})`);
+				await ctx.sql(
+					`CREATE TABLE "${tableName}" ("id" ${idType} PRIMARY KEY, "title" ${idType} NOT NULL, "createdAt" ${tsType} NOT NULL DEFAULT ${dialect === 'postgresql' ? 'NOW()' : "(datetime('now'))"})`,
+				);
 			},
 			async down(ctx: MigrationContext): Promise<void> {
 				await ctx.sql(`DROP TABLE IF EXISTS "${tableName}"`);
@@ -68,7 +74,9 @@ function failingMigration(name: string): LoadedMigration {
 			async up(): Promise<void> {
 				throw new Error('Intentional failure');
 			},
-			async down(): Promise<void> {},
+			async down(): Promise<void> {
+				/* noop */
+			},
 		},
 	};
 }
@@ -105,7 +113,9 @@ describe.skipIf(!pgAvailable)('migrate-pipeline (PostgreSQL)', () => {
 		expect(result.successCount).toBe(1);
 
 		// Verify table exists
-		const tables = await pool.query(`SELECT table_name FROM information_schema.tables WHERE table_name = 'posts'`);
+		const tables = await pool.query(
+			`SELECT table_name FROM information_schema.tables WHERE table_name = 'posts'`,
+		);
 		expect(tables.rows).toHaveLength(1);
 
 		// Verify tracking record
@@ -137,7 +147,9 @@ describe.skipIf(!pgAvailable)('migrate-pipeline (PostgreSQL)', () => {
 		expect(rollbackResult.successCount).toBe(1);
 
 		// Table should be gone
-		const tables = await pool.query(`SELECT table_name FROM information_schema.tables WHERE table_name = 'posts'`);
+		const tables = await pool.query(
+			`SELECT table_name FROM information_schema.tables WHERE table_name = 'posts'`,
+		);
 		expect(tables.rows).toHaveLength(0);
 
 		// Tracking record should be gone
@@ -180,21 +192,22 @@ describe.skipIf(!pgAvailable)('migrate-pipeline (PostgreSQL)', () => {
 		});
 
 		// posts table should still exist (batch 1)
-		const tables = await pool.query(`SELECT table_name FROM information_schema.tables WHERE table_name = 'posts'`);
+		const tables = await pool.query(
+			`SELECT table_name FROM information_schema.tables WHERE table_name = 'posts'`,
+		);
 		expect(tables.rows).toHaveLength(1);
 
 		// But status column should be gone
-		const cols = await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'status'`);
+		const cols = await pool.query(
+			`SELECT column_name FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'status'`,
+		);
 		expect(cols.rows).toHaveLength(0);
 	});
 
 	it('should stop on first failure with preceding applied', async () => {
 		const tracker = pgTracker(pool);
 		const result = await runMigrations({
-			migrations: [
-				createTableMigration('posts', 'postgresql'),
-				failingMigration('bad_migration'),
-			],
+			migrations: [createTableMigration('posts', 'postgresql'), failingMigration('bad_migration')],
 			dialect: 'postgresql',
 			tracker,
 			buildContext: () => buildPgContext(pool),
@@ -205,7 +218,9 @@ describe.skipIf(!pgAvailable)('migrate-pipeline (PostgreSQL)', () => {
 		expect(result.failCount).toBe(1);
 
 		// posts table should exist (first migration succeeded)
-		const tables = await pool.query(`SELECT table_name FROM information_schema.tables WHERE table_name = 'posts'`);
+		const tables = await pool.query(
+			`SELECT table_name FROM information_schema.tables WHERE table_name = 'posts'`,
+		);
 		expect(tables.rows).toHaveLength(1);
 	});
 
@@ -265,11 +280,16 @@ describe('migrate-pipeline (SQLite)', () => {
 		expect(result.successCount).toBe(1);
 
 		// Verify table exists
-		const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='posts'`).all();
+		const tables = db
+			.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='posts'`)
+			.all();
 		expect(tables).toHaveLength(1);
 
 		// Verify tracking record
-		const records = db.prepare(`SELECT * FROM "_momentum_migrations"`).all() as Record<string, unknown>[];
+		const records = db.prepare(`SELECT * FROM "_momentum_migrations"`).all() as Record<
+			string,
+			unknown
+		>[];
 		expect(records).toHaveLength(1);
 		expect(records[0]['name']).toBe('create_posts');
 	});
@@ -295,7 +315,9 @@ describe('migrate-pipeline (SQLite)', () => {
 		});
 
 		// Table should be gone
-		const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='posts'`).all();
+		const tables = db
+			.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='posts'`)
+			.all();
 		expect(tables).toHaveLength(0);
 
 		// Tracking record should be gone
@@ -309,25 +331,36 @@ describe('migrate-pipeline (SQLite)', () => {
 
 		// Run
 		await runMigrations({
-			migrations, dialect: 'sqlite', tracker,
-			buildContext: () => buildSqliteContext(db), skipDangerDetection: true,
+			migrations,
+			dialect: 'sqlite',
+			tracker,
+			buildContext: () => buildSqliteContext(db),
+			skipDangerDetection: true,
 		});
 
 		// Rollback
 		await rollbackBatch({
-			migrations, dialect: 'sqlite', tracker,
-			buildContext: () => buildSqliteContext(db), skipDangerDetection: true,
+			migrations,
+			dialect: 'sqlite',
+			tracker,
+			buildContext: () => buildSqliteContext(db),
+			skipDangerDetection: true,
 		});
 
 		// Run again
 		const result = await runMigrations({
-			migrations, dialect: 'sqlite', tracker,
-			buildContext: () => buildSqliteContext(db), skipDangerDetection: true,
+			migrations,
+			dialect: 'sqlite',
+			tracker,
+			buildContext: () => buildSqliteContext(db),
+			skipDangerDetection: true,
 		});
 
 		expect(result.successCount).toBe(1);
 
-		const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='posts'`).all();
+		const tables = db
+			.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='posts'`)
+			.all();
 		expect(tables).toHaveLength(1);
 	});
 });

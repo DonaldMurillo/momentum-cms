@@ -24,7 +24,6 @@ import {
 } from '../helpers/test-db';
 import { pgTracker, sqliteTracker } from '../helpers/adapter-wiring';
 import { isPgAvailable } from '../helpers/pg-availability';
-import { randomUUID } from 'node:crypto';
 
 const pgAvailable = await isPgAvailable();
 
@@ -75,11 +74,19 @@ describe.skipIf(!pgAvailable)('tracker-real-db (PostgreSQL)', () => {
 
 		await recordMigration(
 			tracker,
-			{ name: 'mig_001', batch: 1, checksum: 'abc123', appliedAt: '2026-02-20T00:00:00Z', executionMs: 42 },
+			{
+				name: 'mig_001',
+				batch: 1,
+				checksum: 'abc123',
+				appliedAt: '2026-02-20T00:00:00Z',
+				executionMs: 42,
+			},
 			'postgresql',
 		);
 
-		const result = await pool.query(`SELECT * FROM "_momentum_migrations" WHERE "name" = $1`, ['mig_001']);
+		const result = await pool.query(`SELECT * FROM "_momentum_migrations" WHERE "name" = $1`, [
+			'mig_001',
+		]);
 		expect(result.rows).toHaveLength(1);
 		expect(result.rows[0].name).toBe('mig_001');
 		expect(result.rows[0].batch).toBe(1);
@@ -90,8 +97,28 @@ describe.skipIf(!pgAvailable)('tracker-real-db (PostgreSQL)', () => {
 		const tracker = pgTracker(pool);
 		await ensureTrackingTable(tracker, 'postgresql');
 
-		await recordMigration(tracker, { name: 'mig_002', batch: 1, checksum: 'b', appliedAt: '2026-02-20T01:00:00Z', executionMs: 10 }, 'postgresql');
-		await recordMigration(tracker, { name: 'mig_001', batch: 1, checksum: 'a', appliedAt: '2026-02-20T00:00:00Z', executionMs: 10 }, 'postgresql');
+		await recordMigration(
+			tracker,
+			{
+				name: 'mig_002',
+				batch: 1,
+				checksum: 'b',
+				appliedAt: '2026-02-20T01:00:00Z',
+				executionMs: 10,
+			},
+			'postgresql',
+		);
+		await recordMigration(
+			tracker,
+			{
+				name: 'mig_001',
+				batch: 1,
+				checksum: 'a',
+				appliedAt: '2026-02-20T00:00:00Z',
+				executionMs: 10,
+			},
+			'postgresql',
+		);
 
 		const applied = await getAppliedMigrations(tracker);
 		expect(applied).toHaveLength(2);
@@ -105,10 +132,30 @@ describe.skipIf(!pgAvailable)('tracker-real-db (PostgreSQL)', () => {
 
 		expect(await getNextBatchNumber(tracker)).toBe(1);
 
-		await recordMigration(tracker, { name: 'mig_001', batch: 1, checksum: 'a', appliedAt: '2026-02-20T00:00:00Z', executionMs: 10 }, 'postgresql');
+		await recordMigration(
+			tracker,
+			{
+				name: 'mig_001',
+				batch: 1,
+				checksum: 'a',
+				appliedAt: '2026-02-20T00:00:00Z',
+				executionMs: 10,
+			},
+			'postgresql',
+		);
 		expect(await getNextBatchNumber(tracker)).toBe(2);
 
-		await recordMigration(tracker, { name: 'mig_002', batch: 3, checksum: 'b', appliedAt: '2026-02-20T00:00:00Z', executionMs: 10 }, 'postgresql');
+		await recordMigration(
+			tracker,
+			{
+				name: 'mig_002',
+				batch: 3,
+				checksum: 'b',
+				appliedAt: '2026-02-20T00:00:00Z',
+				executionMs: 10,
+			},
+			'postgresql',
+		);
 		expect(await getNextBatchNumber(tracker)).toBe(4);
 	});
 
@@ -116,10 +163,22 @@ describe.skipIf(!pgAvailable)('tracker-real-db (PostgreSQL)', () => {
 		const tracker = pgTracker(pool);
 		await ensureTrackingTable(tracker, 'postgresql');
 
-		await recordMigration(tracker, { name: 'mig_001', batch: 1, checksum: 'a', appliedAt: '2026-02-20T00:00:00Z', executionMs: 10 }, 'postgresql');
+		await recordMigration(
+			tracker,
+			{
+				name: 'mig_001',
+				batch: 1,
+				checksum: 'a',
+				appliedAt: '2026-02-20T00:00:00Z',
+				executionMs: 10,
+			},
+			'postgresql',
+		);
 		await removeMigrationRecord(tracker, 'mig_001', 'postgresql');
 
-		const result = await pool.query(`SELECT * FROM "_momentum_migrations" WHERE "name" = $1`, ['mig_001']);
+		const result = await pool.query(`SELECT * FROM "_momentum_migrations" WHERE "name" = $1`, [
+			'mig_001',
+		]);
 		expect(result.rows).toHaveLength(0);
 	});
 
@@ -127,9 +186,39 @@ describe.skipIf(!pgAvailable)('tracker-real-db (PostgreSQL)', () => {
 		const tracker = pgTracker(pool);
 		await ensureTrackingTable(tracker, 'postgresql');
 
-		await recordMigration(tracker, { name: 'mig_001', batch: 1, checksum: 'a', appliedAt: '2026-02-20T00:00:00Z', executionMs: 10 }, 'postgresql');
-		await recordMigration(tracker, { name: 'mig_002', batch: 1, checksum: 'b', appliedAt: '2026-02-20T00:00:00Z', executionMs: 10 }, 'postgresql');
-		await recordMigration(tracker, { name: 'mig_003', batch: 2, checksum: 'c', appliedAt: '2026-02-20T00:00:00Z', executionMs: 10 }, 'postgresql');
+		await recordMigration(
+			tracker,
+			{
+				name: 'mig_001',
+				batch: 1,
+				checksum: 'a',
+				appliedAt: '2026-02-20T00:00:00Z',
+				executionMs: 10,
+			},
+			'postgresql',
+		);
+		await recordMigration(
+			tracker,
+			{
+				name: 'mig_002',
+				batch: 1,
+				checksum: 'b',
+				appliedAt: '2026-02-20T00:00:00Z',
+				executionMs: 10,
+			},
+			'postgresql',
+		);
+		await recordMigration(
+			tracker,
+			{
+				name: 'mig_003',
+				batch: 2,
+				checksum: 'c',
+				appliedAt: '2026-02-20T00:00:00Z',
+				executionMs: 10,
+			},
+			'postgresql',
+		);
 
 		const batch1 = await getMigrationsByBatch(tracker, 1, 'postgresql');
 		expect(batch1).toHaveLength(2);
@@ -143,7 +232,17 @@ describe.skipIf(!pgAvailable)('tracker-real-db (PostgreSQL)', () => {
 
 		expect(await isMigrationApplied(tracker, 'mig_001', 'postgresql')).toBe(false);
 
-		await recordMigration(tracker, { name: 'mig_001', batch: 1, checksum: 'a', appliedAt: '2026-02-20T00:00:00Z', executionMs: 10 }, 'postgresql');
+		await recordMigration(
+			tracker,
+			{
+				name: 'mig_001',
+				batch: 1,
+				checksum: 'a',
+				appliedAt: '2026-02-20T00:00:00Z',
+				executionMs: 10,
+			},
+			'postgresql',
+		);
 		expect(await isMigrationApplied(tracker, 'mig_001', 'postgresql')).toBe(true);
 	});
 
@@ -153,10 +252,30 @@ describe.skipIf(!pgAvailable)('tracker-real-db (PostgreSQL)', () => {
 
 		expect(await getLatestBatchNumber(tracker)).toBe(0);
 
-		await recordMigration(tracker, { name: 'mig_001', batch: 1, checksum: 'a', appliedAt: '2026-02-20T00:00:00Z', executionMs: 10 }, 'postgresql');
+		await recordMigration(
+			tracker,
+			{
+				name: 'mig_001',
+				batch: 1,
+				checksum: 'a',
+				appliedAt: '2026-02-20T00:00:00Z',
+				executionMs: 10,
+			},
+			'postgresql',
+		);
 		expect(await getLatestBatchNumber(tracker)).toBe(1);
 
-		await recordMigration(tracker, { name: 'mig_002', batch: 5, checksum: 'b', appliedAt: '2026-02-20T00:00:00Z', executionMs: 10 }, 'postgresql');
+		await recordMigration(
+			tracker,
+			{
+				name: 'mig_002',
+				batch: 5,
+				checksum: 'b',
+				appliedAt: '2026-02-20T00:00:00Z',
+				executionMs: 10,
+			},
+			'postgresql',
+		);
 		expect(await getLatestBatchNumber(tracker)).toBe(5);
 	});
 });
@@ -185,7 +304,9 @@ describe('tracker-real-db (SQLite)', () => {
 		const tracker = sqliteTracker(db);
 		await ensureTrackingTable(tracker, 'sqlite');
 
-		const rows = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='_momentum_migrations'`).all();
+		const rows = db
+			.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='_momentum_migrations'`)
+			.all();
 		expect(rows).toHaveLength(1);
 	});
 
@@ -194,7 +315,9 @@ describe('tracker-real-db (SQLite)', () => {
 		await ensureTrackingTable(tracker, 'sqlite');
 		await ensureTrackingTable(tracker, 'sqlite');
 
-		const rows = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='_momentum_migrations'`).all();
+		const rows = db
+			.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='_momentum_migrations'`)
+			.all();
 		expect(rows).toHaveLength(1);
 	});
 
@@ -204,11 +327,19 @@ describe('tracker-real-db (SQLite)', () => {
 
 		await recordMigration(
 			tracker,
-			{ name: 'mig_001', batch: 1, checksum: 'abc123', appliedAt: '2026-02-20T00:00:00Z', executionMs: 42 },
+			{
+				name: 'mig_001',
+				batch: 1,
+				checksum: 'abc123',
+				appliedAt: '2026-02-20T00:00:00Z',
+				executionMs: 42,
+			},
 			'sqlite',
 		);
 
-		const rows = db.prepare(`SELECT * FROM "_momentum_migrations" WHERE "name" = ?`).all('mig_001') as Record<string, unknown>[];
+		const rows = db
+			.prepare(`SELECT * FROM "_momentum_migrations" WHERE "name" = ?`)
+			.all('mig_001') as Record<string, unknown>[];
 		expect(rows).toHaveLength(1);
 		expect(rows[0]['name']).toBe('mig_001');
 		expect(rows[0]['batch']).toBe(1);
@@ -219,8 +350,28 @@ describe('tracker-real-db (SQLite)', () => {
 		const tracker = sqliteTracker(db);
 		await ensureTrackingTable(tracker, 'sqlite');
 
-		await recordMigration(tracker, { name: 'mig_002', batch: 1, checksum: 'b', appliedAt: '2026-02-20T01:00:00Z', executionMs: 10 }, 'sqlite');
-		await recordMigration(tracker, { name: 'mig_001', batch: 1, checksum: 'a', appliedAt: '2026-02-20T00:00:00Z', executionMs: 10 }, 'sqlite');
+		await recordMigration(
+			tracker,
+			{
+				name: 'mig_002',
+				batch: 1,
+				checksum: 'b',
+				appliedAt: '2026-02-20T01:00:00Z',
+				executionMs: 10,
+			},
+			'sqlite',
+		);
+		await recordMigration(
+			tracker,
+			{
+				name: 'mig_001',
+				batch: 1,
+				checksum: 'a',
+				appliedAt: '2026-02-20T00:00:00Z',
+				executionMs: 10,
+			},
+			'sqlite',
+		);
 
 		const applied = await getAppliedMigrations(tracker);
 		expect(applied).toHaveLength(2);
@@ -234,7 +385,17 @@ describe('tracker-real-db (SQLite)', () => {
 
 		expect(await getNextBatchNumber(tracker)).toBe(1);
 
-		await recordMigration(tracker, { name: 'mig_001', batch: 1, checksum: 'a', appliedAt: '2026-02-20T00:00:00Z', executionMs: 10 }, 'sqlite');
+		await recordMigration(
+			tracker,
+			{
+				name: 'mig_001',
+				batch: 1,
+				checksum: 'a',
+				appliedAt: '2026-02-20T00:00:00Z',
+				executionMs: 10,
+			},
+			'sqlite',
+		);
 		expect(await getNextBatchNumber(tracker)).toBe(2);
 	});
 
@@ -242,7 +403,17 @@ describe('tracker-real-db (SQLite)', () => {
 		const tracker = sqliteTracker(db);
 		await ensureTrackingTable(tracker, 'sqlite');
 
-		await recordMigration(tracker, { name: 'mig_001', batch: 1, checksum: 'a', appliedAt: '2026-02-20T00:00:00Z', executionMs: 10 }, 'sqlite');
+		await recordMigration(
+			tracker,
+			{
+				name: 'mig_001',
+				batch: 1,
+				checksum: 'a',
+				appliedAt: '2026-02-20T00:00:00Z',
+				executionMs: 10,
+			},
+			'sqlite',
+		);
 		await removeMigrationRecord(tracker, 'mig_001', 'sqlite');
 
 		const rows = db.prepare(`SELECT * FROM "_momentum_migrations" WHERE "name" = ?`).all('mig_001');
@@ -255,7 +426,17 @@ describe('tracker-real-db (SQLite)', () => {
 
 		expect(await isMigrationApplied(tracker, 'mig_001', 'sqlite')).toBe(false);
 
-		await recordMigration(tracker, { name: 'mig_001', batch: 1, checksum: 'a', appliedAt: '2026-02-20T00:00:00Z', executionMs: 10 }, 'sqlite');
+		await recordMigration(
+			tracker,
+			{
+				name: 'mig_001',
+				batch: 1,
+				checksum: 'a',
+				appliedAt: '2026-02-20T00:00:00Z',
+				executionMs: 10,
+			},
+			'sqlite',
+		);
 		expect(await isMigrationApplied(tracker, 'mig_001', 'sqlite')).toBe(true);
 	});
 });

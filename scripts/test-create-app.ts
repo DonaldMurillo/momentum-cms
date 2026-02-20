@@ -587,7 +587,8 @@ function verifyGenerateTypes(projectDir: string): void {
 		);
 	}
 	// Verify collections are inlined (not imported from user files)
-	if (!configContent.includes('slug: "posts"')) {
+	// Prettier may format with single or double quotes depending on project config
+	if (!configContent.includes("slug: 'posts'") && !configContent.includes('slug: "posts"')) {
 		throw new Error(
 			'generate admin config does not contain inlined Posts collection.\n' +
 				`Content:\n${configContent.substring(0, 1000)}`,

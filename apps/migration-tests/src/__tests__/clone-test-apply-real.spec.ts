@@ -11,19 +11,10 @@
  * clone, create fresh pool after clone for the apply phase.
  */
 import { Pool, Client } from 'pg';
-import {
-	cloneTestApply,
-} from '@momentumcms/migrations';
+import { cloneTestApply } from '@momentumcms/migrations';
 import type { LoadedMigration, MigrationContext, CloneCapableDb } from '@momentumcms/migrations';
-import {
-	createTestPgDb,
-	dropTestPgDb,
-	getDatabaseUrl,
-} from '../helpers/test-db';
-import {
-	pgTracker,
-	pgDataDb,
-} from '../helpers/adapter-wiring';
+import { createTestPgDb, dropTestPgDb, getDatabaseUrl } from '../helpers/test-db';
+import { pgTracker, pgDataDb } from '../helpers/adapter-wiring';
 import { isPgAvailable } from '../helpers/pg-availability';
 import { createDataHelpers } from '@momentumcms/migrations';
 
@@ -39,7 +30,9 @@ function createTableMigration(tableName: string): LoadedMigration {
 		file: {
 			meta: { name: `create_${tableName}`, description: `Create ${tableName} table` },
 			async up(ctx: MigrationContext): Promise<void> {
-				await ctx.sql(`CREATE TABLE "${tableName}" ("id" VARCHAR(36) PRIMARY KEY, "title" VARCHAR(255) NOT NULL, "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+				await ctx.sql(
+					`CREATE TABLE "${tableName}" ("id" VARCHAR(36) PRIMARY KEY, "title" VARCHAR(255) NOT NULL, "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW())`,
+				);
 			},
 			async down(ctx: MigrationContext): Promise<void> {
 				await ctx.sql(`DROP TABLE IF EXISTS "${tableName}"`);
@@ -56,7 +49,9 @@ function failingMigration(name: string): LoadedMigration {
 			async up(): Promise<void> {
 				throw new Error('Intentional clone test failure');
 			},
-			async down(): Promise<void> {},
+			async down(): Promise<void> {
+				/* noop */
+			},
 		},
 	};
 }
@@ -71,7 +66,9 @@ async function pgDbExists(dbName: string): Promise<boolean> {
 	} catch {
 		return false;
 	} finally {
-		await client.end().catch(() => {});
+		await client.end().catch(() => {
+			/* noop */
+		});
 	}
 }
 
@@ -131,7 +128,14 @@ function buildContextFromPool(pool: Pool): MigrationContext {
 		},
 		data: helpers,
 		dialect: 'postgresql',
-		log: { info: (): void => {}, warn: (): void => {} },
+		log: {
+			info(): void {
+				/* noop */
+			},
+			warn(): void {
+				/* noop */
+			},
+		},
 	};
 }
 
@@ -153,30 +157,40 @@ describe.skipIf(!pgAvailable)('clone-test-apply-real (PostgreSQL)', () => {
 		connectionString = result.connectionString;
 		pool = new Pool({ connectionString, max: 5 });
 		// Suppress uncaught errors from terminated connections
-		pool.on('error', () => {});
+		pool.on('error', () => {
+			/* noop */
+		});
 	});
 
 	afterEach(async () => {
 		// End all clone pools
 		for (const p of clonePools) {
-			await p.end().catch(() => {});
+			await p.end().catch(() => {
+				/* noop */
+			});
 		}
 		clonePools.length = 0;
 
-		await pool.end().catch(() => {});
+		await pool.end().catch(() => {
+			/* noop */
+		});
 		await dropTestPgDb(dbName);
 	});
 
 	function buildCloneTracker(cloneName: string): ReturnType<typeof pgTracker> {
 		const clonePool = new Pool({ connectionString: getDatabaseUrl(cloneName), max: 3 });
-		clonePool.on('error', () => {});
+		clonePool.on('error', () => {
+			/* noop */
+		});
 		clonePools.push(clonePool);
 		return pgTracker(clonePool);
 	}
 
 	function buildCloneContext(cloneName: string): MigrationContext {
 		const clonePool = new Pool({ connectionString: getDatabaseUrl(cloneName), max: 3 });
-		clonePool.on('error', () => {});
+		clonePool.on('error', () => {
+			/* noop */
+		});
 		clonePools.push(clonePool);
 		return buildContextFromPool(clonePool);
 	}
@@ -184,7 +198,9 @@ describe.skipIf(!pgAvailable)('clone-test-apply-real (PostgreSQL)', () => {
 	/** Recreate the main pool (after clone terminates connections). */
 	function refreshPool(): void {
 		pool = new Pool({ connectionString, max: 5 });
-		pool.on('error', () => {});
+		pool.on('error', () => {
+			/* noop */
+		});
 	}
 
 	it('should complete full pipeline: clone, test, apply', async () => {
@@ -209,7 +225,9 @@ describe.skipIf(!pgAvailable)('clone-test-apply-real (PostgreSQL)', () => {
 
 		// Verify table exists in real DB (use fresh connection)
 		refreshPool();
-		const tables = await pool.query(`SELECT table_name FROM information_schema.tables WHERE table_name = 'cta_posts'`);
+		const tables = await pool.query(
+			`SELECT table_name FROM information_schema.tables WHERE table_name = 'cta_posts'`,
+		);
 		expect(tables.rows).toHaveLength(1);
 	});
 
@@ -236,10 +254,7 @@ describe.skipIf(!pgAvailable)('clone-test-apply-real (PostgreSQL)', () => {
 	it('should not touch real DB when clone test fails', async () => {
 		const tracker = pgTracker(pool);
 		const result = await cloneTestApply({
-			migrations: [
-				createTableMigration('cta_posts'),
-				failingMigration('bad_migration'),
-			],
+			migrations: [createTableMigration('cta_posts'), failingMigration('bad_migration')],
 			dialect: 'postgresql',
 			tracker,
 			buildContext: () => buildContextFromPool(pool),
@@ -256,7 +271,9 @@ describe.skipIf(!pgAvailable)('clone-test-apply-real (PostgreSQL)', () => {
 
 		// Real DB should NOT have the table
 		refreshPool();
-		const tables = await pool.query(`SELECT table_name FROM information_schema.tables WHERE table_name = 'cta_posts'`);
+		const tables = await pool.query(
+			`SELECT table_name FROM information_schema.tables WHERE table_name = 'cta_posts'`,
+		);
 		expect(tables.rows).toHaveLength(0);
 	});
 
@@ -307,14 +324,18 @@ describe.skipIf(!pgAvailable)('clone-test-apply-real (PostgreSQL)', () => {
 
 		// Real DB should NOT have the table
 		refreshPool();
-		const tables = await pool.query(`SELECT table_name FROM information_schema.tables WHERE table_name = 'cta_posts'`);
+		const tables = await pool.query(
+			`SELECT table_name FROM information_schema.tables WHERE table_name = 'cta_posts'`,
+		);
 		expect(tables.rows).toHaveLength(0);
 	});
 
 	it('should clone database with existing data', async () => {
 		// Create table and insert data before cloning
 		await pool.query(`CREATE TABLE "source_data" ("id" VARCHAR(36) PRIMARY KEY, "name" TEXT)`);
-		await pool.query(`INSERT INTO "source_data" ("id", "name") VALUES ('1', 'Alice'), ('2', 'Bob')`);
+		await pool.query(
+			`INSERT INTO "source_data" ("id", "name") VALUES ('1', 'Alice'), ('2', 'Bob')`,
+		);
 
 		let cloneHadData = false;
 		const checkCloneMigration: LoadedMigration = {
@@ -322,10 +343,14 @@ describe.skipIf(!pgAvailable)('clone-test-apply-real (PostgreSQL)', () => {
 			file: {
 				meta: { name: 'check_clone_data', description: 'Verify clone has source data' },
 				async up(ctx: MigrationContext): Promise<void> {
-					const rows = await ctx.query<{ cnt: string }>(`SELECT COUNT(*) as cnt FROM "source_data"`);
+					const rows = await ctx.query<{ cnt: string }>(
+						`SELECT COUNT(*) as cnt FROM "source_data"`,
+					);
 					cloneHadData = Number(rows[0].cnt) === 2;
 				},
-				async down(): Promise<void> {},
+				async down(): Promise<void> {
+					/* noop */
+				},
 			},
 		};
 
@@ -353,7 +378,9 @@ describe.skipIf(!pgAvailable)('clone-test-apply-real (PostgreSQL)', () => {
 				async up(): Promise<void> {
 					throw new Error('column "status" of relation "posts" contains null values (NOT NULL)');
 				},
-				async down(): Promise<void> {},
+				async down(): Promise<void> {
+					/* noop */
+				},
 			},
 		};
 

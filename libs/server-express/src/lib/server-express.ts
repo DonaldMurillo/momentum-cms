@@ -720,9 +720,8 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		// Extract non-file fields from multipart body
 		const fields: Record<string, unknown> = {};
 		if (typeof req.body === 'object' && req.body !== null) {
-			for (const [key, value] of Object.entries(
-				req.body as Record<string, unknown>,
-			)) {
+			const body: Record<string, unknown> = req.body;
+			for (const [key, value] of Object.entries(body)) {
 				if (key !== 'file') {
 					fields[key] = value;
 				}
@@ -1315,9 +1314,8 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 					// Extract non-file fields from multipart body
 					const fields: Record<string, unknown> = {};
 					if (typeof req.body === 'object' && req.body !== null) {
-						for (const [key, value] of Object.entries(
-							req.body as Record<string, unknown>,
-						)) {
+						const body: Record<string, unknown> = req.body;
+						for (const [key, value] of Object.entries(body)) {
 							if (key !== 'file') {
 								fields[key] = value;
 							}
@@ -1330,13 +1328,9 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 							'@momentumcms/storage'
 						);
 						const maxFileSize =
-							collectionConfig.upload.maxFileSize ??
-							uploadConfig.maxFileSize ??
-							10 * 1024 * 1024;
+							collectionConfig.upload.maxFileSize ?? uploadConfig.maxFileSize ?? 10 * 1024 * 1024;
 						const allowedMimeTypes =
-							collectionConfig.upload.mimeTypes ??
-							uploadConfig.allowedMimeTypes ??
-							[];
+							collectionConfig.upload.mimeTypes ?? uploadConfig.allowedMimeTypes ?? [];
 
 						// Validate size
 						if (file.size > maxFileSize) {
@@ -1394,10 +1388,8 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 					}
 				} else {
 					// No file: standard JSON update with multipart fields
-					const body =
-						typeof req.body === 'object' && req.body !== null
-							? (req.body as Record<string, unknown>)
-							: {};
+					const body: Record<string, unknown> =
+						typeof req.body === 'object' && req.body !== null ? req.body : {};
 					const request: MomentumRequest = {
 						method: 'PATCH',
 						collectionSlug: slug,
