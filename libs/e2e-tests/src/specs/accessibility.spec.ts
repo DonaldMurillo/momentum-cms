@@ -674,7 +674,8 @@ test.describe('Accessibility: axe-core WCAG 2.1 AA scans', { tag: ['@a11y', '@ad
 		const heading = page.locator('main h1');
 		await expect(heading).toBeVisible({ timeout: 15000 });
 
-		const results = await checkA11y(page);
+		// Exclude preview iframe — axe-core crashes when analyzing cross-origin iframe content
+		const results = await checkA11y(page, { exclude: ['[data-testid="preview-iframe"]'] });
 
 		// Clean up
 		await page.request.delete(`/api/articles/${articleId}`);

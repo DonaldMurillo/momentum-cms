@@ -48,6 +48,11 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 					label: 'Title',
 				},
 				{
+					name: 'slug',
+					type: 'text',
+					label: 'URL Slug',
+				},
+				{
 					name: 'coverImage',
 					type: 'upload',
 					relationTo: 'media',
@@ -72,6 +77,7 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			],
 			admin: {
 				group: 'Content',
+				preview: '/articles/{slug}',
 			},
 			timestamps: true,
 			versions: {

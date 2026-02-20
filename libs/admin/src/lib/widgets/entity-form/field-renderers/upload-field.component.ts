@@ -126,7 +126,7 @@ function getInputFromEvent(event: Event): HTMLInputElement | null {
 					</div>
 				</div>
 			} @else {
-				<!-- Drop zone -->
+				<!-- Drop zone (no nested interactive elements) -->
 				<div
 					class="relative rounded-lg border-2 border-dashed transition-colors"
 					[class.border-mcms-border]="!isDragging()"
@@ -134,16 +134,10 @@ function getInputFromEvent(event: Event): HTMLInputElement | null {
 					[class.bg-mcms-primary/5]="isDragging()"
 					[class.cursor-pointer]="!isDisabled()"
 					[class.opacity-50]="isDisabled()"
-					tabindex="0"
-					role="button"
-					[attr.aria-disabled]="isDisabled()"
-					[attr.aria-label]="'Upload ' + label() + ' file. Drag and drop or click to browse.'"
 					(dragover)="onDragOver($event)"
 					(dragleave)="onDragLeave($event)"
 					(drop)="onDrop($event)"
 					(click)="triggerFileInput()"
-					(keydown.enter)="triggerFileInput()"
-					(keydown.space)="triggerFileInput()"
 				>
 					<div class="flex flex-col items-center justify-center gap-2 p-8">
 						<ng-icon [name]="uploadIcon" class="h-10 w-10 text-mcms-muted-foreground" aria-hidden="true" />
@@ -166,31 +160,31 @@ function getInputFromEvent(event: Event): HTMLInputElement | null {
 								</p>
 							}
 						</div>
-						@if (!isDisabled()) {
-							<div class="mt-2 flex gap-2">
-								<button
-									mcms-button
-									variant="outline"
-									size="sm"
-									type="button"
-									(click)="$event.stopPropagation(); openMediaPicker()"
-								>
-									<ng-icon [name]="photoIcon" class="h-4 w-4" />
-									Select from library
-								</button>
-							</div>
-						}
 					</div>
-					<input
-						#fileInput
-						type="file"
-						class="sr-only"
-						[accept]="acceptAttribute()"
-						[disabled]="isDisabled()"
-						(change)="onFileSelected($event)"
-						[attr.aria-label]="'Choose file for ' + label()"
-					/>
 				</div>
+				@if (!isDisabled()) {
+					<div class="mt-2 flex gap-2">
+						<button
+							mcms-button
+							variant="outline"
+							size="sm"
+							type="button"
+							(click)="openMediaPicker()"
+						>
+							<ng-icon [name]="photoIcon" class="h-4 w-4" />
+							Select from library
+						</button>
+					</div>
+				}
+				<input
+					#fileInput
+					type="file"
+					class="sr-only"
+					[accept]="acceptAttribute()"
+					[disabled]="isDisabled()"
+					(change)="onFileSelected($event)"
+					[attr.aria-label]="'Choose file for ' + label()"
+				/>
 			}
 
 			@if (uploadError()) {

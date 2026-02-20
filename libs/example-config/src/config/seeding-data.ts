@@ -13,6 +13,7 @@ interface CategoryDoc {
 interface ArticleDoc {
 	[key: string]: unknown;
 	title: string;
+	slug?: string;
 	content?: string;
 	category?: string;
 }
@@ -87,6 +88,7 @@ export const exampleSeedingConfig: SeedingConfig = {
 		// Seed articles for testing (published so they appear in default list queries)
 		collection<ArticleDoc>('articles').create('article-welcome', {
 			title: 'Welcome Article',
+			slug: 'welcome-article',
 			content: '<p>This is a seeded <strong>welcome article</strong> for E2E testing.</p>',
 			_status: 'published',
 		}),
@@ -298,6 +300,7 @@ export const exampleSeedingConfig: SeedingConfig = {
 				collection: 'articles',
 				data: {
 					title: 'First Tech Article',
+					slug: 'first-tech-article',
 					content: '<p>Article about <em>technology</em> for E2E testing.</p>',
 					category: techCategory.id,
 					_status: 'published',
@@ -309,6 +312,7 @@ export const exampleSeedingConfig: SeedingConfig = {
 				collection: 'articles',
 				data: {
 					title: 'Second Tech Article',
+					slug: 'second-tech-article',
 					content: '<p>Another tech article for testing pagination.</p>',
 					category: techCategory.id,
 					_status: 'published',
@@ -322,6 +326,7 @@ export const exampleSeedingConfig: SeedingConfig = {
 				collection: 'articles',
 				data: {
 					title: 'Breaking News',
+					slug: 'breaking-news',
 					content: '<p>Important news article for testing.</p>',
 					category: newsCategory.id,
 					_status: 'published',
@@ -333,6 +338,7 @@ export const exampleSeedingConfig: SeedingConfig = {
 				collection: 'articles',
 				data: {
 					title: 'The Future of CMS Platforms',
+					slug: 'the-future-of-cms-platforms',
 					content:
 						'<p>The CMS landscape is evolving rapidly with headless architectures leading the charge.</p><h2>What to Expect</h2><p>AI-powered content workflows, composable architectures, and developer-first tooling are redefining how teams build digital experiences.</p>',
 					category: newsCategory.id,
@@ -347,6 +353,7 @@ export const exampleSeedingConfig: SeedingConfig = {
 				collection: 'articles',
 				data: {
 					title: 'Getting Started with Angular 21',
+					slug: 'getting-started-with-angular-21',
 					content:
 						'<p>Angular 21 brings exciting new features including improved signal-based reactivity and streamlined SSR.</p><h2>Key Features</h2><p>Signal inputs, the new control flow syntax, and incremental hydration make Angular faster and more ergonomic than ever.</p>',
 					category: techCategory.id,
@@ -359,7 +366,7 @@ export const exampleSeedingConfig: SeedingConfig = {
 	},
 	options: {
 		runOnStart: 'always', // Always run for E2E testing
-		onConflict: 'skip', // Idempotent by default
+		onConflict: 'update', // Update existing seeds when fields are added (e.g., slugs)
 		quiet: false, // Show seeding logs for debugging
 	},
 };

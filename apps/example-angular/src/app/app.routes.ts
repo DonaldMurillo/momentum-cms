@@ -1,7 +1,7 @@
 import type { Route } from '@angular/router';
 import { momentumAdminRoutes } from '@momentumcms/admin';
 import { KitchenSinkPage } from '@momentumcms/ui';
-import { pageResolver } from '@momentumcms/example-config/pages';
+import { pageResolver, articleDetailResolver } from '@momentumcms/example-config/pages';
 import { adminConfig } from '../generated/momentum.config';
 
 export const appRoutes: Route[] = [
@@ -27,6 +27,13 @@ export const appRoutes: Route[] = [
 				path: 'articles',
 				loadComponent: () =>
 					import('@momentumcms/example-config/pages').then((m) => m.ArticlesPageComponent),
+			},
+			// Article detail page
+			{
+				path: 'articles/:slug',
+				loadComponent: () =>
+					import('@momentumcms/example-config/pages').then((m) => m.ArticleDetailComponent),
+				resolve: { articleData: articleDetailResolver },
 			},
 			// Experiments page
 			{

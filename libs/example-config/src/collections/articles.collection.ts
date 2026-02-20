@@ -1,5 +1,28 @@
-import { defineCollection, text, richText, relationship, upload, allowAll } from '@momentumcms/core';
+import {
+	defineCollection,
+	text,
+	richText,
+	relationship,
+	upload,
+	allowAll,
+} from '@momentumcms/core';
+import type { FieldHookFunction } from '@momentumcms/core';
 import { Categories } from './categories.collection';
+
+/**
+ * Auto-generate slug from title if not explicitly provided.
+ */
+const autoSlugFromTitle: FieldHookFunction = ({ value, data }) => {
+	if (value) return value;
+	const title = data['title'];
+	if (typeof title === 'string') {
+		return title
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/^-|-$/g, '');
+	}
+	return value;
+};
 
 /**
  * Collection with relationship for seeding E2E tests.
@@ -12,9 +35,18 @@ export const Articles = defineCollection({
 		singular: 'Article',
 		plural: 'Articles',
 	},
-	admin: { group: 'Content' },
+	admin: {
+		group: 'Content',
+		preview: (doc) => '/articles/' + String(doc['slug'] ?? ''),
+	},
 	fields: [
 		text('title', { required: true, label: 'Title' }),
+		text('slug', {
+			label: 'URL Slug',
+			hooks: {
+				beforeValidate: [autoSlugFromTitle],
+			},
+		}),
 		upload('coverImage', {
 			label: 'Cover Image',
 			relationTo: 'media',

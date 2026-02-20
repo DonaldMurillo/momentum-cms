@@ -14,6 +14,7 @@ export interface Categories {
 export interface Articles {
 	id: string;
 	title: string;
+	slug?: string;
 	coverImage?: string;
 	content?: string;
 	category?: string;
@@ -333,6 +334,7 @@ export interface CategoriesWhereClause {
 export interface ArticlesWhereClause {
 	id?: string | { equals?: string; not?: string; in?: string[] };
 	title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	slug?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
 	coverImage?: string | { equals?: string; not?: string; in?: string[] };
 	content?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
 	category?: string | { equals?: string; not?: string; in?: string[] };
