@@ -21,6 +21,7 @@
 			"@momentumcms/server-analog": ["libs/server-analog/src/index.ts"],
 			"@momentumcms/admin": ["libs/admin/src/index.ts"],
 			"@momentumcms/db-drizzle": ["libs/db-drizzle/src/index.ts"],
+			"@momentumcms/migrations": ["libs/migrations/src/index.ts"],
 			"@momentumcms/auth": ["libs/auth/src/index.ts"],
 			"@momentumcms/auth/core": ["libs/auth/src/core.ts"],
 			"@momentumcms/auth/collections": ["libs/auth/src/lib/auth-collections.ts"],

@@ -974,6 +974,8 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 	const methods = buildMethods(helpers);
 
 	return {
+		dialect: 'postgresql' as const,
+
 		/**
 		 * Get the pg Pool instance for Better Auth integration.
 		 */

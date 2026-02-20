@@ -1,0 +1,16 @@
+{
+	"name": "migration-tests",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "apps/migration-tests/src",
+	"projectType": "application",
+	"tags": ["scope:app", "type:test"],
+	"targets": {
+		"test": {
+			"executor": "@nx/vitest:test",
+			"outputs": ["{workspaceRoot}/coverage/apps/migration-tests"],
+			"options": {
+				"config": "apps/migration-tests/vitest.config.ts"
+			}
+		}
+	}
+}
