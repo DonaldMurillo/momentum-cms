@@ -42,7 +42,10 @@
 		},
 		"test": {
 			"executor": "@nx/angular:unit-test",
-			"options": {}
+			"options": {
+				"coverageInclude": ["libs/admin/src/**/*.ts"],
+				"coverageExclude": ["**/*.spec.ts", "**/__tests__/**"]
+			}
 		},
 		"lint": {
 			"executor": "@nx/eslint:lint"
