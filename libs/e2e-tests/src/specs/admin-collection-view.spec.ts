@@ -130,17 +130,35 @@ test.describe('Admin Collection View', { tag: ['@admin'] }, () => {
 		});
 
 		test('view page renders via SPA navigation from list', async ({ authenticatedPage: page }) => {
-			await page.goto('/admin/collections/pages');
+			// Navigate via sidebar to ensure Angular is bootstrapped before table renders.
+			await page.goto('/admin');
 			await page.waitForLoadState('domcontentloaded');
 
+			await page.getByLabel('Main navigation').getByRole('link', { name: 'Pages' }).click();
+			await expect(page).toHaveURL(/\/admin\/collections\/pages$/, { timeout: 10000 });
+
+			// Wait for the first data cell to have content, then click the row to navigate
 			const firstRow = page.locator('mcms-table-body mcms-table-row').first();
-			await expect(firstRow).toBeVisible({ timeout: 15000 });
+			const firstDataCell = firstRow.locator('mcms-table-cell').nth(1);
+			await expect(firstDataCell).toContainText(/.+/, { timeout: 15000 });
 
-			await firstRow.click();
-
-			await expect(page).toHaveURL(/\/admin\/collections\/pages\/[a-f0-9-]+$/, {
-				timeout: 10000,
-			});
+			// Use expect.poll to retry the click — Angular event bindings may not be
+			// attached yet even though the DOM is rendered (hydration race).
+			await expect
+				.poll(
+					async () => {
+						const currentUrl = page.url();
+						if (/\/admin\/collections\/pages\/[a-f0-9-]+$/.test(currentUrl)) {
+							return currentUrl;
+						}
+						await firstDataCell.click({ timeout: 2000 }).catch((_e: unknown) => undefined);
+						// Give Angular router a moment to navigate
+						await page.waitForTimeout(300);
+						return page.url();
+					},
+					{ timeout: 15000, intervals: [500, 1000, 1500, 2000] },
+				)
+				.toMatch(/\/admin\/collections\/pages\/[a-f0-9-]+$/);
 
 			const heading = page.locator('main h1').first();
 			await expect(heading).toBeVisible({ timeout: 15000 });
