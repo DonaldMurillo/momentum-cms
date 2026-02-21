@@ -142,7 +142,9 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	router.use((req: Request, res: Response, next: NextFunction) => {
 		if (!beforeApiRouter) {
 			const pluginMiddleware = getPluginMiddleware();
-			const beforeMw = pluginMiddleware.filter((mw) => mw.position !== 'after-api');
+			const beforeMw = pluginMiddleware.filter(
+				(mw) => mw.position !== 'after-api' && mw.position !== 'root',
+			);
 			if (beforeMw.length > 0) {
 				beforeApiRouter = Router();
 				for (const mw of beforeMw) {
@@ -720,8 +722,8 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		// Extract non-file fields from multipart body
 		const fields: Record<string, unknown> = {};
 		if (typeof req.body === 'object' && req.body !== null) {
-			const body: Record<string, unknown> = req.body;
-			for (const [key, value] of Object.entries(body)) {
+			const bodyEntries: Record<string, unknown> = Object(req.body);
+			for (const [key, value] of Object.entries(bodyEntries)) {
 				if (key !== 'file') {
 					fields[key] = value;
 				}
@@ -1314,8 +1316,8 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 					// Extract non-file fields from multipart body
 					const fields: Record<string, unknown> = {};
 					if (typeof req.body === 'object' && req.body !== null) {
-						const body: Record<string, unknown> = req.body;
-						for (const [key, value] of Object.entries(body)) {
+						const bodyEntries: Record<string, unknown> = Object(req.body);
+						for (const [key, value] of Object.entries(bodyEntries)) {
 							if (key !== 'file') {
 								fields[key] = value;
 							}
@@ -1389,7 +1391,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				} else {
 					// No file: standard JSON update with multipart fields
 					const body: Record<string, unknown> =
-						typeof req.body === 'object' && req.body !== null ? req.body : {};
+						typeof req.body === 'object' && req.body !== null ? Object(req.body) : {};
 					const request: MomentumRequest = {
 						method: 'PATCH',
 						collectionSlug: slug,

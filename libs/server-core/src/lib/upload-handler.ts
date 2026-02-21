@@ -315,12 +315,11 @@ export async function handleCollectionUpload(
 
 		// 7. Create document in the target collection
 		const api = getMomentumAPI().setContext({ user });
-		const doc = await api.collection(collectionSlug).create(docData);
+		const doc = await api.collection<Record<string, unknown>>(collectionSlug).create(docData);
 
-		const result: Record<string, unknown> = doc;
 		return {
 			status: 201,
-			doc: result,
+			doc,
 		};
 	} catch (error) {
 		if (error instanceof Error) {

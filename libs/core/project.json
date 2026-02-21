@@ -18,8 +18,16 @@
 			"options": {
 				"outputPath": "dist/libs/core",
 				"main": "libs/core/src/index.ts",
-				"additionalEntryPoints": ["libs/core/src/generators/generator.ts"],
-				"tsConfig": "libs/core/tsconfig.lib.json"
+				"additionalEntryPoints": [
+					"libs/core/src/generators/generator.ts",
+					"libs/core/schematics/types/index.ts"
+				],
+				"tsConfig": "libs/core/tsconfig.lib.json",
+				"assets": [
+					"libs/core/schematics/collection.json",
+					"libs/core/schematics/types/schema.json",
+					"libs/core/schematics/types/schema.d.ts"
+				]
 			}
 		},
 		"nx-release-publish": {

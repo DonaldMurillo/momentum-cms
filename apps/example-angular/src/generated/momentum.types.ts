@@ -7,6 +7,21 @@ export interface Categories {
 	id: string;
 	name: string;
 	slug: string;
+	seo?: {
+		metaTitle?: string;
+		metaDescription?: string;
+		canonicalUrl?: string;
+		focusKeyword?: string;
+		ogTitle?: string;
+		ogDescription?: string;
+		ogImage?: string;
+		ogType?: 'website' | 'article' | 'product' | 'profile';
+		twitterCard?: 'summary' | 'summary_large_image' | 'player' | 'app';
+		noIndex?: boolean;
+		noFollow?: boolean;
+		excludeFromSitemap?: boolean;
+		structuredData?: Record<string, unknown>;
+	};
 	createdAt: string;
 	updatedAt: string;
 }
@@ -18,6 +33,21 @@ export interface Articles {
 	coverImage?: string;
 	content?: string;
 	category?: string;
+	seo?: {
+		metaTitle?: string;
+		metaDescription?: string;
+		canonicalUrl?: string;
+		focusKeyword?: string;
+		ogTitle?: string;
+		ogDescription?: string;
+		ogImage?: string;
+		ogType?: 'website' | 'article' | 'product' | 'profile';
+		twitterCard?: 'summary' | 'summary_large_image' | 'player' | 'app';
+		noIndex?: boolean;
+		noFollow?: boolean;
+		excludeFromSitemap?: boolean;
+		structuredData?: Record<string, unknown>;
+	};
 	_status?: 'draft' | 'published';
 	createdAt: string;
 	updatedAt: string;
@@ -159,6 +189,21 @@ export interface Pages {
 	title: string;
 	slug: string;
 	content?: PagesContentBlock[];
+	seo?: {
+		metaTitle?: string;
+		metaDescription?: string;
+		canonicalUrl?: string;
+		focusKeyword?: string;
+		ogTitle?: string;
+		ogDescription?: string;
+		ogImage?: string;
+		ogType?: 'website' | 'article' | 'product' | 'profile';
+		twitterCard?: 'summary' | 'summary_large_image' | 'player' | 'app';
+		noIndex?: boolean;
+		noFollow?: boolean;
+		excludeFromSitemap?: boolean;
+		structuredData?: Record<string, unknown>;
+	};
 	createdAt: string;
 	updatedAt: string;
 }

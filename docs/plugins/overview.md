@@ -161,13 +161,15 @@ throw new PluginFatalError('my-plugin', 'Required service unavailable');
 
 ## Available Plugins
 
-| Plugin                            | Description                                    |
-| --------------------------------- | ---------------------------------------------- |
-| [Analytics](analytics.md)         | Tracking, content performance, block analytics |
-| [OpenTelemetry](opentelemetry.md) | Distributed tracing                            |
+| Plugin                            | Description                                              |
+| --------------------------------- | -------------------------------------------------------- |
+| [Analytics](analytics.md)         | Tracking, content performance, block analytics           |
+| [OpenTelemetry](opentelemetry.md) | Distributed tracing                                      |
+| [SEO](seo.md)                     | Sitemap, robots.txt, meta tags, content analysis scoring |
 
 ## Related
 
 - [Writing a Plugin](writing-a-plugin.md) — Step-by-step guide
 - [Analytics Plugin](analytics.md) — Built-in analytics
 - [OpenTelemetry Plugin](opentelemetry.md) — Tracing integration
+- [SEO Plugin](seo.md) — Search engine optimization

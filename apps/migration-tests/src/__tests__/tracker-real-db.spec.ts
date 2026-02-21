@@ -24,7 +24,6 @@ import {
 } from '../helpers/test-db';
 import { pgTracker, sqliteTracker } from '../helpers/adapter-wiring';
 import { isPgAvailable } from '../helpers/pg-availability';
-
 const pgAvailable = await isPgAvailable();
 
 // ============================================

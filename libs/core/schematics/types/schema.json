@@ -1,0 +1,26 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"$id": "MomentumGenerateTypes",
+	"title": "Momentum CMS Type Generation",
+	"description": "Generate TypeScript types and browser-safe admin config from momentum.config.ts",
+	"type": "object",
+	"properties": {
+		"configPath": {
+			"type": "string",
+			"description": "Path to momentum.config.ts",
+			"default": "src/momentum.config.ts",
+			"x-prompt": "Path to your momentum.config.ts file?"
+		},
+		"typesOutput": {
+			"type": "string",
+			"description": "Output path for generated TypeScript types",
+			"default": "src/generated/momentum.types.ts"
+		},
+		"configOutput": {
+			"type": "string",
+			"description": "Output path for generated browser-safe admin config",
+			"default": "src/generated/momentum.config.ts"
+		}
+	},
+	"required": []
+}

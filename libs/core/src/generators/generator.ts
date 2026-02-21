@@ -418,6 +418,34 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * Recursively collect all data field names from a fields array,
+ * descending into tabs (unnamed), collapsible, and row layout wrappers.
+ * Named tabs produce a synthetic field name (e.g. 'seo') to match the
+ * data nesting at runtime.
+ */
+function collectFieldNames(fields: FieldDefinition[]): string[] {
+	const names: string[] = [];
+	for (const field of fields) {
+		if (field.type === 'tabs' && field.tabs) {
+			for (const tab of field.tabs) {
+				if (tab.name) {
+					// Named tab stores data under tab.name — treat as a group
+					names.push(tab.name);
+				} else {
+					// Unnamed tab is layout-only — hoist children
+					names.push(...collectFieldNames(tab.fields));
+				}
+			}
+		} else if ((field.type === 'collapsible' || field.type === 'row') && field.fields) {
+			names.push(...collectFieldNames(field.fields));
+		} else {
+			names.push(field.name);
+		}
+	}
+	return names;
+}
+
+/**
  * Convert a preview function to a URL template string by evaluating it with
  * sentinel placeholder values and replacing them with {fieldName} tokens.
  * Falls back to `true` if the function can't be converted.
@@ -431,8 +459,9 @@ function previewFunctionToTemplate(
 	try {
 		const sentinel = '__MCMS_FIELD_';
 		const mockDoc: Record<string, string> = {};
-		for (const field of fields) {
-			mockDoc[field.name] = `${sentinel}${field.name}__`;
+		// Flatten layout wrappers (tabs, collapsible, row) to find actual data field names
+		for (const name of collectFieldNames(fields)) {
+			mockDoc[name] = `${sentinel}${name}__`;
 		}
 		const result = fn(mockDoc);
 		if (typeof result !== 'string') return true;

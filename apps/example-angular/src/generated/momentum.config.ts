@@ -6,6 +6,7 @@
 import type { MomentumAdminConfig } from '@momentumcms/core';
 import type { CollectionSlug, GlobalSlug } from './momentum.types';
 import { analyticsAdminRoutes } from '@momentumcms/plugins/analytics/admin-routes';
+import { seoAdminRoutes } from '@momentumcms/plugins/seo/admin-routes';
 
 export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 	collections: [
@@ -17,16 +18,158 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			},
 			fields: [
 				{
-					name: 'name',
-					type: 'text',
-					required: true,
-					label: 'Name',
-				},
-				{
-					name: 'slug',
-					type: 'text',
-					required: true,
-					label: 'Slug',
+					name: 'seoTabs',
+					type: 'tabs',
+					tabs: [
+						{
+							label: 'Content',
+							fields: [
+								{
+									name: 'name',
+									type: 'text',
+									required: true,
+									label: 'Name',
+								},
+								{
+									name: 'slug',
+									type: 'text',
+									required: true,
+									label: 'Slug',
+								},
+							],
+						},
+						{
+							name: 'seo',
+							label: 'SEO',
+							description: 'Search engine optimization settings',
+							fields: [
+								{
+									name: 'metaTitle',
+									type: 'text',
+									label: 'Meta Title',
+									maxLength: 70,
+									description: 'Title tag for search engines (50-60 chars recommended)',
+								},
+								{
+									name: 'metaDescription',
+									type: 'textarea',
+									label: 'Meta Description',
+									maxLength: 160,
+									rows: 3,
+									description: 'Description for search results (120-155 chars recommended)',
+								},
+								{
+									name: 'canonicalUrl',
+									type: 'text',
+									label: 'Canonical URL',
+									description: 'Override the canonical URL for this page',
+								},
+								{
+									name: 'focusKeyword',
+									type: 'text',
+									label: 'Focus Keyword',
+									description: 'Primary keyword to optimize this content for',
+								},
+								{
+									name: 'ogTitle',
+									type: 'text',
+									label: 'OG Title',
+									description: 'Open Graph title (falls back to Meta Title)',
+								},
+								{
+									name: 'ogDescription',
+									type: 'textarea',
+									label: 'OG Description',
+									rows: 2,
+									description: 'Open Graph description (falls back to Meta Description)',
+								},
+								{
+									name: 'ogImage',
+									type: 'upload',
+									relationTo: 'media',
+									label: 'OG Image',
+									mimeTypes: ['image/*'],
+									description: 'Recommended size: 1200x630px',
+								},
+								{
+									name: 'ogType',
+									type: 'select',
+									label: 'OG Type',
+									options: [
+										{
+											label: 'Website',
+											value: 'website',
+										},
+										{
+											label: 'Article',
+											value: 'article',
+										},
+										{
+											label: 'Product',
+											value: 'product',
+										},
+										{
+											label: 'Profile',
+											value: 'profile',
+										},
+									],
+									defaultValue: 'website',
+								},
+								{
+									name: 'twitterCard',
+									type: 'select',
+									label: 'Twitter Card',
+									options: [
+										{
+											label: 'Summary',
+											value: 'summary',
+										},
+										{
+											label: 'Summary Large Image',
+											value: 'summary_large_image',
+										},
+										{
+											label: 'Player',
+											value: 'player',
+										},
+										{
+											label: 'App',
+											value: 'app',
+										},
+									],
+									defaultValue: 'summary_large_image',
+								},
+								{
+									name: 'noIndex',
+									type: 'checkbox',
+									label: 'No Index',
+									description: 'Tell search engines not to index this page',
+									defaultValue: false,
+								},
+								{
+									name: 'noFollow',
+									type: 'checkbox',
+									label: 'No Follow',
+									description: 'Tell search engines not to follow links on this page',
+									defaultValue: false,
+								},
+								{
+									name: 'excludeFromSitemap',
+									type: 'checkbox',
+									label: 'Exclude from Sitemap',
+									description:
+										'Exclude this page from the XML sitemap without affecting search engine indexing',
+									defaultValue: false,
+								},
+								{
+									name: 'structuredData',
+									type: 'json',
+									label: 'Structured Data (JSON-LD)',
+									description: 'Custom JSON-LD structured data for this page',
+								},
+							],
+						},
+					],
 				},
 			],
 			admin: {
@@ -42,37 +185,179 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			},
 			fields: [
 				{
-					name: 'title',
-					type: 'text',
-					required: true,
-					label: 'Title',
-				},
-				{
-					name: 'slug',
-					type: 'text',
-					label: 'URL Slug',
-				},
-				{
-					name: 'coverImage',
-					type: 'upload',
-					relationTo: 'media',
-					label: 'Cover Image',
-					mimeTypes: ['image/*'],
-					maxSize: 5242880,
-				},
-				{
-					name: 'content',
-					type: 'richText',
-					label: 'Content',
-				},
-				{
-					name: 'category',
-					type: 'relationship',
-					label: 'Category',
-					collection: () => ({
-						slug: 'categories',
-						labels: { singular: 'Category', plural: 'Categories' },
-					}),
+					name: 'seoTabs',
+					type: 'tabs',
+					tabs: [
+						{
+							label: 'Content',
+							fields: [
+								{
+									name: 'title',
+									type: 'text',
+									required: true,
+									label: 'Title',
+								},
+								{
+									name: 'slug',
+									type: 'text',
+									label: 'URL Slug',
+								},
+								{
+									name: 'coverImage',
+									type: 'upload',
+									relationTo: 'media',
+									label: 'Cover Image',
+									mimeTypes: ['image/*'],
+									maxSize: 5242880,
+								},
+								{
+									name: 'content',
+									type: 'richText',
+									label: 'Content',
+								},
+								{
+									name: 'category',
+									type: 'relationship',
+									label: 'Category',
+									collection: () => ({
+										slug: 'categories',
+										labels: { singular: 'Category', plural: 'Categories' },
+									}),
+								},
+							],
+						},
+						{
+							name: 'seo',
+							label: 'SEO',
+							description: 'Search engine optimization settings',
+							fields: [
+								{
+									name: 'metaTitle',
+									type: 'text',
+									label: 'Meta Title',
+									maxLength: 70,
+									description: 'Title tag for search engines (50-60 chars recommended)',
+								},
+								{
+									name: 'metaDescription',
+									type: 'textarea',
+									label: 'Meta Description',
+									maxLength: 160,
+									rows: 3,
+									description: 'Description for search results (120-155 chars recommended)',
+								},
+								{
+									name: 'canonicalUrl',
+									type: 'text',
+									label: 'Canonical URL',
+									description: 'Override the canonical URL for this page',
+								},
+								{
+									name: 'focusKeyword',
+									type: 'text',
+									label: 'Focus Keyword',
+									description: 'Primary keyword to optimize this content for',
+								},
+								{
+									name: 'ogTitle',
+									type: 'text',
+									label: 'OG Title',
+									description: 'Open Graph title (falls back to Meta Title)',
+								},
+								{
+									name: 'ogDescription',
+									type: 'textarea',
+									label: 'OG Description',
+									rows: 2,
+									description: 'Open Graph description (falls back to Meta Description)',
+								},
+								{
+									name: 'ogImage',
+									type: 'upload',
+									relationTo: 'media',
+									label: 'OG Image',
+									mimeTypes: ['image/*'],
+									description: 'Recommended size: 1200x630px',
+								},
+								{
+									name: 'ogType',
+									type: 'select',
+									label: 'OG Type',
+									options: [
+										{
+											label: 'Website',
+											value: 'website',
+										},
+										{
+											label: 'Article',
+											value: 'article',
+										},
+										{
+											label: 'Product',
+											value: 'product',
+										},
+										{
+											label: 'Profile',
+											value: 'profile',
+										},
+									],
+									defaultValue: 'website',
+								},
+								{
+									name: 'twitterCard',
+									type: 'select',
+									label: 'Twitter Card',
+									options: [
+										{
+											label: 'Summary',
+											value: 'summary',
+										},
+										{
+											label: 'Summary Large Image',
+											value: 'summary_large_image',
+										},
+										{
+											label: 'Player',
+											value: 'player',
+										},
+										{
+											label: 'App',
+											value: 'app',
+										},
+									],
+									defaultValue: 'summary_large_image',
+								},
+								{
+									name: 'noIndex',
+									type: 'checkbox',
+									label: 'No Index',
+									description: 'Tell search engines not to index this page',
+									defaultValue: false,
+								},
+								{
+									name: 'noFollow',
+									type: 'checkbox',
+									label: 'No Follow',
+									description: 'Tell search engines not to follow links on this page',
+									defaultValue: false,
+								},
+								{
+									name: 'excludeFromSitemap',
+									type: 'checkbox',
+									label: 'Exclude from Sitemap',
+									description:
+										'Exclude this page from the XML sitemap without affecting search engine indexing',
+									defaultValue: false,
+								},
+								{
+									name: 'structuredData',
+									type: 'json',
+									label: 'Structured Data (JSON-LD)',
+									description: 'Custom JSON-LD structured data for this page',
+								},
+							],
+						},
+					],
 				},
 			],
 			admin: {
@@ -175,490 +460,632 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			},
 			fields: [
 				{
-					name: 'title',
-					type: 'text',
-					required: true,
-					label: 'Page Title',
-				},
-				{
-					name: 'slug',
-					type: 'text',
-					required: true,
-					label: 'URL Slug',
-				},
-				{
-					name: 'content',
-					type: 'blocks',
-					label: 'Page Content',
-					description: 'Build your page using content blocks.',
-					admin: {
-						editor: 'visual',
-					},
-					blocks: [
+					name: 'seoTabs',
+					type: 'tabs',
+					tabs: [
 						{
-							slug: 'hero',
-							fields: [
-								{
-									name: 'heading',
-									type: 'text',
-									required: true,
-									label: 'Heading',
-								},
-								{
-									name: 'subheading',
-									type: 'textarea',
-									label: 'Subheading',
-								},
-								{
-									name: 'ctaText',
-									type: 'text',
-									label: 'CTA Button Text',
-								},
-								{
-									name: 'ctaLink',
-									type: 'text',
-									label: 'CTA Button Link',
-								},
-								{
-									name: '_analytics',
-									type: 'group',
-									label: 'Analytics',
-									admin: {
-										collapsible: true,
-										defaultOpen: false,
-									},
-									fields: [
-										{
-											name: 'trackImpressions',
-											type: 'checkbox',
-											label: 'Track Impressions',
-											defaultValue: false,
-										},
-										{
-											name: 'trackHover',
-											type: 'checkbox',
-											label: 'Track Hover',
-											defaultValue: false,
-										},
-									],
-								},
-							],
-							labels: {
-								singular: 'Hero',
-								plural: 'Heroes',
-							},
-						},
-						{
-							slug: 'textBlock',
-							fields: [
-								{
-									name: 'heading',
-									type: 'text',
-									label: 'Section Heading',
-								},
-								{
-									name: 'body',
-									type: 'textarea',
-									required: true,
-									label: 'Body Text',
-								},
-								{
-									name: '_analytics',
-									type: 'group',
-									label: 'Analytics',
-									admin: {
-										collapsible: true,
-										defaultOpen: false,
-									},
-									fields: [
-										{
-											name: 'trackImpressions',
-											type: 'checkbox',
-											label: 'Track Impressions',
-											defaultValue: false,
-										},
-										{
-											name: 'trackHover',
-											type: 'checkbox',
-											label: 'Track Hover',
-											defaultValue: false,
-										},
-									],
-								},
-							],
-							labels: {
-								singular: 'Text Block',
-								plural: 'Text Blocks',
-							},
-						},
-						{
-							slug: 'feature',
+							label: 'Content',
 							fields: [
 								{
 									name: 'title',
 									type: 'text',
 									required: true,
-									label: 'Feature Title',
+									label: 'Page Title',
 								},
 								{
-									name: 'description',
-									type: 'textarea',
-									label: 'Feature Description',
-								},
-								{
-									name: 'icon',
+									name: 'slug',
 									type: 'text',
-									label: 'Icon Name',
+									required: true,
+									label: 'URL Slug',
 								},
 								{
-									name: '_analytics',
-									type: 'group',
-									label: 'Analytics',
+									name: 'content',
+									type: 'blocks',
+									label: 'Page Content',
+									description: 'Build your page using content blocks.',
 									admin: {
-										collapsible: true,
-										defaultOpen: false,
+										editor: 'visual',
 									},
-									fields: [
+									blocks: [
 										{
-											name: 'trackImpressions',
-											type: 'checkbox',
-											label: 'Track Impressions',
-											defaultValue: false,
+											slug: 'hero',
+											fields: [
+												{
+													name: 'heading',
+													type: 'text',
+													required: true,
+													label: 'Heading',
+												},
+												{
+													name: 'subheading',
+													type: 'textarea',
+													label: 'Subheading',
+												},
+												{
+													name: 'ctaText',
+													type: 'text',
+													label: 'CTA Button Text',
+												},
+												{
+													name: 'ctaLink',
+													type: 'text',
+													label: 'CTA Button Link',
+												},
+												{
+													name: '_analytics',
+													type: 'group',
+													label: 'Analytics',
+													admin: {
+														collapsible: true,
+														defaultOpen: false,
+													},
+													fields: [
+														{
+															name: 'trackImpressions',
+															type: 'checkbox',
+															label: 'Track Impressions',
+															defaultValue: false,
+														},
+														{
+															name: 'trackHover',
+															type: 'checkbox',
+															label: 'Track Hover',
+															defaultValue: false,
+														},
+													],
+												},
+											],
+											labels: {
+												singular: 'Hero',
+												plural: 'Heroes',
+											},
 										},
 										{
-											name: 'trackHover',
-											type: 'checkbox',
-											label: 'Track Hover',
-											defaultValue: false,
+											slug: 'textBlock',
+											fields: [
+												{
+													name: 'heading',
+													type: 'text',
+													label: 'Section Heading',
+												},
+												{
+													name: 'body',
+													type: 'textarea',
+													required: true,
+													label: 'Body Text',
+												},
+												{
+													name: '_analytics',
+													type: 'group',
+													label: 'Analytics',
+													admin: {
+														collapsible: true,
+														defaultOpen: false,
+													},
+													fields: [
+														{
+															name: 'trackImpressions',
+															type: 'checkbox',
+															label: 'Track Impressions',
+															defaultValue: false,
+														},
+														{
+															name: 'trackHover',
+															type: 'checkbox',
+															label: 'Track Hover',
+															defaultValue: false,
+														},
+													],
+												},
+											],
+											labels: {
+												singular: 'Text Block',
+												plural: 'Text Blocks',
+											},
+										},
+										{
+											slug: 'feature',
+											fields: [
+												{
+													name: 'title',
+													type: 'text',
+													required: true,
+													label: 'Feature Title',
+												},
+												{
+													name: 'description',
+													type: 'textarea',
+													label: 'Feature Description',
+												},
+												{
+													name: 'icon',
+													type: 'text',
+													label: 'Icon Name',
+												},
+												{
+													name: '_analytics',
+													type: 'group',
+													label: 'Analytics',
+													admin: {
+														collapsible: true,
+														defaultOpen: false,
+													},
+													fields: [
+														{
+															name: 'trackImpressions',
+															type: 'checkbox',
+															label: 'Track Impressions',
+															defaultValue: false,
+														},
+														{
+															name: 'trackHover',
+															type: 'checkbox',
+															label: 'Track Hover',
+															defaultValue: false,
+														},
+													],
+												},
+											],
+											labels: {
+												singular: 'Feature',
+												plural: 'Features',
+											},
+										},
+										{
+											slug: 'callToAction',
+											fields: [
+												{
+													name: 'heading',
+													type: 'text',
+													required: true,
+													label: 'Heading',
+												},
+												{
+													name: 'description',
+													type: 'textarea',
+													label: 'Description',
+												},
+												{
+													name: 'primaryButtonText',
+													type: 'text',
+													label: 'Primary Button Text',
+												},
+												{
+													name: 'primaryButtonLink',
+													type: 'text',
+													label: 'Primary Button Link',
+												},
+												{
+													name: 'secondaryButtonText',
+													type: 'text',
+													label: 'Secondary Button Text',
+												},
+												{
+													name: 'secondaryButtonLink',
+													type: 'text',
+													label: 'Secondary Button Link',
+												},
+												{
+													name: '_analytics',
+													type: 'group',
+													label: 'Analytics',
+													admin: {
+														collapsible: true,
+														defaultOpen: false,
+													},
+													fields: [
+														{
+															name: 'trackImpressions',
+															type: 'checkbox',
+															label: 'Track Impressions',
+															defaultValue: false,
+														},
+														{
+															name: 'trackHover',
+															type: 'checkbox',
+															label: 'Track Hover',
+															defaultValue: false,
+														},
+													],
+												},
+											],
+											labels: {
+												singular: 'Call to Action',
+												plural: 'Calls to Action',
+											},
+										},
+										{
+											slug: 'imageText',
+											fields: [
+												{
+													name: 'heading',
+													type: 'text',
+													required: true,
+													label: 'Heading',
+												},
+												{
+													name: 'body',
+													type: 'textarea',
+													required: true,
+													label: 'Body Text',
+												},
+												{
+													name: 'imageUrl',
+													type: 'text',
+													label: 'Image URL',
+												},
+												{
+													name: 'imageAlt',
+													type: 'text',
+													label: 'Image Alt Text',
+												},
+												{
+													name: 'imagePosition',
+													type: 'select',
+													label: 'Image Position',
+													options: [
+														{
+															label: 'Left',
+															value: 'left',
+														},
+														{
+															label: 'Right',
+															value: 'right',
+														},
+													],
+												},
+												{
+													name: '_analytics',
+													type: 'group',
+													label: 'Analytics',
+													admin: {
+														collapsible: true,
+														defaultOpen: false,
+													},
+													fields: [
+														{
+															name: 'trackImpressions',
+															type: 'checkbox',
+															label: 'Track Impressions',
+															defaultValue: false,
+														},
+														{
+															name: 'trackHover',
+															type: 'checkbox',
+															label: 'Track Hover',
+															defaultValue: false,
+														},
+													],
+												},
+											],
+											labels: {
+												singular: 'Image + Text',
+												plural: 'Image + Text Blocks',
+											},
+										},
+										{
+											slug: 'stats',
+											fields: [
+												{
+													name: 'heading',
+													type: 'text',
+													label: 'Section Heading',
+												},
+												{
+													name: 'description',
+													type: 'textarea',
+													label: 'Section Description',
+												},
+												{
+													name: 'items',
+													type: 'array',
+													label: 'Stat Items',
+													fields: [
+														{
+															name: 'value',
+															type: 'text',
+															required: true,
+															label: 'Value',
+														},
+														{
+															name: 'label',
+															type: 'text',
+															required: true,
+															label: 'Label',
+														},
+														{
+															name: 'suffix',
+															type: 'text',
+															label: 'Suffix (e.g., +, %, K)',
+														},
+													],
+													minRows: 1,
+													maxRows: 6,
+												},
+												{
+													name: '_analytics',
+													type: 'group',
+													label: 'Analytics',
+													admin: {
+														collapsible: true,
+														defaultOpen: false,
+													},
+													fields: [
+														{
+															name: 'trackImpressions',
+															type: 'checkbox',
+															label: 'Track Impressions',
+															defaultValue: false,
+														},
+														{
+															name: 'trackHover',
+															type: 'checkbox',
+															label: 'Track Hover',
+															defaultValue: false,
+														},
+													],
+												},
+											],
+											labels: {
+												singular: 'Statistics',
+												plural: 'Statistics Blocks',
+											},
+										},
+										{
+											slug: 'testimonial',
+											fields: [
+												{
+													name: 'quote',
+													type: 'textarea',
+													required: true,
+													label: 'Quote',
+												},
+												{
+													name: 'authorName',
+													type: 'text',
+													required: true,
+													label: 'Author Name',
+												},
+												{
+													name: 'authorRole',
+													type: 'text',
+													label: 'Author Role / Title',
+												},
+												{
+													name: 'authorCompany',
+													type: 'text',
+													label: 'Company',
+												},
+												{
+													name: '_analytics',
+													type: 'group',
+													label: 'Analytics',
+													admin: {
+														collapsible: true,
+														defaultOpen: false,
+													},
+													fields: [
+														{
+															name: 'trackImpressions',
+															type: 'checkbox',
+															label: 'Track Impressions',
+															defaultValue: false,
+														},
+														{
+															name: 'trackHover',
+															type: 'checkbox',
+															label: 'Track Hover',
+															defaultValue: false,
+														},
+													],
+												},
+											],
+											labels: {
+												singular: 'Testimonial',
+												plural: 'Testimonials',
+											},
+										},
+										{
+											slug: 'featureGrid',
+											fields: [
+												{
+													name: 'heading',
+													type: 'text',
+													label: 'Section Heading',
+												},
+												{
+													name: 'description',
+													type: 'textarea',
+													label: 'Section Description',
+												},
+												{
+													name: 'features',
+													type: 'array',
+													label: 'Features',
+													fields: [
+														{
+															name: 'title',
+															type: 'text',
+															required: true,
+															label: 'Feature Title',
+														},
+														{
+															name: 'description',
+															type: 'textarea',
+															label: 'Feature Description',
+														},
+														{
+															name: 'icon',
+															type: 'text',
+															label: 'Icon Name',
+														},
+													],
+													minRows: 1,
+													maxRows: 12,
+												},
+												{
+													name: '_analytics',
+													type: 'group',
+													label: 'Analytics',
+													admin: {
+														collapsible: true,
+														defaultOpen: false,
+													},
+													fields: [
+														{
+															name: 'trackImpressions',
+															type: 'checkbox',
+															label: 'Track Impressions',
+															defaultValue: false,
+														},
+														{
+															name: 'trackHover',
+															type: 'checkbox',
+															label: 'Track Hover',
+															defaultValue: false,
+														},
+													],
+												},
+											],
+											labels: {
+												singular: 'Feature Grid',
+												plural: 'Feature Grids',
+											},
 										},
 									],
 								},
 							],
-							labels: {
-								singular: 'Feature',
-								plural: 'Features',
-							},
 						},
 						{
-							slug: 'callToAction',
+							name: 'seo',
+							label: 'SEO',
+							description: 'Search engine optimization settings',
 							fields: [
 								{
-									name: 'heading',
+									name: 'metaTitle',
 									type: 'text',
-									required: true,
-									label: 'Heading',
+									label: 'Meta Title',
+									maxLength: 70,
+									description: 'Title tag for search engines (50-60 chars recommended)',
 								},
 								{
-									name: 'description',
+									name: 'metaDescription',
 									type: 'textarea',
-									label: 'Description',
+									label: 'Meta Description',
+									maxLength: 160,
+									rows: 3,
+									description: 'Description for search results (120-155 chars recommended)',
 								},
 								{
-									name: 'primaryButtonText',
+									name: 'canonicalUrl',
 									type: 'text',
-									label: 'Primary Button Text',
+									label: 'Canonical URL',
+									description: 'Override the canonical URL for this page',
 								},
 								{
-									name: 'primaryButtonLink',
+									name: 'focusKeyword',
 									type: 'text',
-									label: 'Primary Button Link',
+									label: 'Focus Keyword',
+									description: 'Primary keyword to optimize this content for',
 								},
 								{
-									name: 'secondaryButtonText',
+									name: 'ogTitle',
 									type: 'text',
-									label: 'Secondary Button Text',
+									label: 'OG Title',
+									description: 'Open Graph title (falls back to Meta Title)',
 								},
 								{
-									name: 'secondaryButtonLink',
-									type: 'text',
-									label: 'Secondary Button Link',
-								},
-								{
-									name: '_analytics',
-									type: 'group',
-									label: 'Analytics',
-									admin: {
-										collapsible: true,
-										defaultOpen: false,
-									},
-									fields: [
-										{
-											name: 'trackImpressions',
-											type: 'checkbox',
-											label: 'Track Impressions',
-											defaultValue: false,
-										},
-										{
-											name: 'trackHover',
-											type: 'checkbox',
-											label: 'Track Hover',
-											defaultValue: false,
-										},
-									],
-								},
-							],
-							labels: {
-								singular: 'Call to Action',
-								plural: 'Calls to Action',
-							},
-						},
-						{
-							slug: 'imageText',
-							fields: [
-								{
-									name: 'heading',
-									type: 'text',
-									required: true,
-									label: 'Heading',
-								},
-								{
-									name: 'body',
+									name: 'ogDescription',
 									type: 'textarea',
-									required: true,
-									label: 'Body Text',
+									label: 'OG Description',
+									rows: 2,
+									description: 'Open Graph description (falls back to Meta Description)',
 								},
 								{
-									name: 'imageUrl',
-									type: 'text',
-									label: 'Image URL',
+									name: 'ogImage',
+									type: 'upload',
+									relationTo: 'media',
+									label: 'OG Image',
+									mimeTypes: ['image/*'],
+									description: 'Recommended size: 1200x630px',
 								},
 								{
-									name: 'imageAlt',
-									type: 'text',
-									label: 'Image Alt Text',
-								},
-								{
-									name: 'imagePosition',
+									name: 'ogType',
 									type: 'select',
-									label: 'Image Position',
+									label: 'OG Type',
 									options: [
 										{
-											label: 'Left',
-											value: 'left',
+											label: 'Website',
+											value: 'website',
 										},
 										{
-											label: 'Right',
-											value: 'right',
+											label: 'Article',
+											value: 'article',
+										},
+										{
+											label: 'Product',
+											value: 'product',
+										},
+										{
+											label: 'Profile',
+											value: 'profile',
 										},
 									],
+									defaultValue: 'website',
 								},
 								{
-									name: '_analytics',
-									type: 'group',
-									label: 'Analytics',
-									admin: {
-										collapsible: true,
-										defaultOpen: false,
-									},
-									fields: [
+									name: 'twitterCard',
+									type: 'select',
+									label: 'Twitter Card',
+									options: [
 										{
-											name: 'trackImpressions',
-											type: 'checkbox',
-											label: 'Track Impressions',
-											defaultValue: false,
+											label: 'Summary',
+											value: 'summary',
 										},
 										{
-											name: 'trackHover',
-											type: 'checkbox',
-											label: 'Track Hover',
-											defaultValue: false,
+											label: 'Summary Large Image',
+											value: 'summary_large_image',
+										},
+										{
+											label: 'Player',
+											value: 'player',
+										},
+										{
+											label: 'App',
+											value: 'app',
 										},
 									],
+									defaultValue: 'summary_large_image',
+								},
+								{
+									name: 'noIndex',
+									type: 'checkbox',
+									label: 'No Index',
+									description: 'Tell search engines not to index this page',
+									defaultValue: false,
+								},
+								{
+									name: 'noFollow',
+									type: 'checkbox',
+									label: 'No Follow',
+									description: 'Tell search engines not to follow links on this page',
+									defaultValue: false,
+								},
+								{
+									name: 'excludeFromSitemap',
+									type: 'checkbox',
+									label: 'Exclude from Sitemap',
+									description:
+										'Exclude this page from the XML sitemap without affecting search engine indexing',
+									defaultValue: false,
+								},
+								{
+									name: 'structuredData',
+									type: 'json',
+									label: 'Structured Data (JSON-LD)',
+									description: 'Custom JSON-LD structured data for this page',
 								},
 							],
-							labels: {
-								singular: 'Image + Text',
-								plural: 'Image + Text Blocks',
-							},
-						},
-						{
-							slug: 'stats',
-							fields: [
-								{
-									name: 'heading',
-									type: 'text',
-									label: 'Section Heading',
-								},
-								{
-									name: 'description',
-									type: 'textarea',
-									label: 'Section Description',
-								},
-								{
-									name: 'items',
-									type: 'array',
-									label: 'Stat Items',
-									fields: [
-										{
-											name: 'value',
-											type: 'text',
-											required: true,
-											label: 'Value',
-										},
-										{
-											name: 'label',
-											type: 'text',
-											required: true,
-											label: 'Label',
-										},
-										{
-											name: 'suffix',
-											type: 'text',
-											label: 'Suffix (e.g., +, %, K)',
-										},
-									],
-									minRows: 1,
-									maxRows: 6,
-								},
-								{
-									name: '_analytics',
-									type: 'group',
-									label: 'Analytics',
-									admin: {
-										collapsible: true,
-										defaultOpen: false,
-									},
-									fields: [
-										{
-											name: 'trackImpressions',
-											type: 'checkbox',
-											label: 'Track Impressions',
-											defaultValue: false,
-										},
-										{
-											name: 'trackHover',
-											type: 'checkbox',
-											label: 'Track Hover',
-											defaultValue: false,
-										},
-									],
-								},
-							],
-							labels: {
-								singular: 'Statistics',
-								plural: 'Statistics Blocks',
-							},
-						},
-						{
-							slug: 'testimonial',
-							fields: [
-								{
-									name: 'quote',
-									type: 'textarea',
-									required: true,
-									label: 'Quote',
-								},
-								{
-									name: 'authorName',
-									type: 'text',
-									required: true,
-									label: 'Author Name',
-								},
-								{
-									name: 'authorRole',
-									type: 'text',
-									label: 'Author Role / Title',
-								},
-								{
-									name: 'authorCompany',
-									type: 'text',
-									label: 'Company',
-								},
-								{
-									name: '_analytics',
-									type: 'group',
-									label: 'Analytics',
-									admin: {
-										collapsible: true,
-										defaultOpen: false,
-									},
-									fields: [
-										{
-											name: 'trackImpressions',
-											type: 'checkbox',
-											label: 'Track Impressions',
-											defaultValue: false,
-										},
-										{
-											name: 'trackHover',
-											type: 'checkbox',
-											label: 'Track Hover',
-											defaultValue: false,
-										},
-									],
-								},
-							],
-							labels: {
-								singular: 'Testimonial',
-								plural: 'Testimonials',
-							},
-						},
-						{
-							slug: 'featureGrid',
-							fields: [
-								{
-									name: 'heading',
-									type: 'text',
-									label: 'Section Heading',
-								},
-								{
-									name: 'description',
-									type: 'textarea',
-									label: 'Section Description',
-								},
-								{
-									name: 'features',
-									type: 'array',
-									label: 'Features',
-									fields: [
-										{
-											name: 'title',
-											type: 'text',
-											required: true,
-											label: 'Feature Title',
-										},
-										{
-											name: 'description',
-											type: 'textarea',
-											label: 'Feature Description',
-										},
-										{
-											name: 'icon',
-											type: 'text',
-											label: 'Icon Name',
-										},
-									],
-									minRows: 1,
-									maxRows: 12,
-								},
-								{
-									name: '_analytics',
-									type: 'group',
-									label: 'Analytics',
-									admin: {
-										collapsible: true,
-										defaultOpen: false,
-									},
-									fields: [
-										{
-											name: 'trackImpressions',
-											type: 'checkbox',
-											label: 'Track Impressions',
-											defaultValue: false,
-										},
-										{
-											name: 'trackHover',
-											type: 'checkbox',
-											label: 'Track Hover',
-											defaultValue: false,
-										},
-									],
-								},
-							],
-							labels: {
-								singular: 'Feature Grid',
-								plural: 'Feature Grids',
-							},
 						},
 					],
 				},
@@ -1342,5 +1769,8 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 		},
 		toasts: true,
 	},
-	plugins: [{ name: 'analytics', adminRoutes: analyticsAdminRoutes }],
+	plugins: [
+		{ name: 'analytics', adminRoutes: analyticsAdminRoutes },
+		{ name: 'seo', adminRoutes: seoAdminRoutes },
+	],
 };

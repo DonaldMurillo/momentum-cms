@@ -2,6 +2,8 @@
 
 Angular-based headless CMS application built with [Momentum CMS](https://github.com/momentum-cms/momentum-cms).
 
+For comprehensive AI agent reference (skills, workflows, architecture), see [agents.md](agents.md).
+
 ## Tech Stack
 
 - Angular 21 (SSR) with Express or Analog.js (Nitro)
@@ -12,19 +14,22 @@ Angular-based headless CMS application built with [Momentum CMS](https://github.
 ## Commands
 
 ```bash
-npm run dev          # Start dev server
-npm run build        # Production build
-npm start            # Start production server
-npx drizzle-kit generate   # Create SQL migrations from schema changes
-npx drizzle-kit push       # Direct push (dev only)
-npx drizzle-kit migrate    # Apply migrations (production)
+npm run dev                    # Start dev server
+npm run build                  # Production build
+npm start                      # Start production server
+npm run generate               # Generate types and admin config
+npm run migrate:generate       # Create a migration from schema changes
+npm run migrate:run            # Apply pending migrations
+npm run migrate:status         # Show migration status
+npm run migrate:rollback       # Rollback latest migration batch
 ```
 
 ## Project Structure
 
 ```
 src/
-  collections/       # Collection definitions (data models)
+  collections/       # Collection definitions (*.collection.ts)
+  generated/         # Auto-generated types and admin config (don't edit)
   momentum.config.ts # Central configuration (db, auth, collections, plugins)
   server.ts          # Server entry point (Express) or server/ (Analog)
   app/               # Angular app components and routes
@@ -36,7 +41,7 @@ src/
 Collections are the core data model. Each collection generates a database table, REST API, and admin UI.
 
 ```typescript
-import { defineCollection, text, richText, select, relationship } from '@momentumcms/core';
+import { defineCollection, text, richText, select, blocks } from '@momentumcms/core';
 
 export const Posts = defineCollection({
 	slug: 'posts',
@@ -57,16 +62,27 @@ export const Posts = defineCollection({
 			],
 			defaultValue: 'draft',
 		}),
+		blocks('pageContent', {
+			label: 'Page Content',
+			blocks: [
+				{
+					slug: 'contentBlock',
+					labels: { singular: 'Content Block', plural: 'Content Blocks' },
+					fields: [text('heading'), richText('body', { required: true })],
+				},
+			],
+		}),
 	],
 });
 ```
 
 ### Adding a New Collection
 
-1. Create `src/collections/<name>.ts` with `defineCollection()`
+1. Create `src/collections/<name>.collection.ts` with `defineCollection()`
 2. Add to `collections` array in `momentum.config.ts`
-3. Run `npx drizzle-kit generate && npx drizzle-kit push`
-4. Restart dev server
+3. Run `npm run generate` to regenerate types and admin config
+4. Run `npm run migrate:generate` to create a migration
+5. Restart dev server
 
 ### Field Types
 
@@ -137,6 +153,7 @@ export class MyComponent {
 - **Control flow**: `@if`, `@for`, `@switch`
 - Don't add `standalone: true` (default in Angular 21)
 - Use kebab-case filenames, PascalCase classes
+- Collection files use `.collection.ts` suffix (e.g., `posts.collection.ts`)
 
 ## REST API
 
@@ -152,4 +169,4 @@ All collections get auto-generated endpoints:
 
 ## Documentation
 
-Full docs: https://github.com/momentum-cms/momentum-cms/tree/main/docs
+Full docs: https://github.com/DonaldMurillo/momentum-cms#readme

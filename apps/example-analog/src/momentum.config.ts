@@ -5,6 +5,7 @@ import { momentumAuth } from '@momentumcms/auth';
 import { localStorageAdapter } from '@momentumcms/storage';
 import { eventBusPlugin } from '@momentumcms/plugins/core';
 import { analyticsPlugin, MemoryAnalyticsAdapter } from '@momentumcms/plugins/analytics';
+import { seoPlugin } from '@momentumcms/plugins/seo';
 import { join } from 'node:path';
 import { collections } from '@momentumcms/example-config/collections';
 import { globals } from '@momentumcms/example-config/globals';
@@ -54,6 +55,16 @@ export const analytics = analyticsPlugin({
 	trackingRules: { cacheTtl: 0 }, // No cache for E2E testing
 });
 
+export const seo = seoPlugin({
+	collections: ['categories', 'articles', 'pages'],
+	siteUrl: `http://localhost:${process.env['PORT'] || 4200}`,
+	analysis: true,
+	sitemap: true,
+	robots: true,
+	metaApi: true,
+	adminDashboard: true,
+});
+
 /**
  * Momentum CMS configuration.
  *
@@ -88,7 +99,7 @@ const config = defineMomentumConfig({
 		level: 'debug',
 		format: 'pretty',
 	},
-	plugins: [events, analytics, authPlugin],
+	plugins: [events, analytics, seo, authPlugin],
 	seeding: exampleSeedingConfig,
 });
 

@@ -8,6 +8,7 @@ import {
 	provideMomentumFieldRenderers,
 } from '@momentumcms/admin';
 import { adminConfig } from '../generated/momentum.config';
+import { providePostBlocks } from './pages/post-block-providers';
 
 const adminRoutes = momentumAdminRoutes(adminConfig);
 
@@ -21,5 +22,6 @@ export const appConfig: ApplicationConfig = {
 		),
 		provideClientHydration(withEventReplay()),
 		provideMomentumFieldRenderers(),
+		...providePostBlocks(),
 	],
 };

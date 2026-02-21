@@ -38,9 +38,11 @@ const LOG_PREFIX = '[test-create-app]';
 const PUBLISHABLE_LIBS = [
 	'core',
 	'logger',
+	'migrations',
 	'plugins-core',
 	'plugins-analytics',
 	'plugins-otel',
+	'plugins-seo',
 	'db-drizzle',
 	'storage',
 	'auth',
@@ -220,6 +222,8 @@ function resolveDistPath(lib: string): string {
 		'plugins-core': 'dist/libs/plugins/core',
 		'plugins-analytics': 'dist/libs/plugins/analytics',
 		'plugins-otel': 'dist/libs/plugins/otel',
+		'plugins-seo': 'dist/libs/plugins/seo',
+		migrations: 'dist/libs/migrations',
 	};
 	const rel = pathMap[lib];
 	if (!rel) throw new Error(`Unknown lib: ${lib}`);
@@ -355,8 +359,15 @@ function verifyProject(projectDir: string, flavor: Flavor, database: Database): 
 			'src/app/app.routes.ts',
 			'src/app/app.routes.server.ts',
 			'src/app/pages/welcome.ts',
+			'src/app/pages/posts.ts',
+			'src/app/pages/post-detail.ts',
+			'src/app/pages/post-detail.resolver.ts',
+			'src/app/pages/post-block-providers.ts',
+			'src/app/pages/blocks/hero-block.component.ts',
+			'src/app/pages/blocks/text-block.component.ts',
+			'src/app/pages/blocks/image-text-block.component.ts',
 			'src/main.server.ts',
-			'src/collections/posts.ts',
+			'src/collections/posts.collection.ts',
 		],
 		analog: [
 			'vite.config.ts',
@@ -365,7 +376,10 @@ function verifyProject(projectDir: string, flavor: Flavor, database: Database): 
 			'src/server/routes/api/[...momentum].ts',
 			'src/app/app.ts',
 			'src/app/app.config.ts',
-			'src/collections/posts.ts',
+			'src/app/pages/posts.page.ts',
+			'src/app/pages/post-block-providers.ts',
+			'src/app/pages/blocks/hero-block.component.ts',
+			'src/collections/posts.collection.ts',
 		],
 	};
 
@@ -805,6 +819,141 @@ async function runPlaywrightTests(port: number): Promise<void> {
 		await loginPage.waitForURL(/\/admin(?!\/login|\/setup)/, { timeout: 15000 });
 		console.log(`${LOG_PREFIX}   [Playwright] Login succeeded, redirected to dashboard.`);
 		await loginPage.close();
+
+		// --- Test 6: Create a post via REST API ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 6: Create post via API`);
+		const apiContext = await browser.newPage();
+		// Login first to get auth cookies
+		await apiContext.goto(`${baseUrl}/admin/login`);
+		await apiContext.waitForLoadState('networkidle');
+		await apiContext.locator('input[name="email"]').fill('admin@test.com');
+		await apiContext.locator('input[name="password"]').fill('testpass123');
+		await apiContext.getByRole('button', { name: /sign in/i }).click();
+		await apiContext.waitForURL(/\/admin(?!\/login|\/setup)/, { timeout: 15000 });
+
+		// Create post with blocks via the API
+		const createRes = await apiContext.evaluate(async (url: string) => {
+			const res = await fetch(`${url}/api/posts`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					title: 'Hello World Post',
+					slug: 'hello-world-post',
+					pageContent: [
+						{
+							blockType: 'hero',
+							heading: 'Welcome Hero',
+							subheading: 'This is the hero subheading',
+							ctaText: 'Read More',
+							ctaLink: '/posts',
+						},
+						{
+							blockType: 'textBlock',
+							heading: 'Text Section',
+							body: 'This is the body of the text block with some content.',
+						},
+						{
+							blockType: 'imageText',
+							heading: 'Image Text Heading',
+							body: 'Image text body content.',
+							imageUrl: 'https://placehold.co/400x300',
+							imageAlt: 'Placeholder image',
+							imagePosition: 'left',
+						},
+					],
+				}),
+			});
+			return { status: res.status, ok: res.ok };
+		}, baseUrl);
+		if (!createRes.ok) {
+			throw new Error(`Failed to create post via API: status ${createRes.status}`);
+		}
+		console.log(`${LOG_PREFIX}   [Playwright] Post created via API (status ${createRes.status}).`);
+		await apiContext.close();
+
+		// --- Test 7: Posts listing page at /posts ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 7: Posts listing page`);
+		const postsPage = await browser.newPage();
+		await postsPage.goto(`${baseUrl}/posts`);
+		await postsPage.waitForLoadState('networkidle');
+
+		const postsTitle = postsPage.locator('[data-testid="posts-title"]');
+		await postsTitle.waitFor({ state: 'visible', timeout: 10000 });
+
+		// Wait for posts to load (grid appears)
+		const postsGrid = postsPage.locator('[data-testid="posts-grid"]');
+		await postsGrid.waitFor({ state: 'visible', timeout: 10000 });
+
+		// Verify at least one post card is rendered
+		const postCards = postsPage.locator('[data-testid="post-card"]');
+		const cardCount = await postCards.count();
+		if (cardCount < 1) {
+			throw new Error(`Expected at least 1 post card, found ${cardCount}`);
+		}
+
+		// Verify the post title is visible
+		const firstPostTitle = postsPage.locator('[data-testid="post-title"]').first();
+		await firstPostTitle.waitFor({ state: 'visible', timeout: 5000 });
+		const titleText = await firstPostTitle.textContent();
+		if (!titleText?.includes('Hello World Post')) {
+			throw new Error(`Expected post title "Hello World Post", got "${titleText}"`);
+		}
+		console.log(`${LOG_PREFIX}   [Playwright] Posts listing renders ${cardCount} post(s).`);
+
+		// --- Test 8: Search filters posts ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 8: Search filters posts`);
+		const searchInput = postsPage.locator('[data-testid="posts-search"]');
+		await searchInput.fill('nonexistent-query-xyz');
+		// Wait for the empty state to appear
+		const postsEmpty = postsPage.locator('[data-testid="posts-empty"]');
+		await postsEmpty.waitFor({ state: 'visible', timeout: 5000 });
+		console.log(`${LOG_PREFIX}   [Playwright] Search filters: empty state shown for no results.`);
+
+		// Clear search and verify posts come back
+		await searchInput.clear();
+		await postsGrid.waitFor({ state: 'visible', timeout: 5000 });
+		console.log(`${LOG_PREFIX}   [Playwright] Search clear: posts grid restored.`);
+		await postsPage.close();
+
+		// --- Test 9: Post detail page with blocks ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 9: Post detail page with blocks`);
+		const detailPage = await browser.newPage();
+		await detailPage.goto(`${baseUrl}/posts/hello-world-post`);
+		await detailPage.waitForLoadState('networkidle');
+
+		// Verify post detail renders
+		const postDetail = detailPage.locator('[data-testid="post-detail"]');
+		await postDetail.waitFor({ state: 'visible', timeout: 10000 });
+
+		// Verify title
+		const detailTitle = detailPage.locator('[data-testid="post-detail-title"]');
+		await detailTitle.waitFor({ state: 'visible', timeout: 5000 });
+		const detailTitleText = await detailTitle.textContent();
+		if (!detailTitleText?.includes('Hello World Post')) {
+			throw new Error(`Expected detail title "Hello World Post", got "${detailTitleText}"`);
+		}
+
+		// Verify blocks container is rendered
+		const blocksContainer = detailPage.locator('[data-testid="post-blocks"]');
+		await blocksContainer.waitFor({ state: 'visible', timeout: 5000 });
+
+		// Verify back link
+		const backLink = detailPage.locator('[data-testid="post-back-link"]');
+		await backLink.waitFor({ state: 'visible', timeout: 5000 });
+
+		console.log(`${LOG_PREFIX}   [Playwright] Post detail page renders with title and blocks.`);
+		await detailPage.close();
+
+		// --- Test 10: Non-existent post shows error state ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 10: Non-existent post error state`);
+		const errorPage = await browser.newPage();
+		await errorPage.goto(`${baseUrl}/posts/does-not-exist-slug`);
+		await errorPage.waitForLoadState('networkidle');
+
+		const postError = errorPage.locator('[data-testid="post-error"]');
+		await postError.waitFor({ state: 'visible', timeout: 10000 });
+		console.log(`${LOG_PREFIX}   [Playwright] Non-existent post shows error state.`);
+		await errorPage.close();
 
 		console.log(`${LOG_PREFIX} All Playwright browser tests passed!`);
 	} finally {

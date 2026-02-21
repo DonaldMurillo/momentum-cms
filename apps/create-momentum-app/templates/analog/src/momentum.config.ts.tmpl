@@ -3,8 +3,9 @@ import { defineMomentumConfig } from '@momentumcms/core';
 {{dbImport}}
 import { momentumAuth } from '@momentumcms/auth';
 import { localStorageAdapter } from '@momentumcms/storage';
+import { seoPlugin } from '@momentumcms/plugins-seo';
 import { join } from 'node:path';
-import { Posts } from './collections/posts';
+import { Posts } from './collections/posts.collection';
 
 const dbAdapter = {{dbAdapter}};
 
@@ -20,6 +21,19 @@ export const authPlugin = momentumAuth({
 	email: {
 		appName: '{{projectName}}',
 	},
+});
+
+/**
+ * SEO plugin - generates sitemap.xml, robots.txt, and meta tag API.
+ */
+export const seo = seoPlugin({
+	collections: ['posts'],
+	siteUrl: `http://localhost:${process.env['PORT'] || {{defaultPort}}}`,
+	analysis: true,
+	sitemap: true,
+	robots: true,
+	metaApi: true,
+	adminDashboard: true,
 });
 
 const config = defineMomentumConfig({
@@ -44,7 +58,7 @@ const config = defineMomentumConfig({
 			headers: ['Content-Type', 'Authorization', 'X-API-Key'],
 		},
 	},
-	plugins: [authPlugin],
+	plugins: [seo, authPlugin],
 });
 
 export default config;

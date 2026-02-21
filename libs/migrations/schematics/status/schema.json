@@ -1,0 +1,15 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"$id": "MomentumMigrationStatus",
+	"title": "Migration Status",
+	"description": "Show the status of all migrations (applied vs pending)",
+	"type": "object",
+	"properties": {
+		"configPath": {
+			"type": "string",
+			"description": "Path to momentum.config.ts",
+			"default": "src/momentum.config.ts"
+		}
+	},
+	"required": []
+}
