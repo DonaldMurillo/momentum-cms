@@ -25,6 +25,7 @@ import type { ValidationError } from '../input/input.types';
 			[id]="id()"
 			[attr.aria-checked]="value()"
 			[attr.aria-invalid]="hasError() || null"
+			[attr.aria-label]="ariaLabel() || null"
 			[attr.aria-describedby]="ariaDescribedBy()"
 			[disabled]="disabled()"
 			(click)="toggle()"
@@ -61,6 +62,7 @@ export class Switch {
 
 	// === Component-specific configuration ===
 	readonly id = input('');
+	readonly ariaLabel = input<string | undefined>(undefined);
 	readonly describedBy = input<string | undefined>(undefined);
 	readonly hasLabel = input(true);
 

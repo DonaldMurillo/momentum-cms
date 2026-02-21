@@ -29,6 +29,8 @@ import type { RadioOption } from './radio-group.types';
 		'[class.mcms-radio-group--disabled]': 'disabled()',
 		'[attr.aria-invalid]': 'hasError() || null',
 		'[attr.aria-describedby]': 'ariaDescribedBy()',
+		'[attr.aria-label]': 'ariaLabel() || null',
+		'[attr.aria-labelledby]': 'ariaLabelledBy() || null',
 		'[attr.aria-required]': 'required() || null',
 		'(keydown)': 'onKeydown($event)',
 	},
@@ -78,6 +80,8 @@ export class RadioGroup {
 	readonly id = input('');
 	readonly name = input('');
 	readonly options = input<RadioOption[]>([]);
+	readonly ariaLabel = input<string | undefined>(undefined);
+	readonly ariaLabelledBy = input<string | undefined>(undefined);
 	readonly describedBy = input<string | undefined>(undefined);
 	readonly required = input(false);
 

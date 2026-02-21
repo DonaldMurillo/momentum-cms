@@ -111,6 +111,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 							type="file"
 							class="sr-only"
 							multiple
+							aria-label="Upload media files"
 							(change)="onFilesSelected($event)"
 						/>
 						<span
@@ -144,7 +145,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 							size="sm"
 							(click)="deleteSelected()"
 						>
-							<ng-icon name="heroTrash" class="h-4 w-4" />
+							<ng-icon name="heroTrash" class="h-4 w-4" aria-hidden="true" />
 							Delete
 						</button>
 					</div>
@@ -235,7 +236,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 
 							<!-- Hover overlay -->
 							<div
-								class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-3 opacity-0 transition-opacity group-hover:opacity-100"
+								class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-3 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
 							>
 								<p class="truncate text-sm font-medium text-white">
 									{{ media.filename }}

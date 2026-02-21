@@ -32,24 +32,26 @@ import { ResetPasswordFormComponent } from '../../components/reset-password-form
 		class: 'flex min-h-screen items-center justify-center bg-background p-4',
 	},
 	template: `
-		<mcms-card class="w-full max-w-md">
-			<mcms-card-header class="text-center">
-				<mcms-card-title>Set New Password</mcms-card-title>
-				<mcms-card-description> Enter your new password below </mcms-card-description>
-			</mcms-card-header>
+		<main>
+			<mcms-card class="w-full max-w-md">
+				<mcms-card-header class="text-center">
+					<mcms-card-title>Set New Password</mcms-card-title>
+					<mcms-card-description> Enter your new password below </mcms-card-description>
+				</mcms-card-header>
 
-			<mcms-card-content>
-				<mcms-reset-password-form
-					[token]="token()"
-					(goToLogin)="navigateToLogin()"
-					(goToForgotPassword)="navigateToForgotPassword()"
-				/>
-			</mcms-card-content>
+				<mcms-card-content>
+					<mcms-reset-password-form
+						[token]="token()"
+						(goToLogin)="navigateToLogin()"
+						(goToForgotPassword)="navigateToForgotPassword()"
+					/>
+				</mcms-card-content>
 
-			<mcms-card-footer class="justify-center">
-				<p class="text-sm text-muted-foreground">Momentum CMS</p>
-			</mcms-card-footer>
-		</mcms-card>
+				<mcms-card-footer class="justify-center">
+					<p class="text-sm text-muted-foreground">Momentum CMS</p>
+				</mcms-card-footer>
+			</mcms-card>
+		</main>
 	`,
 })
 export class ResetPasswordPage implements OnInit {

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { A11yModule } from '@angular/cdk/a11y';
 
 /**
  * Popover content container component.
@@ -12,11 +13,12 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
  */
 @Component({
 	selector: 'mcms-popover-content',
+	imports: [A11yModule],
 	host: {
 		class: 'block',
 		role: 'dialog',
 	},
-	template: `<ng-content />`,
+	template: `<div cdkTrapFocus cdkTrapFocusAutoCapture><ng-content /></div>`,
 	styles: `
 		:host {
 			display: block;

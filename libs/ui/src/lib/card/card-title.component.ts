@@ -1,12 +1,28 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 @Component({
 	selector: 'mcms-card-title',
-	host: { class: 'contents' },
+	host: {
+		class: 'contents',
+	},
 	template: `
-		<h2 class="card-title">
-			<ng-content />
-		</h2>
+		@switch (level()) {
+			@case (1) {
+				<h1 class="card-title"><ng-content /></h1>
+			}
+			@case (2) {
+				<h2 class="card-title"><ng-content /></h2>
+			}
+			@case (3) {
+				<h3 class="card-title"><ng-content /></h3>
+			}
+			@case (4) {
+				<h4 class="card-title"><ng-content /></h4>
+			}
+			@default {
+				<h2 class="card-title"><ng-content /></h2>
+			}
+		}
 	`,
 	styles: `
 		.card-title {
@@ -20,4 +36,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CardTitle {}
+export class CardTitle {
+	/** Heading level (1-4). Defaults to 2 for proper document hierarchy. */
+	readonly level = input<1 | 2 | 3 | 4>(2);
+}

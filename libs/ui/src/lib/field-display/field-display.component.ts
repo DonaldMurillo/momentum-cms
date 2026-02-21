@@ -149,6 +149,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 						<div
 							class="prose prose-sm dark:prose-invert max-w-none"
 							[innerHTML]="stringValue()"
+							[attr.aria-label]="label() ? label() + ' rich content' : 'Rich text content'"
 						></div>
 					}
 				}
@@ -175,11 +176,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 						<span class="text-muted-foreground">{{ emptyText() }}</span>
 					} @else {
 						<div class="overflow-auto rounded-md border border-border">
-							<table class="w-full text-sm">
+							<table class="w-full text-sm" [attr.aria-label]="label() || 'Data table'">
 								<thead>
 									<tr class="border-b bg-muted/50">
 										@for (meta of fieldMeta(); track meta.name) {
-											<th class="px-3 py-2 text-left font-medium text-muted-foreground">
+											<th scope="col" class="px-3 py-2 text-left font-medium text-muted-foreground">
 												{{ meta.label || meta.name }}
 											</th>
 										}

@@ -7,4 +7,13 @@ export interface ValidationError {
 	[key: string]: unknown;
 }
 
-export type InputType = 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'search';
+export type InputType =
+	| 'text'
+	| 'email'
+	| 'password'
+	| 'number'
+	| 'tel'
+	| 'url'
+	| 'search'
+	| 'date'
+	| 'datetime-local';

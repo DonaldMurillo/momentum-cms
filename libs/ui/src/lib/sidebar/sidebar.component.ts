@@ -52,6 +52,7 @@ import { SidebarService } from './sidebar.service';
 				role="dialog"
 				[attr.aria-modal]="sidebar.open() || null"
 				aria-label="Sidebar navigation"
+				(keydown.escape)="sidebar.setOpen(false)"
 			>
 				<ng-container *ngTemplateOutlet="sidebarContent" />
 			</aside>

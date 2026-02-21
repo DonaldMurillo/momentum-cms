@@ -10,7 +10,11 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
  */
 @Component({
 	selector: 'mcms-alert-title',
-	host: { class: 'block' },
+	host: {
+		class: 'block',
+		role: 'heading',
+		'aria-level': '2',
+	},
 	template: `<ng-content />`,
 	styles: `
 		:host {

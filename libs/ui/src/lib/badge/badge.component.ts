@@ -15,7 +15,7 @@ import type { BadgeVariant } from './badge.types';
 @Component({
 	selector: 'mcms-badge',
 	host: {
-		role: 'status',
+		'[attr.role]': 'role() || null',
 		'[attr.aria-label]': 'ariaLabel() || null',
 		'[style.--badge-bg]': 'variantBg()',
 		'[style.--badge-color]': 'variantColor()',
@@ -46,6 +46,8 @@ import type { BadgeVariant } from './badge.types';
 export class Badge {
 	readonly variant = input<BadgeVariant>('default');
 	readonly class = input('');
+	/** ARIA role. Set to 'status' for live-region badges, or null for decorative. */
+	readonly role = input<string | null>(null);
 	/** Accessible label for screen reader override. */
 	readonly ariaLabel = input<string | undefined>(undefined);
 

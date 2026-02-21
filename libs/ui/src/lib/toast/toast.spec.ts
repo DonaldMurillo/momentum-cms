@@ -176,8 +176,8 @@ describe('ToastComponent', () => {
 		expect(fixture.componentInstance).toBeTruthy();
 	});
 
-	it('should have role="status"', () => {
-		expect(fixture.nativeElement.getAttribute('role')).toBe('status');
+	it('should not have role="status" on individual toasts (container handles live region)', () => {
+		expect(fixture.nativeElement.getAttribute('role')).toBeNull();
 	});
 
 	it('should display title', () => {

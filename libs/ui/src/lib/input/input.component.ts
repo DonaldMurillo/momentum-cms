@@ -30,6 +30,7 @@ import type { InputType, ValidationError } from './input.types';
 			[placeholder]="placeholder()"
 			[attr.aria-invalid]="hasError() || null"
 			[attr.aria-describedby]="ariaDescribedBy()"
+			[attr.aria-label]="ariaLabel() || null"
 			[attr.aria-required]="required() || null"
 			[attr.autocomplete]="autocomplete()"
 			[attr.min]="min()"
@@ -99,6 +100,7 @@ export class Input {
 	readonly name = input('');
 	readonly placeholder = input('');
 	readonly autocomplete = input<string | undefined>(undefined);
+	readonly ariaLabel = input<string | undefined>(undefined);
 	readonly describedBy = input<string | undefined>(undefined);
 	readonly min = input<number | undefined>(undefined);
 	readonly max = input<number | undefined>(undefined);

@@ -18,7 +18,6 @@ import { ToastService } from './toast.service';
 	imports: [ToastComponent],
 	host: {
 		'aria-live': 'polite',
-		'aria-atomic': 'true',
 		'[class]': 'hostClass()',
 	},
 	template: `

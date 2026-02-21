@@ -44,100 +44,102 @@ import { MomentumAuthService } from '../../services/auth.service';
 		class: 'flex min-h-screen items-center justify-center bg-background p-4',
 	},
 	template: `
-		<mcms-card class="w-full max-w-md">
-			<mcms-card-header class="text-center">
-				<mcms-card-title>Welcome to Momentum CMS</mcms-card-title>
-				<mcms-card-description> Create your admin account to get started </mcms-card-description>
-			</mcms-card-header>
+		<main>
+			<mcms-card class="w-full max-w-md">
+				<mcms-card-header class="text-center">
+					<mcms-card-title>Welcome to Momentum CMS</mcms-card-title>
+					<mcms-card-description> Create your admin account to get started </mcms-card-description>
+				</mcms-card-header>
 
-			<mcms-card-content>
-				<form (submit)="onSubmit($event)" class="space-y-4">
-					@if (error()) {
-						<div
-							class="rounded-md bg-destructive/15 p-3 text-sm text-destructive"
-							role="alert"
-							aria-live="polite"
-						>
-							{{ error() }}
-						</div>
-					}
-
-					<mcms-form-field id="setup-name" [required]="true" [errors]="nameErrors()">
-						<span mcmsLabel>Full Name</span>
-						<mcms-input
-							type="text"
-							id="setup-name"
-							name="name"
-							[(value)]="name"
-							placeholder="Your name"
-							autocomplete="name"
-							[disabled]="!hydrated() || isSubmitting()"
-						/>
-					</mcms-form-field>
-
-					<mcms-form-field id="setup-email" [required]="true" [errors]="emailErrors()">
-						<span mcmsLabel>Email Address</span>
-						<mcms-input
-							type="email"
-							id="setup-email"
-							name="email"
-							[(value)]="email"
-							placeholder="admin@example.com"
-							autocomplete="email"
-							[disabled]="!hydrated() || isSubmitting()"
-						/>
-					</mcms-form-field>
-
-					<mcms-form-field id="setup-password" [required]="true" [errors]="passwordErrors()">
-						<span mcmsLabel>Password</span>
-						<mcms-input
-							type="password"
-							id="setup-password"
-							name="password"
-							[(value)]="password"
-							placeholder="At least 8 characters"
-							autocomplete="new-password"
-							[disabled]="!hydrated() || isSubmitting()"
-						/>
-					</mcms-form-field>
-
-					<mcms-form-field
-						id="setup-confirm-password"
-						[required]="true"
-						[errors]="confirmPasswordErrors()"
-					>
-						<span mcmsLabel>Confirm Password</span>
-						<mcms-input
-							type="password"
-							id="setup-confirm-password"
-							name="confirmPassword"
-							[(value)]="confirmPassword"
-							placeholder="Repeat your password"
-							autocomplete="new-password"
-							[disabled]="!hydrated() || isSubmitting()"
-						/>
-					</mcms-form-field>
-
-					<button
-						mcms-button
-						type="submit"
-						class="w-full"
-						[disabled]="!hydrated() || isSubmitting() || !isValid()"
-					>
-						@if (isSubmitting()) {
-							<span class="animate-spin" aria-hidden="true">⏳</span>
-							Creating account...
-						} @else {
-							Create Admin Account
+				<mcms-card-content>
+					<form (submit)="onSubmit($event)" class="space-y-4">
+						@if (error()) {
+							<div
+								class="rounded-md bg-destructive/15 p-3 text-sm text-destructive"
+								role="alert"
+								aria-live="polite"
+							>
+								{{ error() }}
+							</div>
 						}
-					</button>
-				</form>
-			</mcms-card-content>
 
-			<mcms-card-footer class="justify-center">
-				<p class="text-sm text-muted-foreground">This account will have full admin privileges</p>
-			</mcms-card-footer>
-		</mcms-card>
+						<mcms-form-field id="setup-name" [required]="true" [errors]="nameErrors()">
+							<span mcmsLabel>Full Name</span>
+							<mcms-input
+								type="text"
+								id="setup-name"
+								name="name"
+								[(value)]="name"
+								placeholder="Your name"
+								autocomplete="name"
+								[disabled]="!hydrated() || isSubmitting()"
+							/>
+						</mcms-form-field>
+
+						<mcms-form-field id="setup-email" [required]="true" [errors]="emailErrors()">
+							<span mcmsLabel>Email Address</span>
+							<mcms-input
+								type="email"
+								id="setup-email"
+								name="email"
+								[(value)]="email"
+								placeholder="admin@example.com"
+								autocomplete="email"
+								[disabled]="!hydrated() || isSubmitting()"
+							/>
+						</mcms-form-field>
+
+						<mcms-form-field id="setup-password" [required]="true" [errors]="passwordErrors()">
+							<span mcmsLabel>Password</span>
+							<mcms-input
+								type="password"
+								id="setup-password"
+								name="password"
+								[(value)]="password"
+								placeholder="At least 8 characters"
+								autocomplete="new-password"
+								[disabled]="!hydrated() || isSubmitting()"
+							/>
+						</mcms-form-field>
+
+						<mcms-form-field
+							id="setup-confirm-password"
+							[required]="true"
+							[errors]="confirmPasswordErrors()"
+						>
+							<span mcmsLabel>Confirm Password</span>
+							<mcms-input
+								type="password"
+								id="setup-confirm-password"
+								name="confirmPassword"
+								[(value)]="confirmPassword"
+								placeholder="Repeat your password"
+								autocomplete="new-password"
+								[disabled]="!hydrated() || isSubmitting()"
+							/>
+						</mcms-form-field>
+
+						<button
+							mcms-button
+							type="submit"
+							class="w-full"
+							[disabled]="!hydrated() || isSubmitting() || !isValid()"
+						>
+							@if (isSubmitting()) {
+								<span class="animate-spin" aria-hidden="true">⏳</span>
+								Creating account...
+							} @else {
+								Create Admin Account
+							}
+						</button>
+					</form>
+				</mcms-card-content>
+
+				<mcms-card-footer class="justify-center">
+					<p class="text-sm text-muted-foreground">This account will have full admin privileges</p>
+				</mcms-card-footer>
+			</mcms-card>
+		</main>
 	`,
 })
 export class SetupPage {

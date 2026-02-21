@@ -32,22 +32,24 @@ import { ForgotPasswordFormComponent } from '../../components/forgot-password-fo
 		class: 'flex min-h-screen items-center justify-center bg-background p-4',
 	},
 	template: `
-		<mcms-card class="w-full max-w-md">
-			<mcms-card-header class="text-center">
-				<mcms-card-title>Reset Password</mcms-card-title>
-				<mcms-card-description>
-					We'll send you a link to reset your password
-				</mcms-card-description>
-			</mcms-card-header>
+		<main>
+			<mcms-card class="w-full max-w-md">
+				<mcms-card-header class="text-center">
+					<mcms-card-title>Reset Password</mcms-card-title>
+					<mcms-card-description>
+						We'll send you a link to reset your password
+					</mcms-card-description>
+				</mcms-card-header>
 
-			<mcms-card-content>
-				<mcms-forgot-password-form (backToLogin)="navigateToLogin()" />
-			</mcms-card-content>
+				<mcms-card-content>
+					<mcms-forgot-password-form (backToLogin)="navigateToLogin()" />
+				</mcms-card-content>
 
-			<mcms-card-footer class="justify-center">
-				<p class="text-sm text-muted-foreground">Momentum CMS</p>
-			</mcms-card-footer>
-		</mcms-card>
+				<mcms-card-footer class="justify-center">
+					<p class="text-sm text-muted-foreground">Momentum CMS</p>
+				</mcms-card-footer>
+			</mcms-card>
+		</main>
 	`,
 })
 export class ForgotPasswordPage {
