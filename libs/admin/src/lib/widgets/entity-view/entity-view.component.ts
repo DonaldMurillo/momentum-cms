@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import type { CollectionConfig, Field, DocumentStatus } from '@momentumcms/core';
-import { humanizeFieldName, getSoftDeleteField } from '@momentumcms/core';
+import { humanizeFieldName, getSoftDeleteField, flattenDataFields } from '@momentumcms/core';
 import {
 	Card,
 	CardContent,
@@ -291,12 +291,13 @@ export class EntityViewWidget<T extends Entity = Entity> {
 		return `${this.collectionLabelSingular()} ${e.id}`;
 	});
 
-	/** Visible fields (excluding hidden ones) */
+	/** Visible fields (excluding hidden ones, flattening layout wrappers) */
 	readonly visibleFields = computed((): Field[] => {
 		const col = this.collection();
 		const configs = this.fieldConfigs();
+		const dataFields = flattenDataFields(col.fields);
 
-		return col.fields.filter((field) => {
+		return dataFields.filter((field) => {
 			// Check custom config
 			const config = configs.find((c) => c.field === field.name);
 			if (config?.hidden) return false;
@@ -651,7 +652,7 @@ export class EntityViewWidget<T extends Entity = Entity> {
 	 * Resolve relationship and upload field values from IDs to display labels.
 	 */
 	private resolveRelationships(entity: T): void {
-		const fields = this.collection().fields;
+		const fields = flattenDataFields(this.collection().fields);
 		const resolved = new Map<string, string>();
 
 		const promises: Promise<void>[] = [];
