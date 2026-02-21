@@ -27,6 +27,9 @@ import {
 	heroDocumentText,
 	heroCog6Tooth,
 	heroPuzzlePiece,
+	heroMagnifyingGlass,
+	heroMap,
+	heroCursorArrowRays,
 } from '@ng-icons/heroicons/outline';
 import type { AdminBranding, AdminUser } from '../widget.types';
 import { humanizeFieldName } from '@momentumcms/core';
@@ -96,6 +99,9 @@ interface PluginRouteGroup {
 			heroDocumentText,
 			heroCog6Tooth,
 			heroPuzzlePiece,
+			heroMagnifyingGlass,
+			heroMap,
+			heroCursorArrowRays,
 		}),
 	],
 	host: {
