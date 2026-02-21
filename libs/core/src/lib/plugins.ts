@@ -19,8 +19,14 @@ export interface PluginMiddlewareDescriptor {
 	path: string;
 	/** Express Router or middleware function. Typed as unknown to avoid Express dependency in core. */
 	handler: unknown;
-	/** Where to mount relative to collection CRUD routes. @default 'before-api' */
-	position?: 'before-api' | 'after-api';
+	/**
+	 * Where to mount relative to collection CRUD routes.
+	 * - 'before-api': Before collection CRUD routes (under /api)
+	 * - 'after-api': After collection CRUD routes (under /api)
+	 * - 'root': Mounted at the application root (not under /api)
+	 * @default 'before-api'
+	 */
+	position?: 'before-api' | 'after-api' | 'root';
 }
 
 /**

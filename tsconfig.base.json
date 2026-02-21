@@ -32,6 +32,9 @@
 			"@momentumcms/plugins/core": ["libs/plugins/core/src/index.ts"],
 			"@momentumcms/plugins/analytics": ["libs/plugins/analytics/src/index.ts"],
 			"@momentumcms/plugins/otel": ["libs/plugins/otel/src/index.ts"],
+			"@momentumcms/plugins/seo": ["libs/plugins/seo/src/index.ts"],
+			"@momentumcms/plugins/seo/admin-routes": ["libs/plugins/seo/src/lib/seo-admin-routes.ts"],
+			"@momentumcms/plugins/seo/fields": ["libs/plugins/seo/src/lib/seo-field-injector.ts"],
 			"@momentumcms/plugins/analytics/dashboard": [
 				"libs/plugins/analytics/src/lib/dashboard/analytics-dashboard.page.ts"
 			],

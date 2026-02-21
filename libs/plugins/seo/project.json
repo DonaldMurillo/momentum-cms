@@ -1,0 +1,32 @@
+{
+	"name": "plugins-seo",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/plugins/seo/src",
+	"projectType": "library",
+	"tags": ["scope:plugin"],
+	"targets": {
+		"test": {
+			"executor": "@nx/vitest:test",
+			"outputs": ["{workspaceRoot}/coverage/libs/plugins/seo"],
+			"options": {
+				"config": "libs/plugins/seo/vitest.config.ts"
+			}
+		},
+		"build": {
+			"executor": "@nx/esbuild:esbuild",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/libs/plugins/seo",
+				"main": "libs/plugins/seo/src/index.ts",
+				"tsConfig": "libs/plugins/seo/tsconfig.lib.json",
+				"external": ["@angular/*", "@ng-icons/*", "@momentumcms/ui"]
+			}
+		},
+		"nx-release-publish": {
+			"options": {
+				"packageRoot": "dist/{projectRoot}",
+				"access": "public"
+			}
+		}
+	}
+}
