@@ -197,7 +197,6 @@ import { DropdownMenuItem } from '../dropdown-menu/dropdown-menu-item.component'
 								[class.bg-muted/50]="isSelected(item)"
 								[class.cursor-pointer]="clickableRows()"
 								[attr.tabindex]="clickableRows() ? 0 : null"
-								[attr.role]="clickableRows() ? 'link' : null"
 								(click)="onRowClicked(item)"
 								(keydown.enter)="onRowClicked(item)"
 							>

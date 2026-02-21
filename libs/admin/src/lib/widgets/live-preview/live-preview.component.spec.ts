@@ -75,16 +75,4 @@ describe('LivePreviewComponent', () => {
 			expect(component.iframeWidth()).toBe('375px');
 		});
 	});
-
-	describe('device size toggle should not reload iframe', () => {
-		// jsdom cannot render @if(previewUrl()) conditional blocks, so the iframe
-		// is never present in the unit test DOM. This behavior is verified by:
-		// 1. The effect split (src+sandbox vs width) using untracked() — tested
-		//    indirectly via the iframeWidth computed tests above.
-		// 2. E2E tests in admin-edit-preview-debug.spec.ts which use a real browser.
-		it.skip('should update iframe width without re-setting src when device size changes (requires real browser)', () => {
-			// Skipped: @if conditional rendering does not work in jsdom.
-			// The fix (split effects with untracked) is verified via E2E.
-		});
-	});
 });

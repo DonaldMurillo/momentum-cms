@@ -106,22 +106,23 @@ function getInputElement(event: Event): HTMLInputElement | null {
 					</p>
 				</div>
 				<div class="flex gap-2">
-					<label class="cursor-pointer">
-						<input
-							type="file"
-							class="sr-only"
-							multiple
-							aria-label="Upload media files"
-							(change)="onFilesSelected($event)"
-						/>
-						<span
-							mcms-button
-							class="inline-flex"
-						>
-							<ng-icon name="heroCloudArrowUp" class="h-4 w-4" />
-							Upload Files
-						</span>
-					</label>
+					<input
+						#fileInput
+						type="file"
+						class="sr-only"
+						multiple
+						aria-label="Upload media files"
+						(change)="onFilesSelected($event)"
+					/>
+					<button
+						mcms-button
+						type="button"
+						class="inline-flex"
+						(click)="fileInput.click()"
+					>
+						<ng-icon name="heroCloudArrowUp" class="h-4 w-4" />
+						Upload Files
+					</button>
 				</div>
 			</div>
 

@@ -1,31 +1,22 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
+/**
+ * Card title component that renders as an ARIA heading.
+ *
+ * Uses `role="heading"` with `aria-level` on the host element instead of
+ * native heading elements inside `@switch` blocks. This avoids Angular SSR
+ * hydration issues where `<ng-content />` inside control flow blocks causes
+ * projected content to be dropped during client-side hydration.
+ */
 @Component({
 	selector: 'mcms-card-title',
 	host: {
-		class: 'contents',
+		role: 'heading',
+		'[attr.aria-level]': 'level()',
 	},
-	template: `
-		@switch (level()) {
-			@case (1) {
-				<h1 class="card-title"><ng-content /></h1>
-			}
-			@case (2) {
-				<h2 class="card-title"><ng-content /></h2>
-			}
-			@case (3) {
-				<h3 class="card-title"><ng-content /></h3>
-			}
-			@case (4) {
-				<h4 class="card-title"><ng-content /></h4>
-			}
-			@default {
-				<h2 class="card-title"><ng-content /></h2>
-			}
-		}
-	`,
+	template: `<ng-content />`,
 	styles: `
-		.card-title {
+		:host {
 			display: block;
 			font-size: 1.5rem;
 			font-weight: 600;

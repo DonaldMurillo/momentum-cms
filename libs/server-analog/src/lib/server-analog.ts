@@ -7,6 +7,7 @@ import {
 	executeGraphQL,
 	handleUpload,
 	handleFileGet,
+	handleCollectionUpload,
 	getUploadConfig,
 	exportToJson,
 	exportToCsv,
@@ -28,9 +29,11 @@ import {
 	type ExportFormat,
 	type ImportResult,
 	type UploadRequest,
+	type CollectionUploadRequest,
 	sanitizeErrorMessage,
 	parseWhereParam,
 	sanitizeFilename,
+	validateMimeType,
 } from '@momentumcms/server-core';
 import type {
 	MomentumConfig,
@@ -40,6 +43,7 @@ import type {
 	EndpointQueryHelper,
 	DatabaseAdapter,
 } from '@momentumcms/core';
+import { isUploadCollection } from '@momentumcms/core';
 
 // ============================================
 // H3 Type Definitions
@@ -129,6 +133,56 @@ export interface MomentumH3Utils {
 // sanitizeErrorMessage and parseWhereParam are imported from @momentumcms/server-core
 
 /**
+ * Convert flat bracket-style query params from h3/ufo into nested objects.
+ * h3's getQuery returns { "where[title][equals]": "foo" } for bracket-style params,
+ * but Express/qs returns { where: { title: { equals: "foo" } } }.
+ * This helper normalizes the h3 format to match Express behavior.
+ */
+function nestBracketParams(flat: Record<string, string | string[]>): Record<string, unknown> {
+	const result: Record<string, unknown> = {};
+
+	for (const [key, value] of Object.entries(flat)) {
+		const bracketIdx = key.indexOf('[');
+		if (bracketIdx === -1) {
+			// No brackets — pass through as-is
+			result[key] = value;
+			continue;
+		}
+
+		const rootKey = key.slice(0, bracketIdx);
+		const bracketPart = key.slice(bracketIdx);
+		const parts: string[] = [];
+		const bracketRegex = /\[([^\]]*)\]/g;
+		let m: RegExpExecArray | null;
+		while ((m = bracketRegex.exec(bracketPart)) !== null) {
+			parts.push(m[1]);
+		}
+
+		if (parts.length === 0) {
+			result[key] = value;
+			continue;
+		}
+
+		// Build nested object
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+		let current = (result[rootKey] ?? {}) as Record<string, unknown>;
+		result[rootKey] = current;
+
+		for (let i = 0; i < parts.length - 1; i++) {
+			const part = parts[i];
+			if (typeof current[part] !== 'object' || current[part] === null) {
+				current[part] = {};
+			}
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+			current = current[part] as Record<string, unknown>;
+		}
+		current[parts[parts.length - 1]] = value;
+	}
+
+	return result;
+}
+
+/**
  * Convert string method to MomentumRequest method type.
  */
 function toMomentumMethod(m: string): MomentumRequest['method'] {
@@ -182,8 +236,8 @@ export function createMomentumHandler(config: MomentumConfig | ResolvedMomentumC
 		const collectionSlug = pathSegments[0] ?? '';
 		const id = pathSegments[1];
 
-		// Parse query params
-		const queryParams = getQuery(event);
+		// Parse query params (h3/ufo doesn't nest bracket-style params like Express/qs)
+		const queryParams = nestBracketParams(getQuery(event));
 		const sortParam = queryParams['sort'];
 		const query = {
 			limit: queryParams['limit'] ? Number(queryParams['limit']) : undefined,
@@ -408,7 +462,8 @@ export function createComprehensiveMomentumHandler(
 		// Parse route segments from catch-all param
 		const params = utils.getRouterParams(event);
 		const pathSegments = (params['momentum'] ?? '').split('/').filter(Boolean);
-		const queryParams = utils.getQuery(event);
+		// h3/ufo doesn't nest bracket-style params like Express/qs
+		const queryParams = nestBracketParams(utils.getQuery(event));
 
 		const seg0 = pathSegments[0] ?? '';
 		const seg1 = pathSegments[1];
@@ -725,8 +780,13 @@ export function createComprehensiveMomentumHandler(
 				utils.setResponseStatus(event, 400);
 				return { error: 'Invalid path encoding' };
 			}
-			const filePath = normalize(decodedPath).replace(/^(\.\.(\/|\\|$))+/, '');
-			if (isAbsolute(filePath) || filePath.includes('..') || filePath.includes(`${sep}..`)) {
+			// Reject any path containing traversal sequences before normalization
+			if (decodedPath.includes('..')) {
+				utils.setResponseStatus(event, 403);
+				return { error: 'Invalid file path' };
+			}
+			const filePath = normalize(decodedPath);
+			if (isAbsolute(filePath)) {
 				utils.setResponseStatus(event, 403);
 				return { error: 'Invalid file path' };
 			}
@@ -1318,6 +1378,164 @@ export function createComprehensiveMomentumHandler(
 			} catch (error) {
 				utils.setResponseStatus(event, 500);
 				return { error: sanitizeErrorMessage(error, 'Import failed') };
+			}
+		}
+
+		// ============================================
+		// Collection-level upload: POST /:collection (upload collections)
+		// ============================================
+		const postUploadCol = seg0 ? config.collections.find((c) => c.slug === seg0) : undefined;
+		if (method === 'POST' && seg0 && !seg1 && postUploadCol && isUploadCollection(postUploadCol)) {
+			if (!user) {
+				utils.setResponseStatus(event, 401);
+				return { error: 'Authentication required to upload files' };
+			}
+			const uploadConfig = getUploadConfig(config);
+			if (!uploadConfig) {
+				utils.setResponseStatus(event, 500);
+				return { error: 'Storage not configured' };
+			}
+			const formData = await utils.readMultipartFormData(event);
+			if (!formData || formData.length === 0) {
+				utils.setResponseStatus(event, 400);
+				return { error: 'No file provided' };
+			}
+			const fileField = formData.find((f) => f.name === 'file');
+			if (!fileField || !fileField.filename) {
+				utils.setResponseStatus(event, 400);
+				return { error: 'No file provided' };
+			}
+			const file: UploadedFile = {
+				originalName: fileField.filename,
+				mimeType: fileField.type ?? 'application/octet-stream',
+				size: fileField.data.length,
+				buffer: fileField.data,
+			};
+			const fields: Record<string, unknown> = {};
+			for (const field of formData) {
+				if (field.name !== 'file' && field.name) {
+					fields[field.name] = field.data.toString('utf-8');
+				}
+			}
+			const uploadRequest: CollectionUploadRequest = {
+				file,
+				user,
+				fields,
+				collectionSlug: seg0,
+				collectionUpload: postUploadCol.upload!,
+			};
+			const response = await handleCollectionUpload(uploadConfig, uploadRequest);
+			utils.setResponseStatus(event, response.status);
+			return response;
+		}
+
+		// ============================================
+		// Collection-level PATCH with file: PATCH /:collection/:id (upload collections)
+		// ============================================
+		const patchUploadCol = seg0 ? config.collections.find((c) => c.slug === seg0) : undefined;
+		if (
+			method === 'PATCH' &&
+			seg0 &&
+			seg1 &&
+			patchUploadCol &&
+			isUploadCollection(patchUploadCol)
+		) {
+			// Auth check before parsing multipart (matches Express behavior)
+			if (!user) {
+				utils.setResponseStatus(event, 401);
+				return { error: 'Authentication required to upload files' };
+			}
+			// Try to read multipart form data (returns undefined for non-multipart requests)
+			const formData = await utils.readMultipartFormData(event);
+			if (formData) {
+				const uploadConfig = getUploadConfig(config);
+				if (!uploadConfig) {
+					utils.setResponseStatus(event, 500);
+					return { error: 'Storage not configured' };
+				}
+				const fileField = formData.find((f) => f.name === 'file');
+				if (fileField?.filename) {
+					const file: UploadedFile = {
+						originalName: fileField.filename,
+						mimeType: fileField.type ?? 'application/octet-stream',
+						size: fileField.data.length,
+						buffer: fileField.data,
+					};
+					// Validate file size and MIME type
+					const maxFileSize =
+						patchUploadCol.upload?.maxFileSize ?? uploadConfig.maxFileSize ?? 10 * 1024 * 1024;
+					const allowedMimeTypes =
+						patchUploadCol.upload?.mimeTypes ?? uploadConfig.allowedMimeTypes ?? [];
+					if (file.size > maxFileSize) {
+						const maxMB = (maxFileSize / (1024 * 1024)).toFixed(1);
+						utils.setResponseStatus(event, 400);
+						return { error: `File too large. Maximum size is ${maxMB}MB` };
+					}
+					const mimeError = validateMimeType(file.mimeType, allowedMimeTypes);
+					if (mimeError) {
+						utils.setResponseStatus(event, 400);
+						return { error: mimeError };
+					}
+					// Validate magic bytes
+					if (file.buffer && file.buffer.length > 0) {
+						const { validateMimeType: validateMimeByMagicBytes } = await import(
+							'@momentumcms/storage'
+						);
+						const magicByteResult = validateMimeByMagicBytes(
+							file.buffer,
+							file.mimeType,
+							allowedMimeTypes,
+						);
+						if (!magicByteResult.valid) {
+							utils.setResponseStatus(event, 400);
+							return {
+								error: magicByteResult.error ?? 'File content does not match claimed type',
+							};
+						}
+					}
+					// Store file and update document
+					const storedFile = await uploadConfig.adapter.upload(file);
+					const fields: Record<string, unknown> = {};
+					for (const field of formData ?? []) {
+						if (field.name !== 'file' && field.name) {
+							fields[field.name] = field.data.toString('utf-8');
+						}
+					}
+					const updateData: Record<string, unknown> = {
+						...fields,
+						filename: file.originalName,
+						mimeType: file.mimeType,
+						filesize: file.size,
+						path: storedFile.path,
+						url: storedFile.url,
+					};
+					try {
+						const api = getMomentumAPI().setContext({ user });
+						const doc = await api.collection(seg0).update(seg1, updateData);
+						return { doc };
+					} catch (error) {
+						utils.setResponseStatus(event, 500);
+						return { error: sanitizeErrorMessage(error, 'Failed to update document') };
+					}
+				} else {
+					// No file: standard JSON update with multipart fields
+					const fields: Record<string, unknown> = {};
+					for (const field of formData ?? []) {
+						if (field.name) {
+							fields[field.name] = field.data.toString('utf-8');
+						}
+					}
+					const request: MomentumRequest = {
+						method: 'PATCH',
+						collectionSlug: seg0,
+						id: seg1,
+						body: fields,
+						user,
+					};
+					const response = await handlers.routeRequest(request);
+					utils.setResponseStatus(event, response.status ?? 200);
+					return response;
+				}
 			}
 		}
 

@@ -33,14 +33,18 @@ test.describe('Articles Page', { tag: ['@frontend', '@articles'] }, () => {
 	});
 
 	test('search filters articles by title', async ({ authenticatedPage: page }) => {
-		await page.goto('/articles');
+		await page.goto('/articles', { waitUntil: 'networkidle' });
 
-		await expect(page.locator('[data-testid="articles-grid"]')).toBeVisible({
-			timeout: 10000,
-		});
+		// Wait for all articles to load (ensures Angular hydration and API calls complete)
+		await expect
+			.poll(() => page.locator('[data-testid="article-card"]').count(), { timeout: 10000 })
+			.toBeGreaterThanOrEqual(6);
 
-		// Search for a specific article
-		await page.locator('[data-testid="articles-search"]').fill('Angular');
+		// Type search query and verify input accepted the value
+		const searchInput = page.locator('[data-testid="articles-search"]');
+		await searchInput.click();
+		await searchInput.pressSequentially('Angular', { delay: 50 });
+		await expect(searchInput).toHaveValue('Angular', { timeout: 3000 });
 
 		// Should filter to just the Angular article
 		await expect
@@ -53,14 +57,18 @@ test.describe('Articles Page', { tag: ['@frontend', '@articles'] }, () => {
 	});
 
 	test('shows empty state when search has no results', async ({ authenticatedPage: page }) => {
-		await page.goto('/articles');
+		await page.goto('/articles', { waitUntil: 'networkidle' });
 
-		await expect(page.locator('[data-testid="articles-grid"]')).toBeVisible({
-			timeout: 10000,
-		});
+		// Wait for all articles to load (ensures Angular hydration and API calls complete)
+		await expect
+			.poll(() => page.locator('[data-testid="article-card"]').count(), { timeout: 10000 })
+			.toBeGreaterThanOrEqual(6);
 
-		// Search for nonsense
-		await page.locator('[data-testid="articles-search"]').fill('xyznonexistent12345');
+		// Type search query and verify input accepted the value
+		const searchInput = page.locator('[data-testid="articles-search"]');
+		await searchInput.click();
+		await searchInput.pressSequentially('xyznonexistent12345', { delay: 30 });
+		await expect(searchInput).toHaveValue('xyznonexistent12345', { timeout: 3000 });
 
 		await expect(page.locator('[data-testid="articles-empty"]')).toBeVisible({
 			timeout: 5000,
