@@ -13,7 +13,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import type { CollectionConfig, Field } from '@momentumcms/core';
-import { humanizeFieldName, getSoftDeleteField } from '@momentumcms/core';
+import { humanizeFieldName, getSoftDeleteField, flattenDataFields } from '@momentumcms/core';
 import {
 	DataTable,
 	Button,
@@ -300,12 +300,13 @@ export class EntityListWidget<T extends Entity = Entity> {
 			return customColumns;
 		}
 
-		// Auto-derive from collection fields
+		// Auto-derive from collection fields (flatten layout wrappers like tabs/collapsible/row)
 		const col = this.collection();
 		const columns: EntityListColumn<T>[] = [];
+		const dataFields = flattenDataFields(col.fields);
 
 		// Add first text/title-like field as primary column
-		for (const field of col.fields) {
+		for (const field of dataFields) {
 			if (this.shouldShowFieldInList(field)) {
 				columns.push(this.fieldToColumn(field, complexTemplate));
 			}
@@ -480,8 +481,9 @@ export class EntityListWidget<T extends Entity = Entity> {
 	private getDefaultSearchFields(): string[] {
 		const col = this.collection();
 		const fields: string[] = [];
+		const dataFields = flattenDataFields(col.fields);
 
-		for (const field of col.fields) {
+		for (const field of dataFields) {
 			if (field.type === 'text' || field.type === 'textarea' || field.type === 'email') {
 				fields.push(field.name);
 				if (fields.length >= 3) break; // Limit search fields
@@ -497,6 +499,9 @@ export class EntityListWidget<T extends Entity = Entity> {
 	private shouldShowFieldInList(field: Field): boolean {
 		// Skip hidden fields
 		if (field.admin?.hidden) return false;
+
+		// Skip layout fields (tabs, collapsible, row) — these are handled by flattenDataFields
+		if (field.type === 'tabs' || field.type === 'collapsible' || field.type === 'row') return false;
 
 		// Skip blocks (too complex for table cells)
 		if (field.type === 'blocks') return false;

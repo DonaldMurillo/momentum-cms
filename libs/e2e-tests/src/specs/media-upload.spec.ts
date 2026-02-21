@@ -296,16 +296,16 @@ test.describe('Upload Field UI - Articles', { tag: ['@media', '@admin'] }, () =>
 			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
 		).toBeVisible();
 
-		// Upload field should show the drop zone (scoped to the upload renderer)
-		const uploadField = authenticatedPage.locator('mcms-upload-field-renderer');
-		await expect(uploadField).toBeVisible();
-		await expect(uploadField.getByText('Drag & drop or click to upload')).toBeVisible();
+		// Upload field drop zone (uses aria-label; allow extra time for nested lazy loading inside tabs)
+		const dropZone = authenticatedPage.getByRole('button', { name: 'Upload file for Cover Image' });
+		await expect(dropZone).toBeVisible({ timeout: 15000 });
+		await expect(dropZone.getByText('Drag & drop or click to upload')).toBeVisible();
 
 		// Should show MIME type hint
-		await expect(uploadField.getByText(/Allowed: Images/)).toBeVisible();
+		await expect(dropZone.getByText(/Allowed: Images/)).toBeVisible();
 
 		// Should show max size hint
-		await expect(uploadField.getByText(/Max size: 5.0 MB/)).toBeVisible();
+		await expect(dropZone.getByText(/Max size: 5.0 MB/)).toBeVisible();
 	});
 
 	test('should upload file via file picker and show preview', async ({ authenticatedPage }) => {
@@ -314,10 +314,13 @@ test.describe('Upload Field UI - Articles', { tag: ['@media', '@admin'] }, () =>
 			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
 		).toBeVisible();
 
+		// Wait for drop zone to appear (nested lazy loading inside tabs)
+		const dropZone = authenticatedPage.getByRole('button', { name: 'Upload file for Cover Image' });
+		await expect(dropZone).toBeVisible({ timeout: 15000 });
+
 		// Use filechooser event pattern — click the drop zone, then set files via the file chooser
-		const uploadField = authenticatedPage.locator('mcms-upload-field-renderer');
 		const fileChooserPromise = authenticatedPage.waitForEvent('filechooser');
-		await uploadField.getByText('Drag & drop or click to upload').click();
+		await dropZone.click();
 		const fileChooser = await fileChooserPromise;
 		await fileChooser.setFiles({
 			name: 'test-cover.jpg',
@@ -326,7 +329,7 @@ test.describe('Upload Field UI - Articles', { tag: ['@media', '@admin'] }, () =>
 		});
 
 		// After upload completes, preview should show the filename
-		await expect(uploadField.getByText('test-cover.jpg')).toBeVisible({ timeout: 15000 });
+		await expect(authenticatedPage.getByText('test-cover.jpg')).toBeVisible({ timeout: 15000 });
 	});
 
 	test('should create article with cover image via form submission', async ({
@@ -340,15 +343,19 @@ test.describe('Upload Field UI - Articles', { tag: ['@media', '@admin'] }, () =>
 		// Use unique title to avoid collisions with parallel test runs
 		const uniqueTitle = `Article With Cover ${Date.now()}`;
 
-		// Fill required title field
-		const titleInput = authenticatedPage.getByLabel('Title');
+		// Fill required title field using ID selector (avoids ambiguity with SEO "Meta Title" etc.)
+		const titleInput = authenticatedPage.locator('input#field-title');
+		await expect(titleInput).toBeVisible({ timeout: 10000 });
 		await titleInput.click();
 		await titleInput.pressSequentially(uniqueTitle, { delay: 20 });
 
+		// Wait for drop zone (nested lazy loading inside tabs)
+		const dropZone = authenticatedPage.getByRole('button', { name: 'Upload file for Cover Image' });
+		await expect(dropZone).toBeVisible({ timeout: 15000 });
+
 		// Upload cover image via filechooser
-		const uploadField = authenticatedPage.locator('mcms-upload-field-renderer');
 		const fileChooserPromise = authenticatedPage.waitForEvent('filechooser');
-		await uploadField.getByText('Drag & drop or click to upload').click();
+		await dropZone.click();
 		const fileChooser = await fileChooserPromise;
 		await fileChooser.setFiles({
 			name: 'cover-photo.jpg',
@@ -357,7 +364,7 @@ test.describe('Upload Field UI - Articles', { tag: ['@media', '@admin'] }, () =>
 		});
 
 		// Wait for upload to complete (preview shows filename)
-		await expect(uploadField.getByText('cover-photo.jpg')).toBeVisible({ timeout: 15000 });
+		await expect(authenticatedPage.getByText('cover-photo.jpg')).toBeVisible({ timeout: 15000 });
 
 		// Submit form
 		await authenticatedPage.getByRole('button', { name: 'Create', exact: true }).click();
@@ -391,10 +398,13 @@ test.describe('Upload Field UI - Articles', { tag: ['@media', '@admin'] }, () =>
 			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
 		).toBeVisible();
 
+		// Wait for upload drop zone to appear (may be inside tabs)
+		const dropZone = authenticatedPage.getByRole('button', { name: 'Upload file for Cover Image' });
+		await expect(dropZone).toBeVisible({ timeout: 15000 });
+
 		// Upload a file via filechooser
-		const uploadField = authenticatedPage.locator('mcms-upload-field-renderer');
 		const fileChooserPromise = authenticatedPage.waitForEvent('filechooser');
-		await uploadField.getByText('Drag & drop or click to upload').click();
+		await dropZone.click();
 		const fileChooser = await fileChooserPromise;
 		await fileChooser.setFiles({
 			name: 'remove-test.jpg',
@@ -403,13 +413,13 @@ test.describe('Upload Field UI - Articles', { tag: ['@media', '@admin'] }, () =>
 		});
 
 		// Wait for preview
-		await expect(uploadField.getByText('remove-test.jpg')).toBeVisible({ timeout: 15000 });
+		await expect(authenticatedPage.getByText('remove-test.jpg')).toBeVisible({ timeout: 15000 });
 
 		// Click Remove button
-		await uploadField.getByRole('button', { name: 'Remove' }).click();
+		await authenticatedPage.getByRole('button', { name: 'Remove' }).click();
 
 		// Drop zone should reappear
-		await expect(uploadField.getByText('Drag & drop or click to upload')).toBeVisible();
+		await expect(dropZone).toBeVisible({ timeout: 10000 });
 	});
 
 	test('should show error when uploading non-image file to image-only field', async ({
@@ -420,10 +430,13 @@ test.describe('Upload Field UI - Articles', { tag: ['@media', '@admin'] }, () =>
 			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
 		).toBeVisible();
 
+		// Wait for upload drop zone to appear (may be inside tabs)
+		const dropZone = authenticatedPage.getByRole('button', { name: 'Upload file for Cover Image' });
+		await expect(dropZone).toBeVisible({ timeout: 15000 });
+
 		// Try uploading a PDF to an image-only field via filechooser
-		const uploadField = authenticatedPage.locator('mcms-upload-field-renderer');
 		const fileChooserPromise = authenticatedPage.waitForEvent('filechooser');
-		await uploadField.getByText('Drag & drop or click to upload').click();
+		await dropZone.click();
 		const fileChooser = await fileChooserPromise;
 		await fileChooser.setFiles({
 			name: 'document.pdf',
@@ -432,7 +445,7 @@ test.describe('Upload Field UI - Articles', { tag: ['@media', '@admin'] }, () =>
 		});
 
 		// Should show client-side MIME validation error
-		await expect(uploadField.getByText(/not allowed/)).toBeVisible({ timeout: 5000 });
+		await expect(authenticatedPage.getByText(/not allowed/)).toBeVisible({ timeout: 5000 });
 	});
 
 	test('should open media picker dialog via Select from library button', async ({

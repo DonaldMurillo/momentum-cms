@@ -15,7 +15,7 @@ import { Router } from '@angular/router';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { form, submit } from '@angular/forms/signals';
 import type { CollectionConfig, Field } from '@momentumcms/core';
-import { humanizeFieldName, isUploadCollection } from '@momentumcms/core';
+import { flattenDataFields, humanizeFieldName, isUploadCollection } from '@momentumcms/core';
 import {
 	Card,
 	CardContent,
@@ -489,9 +489,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 		if (uploadConfig) {
 			// Validate size
 			if (uploadConfig.maxFileSize && file.size > uploadConfig.maxFileSize) {
-				this.uploadFileError.set(
-					`File size exceeds maximum allowed size`,
-				);
+				this.uploadFileError.set(`File size exceeds maximum allowed size`);
 				this.pendingFile.set(null);
 				return;
 			}
@@ -612,14 +610,13 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	 * Extract the `id` property from any upload field values that are objects.
 	 */
 	private normalizeUploadFieldValues(data: Record<string, unknown>): Record<string, unknown> {
-		const fields = this.collection().fields;
+		const fields = flattenDataFields(this.collection().fields);
 		const result = { ...data };
 
 		for (const field of fields) {
 			if (field.type === 'upload' && result[field.name] != null) {
 				const val = result[field.name];
 				if (typeof val === 'object' && val !== null) {
-					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 					const obj = val as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions
 					if (typeof obj['id'] === 'string') {
 						result[field.name] = obj['id'];
@@ -635,10 +632,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	 * Submit an upload collection form with file via multipart.
 	 * Converts non-file form fields to string key-value pairs for the FormData.
 	 */
-	private submitUploadCollection(
-		slug: string,
-		data: Record<string, unknown>,
-	): Promise<T> {
+	private submitUploadCollection(slug: string, data: Record<string, unknown>): Promise<T> {
 		return new Promise<T>((resolve, reject) => {
 			const file = this.pendingFile();
 			if (!file) {
@@ -649,8 +643,14 @@ export class EntityFormWidget<T extends Entity = Entity> {
 			// Convert form data to string fields for FormData
 			// Exclude auto-populated file metadata fields (they come from the server)
 			const excludeFields = new Set([
-				'filename', 'mimeType', 'filesize', 'path', 'url',
-				'id', 'createdAt', 'updatedAt',
+				'filename',
+				'mimeType',
+				'filesize',
+				'path',
+				'url',
+				'id',
+				'createdAt',
+				'updatedAt',
 			]);
 			const fields: Record<string, string> = {};
 			for (const [key, value] of Object.entries(data)) {
@@ -659,7 +659,8 @@ export class EntityFormWidget<T extends Entity = Entity> {
 				if (typeof value === 'object') {
 					// Skip empty objects/arrays; serialize non-empty ones as JSON
 					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-					const isEmptyObject = !Array.isArray(value) && Object.keys(value as Record<string, unknown>).length === 0;
+					const isEmptyObject =
+						!Array.isArray(value) && Object.keys(value as Record<string, unknown>).length === 0;
 					if ((Array.isArray(value) && value.length === 0) || isEmptyObject) continue;
 					fields[key] = JSON.stringify(value);
 				} else {

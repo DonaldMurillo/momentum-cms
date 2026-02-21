@@ -14,7 +14,7 @@ Create a new collection file following project conventions.
 
 ## Steps
 
-1. Create the collection file at `src/collections/<name>.ts`
+1. Create the collection file at `src/collections/<name>.collection.ts`
 
 2. Use this template:
 
@@ -61,7 +61,7 @@ export const <PascalName> = defineCollection({
 3. Add to momentum config. In `src/momentum.config.ts`, import and add to `collections` array:
 
 ```typescript
-import { <PascalName> } from './collections/<name>';
+import { <PascalName> } from './collections/<name>.collection';
 
 // In config:
 collections: [Posts, <PascalName>],

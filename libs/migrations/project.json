@@ -18,7 +18,28 @@
 			"options": {
 				"outputPath": "dist/libs/migrations",
 				"main": "libs/migrations/src/index.ts",
-				"tsConfig": "libs/migrations/tsconfig.lib.json"
+				"additionalEntryPoints": [
+					"libs/migrations/src/cli/generate.ts",
+					"libs/migrations/src/cli/run.ts",
+					"libs/migrations/src/cli/rollback.ts",
+					"libs/migrations/src/cli/status.ts",
+					"libs/migrations/schematics/generate/index.ts",
+					"libs/migrations/schematics/run/index.ts",
+					"libs/migrations/schematics/rollback/index.ts",
+					"libs/migrations/schematics/status/index.ts"
+				],
+				"tsConfig": "libs/migrations/tsconfig.lib.json",
+				"assets": [
+					"libs/migrations/schematics/collection.json",
+					"libs/migrations/schematics/generate/schema.json",
+					"libs/migrations/schematics/generate/schema.d.ts",
+					"libs/migrations/schematics/run/schema.json",
+					"libs/migrations/schematics/run/schema.d.ts",
+					"libs/migrations/schematics/rollback/schema.json",
+					"libs/migrations/schematics/rollback/schema.d.ts",
+					"libs/migrations/schematics/status/schema.json",
+					"libs/migrations/schematics/status/schema.d.ts"
+				]
 			}
 		},
 		"nx-release-publish": {

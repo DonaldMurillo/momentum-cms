@@ -1,0 +1,17 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"outDir": "../../../dist/out-tsc",
+		"declaration": true,
+		"types": ["node"]
+	},
+	"include": ["src/**/*.ts"],
+	"exclude": [
+		"src/**/*.spec.ts",
+		"src/**/*.test.ts",
+		"src/**/*.page.ts",
+		"src/**/*.dialog.ts",
+		"src/lib/dashboard/**",
+		"src/lib/seo-admin-routes.ts"
+	]
+}

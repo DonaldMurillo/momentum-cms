@@ -7,7 +7,11 @@
 		"build": "ng build",
 		"start": "node dist/{{projectName}}/server/server.mjs",
 		"lint": "ng lint",
-		"generate": "tsx node_modules/@momentumcms/core/generators/generator.cjs src/momentum.config.ts --types src/generated/momentum.types.ts --config src/generated/momentum.config.ts"
+		"generate": "tsx node_modules/@momentumcms/core/generators/generator.cjs src/momentum.config.ts --types src/generated/momentum.types.ts --config src/generated/momentum.config.ts",
+		"migrate:generate": "ng generate @momentumcms/migrations:generate",
+		"migrate:run": "ng generate @momentumcms/migrations:run",
+		"migrate:status": "ng generate @momentumcms/migrations:status",
+		"migrate:rollback": "ng generate @momentumcms/migrations:rollback"
 	},
 	"dependencies": {
 		"@angular/animations": "^21.1.0",
@@ -29,7 +33,9 @@
 		"@momentumcms/server-express": "^{{packageVersion}}",
 		"@momentumcms/storage": "^{{packageVersion}}",
 		"@momentumcms/logger": "^{{packageVersion}}",
+		"@momentumcms/migrations": "^{{packageVersion}}",
 		"@momentumcms/plugins-core": "^{{packageVersion}}",
+		"@momentumcms/plugins-seo": "^{{packageVersion}}",
 		"@ng-icons/core": "^33.0.0",
 		"@ng-icons/heroicons": "^33.0.0",
 		"@tiptap/core": "^3.0.0",

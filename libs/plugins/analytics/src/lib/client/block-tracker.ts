@@ -31,6 +31,10 @@ import type { MomentumTracker } from './tracker';
  * @returns Cleanup function to disconnect observers and remove listeners
  */
 export function attachBlockTracking(tracker: MomentumTracker, container?: HTMLElement): () => void {
+	if (typeof document === 'undefined' || !document.body) {
+		// eslint-disable-next-line @typescript-eslint/no-empty-function
+		return (): void => {};
+	}
 	const root = container ?? document.body;
 	const impressionsSeen = new Set<string>();
 	const hoverCooldowns = new Map<string, number>();

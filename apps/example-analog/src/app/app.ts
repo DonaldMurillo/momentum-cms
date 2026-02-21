@@ -1,8 +1,9 @@
 import { Component, ChangeDetectionStrategy, afterNextRender } from '@angular/core';
 import { RouterModule } from '@angular/router';
+import { NxWelcome } from './nx-welcome';
 
 @Component({
-	imports: [RouterModule],
+	imports: [RouterModule, NxWelcome],
 	selector: 'app-root',
 	templateUrl: './app.html',
 	styleUrl: './app.css',

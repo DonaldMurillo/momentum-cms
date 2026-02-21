@@ -27,8 +27,17 @@
 	},
 	"main": "./index.cjs",
 	"types": "./src/index.d.ts",
+	"schematics": "./schematics/collection.json",
 	"bin": {
 		"momentum-generate": "./generators/generator.cjs"
+	},
+	"peerDependencies": {
+		"@angular-devkit/schematics": ">=17.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@angular-devkit/schematics": {
+			"optional": true
+		}
 	},
 	"dependencies": {}
 }

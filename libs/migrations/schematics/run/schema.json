@@ -1,0 +1,25 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema",
+	"$id": "MomentumMigrationRun",
+	"title": "Run Migrations",
+	"description": "Apply pending migrations with optional clone-test-apply safety pipeline",
+	"type": "object",
+	"properties": {
+		"configPath": {
+			"type": "string",
+			"description": "Path to momentum.config.ts",
+			"default": "src/momentum.config.ts"
+		},
+		"testOnly": {
+			"type": "boolean",
+			"description": "Test migrations on a clone without applying to the real database",
+			"default": false
+		},
+		"skipCloneTest": {
+			"type": "boolean",
+			"description": "Skip the clone-test safety check (not recommended for production)",
+			"default": false
+		}
+	},
+	"required": []
+}

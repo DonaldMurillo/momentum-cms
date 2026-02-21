@@ -4,6 +4,7 @@ import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { crudToastInterceptor, provideMomentumFieldRenderers } from '@momentumcms/admin';
 import { routes } from './app.routes';
+import { providePostBlocks } from './pages/post-block-providers';
 
 export const appConfig: ApplicationConfig = {
 	providers: [
@@ -12,5 +13,6 @@ export const appConfig: ApplicationConfig = {
 		provideBrowserGlobalErrorListeners(),
 		provideRouter(routes, withViewTransitions()),
 		provideMomentumFieldRenderers(),
+		...providePostBlocks(),
 	],
 };

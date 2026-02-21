@@ -211,7 +211,19 @@ export const Posts = defineCollection({
 });
 ```
 
-## Drizzle Migrations
+## Migrations
+
+### Momentum Migration CLI (`@momentumcms/migrations`)
+
+```bash
+# In the monorepo (via Nx targets on example apps):
+nx run example-angular:migrate:generate   # Diff schema, create migration file
+nx run example-angular:migrate:run        # Apply pending migrations
+nx run example-angular:migrate:status     # Show applied vs pending
+nx run example-angular:migrate:rollback   # Rollback latest batch
+```
+
+### Drizzle Kit (Simple/Legacy)
 
 ```bash
 nx run db-drizzle:generate-schema  # Generate schema from collections
@@ -220,13 +232,38 @@ npx drizzle-kit migrate            # Apply migrations
 npx drizzle-kit push               # Direct push (dev only)
 ```
 
+## Code Generation
+
+### Unified Generator (Types + Admin Config)
+
+The generator reads `momentum.config.ts` (server-side, Node) and outputs:
+
+1. **TypeScript types** — interfaces for all collections, blocks, where clauses
+2. **Browser-safe admin config** — inlined collections with server-only props stripped
+
+```bash
+nx run example-angular:generate          # One-shot generation
+nx run example-angular:generate:watch    # Watch mode
+```
+
+### Angular Schematics
+
+Both `@momentumcms/core` and `@momentumcms/migrations` ship Angular schematics:
+
+```bash
+# Type/config generation (in scaffolded Angular projects)
+ng generate @momentumcms/core:types
+
+# Migrations (in scaffolded Angular projects)
+ng generate @momentumcms/migrations:generate
+ng generate @momentumcms/migrations:run
+ng generate @momentumcms/migrations:status
+ng generate @momentumcms/migrations:rollback
+```
+
 ## Admin Config Generator
 
 The admin config generator reads `momentum.config.ts` (server-side, Node) and outputs a browser-safe TypeScript file with proper imports. This eliminates manual wiring of collections, auth collections, and plugin routes in app routing.
-
-```bash
-nx run example-angular:generate-admin-config  # Generate browser-safe admin config
-```
 
 Usage in app routes:
 

@@ -31,7 +31,7 @@ import {
 	type MomentumInitResult,
 } from './init-helpers';
 import { createDeferredSessionResolver } from './auth-middleware';
-import { getPluginProviders } from './plugin-middleware-registry';
+import { getPluginMiddleware, getPluginProviders } from './plugin-middleware-registry';
 import { momentumApiMiddleware, createOpenAPIMiddleware } from './server-express';
 import type { MomentumAuthPlugin } from '@momentumcms/auth';
 
@@ -227,10 +227,19 @@ export async function createMomentumServer(
 		app.use('/api/docs', createOpenAPIMiddleware({ config }));
 	}
 
-	// 10. Mount CMS API endpoints
+	// 10. Mount root-level plugin middleware (e.g. /sitemap.xml, /robots.txt)
+	// These are mounted directly on the app, NOT under /api, because external
+	// consumers (search engine crawlers) expect them at the domain root.
+	const rootMiddleware = getPluginMiddleware().filter((mw) => mw.position === 'root');
+	for (const mw of rootMiddleware) {
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- handler is Express Router/middleware
+		app.use(mw.path, mw.handler as import('express').Router);
+	}
+
+	// 11. Mount CMS API endpoints
 	app.use('/api', momentumApiMiddleware(config));
 
-	// 11. SSR provider helper
+	// 12. SSR provider helper
 	function getSsrProviders(user?: { id: string; email: string; role: string }): Provider[] {
 		const pluginProviders = getPluginProviders().map((p) => ({
 			provide: p.token,
@@ -242,7 +251,7 @@ export async function createMomentumServer(
 		return pluginProviders;
 	}
 
-	// 12. Shutdown handler
+	// 13. Shutdown handler
 	async function shutdown(): Promise<void> {
 		schedulerHandle?.stop();
 		await init.shutdown();
