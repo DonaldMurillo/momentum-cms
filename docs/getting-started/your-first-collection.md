@@ -4,7 +4,7 @@ Walk through creating a collection from scratch, generating the database schema,
 
 ## 1. Define the Collection
 
-Create `src/collections/pages.ts`:
+Create `src/collections/pages.collection.ts`:
 
 ```typescript
 import { defineCollection, text, richText, slug, select, checkbox } from '@momentumcms/core';
@@ -46,8 +46,8 @@ export const Pages = defineCollection({
 Add the collection to your `momentum.config.ts`:
 
 ```typescript
-import { Posts } from './collections/posts';
-import { Pages } from './collections/pages';
+import { Posts } from './collections/posts.collection';
+import { Pages } from './collections/pages.collection';
 
 export default {
 	// ...
@@ -58,10 +58,9 @@ export default {
 ## 3. Generate the Database Schema
 
 ```bash
-npx drizzle-kit generate   # Creates SQL migration files
-npx drizzle-kit push        # Apply directly (dev only)
-# OR
-npx drizzle-kit migrate     # Apply migrations (production)
+npm run generate               # Regenerate types and admin config
+npm run migrate:generate       # Create a migration file
+npm run migrate:run            # Apply migrations
 ```
 
 ## 4. Use It

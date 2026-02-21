@@ -1,9 +1,10 @@
 {{dbImport}}
 import { momentumAuth } from '@momentumcms/auth';
 import { localStorageAdapter } from '@momentumcms/storage';
+import { seoPlugin } from '@momentumcms/plugins-seo';
 import { defineMomentumConfig } from '@momentumcms/core';
 import { join } from 'node:path';
-import { Posts } from './collections/posts';
+import { Posts } from './collections/posts.collection';
 
 /**
  * Database adapter - shared between Momentum and the auth plugin.
@@ -22,6 +23,19 @@ export const authPlugin = momentumAuth({
 	{{authDbConfig}}
 	baseURL: authBaseURL,
 	trustedOrigins: [authBaseURL],
+});
+
+/**
+ * SEO plugin - generates sitemap.xml, robots.txt, and meta tag API.
+ */
+export const seo = seoPlugin({
+	collections: ['posts'],
+	siteUrl: `http://localhost:${process.env['PORT'] || {{defaultPort}}}`,
+	analysis: true,
+	sitemap: true,
+	robots: true,
+	metaApi: true,
+	adminDashboard: true,
 });
 
 /**
@@ -53,7 +67,7 @@ const config = defineMomentumConfig({
 		level: 'info',
 		format: 'pretty',
 	},
-	plugins: [authPlugin],
+	plugins: [seo, authPlugin],
 });
 
 export default config;

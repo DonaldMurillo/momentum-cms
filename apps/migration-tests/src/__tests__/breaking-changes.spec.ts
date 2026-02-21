@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 /**
  * Integration tests: Breaking changes against real databases.
  *
@@ -54,7 +55,7 @@ import { createDataHelpers } from '@momentumcms/migrations';
 const pgAvailable = await isPgAvailable();
 
 /** Helper: find a table by name. */
-function findTable(tables: TableSnapshot[], name: string): TableSnapshot | undefined {
+function _findTable(tables: TableSnapshot[], name: string): TableSnapshot | undefined {
 	return tables.find((t) => t.name === name);
 }
 
@@ -64,11 +65,7 @@ function findTable(tables: TableSnapshot[], name: string): TableSnapshot | undef
 
 const PostsBefore = defineCollection({
 	slug: 'posts',
-	fields: [
-		text('title', { required: true }),
-		text('body'),
-		text('status'),
-	],
+	fields: [text('title', { required: true }), text('body'), text('status')],
 });
 
 // ADD a required field with no default → explodes on populated table
@@ -124,7 +121,7 @@ const Authors = defineCollection({
 	fields: [text('name', { required: true })],
 });
 
-const Articles = defineCollection({
+const _Articles = defineCollection({
 	slug: 'articles',
 	fields: [
 		text('title', { required: true }),
@@ -225,7 +222,9 @@ describe.skipIf(!pgAvailable)('breaking-changes: danger detection (PostgreSQL)',
 			});
 
 			// Insert data
-			await pool.query(`INSERT INTO "posts" ("id", "title", "body", "status", "createdAt", "updatedAt") VALUES ('1', 'Hello', 'World', 'draft', NOW(), NOW())`);
+			await pool.query(
+				`INSERT INTO "posts" ("id", "title", "body", "status", "createdAt", "updatedAt") VALUES ('1', 'Hello', 'World', 'draft', NOW(), NOW())`,
+			);
 
 			// Now try to push a breaking change WITH danger detection enabled
 			const result = await runPush({
@@ -326,8 +325,13 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 		const dataDb = pgDataDb(clonePool);
 		const helpers = createDataHelpers(dataDb, 'postgresql');
 		return {
-			async sql(query: string, params?: unknown[]): Promise<void> { await clonePool.query(query, params); },
-			async query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> {
+			async sql(query: string, params?: unknown[]): Promise<void> {
+				await clonePool.query(query, params);
+			},
+			async query<T extends Record<string, unknown>>(
+				sql: string,
+				params?: unknown[],
+			): Promise<T[]> {
 				const result = await clonePool.query(sql, params);
 				return result.rows as T[];
 			},
@@ -384,8 +388,12 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 			dialect: 'postgresql',
 			tracker: pgTracker(pool),
 			buildContext: () => ({
-				async sql(q: string, p?: unknown[]): Promise<void> { await pool.query(q, p); },
-				async query<T extends Record<string, unknown>>(s: string, p?: unknown[]): Promise<T[]> { return (await pool.query(s, p)).rows as T[]; },
+				async sql(q: string, p?: unknown[]): Promise<void> {
+					await pool.query(q, p);
+				},
+				async query<T extends Record<string, unknown>>(s: string, p?: unknown[]): Promise<T[]> {
+					return (await pool.query(s, p)).rows as T[];
+				},
 				data: createDataHelpers(pgDataDb(pool), 'postgresql'),
 				dialect: 'postgresql',
 				log: { info: (): void => {}, warn: (): void => {} },
@@ -402,7 +410,9 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 
 		// Real DB: column should NOT exist, all 5 rows intact
 		refreshPool();
-		const cols = await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'slug'`);
+		const cols = await pool.query(
+			`SELECT column_name FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'slug'`,
+		);
 		expect(cols.rows).toHaveLength(0);
 
 		const rows = await pool.query(`SELECT COUNT(*) as cnt FROM "posts"`);
@@ -430,8 +440,12 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 			dialect: 'postgresql',
 			tracker: pgTracker(pool),
 			buildContext: () => ({
-				async sql(q: string, p?: unknown[]): Promise<void> { await pool.query(q, p); },
-				async query<T extends Record<string, unknown>>(s: string, p?: unknown[]): Promise<T[]> { return (await pool.query(s, p)).rows as T[]; },
+				async sql(q: string, p?: unknown[]): Promise<void> {
+					await pool.query(q, p);
+				},
+				async query<T extends Record<string, unknown>>(s: string, p?: unknown[]): Promise<T[]> {
+					return (await pool.query(s, p)).rows as T[];
+				},
 				data: createDataHelpers(pgDataDb(pool), 'postgresql'),
 				dialect: 'postgresql',
 				log: { info: (): void => {}, warn: (): void => {} },
@@ -447,7 +461,9 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 
 		// Real DB: body should still be nullable
 		refreshPool();
-		const col = await pool.query(`SELECT is_nullable FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'body'`);
+		const col = await pool.query(
+			`SELECT is_nullable FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'body'`,
+		);
 		expect(col.rows[0].is_nullable).toBe('YES');
 	});
 
@@ -486,8 +502,12 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 			dialect: 'postgresql',
 			tracker: pgTracker(pool),
 			buildContext: () => ({
-				async sql(q: string, p?: unknown[]): Promise<void> { await pool.query(q, p); },
-				async query<T extends Record<string, unknown>>(s: string, p?: unknown[]): Promise<T[]> { return (await pool.query(s, p)).rows as T[]; },
+				async sql(q: string, p?: unknown[]): Promise<void> {
+					await pool.query(q, p);
+				},
+				async query<T extends Record<string, unknown>>(s: string, p?: unknown[]): Promise<T[]> {
+					return (await pool.query(s, p)).rows as T[];
+				},
 				data: createDataHelpers(pgDataDb(pool), 'postgresql'),
 				dialect: 'postgresql',
 				log: { info: (): void => {}, warn: (): void => {} },
@@ -543,7 +563,9 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 			file: {
 				meta: { name: 'add_fk_author', description: 'Add FK to authors' },
 				async up(ctx: MigrationContext): Promise<void> {
-					await ctx.sql(`ALTER TABLE "articles" ADD CONSTRAINT "fk_articles_author" FOREIGN KEY ("author") REFERENCES "authors"("id") ON DELETE SET NULL`);
+					await ctx.sql(
+						`ALTER TABLE "articles" ADD CONSTRAINT "fk_articles_author" FOREIGN KEY ("author") REFERENCES "authors"("id") ON DELETE SET NULL`,
+					);
 				},
 				async down(ctx: MigrationContext): Promise<void> {
 					await ctx.sql(`ALTER TABLE "articles" DROP CONSTRAINT "fk_articles_author"`);
@@ -556,8 +578,12 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 			dialect: 'postgresql',
 			tracker: pgTracker(pool),
 			buildContext: () => ({
-				async sql(q: string, p?: unknown[]): Promise<void> { await pool.query(q, p); },
-				async query<T extends Record<string, unknown>>(s: string, p?: unknown[]): Promise<T[]> { return (await pool.query(s, p)).rows as T[]; },
+				async sql(q: string, p?: unknown[]): Promise<void> {
+					await pool.query(q, p);
+				},
+				async query<T extends Record<string, unknown>>(s: string, p?: unknown[]): Promise<T[]> {
+					return (await pool.query(s, p)).rows as T[];
+				},
 				data: createDataHelpers(pgDataDb(pool), 'postgresql'),
 				dialect: 'postgresql',
 				log: { info: (): void => {}, warn: (): void => {} },
@@ -602,7 +628,9 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 			file: {
 				meta: { name: 'change_value_to_int', description: 'Cast value to integer' },
 				async up(ctx: MigrationContext): Promise<void> {
-					await ctx.sql(`ALTER TABLE "metrics" ALTER COLUMN "value" TYPE INTEGER USING "value"::INTEGER`);
+					await ctx.sql(
+						`ALTER TABLE "metrics" ALTER COLUMN "value" TYPE INTEGER USING "value"::INTEGER`,
+					);
 				},
 				async down(ctx: MigrationContext): Promise<void> {
 					await ctx.sql(`ALTER TABLE "metrics" ALTER COLUMN "value" TYPE TEXT`);
@@ -615,8 +643,12 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 			dialect: 'postgresql',
 			tracker: pgTracker(pool),
 			buildContext: () => ({
-				async sql(q: string, p?: unknown[]): Promise<void> { await pool.query(q, p); },
-				async query<T extends Record<string, unknown>>(s: string, p?: unknown[]): Promise<T[]> { return (await pool.query(s, p)).rows as T[]; },
+				async sql(q: string, p?: unknown[]): Promise<void> {
+					await pool.query(q, p);
+				},
+				async query<T extends Record<string, unknown>>(s: string, p?: unknown[]): Promise<T[]> {
+					return (await pool.query(s, p)).rows as T[];
+				},
 				data: createDataHelpers(pgDataDb(pool), 'postgresql'),
 				dialect: 'postgresql',
 				log: { info: (): void => {}, warn: (): void => {} },
@@ -632,7 +664,9 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 
 		// Real DB: column should still be TEXT, data intact
 		refreshPool();
-		const col = await pool.query(`SELECT data_type FROM information_schema.columns WHERE table_name = 'metrics' AND column_name = 'value'`);
+		const col = await pool.query(
+			`SELECT data_type FROM information_schema.columns WHERE table_name = 'metrics' AND column_name = 'value'`,
+		);
 		expect(col.rows[0].data_type).toBe('text');
 
 		const rows = await pool.query(`SELECT "value" FROM "metrics" WHERE "id" = '2'`);
@@ -669,7 +703,9 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 				file: {
 					meta: { name: 'cast_price_to_numeric', description: 'Convert price to numeric' },
 					async up(ctx: MigrationContext): Promise<void> {
-						await ctx.sql(`ALTER TABLE "products" ALTER COLUMN "price" TYPE NUMERIC USING "price"::NUMERIC`);
+						await ctx.sql(
+							`ALTER TABLE "products" ALTER COLUMN "price" TYPE NUMERIC USING "price"::NUMERIC`,
+						);
 					},
 					async down(ctx: MigrationContext): Promise<void> {
 						await ctx.sql(`ALTER TABLE "products" ALTER COLUMN "price" TYPE TEXT`);
@@ -683,8 +719,12 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 			dialect: 'postgresql',
 			tracker: pgTracker(pool),
 			buildContext: () => ({
-				async sql(q: string, p?: unknown[]): Promise<void> { await pool.query(q, p); },
-				async query<T extends Record<string, unknown>>(s: string, p?: unknown[]): Promise<T[]> { return (await pool.query(s, p)).rows as T[]; },
+				async sql(q: string, p?: unknown[]): Promise<void> {
+					await pool.query(q, p);
+				},
+				async query<T extends Record<string, unknown>>(s: string, p?: unknown[]): Promise<T[]> {
+					return (await pool.query(s, p)).rows as T[];
+				},
 				data: createDataHelpers(pgDataDb(pool), 'postgresql'),
 				dialect: 'postgresql',
 				log: { info: (): void => {}, warn: (): void => {} },
@@ -703,7 +743,9 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 
 		// Real DB: completely untouched
 		refreshPool();
-		const priceCol = await pool.query(`SELECT data_type FROM information_schema.columns WHERE table_name = 'products' AND column_name = 'price'`);
+		const priceCol = await pool.query(
+			`SELECT data_type FROM information_schema.columns WHERE table_name = 'products' AND column_name = 'price'`,
+		);
 		expect(priceCol.rows[0].data_type).toBe('text');
 
 		const freeRow = await pool.query(`SELECT "price" FROM "products" WHERE "id" = '2'`);

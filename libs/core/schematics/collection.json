@@ -1,0 +1,10 @@
+{
+	"$schema": "../../../node_modules/@angular-devkit/schematics/collection-schema.json",
+	"schematics": {
+		"types": {
+			"description": "Generate TypeScript types and browser-safe admin config from momentum.config.ts",
+			"factory": "./types/index#generateTypes",
+			"schema": "./types/schema.json"
+		}
+	}
+}

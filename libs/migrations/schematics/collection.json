@@ -1,0 +1,25 @@
+{
+	"$schema": "../../../node_modules/@angular-devkit/schematics/collection-schema.json",
+	"schematics": {
+		"generate": {
+			"description": "Generate a new migration by diffing the current schema against the snapshot",
+			"factory": "./generate/index#migrationGenerate",
+			"schema": "./generate/schema.json"
+		},
+		"run": {
+			"description": "Run pending migrations with optional clone-test-apply safety",
+			"factory": "./run/index#migrationRun",
+			"schema": "./run/schema.json"
+		},
+		"rollback": {
+			"description": "Rollback the latest batch of applied migrations",
+			"factory": "./rollback/index#migrationRollback",
+			"schema": "./rollback/schema.json"
+		},
+		"status": {
+			"description": "Show the status of all migrations (applied vs pending)",
+			"factory": "./status/index#migrationStatus",
+			"schema": "./status/schema.json"
+		}
+	}
+}

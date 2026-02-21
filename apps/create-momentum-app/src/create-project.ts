@@ -307,6 +307,20 @@ The database is automatically created on first run - no setup required.`,
 			shell: true,
 		});
 		console.log();
+
+		console.log(pc.dim('Generating types and admin config...'));
+		try {
+			execFileSync('npm', ['run', 'generate'], {
+				cwd: projectDir,
+				stdio: 'inherit',
+				shell: true,
+			});
+			console.log(pc.green('✓ Types and admin config generated'));
+			console.log();
+		} catch {
+			console.log(pc.yellow('⚠️  Code generation failed. Run `npm run generate` manually.'));
+			console.log();
+		}
 	}
 
 	console.log(pc.green(pc.bold('Done!')));

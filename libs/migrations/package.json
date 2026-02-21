@@ -5,8 +5,15 @@
 	"license": "MIT",
 	"main": "./index.cjs",
 	"types": "./src/index.d.ts",
+	"schematics": "./schematics/collection.json",
 	"peerDependencies": {
+		"@angular-devkit/schematics": ">=17.0.0",
 		"@momentumcms/core": ">=0.0.1",
 		"pg": "^8.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@angular-devkit/schematics": {
+			"optional": true
+		}
 	}
 }
