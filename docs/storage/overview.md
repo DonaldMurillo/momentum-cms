@@ -2,6 +2,8 @@
 
 Momentum CMS uses a storage adapter pattern for file uploads. Choose between local filesystem or S3-compatible storage.
 
+![Media Library](../visuals/media/media-library-light.png)
+
 ## Package
 
 ```bash

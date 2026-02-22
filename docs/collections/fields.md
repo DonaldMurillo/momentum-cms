@@ -2,6 +2,14 @@
 
 All field types available in Momentum CMS. Import field builders from `@momentumcms/core`.
 
+![Field Types](../visuals/fields/field-types-light.png)
+
+### Blocks in Action
+
+The blocks field type enables flexible page layouts with multiple content block types:
+
+![Page Builder with Blocks](../visuals/collections/blocks-in-action.gif)
+
 ## Common Options
 
 Every field accepts these base options:

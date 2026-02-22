@@ -2,6 +2,8 @@
 
 An Angular-based headless CMS. Define collections in TypeScript, auto-generate an Admin UI, REST API, and database schema.
 
+![Momentum CMS Overview](docs/visuals/dashboard/hero-flow.gif)
+
 > **ALPHA SOFTWARE — DO NOT USE IN PRODUCTION.** This project is in early alpha. APIs will change, things will break, and there are missing features. It is a prototype and a learning platform. Use it for experimentation and prototyping only.
 
 ## Why Momentum?
@@ -84,9 +86,11 @@ export const Posts = defineCollection({
 | `@momentumcms/admin`             | `libs/admin`               | Angular admin dashboard UI                           |
 | `@momentumcms/ui`                | `libs/ui`                  | Base UI component library                            |
 | `@momentumcms/storage`           | `libs/storage`             | File storage adapters (local, S3)                    |
+| `@momentumcms/migrations`        | `libs/migrations`          | Database migration system (generate, run, rollback)  |
 | `@momentumcms/logger`            | `libs/logger`              | Structured logging                                   |
 | `@momentumcms/plugins-core`      | `libs/plugins/core`        | Plugin system core (event bus)                       |
 | `@momentumcms/plugins-analytics` | `libs/plugins/analytics`   | Analytics and tracking plugin                        |
+| `@momentumcms/plugins-seo`       | `libs/plugins/seo`         | SEO plugin (meta tags, sitemap, robots.txt)          |
 | `@momentumcms/plugins-otel`      | `libs/plugins/otel`        | OpenTelemetry observability plugin                   |
 | `create-momentum-app`            | `apps/create-momentum-app` | CLI scaffolding tool                                 |
 
@@ -167,6 +171,35 @@ npm run test:create-app
 ```
 
 This starts a local Verdaccio registry, publishes all packages, runs `create-momentum-app` for each flavor, and verifies the generated projects compile.
+
+## Roadmap
+
+These are planned features and improvements, in no particular priority order.
+
+### UI & Components
+
+- **Headless UI component library** — Fully customizable, unstyled components built on Angular CDK + Angular Aria, usable anywhere (not just the admin)
+- **Swappable admin components** — Replace built-in admin components with your own custom implementations
+- **Customizable admin layouts** — Angular slots and dynamic rendering for extending admin pages without forking
+- **UX polish pass** — Improve interactions, transitions, and overall usability across the admin dashboard
+
+### CMS Features
+
+- **Redirects** — Manage URL redirects from the admin with pattern matching and status codes
+- **Forms** — Form builder plugin for creating and managing front-end forms with submissions
+- **Queueing** — Background job queue for async tasks (email sending, image processing, webhooks)
+- **Image processing without Sharp** — Lightweight image optimization and resizing that doesn't depend on native binaries
+
+### Auth & Integrations
+
+- **Better Auth plugin adapters** — Pre-built adapters for Better Auth plugins (OAuth providers, magic links, passkeys, etc.) with easy opt-in configuration
+- **Resend adapter** — Email delivery via Resend for transactional emails and auth flows
+- **S3 storage adapter** — Production-ready S3-compatible object storage (AWS, Cloudflare R2, MinIO)
+
+### Deployment & Infrastructure
+
+- **Docker deployment guide** — Fully tested Docker setup for deploying to a standard VPS with PostgreSQL, reverse proxy, and persistent storage
+- **Momentum website** — Build the official Momentum CMS website using Momentum itself
 
 ## Contributing
 

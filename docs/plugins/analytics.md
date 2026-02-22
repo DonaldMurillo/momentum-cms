@@ -2,6 +2,8 @@
 
 Track content operations, API usage, page views, and custom events with adapter-based persistence.
 
+![Analytics Dashboard](../visuals/plugins/analytics-light.png)
+
 ## Setup
 
 ```typescript
@@ -94,6 +96,8 @@ When `blockTracking: true`, block fields get a tracking toggle injected. This al
 
 ### Content Performance
 
+![Content Performance Dashboard](../visuals/plugins/content-perf-light.png)
+
 When `contentPerformance: true`, per-document metrics are tracked:
 
 ```typescript
@@ -106,6 +110,8 @@ interface ContentPerformanceData {
 ```
 
 ### Tracking Rules
+
+![Tracking Rules Management](../visuals/plugins/tracking-rules-light.png)
 
 When `trackingRules: true`, admins can define CSS-selector-based tracking rules:
 

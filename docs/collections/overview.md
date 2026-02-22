@@ -13,6 +13,20 @@ export const Posts = defineCollection({
 });
 ```
 
+The admin UI automatically generates list views, create/edit forms, and navigation for each collection:
+
+| List View                                                               | Detail View                                                        |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| ![Collection List View](../visuals/collections/articles-list-light.png) | ![Article Detail](../visuals/collections/article-detail-light.png) |
+
+**Dark mode:**
+
+![Collection List Dark](../visuals/collections/articles-list-dark.png)
+
+### Create Form
+
+![Create Document](../visuals/collections/article-create-light.png)
+
 ## Full Configuration
 
 ```typescript

@@ -36,6 +36,10 @@ const routes: Routes = [
 | `/admin/globals/:slug`              | Global Edit       | Singleton document editor     |
 | `/admin/media`                      | Media Library     | File upload and management    |
 
+| Light                                                        | Dark                                                             |
+| ------------------------------------------------------------ | ---------------------------------------------------------------- |
+| ![Admin Dashboard](../visuals/dashboard/dashboard-light.png) | ![Admin Dashboard Dark](../visuals/dashboard/dashboard-dark.png) |
+
 ## Route Guards
 
 The admin uses several guards automatically:
@@ -115,6 +119,26 @@ The sidebar shows:
 - Collections and globals grouped by `admin.group` (see above)
 - Plugin-registered routes
 - User menu with theme toggle and sign out
+
+| Light                                               | Dark                                                    |
+| --------------------------------------------------- | ------------------------------------------------------- |
+| ![Sidebar](../visuals/navigation/sidebar-light.png) | ![Sidebar Dark](../visuals/navigation/sidebar-dark.png) |
+
+### Mobile Navigation
+
+On small screens, the sidebar collapses into a hamburger menu with a slide-out drawer:
+
+| Mobile Header                                                   | Mobile Drawer                                                   |
+| --------------------------------------------------------------- | --------------------------------------------------------------- |
+| ![Mobile Header](../visuals/navigation/mobile-header-light.png) | ![Mobile Drawer](../visuals/navigation/mobile-drawer-light.png) |
+
+### Responsive Breakpoints
+
+The admin dashboard adapts to different screen sizes:
+
+| Mobile (375px)                                        | Tablet (768px)                                        | Desktop (1280px)                                        | Large (1920px)                                           |
+| ----------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------- |
+| ![Mobile](../visuals/responsive/dashboard-mobile.png) | ![Tablet](../visuals/responsive/dashboard-tablet.png) | ![Desktop](../visuals/responsive/dashboard-desktop.png) | ![Large](../visuals/responsive/dashboard-desktop-lg.png) |
 
 ## Plugin Routes
 

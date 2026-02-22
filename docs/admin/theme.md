@@ -43,6 +43,10 @@ theme.toggleTheme(); // Toggle between light and dark
 
 ## CSS Variables
 
+| Light                                               | Dark                                              |
+| --------------------------------------------------- | ------------------------------------------------- |
+| ![Light Mode](../visuals/theme/dashboard-light.png) | ![Dark Mode](../visuals/theme/dashboard-dark.png) |
+
 The theme is driven by CSS variables. The `.dark` class on `<html>` switches variable values:
 
 ```css

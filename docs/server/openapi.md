@@ -4,6 +4,8 @@ Momentum CMS auto-generates an OpenAPI (Swagger) specification from your collect
 
 ## Swagger UI
 
+![OpenAPI / Swagger UI](../visuals/plugins/openapi-light.png)
+
 Access the interactive API documentation at:
 
 ```

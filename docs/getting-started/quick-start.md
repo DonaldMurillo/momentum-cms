@@ -34,6 +34,8 @@ Open `http://localhost:4200/admin` (Angular) or `http://localhost:4000/admin` (A
 
 ## What You Get
 
+![Admin Dashboard](../visuals/dashboard/quickstart-dashboard-light.png)
+
 The generated project includes:
 
 - **A sample `posts` collection** with title, auto-slug, and 3 content blocks (hero, textBlock, imageText)
@@ -47,6 +49,10 @@ The generated project includes:
 - **Tailwind CSS** pre-configured with the Momentum theme
 - **Generated types** at `src/generated/momentum.types.ts`
 - **Generated admin config** at `src/generated/momentum.config.ts`
+
+### Create Form
+
+![Post Create Form](../visuals/collections/quickstart-post-create-light.png)
 
 ## Project Scripts
 
