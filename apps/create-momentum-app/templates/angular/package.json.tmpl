@@ -7,7 +7,7 @@
 		"build": "ng build",
 		"start": "node dist/{{projectName}}/server/server.mjs",
 		"lint": "ng lint",
-		"generate": "tsx node_modules/@momentumcms/core/generators/generator.cjs src/momentum.config.ts --types src/generated/momentum.types.ts --config src/generated/momentum.config.ts",
+		"generate": "tsx node_modules/@momentumcms/core/src/generators/generator.cjs src/momentum.config.ts --types src/generated/momentum.types.ts --config src/generated/momentum.config.ts",
 		"migrate:generate": "ng generate @momentumcms/migrations:generate",
 		"migrate:run": "ng generate @momentumcms/migrations:run",
 		"migrate:status": "ng generate @momentumcms/migrations:status",

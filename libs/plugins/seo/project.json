@@ -18,7 +18,20 @@
 			"options": {
 				"outputPath": "dist/libs/plugins/seo",
 				"main": "libs/plugins/seo/src/index.ts",
+				"additionalEntryPoints": [
+					"libs/plugins/seo/src/lib/seo-admin-routes.ts",
+					"libs/plugins/seo/src/lib/seo-field-injector.ts"
+				],
 				"tsConfig": "libs/plugins/seo/tsconfig.lib.json",
+				"generatePackageJson": false,
+				"assets": [
+					"libs/plugins/seo/package.json",
+					{
+						"input": "libs/plugins/seo/src/lib",
+						"glob": "seo-admin-routes.d.ts",
+						"output": "src/lib"
+					}
+				],
 				"external": ["@angular/*", "@ng-icons/*", "@momentumcms/ui"]
 			}
 		},

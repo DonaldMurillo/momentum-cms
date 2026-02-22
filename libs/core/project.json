@@ -23,7 +23,9 @@
 					"libs/core/schematics/types/index.ts"
 				],
 				"tsConfig": "libs/core/tsconfig.lib.json",
+				"generatePackageJson": false,
 				"assets": [
+					"libs/core/package.json",
 					"libs/core/schematics/collection.json",
 					"libs/core/schematics/types/schema.json",
 					"libs/core/schematics/types/schema.d.ts"

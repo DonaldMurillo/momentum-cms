@@ -71,7 +71,7 @@ export class PostDetailComponent {
 			map((data): Record<string, unknown> | null => {
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- route resolver returns FindResult
 				const result = data['postData'] as FindResult<Record<string, unknown>> | undefined;
-				if (!result || !result.docs[0]) return null;
+				if (!result?.docs?.[0]) return null;
 				return result.docs[0];
 			}),
 		),

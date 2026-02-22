@@ -25,6 +25,24 @@
 	},
 	"main": "./index.cjs",
 	"types": "./src/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.d.ts",
+			"default": "./index.cjs"
+		},
+		"./admin-routes": {
+			"types": "./src/lib/analytics-admin-routes.d.ts",
+			"default": "./lib/analytics-admin-routes.cjs"
+		},
+		"./block-fields": {
+			"types": "./src/lib/collectors/block-field-injector.d.ts",
+			"default": "./lib/collectors/block-field-injector.cjs"
+		},
+		"./client": {
+			"types": "./src/lib/client/tracker.d.ts",
+			"default": "./lib/client/tracker.cjs"
+		}
+	},
 	"dependencies": {
 		"@momentumcms/core": "0.3.0",
 		"@momentumcms/logger": "0.3.0",

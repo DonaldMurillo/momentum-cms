@@ -53,7 +53,7 @@ export interface AnalyticsPluginInstance extends MomentumPlugin {
  * NOTE: Does NOT import `analytics-admin-routes.ts` because that file contains
  * a static `import('./dashboard/...')` that esbuild follows during the CJS build.
  * Instead, constructs routes inline using a variable-based import path.
- * For browser builds, use `@momentumcms/plugins/analytics/admin-routes` directly.
+ * For browser builds, use `@momentumcms/plugins-analytics/admin-routes` directly.
  */
 function resolveAdminRoutes(
 	dashboardConfig: AnalyticsConfig['adminDashboard'],
@@ -138,11 +138,11 @@ export function analyticsPlugin(config: AnalyticsConfig): AnalyticsPluginInstanc
 		// Browser-safe import paths for the admin config generator
 		browserImports: {
 			adminRoutes: {
-				path: '@momentumcms/plugins/analytics/admin-routes',
+				path: '@momentumcms/plugins-analytics/admin-routes',
 				exportName: 'analyticsAdminRoutes',
 			},
 			modifyCollections: {
-				path: '@momentumcms/plugins/analytics/block-fields',
+				path: '@momentumcms/plugins-analytics/block-fields',
 				exportName: 'injectBlockAnalyticsFields',
 			},
 		},

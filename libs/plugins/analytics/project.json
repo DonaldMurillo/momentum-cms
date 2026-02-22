@@ -18,7 +18,21 @@
 			"options": {
 				"outputPath": "dist/libs/plugins/analytics",
 				"main": "libs/plugins/analytics/src/index.ts",
+				"additionalEntryPoints": [
+					"libs/plugins/analytics/src/lib/analytics-admin-routes.ts",
+					"libs/plugins/analytics/src/lib/collectors/block-field-injector.ts",
+					"libs/plugins/analytics/src/lib/client/tracker.ts"
+				],
 				"tsConfig": "libs/plugins/analytics/tsconfig.lib.json",
+				"generatePackageJson": false,
+				"assets": [
+					"libs/plugins/analytics/package.json",
+					{
+						"input": "libs/plugins/analytics/src/lib",
+						"glob": "analytics-admin-routes.d.ts",
+						"output": "src/lib"
+					}
+				],
 				"external": ["@angular/*", "@ng-icons/*", "@momentumcms/ui"]
 			}
 		},
