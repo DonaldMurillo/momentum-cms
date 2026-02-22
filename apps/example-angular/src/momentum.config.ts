@@ -46,6 +46,13 @@ export const analytics = analyticsPlugin({
 	adapter: analyticsAdapter,
 	trackCollections: true,
 	trackApi: true,
+	trackPageViews: {
+		contentRoutes: {
+			articles: '/articles/:slug',
+			categories: '/categories/:slug',
+			pages: '/:slug',
+		},
+	},
 	flushInterval: 1000, // 1s for fast E2E feedback
 	flushBatchSize: 10,
 	ingestRateLimit: 10, // Low for rate-limiting E2E test

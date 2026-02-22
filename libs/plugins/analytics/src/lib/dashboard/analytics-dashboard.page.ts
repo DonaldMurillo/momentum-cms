@@ -18,6 +18,7 @@ import {
 	PLATFORM_ID,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { Router, ActivatedRoute } from '@angular/router';
 import {
 	Card,
 	CardHeader,
@@ -544,6 +545,8 @@ interface DateRangeOption {
 export class AnalyticsDashboardPage implements OnInit {
 	protected readonly analytics = inject(AnalyticsService);
 	private readonly platformId = inject(PLATFORM_ID);
+	private readonly router = inject(Router);
+	private readonly route = inject(ActivatedRoute);
 
 	/** Date range options */
 	readonly dateRanges: DateRangeOption[] = [
@@ -589,13 +592,11 @@ export class AnalyticsDashboardPage implements OnInit {
 	/** Events per page */
 	private readonly pageSize = 20;
 
-	/** Filtered events based on selected category (client-side filter on top of server query) */
+	/** Events from server query (filtered server-side by category when selected) */
 	readonly filteredEvents = computed((): AnalyticsEventData[] => {
 		const result = this.analytics.events();
 		if (!result) return [];
-		const cat = this.selectedCategory();
-		if (cat === 'all') return result.events;
-		return result.events.filter((e) => e.category === cat);
+		return result.events;
 	});
 
 	/** Total pages for pagination */
@@ -616,6 +617,25 @@ export class AnalyticsDashboardPage implements OnInit {
 
 	ngOnInit(): void {
 		if (!isPlatformBrowser(this.platformId)) return;
+
+		// Hydrate filter state from URL query params
+		const params = this.route.snapshot.queryParams;
+		if (params['range'] && this.dateRanges.some((r) => r.value === params['range'])) {
+			this.selectedRange.set(params['range']);
+		}
+		if (params['category'] && this.categoryFilters.some((c) => c.value === params['category'])) {
+			this.selectedCategory.set(params['category']);
+		}
+		if (params['search']) {
+			this.searchTerm.set(params['search']);
+		}
+		if (params['page']) {
+			const page = parseInt(params['page'], 10);
+			if (!isNaN(page) && page > 0) {
+				this.currentPage.set(page);
+			}
+		}
+
 		void this.refresh();
 	}
 
@@ -627,6 +647,7 @@ export class AnalyticsDashboardPage implements OnInit {
 		const from = dateRange?.getFrom();
 		const search = this.searchTerm() || undefined;
 		const page = this.currentPage();
+		const category = this.selectedCategory();
 
 		await Promise.all([
 			this.analytics.fetchSummary({ from }),
@@ -635,6 +656,7 @@ export class AnalyticsDashboardPage implements OnInit {
 				page,
 				from,
 				search,
+				category: category !== 'all' ? category : undefined,
 			}),
 		]);
 	}
@@ -645,14 +667,18 @@ export class AnalyticsDashboardPage implements OnInit {
 	setDateRange(range: DateRangeOption): void {
 		this.selectedRange.set(range.value);
 		this.currentPage.set(1);
+		this.syncUrlParams();
 		void this.refresh();
 	}
 
 	/**
-	 * Set category filter.
+	 * Set category filter and re-query server.
 	 */
 	setCategory(category: string): void {
 		this.selectedCategory.set(category);
+		this.currentPage.set(1);
+		this.syncUrlParams();
+		void this.refresh();
 	}
 
 	/**
@@ -663,6 +689,7 @@ export class AnalyticsDashboardPage implements OnInit {
 		if (target instanceof HTMLInputElement) {
 			this.searchTerm.set(target.value);
 			this.currentPage.set(1);
+			this.syncUrlParams();
 			void this.refresh();
 		}
 	}
@@ -672,7 +699,26 @@ export class AnalyticsDashboardPage implements OnInit {
 	 */
 	goToPage(page: number): void {
 		this.currentPage.set(page);
+		this.syncUrlParams();
 		void this.refresh();
+	}
+
+	/**
+	 * Sync current filter state to URL query params.
+	 */
+	private syncUrlParams(): void {
+		const queryParams: Record<string, string | null> = {
+			range: this.selectedRange() !== 'all' ? this.selectedRange() : null,
+			category: this.selectedCategory() !== 'all' ? this.selectedCategory() : null,
+			search: this.searchTerm() || null,
+			page: this.currentPage() > 1 ? String(this.currentPage()) : null,
+		};
+		void this.router.navigate([], {
+			relativeTo: this.route,
+			queryParams,
+			queryParamsHandling: 'merge',
+			replaceUrl: true,
+		});
 	}
 
 	/**

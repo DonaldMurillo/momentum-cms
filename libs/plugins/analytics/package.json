@@ -41,6 +41,10 @@
 		"./client": {
 			"types": "./src/lib/client/tracker.d.ts",
 			"default": "./lib/client/tracker.cjs"
+		},
+		"./page-tracker": {
+			"types": "./src/lib/page-view-tracker.d.ts",
+			"default": "./lib/page-view-tracker.cjs"
 		}
 	},
 	"dependencies": {

@@ -10,6 +10,7 @@
 		"src/**/*.spec.ts",
 		"src/**/*.test.ts",
 		"src/lib/dashboard/**",
-		"src/lib/analytics-admin-routes.ts"
+		"src/lib/analytics-admin-routes.ts",
+		"src/lib/page-view-tracker.ts"
 	]
 }

@@ -2,7 +2,7 @@
  * Analytics Plugin
  *
  * A Momentum CMS plugin that wires all analytics collectors together.
- * Tracks collection CRUD, API requests, and accepts client-side events.
+ * Tracks collection CRUD, API requests, page views, and accepts client-side events.
  *
  * @example
  * ```typescript
@@ -32,6 +32,7 @@ import { injectCollectionCollector } from './collectors/collection-collector';
 import { injectBlockAnalyticsFields } from './collectors/block-field-injector';
 import { createIngestRouter } from './ingest-handler';
 import { createApiCollectorMiddleware } from './collectors/api-collector';
+import { createPageViewCollectorMiddleware } from './collectors/page-view-collector';
 import { createAnalyticsQueryRouter } from './analytics-query-handler';
 import { createContentPerformanceRouter } from './content-performance/content-performance-handler';
 import { createTrackingRulesRouter } from './tracking-rules/tracking-rules-endpoint';
@@ -206,6 +207,22 @@ export function analyticsPlugin(config: AnalyticsConfig): AnalyticsPluginInstanc
 					handler: apiCollector,
 					position: 'before-api',
 				});
+			}
+
+			// Register page view collector middleware (SSR page renders)
+			if (config.trackPageViews !== false) {
+				const pageViewOptions =
+					typeof config.trackPageViews === 'object' ? config.trackPageViews : {};
+				const pageViewCollector = createPageViewCollectorMiddleware(
+					(event) => eventStore.add(event),
+					pageViewOptions,
+				);
+				registerMiddleware({
+					path: '/',
+					handler: pageViewCollector,
+					position: 'root',
+				});
+				logger.info('Page view tracking enabled');
 			}
 
 			// Register content performance endpoint
