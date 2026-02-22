@@ -112,10 +112,10 @@ describe('Robots Handler', () => {
 		expect(res.text).toContain('Allow: /');
 	});
 
-	it('should include Sitemap URL with siteUrl', async () => {
+	it('should derive Sitemap URL from request Host header', async () => {
 		const app = createApp('https://mysite.com');
-		const res = await request(app).get('/robots.txt');
-		expect(res.text).toContain('Sitemap: https://mysite.com/sitemap.xml');
+		const res = await request(app).get('/robots.txt').set('Host', 'mysite.com');
+		expect(res.text).toContain('Sitemap: http://mysite.com/sitemap.xml');
 	});
 
 	it('should include custom disallow rules from config', async () => {

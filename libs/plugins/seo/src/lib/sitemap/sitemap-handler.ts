@@ -76,12 +76,17 @@ export function createSitemapRouter(options: SitemapHandlerOptions): {
 	const cache = new SitemapCache(config.cacheTtl ?? 300_000);
 	const router = createRouter();
 
-	router.get('/sitemap.xml', async (_req: Request, res: Response) => {
+	router.get('/sitemap.xml', async (req: Request, res: Response) => {
 		const api = getApi();
 		if (!api) {
 			res.status(503).json({ error: 'API not ready' });
 			return;
 		}
+
+		// Use the request origin so URLs match the server the crawler is hitting.
+		// siteUrl from config is only a fallback when Host header is missing.
+		const host = req.get('host');
+		const effectiveSiteUrl = host ? `${req.protocol}://${host}` : siteUrl || 'http://localhost';
 
 		const cached = cache.get('sitemap');
 		if (cached) {
@@ -117,9 +122,10 @@ export function createSitemapRouter(options: SitemapHandlerOptions): {
 						if (seoData.noIndex) continue;
 						if (seoData.excludeFromSitemap) continue;
 
+						const identifier = typeof doc['slug'] === 'string' ? doc['slug'] : String(doc['id']);
 						const loc = config.urlBuilder
 							? config.urlBuilder(slug, doc)
-							: `${siteUrl}/${slug}/${String(doc['id'])}`;
+							: `${effectiveSiteUrl}/${slug}/${identifier}`;
 
 						if (!loc) continue;
 
