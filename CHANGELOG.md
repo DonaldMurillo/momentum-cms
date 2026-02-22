@@ -1,3 +1,14 @@
+## 0.4.1 (2026-02-22)
+
+### 🚀 Features
+
+- **analytics:** add client-side SPA page view tracking with content attribution ([f2bbe1c](https://github.com/DonaldMurillo/momentum-cms/commit/f2bbe1c))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.4.0 (2026-02-22)
 
 ### 🚀 Features
