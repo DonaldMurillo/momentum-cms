@@ -1,6 +1,6 @@
 # REST API
 
-All auto-generated REST endpoints for collections.
+All auto-generated REST endpoints for collections. See also the [interactive OpenAPI docs](openapi.md) at `/api/docs`.
 
 ## Collection CRUD
 

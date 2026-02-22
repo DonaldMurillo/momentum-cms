@@ -2,6 +2,8 @@
 
 Globals are singleton collections — a single document with no list view. Use them for site settings, navigation, or other one-off configuration.
 
+![Global Settings Editor](../visuals/collections/global-settings-light.png)
+
 ## defineGlobal
 
 ```typescript

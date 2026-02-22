@@ -2,6 +2,8 @@
 
 > **Alpha Software** — APIs will change, features are incomplete. Use for experimentation only.
 
+![Momentum CMS Overview](visuals/dashboard/hero-flow.gif)
+
 ## Getting Started
 
 - [Quick Start](getting-started/quick-start.md) — Scaffold a new project in minutes

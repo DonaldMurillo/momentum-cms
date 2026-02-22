@@ -2,6 +2,10 @@
 
 Apps using the admin library must configure Tailwind to include the admin preset and library sources.
 
+| Light                                                | Dark                                               |
+| ---------------------------------------------------- | -------------------------------------------------- |
+| ![Light Theme](../visuals/theme/dashboard-light.png) | ![Dark Theme](../visuals/theme/dashboard-dark.png) |
+
 ## Configuration
 
 ### `tailwind.config.js`

@@ -69,3 +69,6 @@ data/
 
 storybook-static
 vitest.config.*.timestamp*
+
+# Doc-visual auth state (contains session tokens)
+docs/visuals/.auth-state.json

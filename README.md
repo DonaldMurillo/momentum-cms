@@ -2,6 +2,8 @@
 
 An Angular-based headless CMS. Define collections in TypeScript, auto-generate an Admin UI, REST API, and database schema.
 
+![Momentum CMS Overview](docs/visuals/dashboard/hero-flow.gif)
+
 > **ALPHA SOFTWARE — DO NOT USE IN PRODUCTION.** This project is in early alpha. APIs will change, things will break, and there are missing features. It is a prototype and a learning platform. Use it for experimentation and prototyping only.
 
 ## Why Momentum?

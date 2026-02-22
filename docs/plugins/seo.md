@@ -149,6 +149,12 @@ When `adminDashboard` is enabled, the plugin adds three pages to the admin sideb
 - **Sitemap** — View and configure sitemap settings per collection
 - **Robots** — Edit robots.txt rules
 
+![SEO Dashboard](../visuals/plugins/seo-light.png)
+
+### Sitemap Settings
+
+![Sitemap Settings](../visuals/plugins/seo-sitemap-light.png)
+
 ## Related
 
 - [Plugins Overview](overview.md) — Plugin system architecture

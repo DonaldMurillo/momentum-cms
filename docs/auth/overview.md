@@ -22,6 +22,16 @@ export default {
 - Auth middleware runs in the server pipeline before access control checks
 - Sessions are cookie-based by default
 
+| Light                                          | Dark                                               |
+| ---------------------------------------------- | -------------------------------------------------- |
+| ![Login Page](../visuals/auth/login-light.png) | ![Login Page Dark](../visuals/auth/login-dark.png) |
+
+### First-Time Setup
+
+When no users exist, the admin redirects to the setup page for creating the first admin account:
+
+![Setup Page](../visuals/auth/setup-light.png)
+
 ## Auth Endpoints
 
 | Method | Path                      | Description         |

@@ -15,8 +15,8 @@ Angular-based headless CMS inspired by Payload CMS. Define collections in TypeSc
 ## Nx Commands
 
 ```bash
-nx serve cms-admin          # Dev server
-nx build cms-admin          # Production build
+nx serve example-angular    # Dev server
+nx build example-angular    # Production build
 nx test <project>           # Run Vitest unit tests
 nx lint <project>           # Lint project
 nx affected -t test         # Test affected
