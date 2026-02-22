@@ -1,3 +1,19 @@
+## 0.4.0 (2026-02-22)
+
+### 🚀 Features
+
+- blocks showcase with articles, pages, and UI fixes ([#36](https://github.com/DonaldMurillo/momentum-cms/pull/36))
+
+### 🩹 Fixes
+
+- resolve all E2E test failures across Angular and Analog suites ([35c2285](https://github.com/DonaldMurillo/momentum-cms/commit/35c2285))
+- resolve 39 WCAG 2.1 AA accessibility violations across UI and admin libs ([1dcb108](https://github.com/DonaldMurillo/momentum-cms/commit/1dcb108))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.3.0 (2026-02-20)
 
 ### 🚀 Features

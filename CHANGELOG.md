@@ -1,3 +1,25 @@
+## 0.4.0 (2026-02-22)
+
+### 🚀 Features
+
+- blocks showcase with articles, pages, and UI fixes ([#36](https://github.com/DonaldMurillo/momentum-cms/pull/36))
+- SEO plugin recovery, E2E fixes, and CLI templates ([#37](https://github.com/DonaldMurillo/momentum-cms/pull/37), [#33](https://github.com/DonaldMurillo/momentum-cms/issues/33))
+- add unified test runner script (npm run test:all) ([c02d24b](https://github.com/DonaldMurillo/momentum-cms/commit/c02d24b))
+
+### 🩹 Fixes
+
+- resolve lint errors, fix vitest config excludes, and fix CLI template test assertion ([5124f72](https://github.com/DonaldMurillo/momentum-cms/commit/5124f72))
+- resolve 39 WCAG 2.1 AA accessibility violations across UI and admin libs ([1dcb108](https://github.com/DonaldMurillo/momentum-cms/commit/1dcb108))
+- resolve all E2E test failures across Angular and Analog suites ([35c2285](https://github.com/DonaldMurillo/momentum-cms/commit/35c2285))
+- complete Analog E2E parity with Express-to-h3 bridge and plugin sub-path exports ([7bca003](https://github.com/DonaldMurillo/momentum-cms/commit/7bca003))
+- sitemap/robots use request Host for URLs and prefer slug over id ([7ad4691](https://github.com/DonaldMurillo/momentum-cms/commit/7ad4691))
+- remove unused CardContent import and duplicate peerDependency ([e67f149](https://github.com/DonaldMurillo/momentum-cms/commit/e67f149))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.3.0 (2026-02-20)
 
 ### 🚀 Features
