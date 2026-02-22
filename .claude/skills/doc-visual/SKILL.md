@@ -302,18 +302,12 @@ Use relative paths from the doc file:
 
 After all captures, verify the output:
 
-```bash
-# Count captured files
-find docs/visuals -name "*.png" | wc -l
-find docs/visuals -name "*.webm" | wc -l
+Use the **Glob** tool (not `find` via Bash) to count and verify files:
 
-# Check for zero-size files (failed captures)
-find docs/visuals -name "*.png" -empty
-find docs/visuals -name "*.webm" -empty
-
-# List everything
-ls -laR docs/visuals/
-```
+1. Count screenshots: `Glob("docs/visuals/**/*.png")`
+2. Count videos: `Glob("docs/visuals/**/*.webm")`
+3. Count GIFs: `Glob("docs/visuals/**/*.gif")`
+4. Check for zero-size files: `ls -la docs/visuals/**/*.png` and inspect sizes
 
 Report a summary:
 
