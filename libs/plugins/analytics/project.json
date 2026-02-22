@@ -21,7 +21,8 @@
 				"additionalEntryPoints": [
 					"libs/plugins/analytics/src/lib/analytics-admin-routes.ts",
 					"libs/plugins/analytics/src/lib/collectors/block-field-injector.ts",
-					"libs/plugins/analytics/src/lib/client/tracker.ts"
+					"libs/plugins/analytics/src/lib/client/tracker.ts",
+					"libs/plugins/analytics/src/lib/page-view-tracker.ts"
 				],
 				"tsConfig": "libs/plugins/analytics/tsconfig.lib.json",
 				"generatePackageJson": false,
@@ -30,6 +31,11 @@
 					{
 						"input": "libs/plugins/analytics/src/lib",
 						"glob": "analytics-admin-routes.d.ts",
+						"output": "src/lib"
+					},
+					{
+						"input": "libs/plugins/analytics/src/lib",
+						"glob": "page-view-tracker.d.ts",
 						"output": "src/lib"
 					}
 				],

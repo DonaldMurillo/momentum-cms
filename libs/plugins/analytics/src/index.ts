@@ -8,7 +8,11 @@ export type {
 } from './lib/analytics-event.types';
 
 // Analytics config types
-export type { AnalyticsAdapter, AnalyticsConfig } from './lib/analytics-config.types';
+export type {
+	AnalyticsAdapter,
+	AnalyticsConfig,
+	PageViewTrackingOptions,
+} from './lib/analytics-config.types';
 
 // Event store
 export { EventStore, type EventStoreOptions } from './lib/event-store';
@@ -22,6 +26,21 @@ export {
 
 // API collector
 export { createApiCollectorMiddleware } from './lib/collectors/api-collector';
+
+// Page view collector
+export {
+	createPageViewCollectorMiddleware,
+	isBot,
+	type PageViewEmitter,
+} from './lib/collectors/page-view-collector';
+
+// Content route matcher
+export {
+	compileContentRoutes,
+	matchContentRoute,
+	type CompiledContentRoute,
+	type ContentRouteMatch,
+} from './lib/utils/content-route-matcher';
 
 // Ingest handler
 export { createIngestRouter, type IngestHandlerOptions } from './lib/ingest-handler';

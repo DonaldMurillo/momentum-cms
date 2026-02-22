@@ -24,6 +24,28 @@ export interface AnalyticsAdapter {
 }
 
 /**
+ * Options for server-side page view tracking.
+ */
+export interface PageViewTrackingOptions {
+	/** Additional path prefixes to exclude from tracking. */
+	excludePaths?: string[];
+	/** File extensions to ignore (overrides defaults when provided). */
+	excludeExtensions?: string[];
+	/** Only track responses with 2xx status codes. @default true */
+	onlySuccessful?: boolean;
+	/** Whether to track bot traffic (Googlebot, Bingbot, etc.). @default false */
+	trackBots?: boolean;
+	/**
+	 * Map collection slugs to URL patterns for content attribution.
+	 * When a page view URL matches a pattern, the event is enriched with
+	 * collection and slug metadata, enabling per-document analytics.
+	 * Patterns use Express-style `:param` syntax.
+	 * @example { articles: '/articles/:slug', pages: '/:slug' }
+	 */
+	contentRoutes?: Record<string, string>;
+}
+
+/**
  * Analytics configuration.
  */
 export interface AnalyticsConfig {
@@ -37,6 +59,14 @@ export interface AnalyticsConfig {
 	trackApi?: boolean;
 	/** Admin action tracking. @default true */
 	trackAdmin?: boolean;
+	/**
+	 * Server-side page view tracking (SSR page renders).
+	 * - `true` (default): enable with default settings
+	 * - `false`: disable
+	 * - object: override page view tracking options
+	 * @default true
+	 */
+	trackPageViews?: boolean | PageViewTrackingOptions;
 	/** Client-side ingest endpoint path. @default '/api/analytics/collect' */
 	ingestPath?: string;
 	/** Rate limit for ingest endpoint (requests per minute per IP). @default 100 */

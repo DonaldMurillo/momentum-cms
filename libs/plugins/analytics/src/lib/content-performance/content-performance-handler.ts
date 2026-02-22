@@ -8,6 +8,7 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import type { AnalyticsAdapter } from '../analytics-config.types';
+import type { AnalyticsCategory, AnalyticsEvent } from '../analytics-event.types';
 import type { ContentPerformanceData } from './content-performance.types';
 import { requireAdmin } from '../analytics-auth';
 
@@ -25,6 +26,69 @@ function matchesDocumentUrl(eventUrl: string | undefined, documentPath: string):
 		pathname = eventUrl;
 	}
 	return pathname === documentPath || pathname === `${documentPath}/`;
+}
+
+/**
+ * Query events using content-attribution first, falling back to URL-based search.
+ *
+ * Runs two parallel queries for content-attributed events:
+ * 1. Server events: adapter filters by context.collection (set by SSR page-view-collector)
+ * 2. All events by name: post-filter by properties.collection + properties.slug
+ *    (catches client SPA events where the ingest handler doesn't copy collection to context)
+ *
+ * Falls back to URL-based substring search for legacy events without any attribution.
+ */
+async function queryEventsByDocument(
+	queryFn: NonNullable<AnalyticsAdapter['query']>,
+	eventName: string,
+	collection: string,
+	documentId: string,
+	documentPath: string,
+	options: { category?: AnalyticsCategory; from?: string; to?: string },
+): Promise<AnalyticsEvent[]> {
+	const queryBase = {
+		...(options.category ? { category: options.category } : {}),
+		name: eventName,
+		from: options.from,
+		to: options.to,
+		limit: 1000,
+	};
+
+	// Parallel queries: server events (context.collection) + all events (post-filter properties)
+	const [serverResult, allResult] = await Promise.all([
+		queryFn({ ...queryBase, collection }),
+		queryFn(queryBase),
+	]);
+
+	// Merge and deduplicate by event ID
+	const seen = new Set<string>();
+	const results: AnalyticsEvent[] = [];
+	for (const e of [...serverResult.events, ...allResult.events]) {
+		if (seen.has(e.id)) continue;
+		seen.add(e.id);
+		const matchesCollection =
+			e.context.collection === collection || e.properties['collection'] === collection;
+		const matchesSlug =
+			typeof e.properties['slug'] === 'string' && e.properties['slug'] === documentId;
+		if (matchesCollection && matchesSlug) results.push(e);
+	}
+	if (results.length > 0) return results;
+
+	// Fallback: URL-based search for legacy events without content attribution
+	const urlResult = await queryFn({ ...queryBase, search: documentPath });
+	return urlResult.events.filter((e) => matchesDocumentUrl(e.context.url, documentPath));
+}
+
+/**
+ * Count events by blockType property.
+ */
+function countByBlockType(events: AnalyticsEvent[]): Map<string, number> {
+	const map = new Map<string, number>();
+	for (const event of events) {
+		const bt = String(event.properties['blockType'] ?? 'unknown');
+		map.set(bt, (map.get(bt) ?? 0) + 1);
+	}
+	return map;
 }
 
 /**
@@ -55,19 +119,17 @@ export function createContentPerformanceRouter(adapter: AnalyticsAdapter): Route
 			}
 
 			const documentPath = `/${collection}/${documentId}`;
+			const queryFn = adapter.query.bind(adapter);
+			const dateRange = { from, to };
 
-			// Query page_view events that match the document.
-			// The adapter `search` is a substring match, so post-filter for exact URL.
-			const pageViewResult = await adapter.query({
-				category: 'page',
-				name: 'page_view',
-				search: documentPath,
-				from,
-				to,
-				limit: 1000,
-			});
-			const pageViewEvents = pageViewResult.events.filter((e) =>
-				matchesDocumentUrl(e.context.url, documentPath),
+			// Query page view events (content-attributed first, URL fallback)
+			const pageViewEvents = await queryEventsByDocument(
+				queryFn,
+				'page_view',
+				collection,
+				documentId,
+				documentPath,
+				{ category: 'page', ...dateRange },
 			);
 
 			// Aggregate metrics
@@ -89,42 +151,27 @@ export function createContentPerformanceRouter(adapter: AnalyticsAdapter): Route
 			// Query block engagement if available
 			let blockEngagement: ContentPerformanceData['blockEngagement'];
 			try {
-				const [impressionResult, hoverResult] = await Promise.all([
-					adapter.query({
-						name: 'block_impression',
-						search: documentPath,
-						from,
-						to,
-						limit: 1000,
-					}),
-					adapter.query({
-						name: 'block_hover',
-						search: documentPath,
-						from,
-						to,
-						limit: 1000,
-					}),
+				const [impressionEvents, hoverEvents] = await Promise.all([
+					queryEventsByDocument(
+						queryFn,
+						'block_impression',
+						collection,
+						documentId,
+						documentPath,
+						dateRange,
+					),
+					queryEventsByDocument(
+						queryFn,
+						'block_hover',
+						collection,
+						documentId,
+						documentPath,
+						dateRange,
+					),
 				]);
 
-				// Post-filter block events for exact document URL match
-				const impressionEvents = impressionResult.events.filter((e) =>
-					matchesDocumentUrl(e.context.url, documentPath),
-				);
-				const hoverEvents = hoverResult.events.filter((e) =>
-					matchesDocumentUrl(e.context.url, documentPath),
-				);
-
-				const impressionMap = new Map<string, number>();
-				for (const event of impressionEvents) {
-					const bt = String(event.properties['blockType'] ?? 'unknown');
-					impressionMap.set(bt, (impressionMap.get(bt) ?? 0) + 1);
-				}
-
-				const hoverMap = new Map<string, number>();
-				for (const event of hoverEvents) {
-					const bt = String(event.properties['blockType'] ?? 'unknown');
-					hoverMap.set(bt, (hoverMap.get(bt) ?? 0) + 1);
-				}
+				const impressionMap = countByBlockType(impressionEvents);
+				const hoverMap = countByBlockType(hoverEvents);
 
 				const allTypes = new Set([...impressionMap.keys(), ...hoverMap.keys()]);
 				if (allTypes.size > 0) {

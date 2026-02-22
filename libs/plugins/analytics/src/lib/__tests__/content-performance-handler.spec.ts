@@ -180,6 +180,172 @@ describe('createContentPerformanceRouter', () => {
 		expect(res.body.blockEngagement[0].hovers).toBe(1);
 	});
 
+	it('should find page views by context.collection + properties.slug (content-attributed events)', async () => {
+		await adapter.store([
+			// Content-attributed event (from page-view-collector with contentRoutes)
+			makeEvent({
+				name: 'page_view',
+				properties: { collection: 'pages', slug: 'about', path: '/about', statusCode: 200 },
+				context: { source: 'server', url: '/about', collection: 'pages' },
+			}),
+			makeEvent({
+				name: 'page_view',
+				properties: { collection: 'pages', slug: 'about', path: '/about', statusCode: 200 },
+				context: { source: 'server', url: '/about', collection: 'pages' },
+			}),
+			// Different page — should NOT be counted
+			makeEvent({
+				name: 'page_view',
+				properties: { collection: 'pages', slug: 'contact', path: '/contact', statusCode: 200 },
+				context: { source: 'server', url: '/contact', collection: 'pages' },
+			}),
+		]);
+
+		const res = await request(app).get(
+			'/analytics/content-performance?collection=pages&documentId=about',
+		);
+
+		expect(res.status).toBe(200);
+		expect(res.body.pageViews).toBe(2);
+	});
+
+	it('should work for root-level pages (no /collection/slug URL pattern)', async () => {
+		// Root-level pages have URL /about, not /pages/about
+		// The old URL-based matching would construct /pages/about and fail
+		await adapter.store([
+			makeEvent({
+				name: 'page_view',
+				properties: { collection: 'pages', slug: 'about', path: '/about', statusCode: 200 },
+				context: { source: 'server', url: '/about', collection: 'pages' },
+			}),
+		]);
+
+		const res = await request(app).get(
+			'/analytics/content-performance?collection=pages&documentId=about',
+		);
+
+		expect(res.status).toBe(200);
+		expect(res.body.pageViews).toBe(1);
+	});
+
+	it('should include block engagement for root-level pages with content attribution', async () => {
+		await adapter.store([
+			makeEvent({
+				name: 'page_view',
+				properties: { collection: 'pages', slug: 'about', path: '/about', statusCode: 200 },
+				context: { source: 'server', url: '/about', collection: 'pages' },
+			}),
+			makeEvent({
+				name: 'block_impression',
+				category: 'custom',
+				properties: { blockType: 'hero', collection: 'pages', slug: 'about' },
+				context: { source: 'client', url: '/about', collection: 'pages' },
+			}),
+			makeEvent({
+				name: 'block_impression',
+				category: 'custom',
+				properties: { blockType: 'hero', collection: 'pages', slug: 'about' },
+				context: { source: 'client', url: '/about', collection: 'pages' },
+			}),
+			makeEvent({
+				name: 'block_hover',
+				category: 'custom',
+				properties: { blockType: 'hero', collection: 'pages', slug: 'about' },
+				context: { source: 'client', url: '/about', collection: 'pages' },
+			}),
+		]);
+
+		const res = await request(app).get(
+			'/analytics/content-performance?collection=pages&documentId=about',
+		);
+
+		expect(res.status).toBe(200);
+		expect(res.body.pageViews).toBe(1);
+		expect(res.body.blockEngagement).toBeDefined();
+		expect(res.body.blockEngagement).toHaveLength(1);
+		expect(res.body.blockEngagement[0].blockType).toBe('hero');
+		expect(res.body.blockEngagement[0].impressions).toBe(2);
+		expect(res.body.blockEngagement[0].hovers).toBe(1);
+	});
+
+	it('should find client-side page views where collection is in properties but NOT in context', async () => {
+		// Client events from PageViewTrackerService have collection/slug in properties only.
+		// The ingest handler strips context.collection for security (whitelist approach).
+		await adapter.store([
+			makeEvent({
+				name: 'page_view',
+				properties: { collection: 'pages', slug: 'about', path: '/about' },
+				context: { source: 'client', url: 'http://localhost:4200/about' },
+			}),
+			makeEvent({
+				name: 'page_view',
+				properties: { collection: 'pages', slug: 'about', path: '/about' },
+				context: { source: 'client', url: 'http://localhost:4200/about' },
+			}),
+			// Different slug — should NOT be counted
+			makeEvent({
+				name: 'page_view',
+				properties: { collection: 'pages', slug: 'contact', path: '/contact' },
+				context: { source: 'client', url: 'http://localhost:4200/contact' },
+			}),
+		]);
+
+		const res = await request(app).get(
+			'/analytics/content-performance?collection=pages&documentId=about',
+		);
+
+		expect(res.status).toBe(200);
+		expect(res.body.pageViews).toBe(2);
+	});
+
+	it('should combine server and client page views for the same document', async () => {
+		await adapter.store([
+			// Server event — has context.collection
+			makeEvent({
+				name: 'page_view',
+				visitorId: 'v-server',
+				properties: { collection: 'pages', slug: 'about', path: '/about', statusCode: 200 },
+				context: { source: 'server', url: '/about', collection: 'pages' },
+			}),
+			// Client event — has properties.collection only (no context.collection)
+			makeEvent({
+				name: 'page_view',
+				visitorId: 'v-client',
+				properties: { collection: 'pages', slug: 'about', path: '/about' },
+				context: { source: 'client', url: 'http://localhost:4200/about' },
+			}),
+		]);
+
+		const res = await request(app).get(
+			'/analytics/content-performance?collection=pages&documentId=about',
+		);
+
+		expect(res.status).toBe(200);
+		expect(res.body.pageViews).toBe(2);
+		expect(res.body.uniqueVisitors).toBe(2);
+	});
+
+	it('should fall back to URL matching for legacy events without collection/slug', async () => {
+		// Legacy events without content attribution — use /${collection}/${documentId} URL pattern
+		await adapter.store([
+			makeEvent({
+				name: 'page_view',
+				context: { source: 'client', url: '/articles/my-post' },
+			}),
+			makeEvent({
+				name: 'page_view',
+				context: { source: 'client', url: '/articles/my-post' },
+			}),
+		]);
+
+		const res = await request(app).get(
+			'/analytics/content-performance?collection=articles&documentId=my-post',
+		);
+
+		expect(res.status).toBe(200);
+		expect(res.body.pageViews).toBe(2);
+	});
+
 	it('should return 501 when adapter does not support queries', async () => {
 		const noQueryAdapter = { store: adapter.store.bind(adapter) };
 		const noQueryApp = express();

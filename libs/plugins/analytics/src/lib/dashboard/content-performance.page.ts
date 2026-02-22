@@ -23,6 +23,7 @@ import {
 	PLATFORM_ID,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { Router, ActivatedRoute } from '@angular/router';
 import {
 	Card,
 	CardHeader,
@@ -315,6 +316,8 @@ interface DateRangeOption {
 export class ContentPerformancePage implements OnInit {
 	protected readonly service = inject(ContentPerformanceService);
 	private readonly platformId = inject(PLATFORM_ID);
+	private readonly router = inject(Router);
+	private readonly route = inject(ActivatedRoute);
 
 	readonly dateRanges: DateRangeOption[] = [
 		{
@@ -368,18 +371,30 @@ export class ContentPerformancePage implements OnInit {
 
 	ngOnInit(): void {
 		if (!isPlatformBrowser(this.platformId)) return;
+
+		// Hydrate filter state from URL query params
+		const params = this.route.snapshot.queryParams;
+		if (params['range'] && this.dateRanges.some((r) => r.value === params['range'])) {
+			this.selectedRange.set(params['range']);
+		}
+		if (params['search']) {
+			this.searchTerm.set(params['search']);
+		}
+
 		void this.fetchData();
 	}
 
 	setDateRange(range: DateRangeOption): void {
 		this.selectedRange.set(range.value);
 		this.expandedRow.set(null);
+		this.syncUrlParams();
 		void this.fetchData();
 	}
 
 	onSearch(event: Event): void {
 		if (event.target instanceof HTMLInputElement) {
 			this.searchTerm.set(event.target.value);
+			this.syncUrlParams();
 		}
 	}
 
@@ -391,5 +406,18 @@ export class ContentPerformancePage implements OnInit {
 		const range = this.dateRanges.find((r) => r.value === this.selectedRange());
 		const from = range?.getFrom();
 		await this.service.fetchTopPages({ from });
+	}
+
+	private syncUrlParams(): void {
+		const queryParams: Record<string, string | null> = {
+			range: this.selectedRange() !== 'all' ? this.selectedRange() : null,
+			search: this.searchTerm() || null,
+		};
+		void this.router.navigate([], {
+			relativeTo: this.route,
+			queryParams,
+			queryParamsHandling: 'merge',
+			replaceUrl: true,
+		});
 	}
 }

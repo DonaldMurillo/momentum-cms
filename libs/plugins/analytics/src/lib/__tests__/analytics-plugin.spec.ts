@@ -116,7 +116,7 @@ describe('analyticsPlugin', () => {
 		expect(registerMiddleware).not.toHaveBeenCalled();
 	});
 
-	it('should register ingest router, query router, and API collector middleware during onInit', async () => {
+	it('should register ingest router, query router, API collector, and page view collector during onInit', async () => {
 		const registeredMiddleware: PluginMiddlewareDescriptor[] = [];
 		const registerMiddleware = vi.fn((d: PluginMiddlewareDescriptor) =>
 			registeredMiddleware.push(d),
@@ -128,20 +128,25 @@ describe('analyticsPlugin', () => {
 		// Verify each middleware is registered by checking paths
 		const paths = registeredMiddleware.map((m) => m.path);
 		expect(paths).toContain('/analytics/collect'); // ingest router
-		expect(paths).toContain('/'); // API collector
+		expect(paths).toContain('/'); // API collector + page view collector
 
 		// Three separate middleware at /analytics: query + content perf + tracking rules
 		const analyticsPaths = registeredMiddleware.filter((m) => m.path === '/analytics');
 		expect(analyticsPaths).toHaveLength(3);
 
-		// All middleware should be before-api
+		// All middleware should be before-api or root
 		for (const mw of registeredMiddleware) {
-			expect(mw.position).toBe('before-api');
+			expect(['before-api', 'root']).toContain(mw.position);
 			expect(mw.handler).toBeDefined();
 		}
 
-		// Total: ingest + query + api collector + content perf + tracking rules
-		expect(registeredMiddleware).toHaveLength(5);
+		// Page view collector should be at root position
+		const rootMiddleware = registeredMiddleware.filter((m) => m.position === 'root');
+		expect(rootMiddleware).toHaveLength(1);
+		expect(rootMiddleware[0].path).toBe('/');
+
+		// Total: ingest + query + api collector + page view collector + content perf + tracking rules
+		expect(registeredMiddleware).toHaveLength(6);
 	});
 
 	it('should use custom ingestPath when configured', async () => {
@@ -165,12 +170,18 @@ describe('analyticsPlugin', () => {
 		const plugin = analyticsPlugin({ ...config, trackApi: false });
 		await plugin.onInit!(createMockContext({ registerMiddleware }));
 
-		// API collector at path '/' should NOT be registered
-		const rootPaths = registeredMiddleware.filter((m) => m.path === '/');
-		expect(rootPaths).toHaveLength(0);
+		// API collector (before-api at '/') should NOT be registered, but page view collector (root) still present
+		const beforeApiRoot = registeredMiddleware.filter(
+			(m) => m.path === '/' && m.position === 'before-api',
+		);
+		expect(beforeApiRoot).toHaveLength(0);
 
-		// ingest + query + content perf + tracking rules = 4
-		expect(registeredMiddleware).toHaveLength(4);
+		// Page view collector still registered at root
+		const rootMiddleware = registeredMiddleware.filter((m) => m.position === 'root');
+		expect(rootMiddleware).toHaveLength(1);
+
+		// ingest + query + page view collector + content perf + tracking rules = 5
+		expect(registeredMiddleware).toHaveLength(5);
 	});
 
 	it('should skip content performance middleware when contentPerformance is false', async () => {
@@ -186,8 +197,8 @@ describe('analyticsPlugin', () => {
 		const analyticsPaths = registeredMiddleware.filter((m) => m.path === '/analytics');
 		expect(analyticsPaths).toHaveLength(2);
 
-		// ingest + query + api collector + tracking rules = 4
-		expect(registeredMiddleware).toHaveLength(4);
+		// ingest + query + api collector + page view collector + tracking rules = 5
+		expect(registeredMiddleware).toHaveLength(5);
 	});
 
 	it('should skip tracking rules middleware when trackingRules is false', async () => {
@@ -207,8 +218,41 @@ describe('analyticsPlugin', () => {
 		// tracking-rules collection should NOT be injected
 		expect(collections.some((c) => c.slug === 'tracking-rules')).toBe(false);
 
-		// ingest + query + api collector + content perf = 4
-		expect(registeredMiddleware).toHaveLength(4);
+		// ingest + query + api collector + page view collector + content perf = 5
+		expect(registeredMiddleware).toHaveLength(5);
+	});
+
+	it('should skip page view collector when trackPageViews is false', async () => {
+		const registeredMiddleware: PluginMiddlewareDescriptor[] = [];
+		const registerMiddleware = vi.fn((d: PluginMiddlewareDescriptor) =>
+			registeredMiddleware.push(d),
+		);
+
+		const plugin = analyticsPlugin({ ...config, trackPageViews: false });
+		await plugin.onInit!(createMockContext({ registerMiddleware }));
+
+		const rootMiddleware = registeredMiddleware.filter((m) => m.position === 'root');
+		expect(rootMiddleware).toHaveLength(0);
+
+		// ingest + query + api collector + content perf + tracking rules = 5
+		expect(registeredMiddleware).toHaveLength(5);
+	});
+
+	it('should pass PageViewTrackingOptions when trackPageViews is an object', async () => {
+		const registeredMiddleware: PluginMiddlewareDescriptor[] = [];
+		const registerMiddleware = vi.fn((d: PluginMiddlewareDescriptor) =>
+			registeredMiddleware.push(d),
+		);
+
+		const plugin = analyticsPlugin({
+			...config,
+			trackPageViews: { excludePaths: ['/admin'], trackBots: true },
+		});
+		await plugin.onInit!(createMockContext({ registerMiddleware }));
+
+		const rootMiddleware = registeredMiddleware.filter((m) => m.position === 'root');
+		expect(rootMiddleware).toHaveLength(1);
+		expect(rootMiddleware[0].path).toBe('/');
 	});
 
 	it('should inject tracking-rules collection when trackingRules is enabled', async () => {

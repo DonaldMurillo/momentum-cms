@@ -8,6 +8,7 @@ import {
 	withIncrementalHydration,
 } from '@angular/platform-browser';
 import { crudToastInterceptor, provideMomentumFieldRenderers } from '@momentumcms/admin';
+import { providePageViewTracking } from '@momentumcms/plugins-analytics/page-tracker';
 
 import { providePageBlocks } from '@momentumcms/example-config/pages';
 
@@ -19,5 +20,12 @@ export const appConfig: ApplicationConfig = {
 		provideRouter(appRoutes, withViewTransitions()),
 		provideMomentumFieldRenderers(),
 		...providePageBlocks(),
+		providePageViewTracking({
+			contentRoutes: {
+				articles: '/articles/:slug',
+				categories: '/categories/:slug',
+				pages: '/:slug',
+			},
+		}),
 	],
 };
