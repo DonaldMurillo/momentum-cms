@@ -31,6 +31,8 @@ nx run-many -t lint         # Lint all projects
 - **E2E tests**: Playwright (no mocks, real server)
 - Write tests BEFORE implementation (Red-Green-Refactor)
 - Test files: `*.spec.ts` in `__tests__/` or alongside source
+- **ALL tests must pass** — there is no such thing as "pre-existing failures". Failing tests are bugs. Fix them.
+- **NO skipped tests** — every test must run. If a test can't pass, fix or delete it.
 
 ## E2E Test Rules (Playwright)
 

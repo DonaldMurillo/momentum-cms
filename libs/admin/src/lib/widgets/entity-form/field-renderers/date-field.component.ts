@@ -71,10 +71,8 @@ export class DateFieldRenderer {
 	});
 
 	/** Input type (date or datetime-local) */
-	readonly inputType = computed((): 'text' => {
-		// HTML5 date input type isn't in InputType union, use text for now
-		// The browser will still render date picker for type="date"
-		return 'text';
+	readonly inputType = computed((): 'date' | 'datetime-local' => {
+		return 'date';
 	});
 
 	/** Formatted date value from FieldState */

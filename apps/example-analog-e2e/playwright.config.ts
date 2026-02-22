@@ -61,6 +61,12 @@ export default defineConfig({
 		{
 			name: 'default',
 			testMatch: /\.spec\.ts$/,
+			testIgnore: [
+				// Analog app doesn't have /articles frontend routes
+				'**/articles-page.spec.ts',
+				// Analog app doesn't have the same frontend shell layout (header/footer/nav)
+				'**/page-rendering.spec.ts',
+			],
 			use: { ...devices['Desktop Chrome'] },
 		},
 	],

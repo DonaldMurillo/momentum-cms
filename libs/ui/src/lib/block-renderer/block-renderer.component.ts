@@ -44,12 +44,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 						<mcms-block-outlet [blockType]="type" [blockData]="block" />
 						<!-- Admin edit overlay -->
 						<div
-							class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+							class="absolute inset-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none"
 						>
 							<div class="absolute inset-0 border-2 border-primary/40 rounded-md"></div>
 							<button
-								class="absolute top-2 right-2 pointer-events-auto bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-sm font-medium shadow-lg hover:bg-primary/90 transition-colors"
+								class="absolute top-2 right-2 pointer-events-auto bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-sm font-medium shadow-lg hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors"
 								(click)="onEditBlock($index)"
+								[attr.aria-label]="'Edit ' + type + ' block at position ' + ($index + 1)"
 								data-testid="block-edit-button"
 							>
 								Edit Block

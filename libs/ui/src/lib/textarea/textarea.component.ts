@@ -29,6 +29,7 @@ import type { ValidationError } from '../input/input.types';
 			[rows]="rows()"
 			[attr.aria-invalid]="hasError() || null"
 			[attr.aria-describedby]="ariaDescribedBy()"
+			[attr.aria-label]="ariaLabel() || null"
 			[attr.aria-required]="required() || null"
 			(input)="value.set(textareaEl.value)"
 			(blur)="blurred.emit()"
@@ -57,6 +58,7 @@ export class Textarea {
 	readonly name = input('');
 	readonly placeholder = input('');
 	readonly rows = input(3);
+	readonly ariaLabel = input<string | undefined>(undefined);
 	readonly describedBy = input<string | undefined>(undefined);
 
 	/** Emitted when the textarea loses focus */

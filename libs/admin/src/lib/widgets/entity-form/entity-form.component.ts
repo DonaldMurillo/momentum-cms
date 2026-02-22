@@ -658,9 +658,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 				if (value === null || value === undefined || value === '') continue;
 				if (typeof value === 'object') {
 					// Skip empty objects/arrays; serialize non-empty ones as JSON
-					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-					const isEmptyObject =
-						!Array.isArray(value) && Object.keys(value as Record<string, unknown>).length === 0;
+					const isEmptyObject = !Array.isArray(value) && Object.keys(value).length === 0;
 					if ((Array.isArray(value) && value.length === 0) || isEmptyObject) continue;
 					fields[key] = JSON.stringify(value);
 				} else {

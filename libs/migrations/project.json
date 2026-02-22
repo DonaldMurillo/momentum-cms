@@ -29,7 +29,9 @@
 					"libs/migrations/schematics/status/index.ts"
 				],
 				"tsConfig": "libs/migrations/tsconfig.lib.json",
+				"generatePackageJson": false,
 				"assets": [
+					"libs/migrations/package.json",
 					"libs/migrations/schematics/collection.json",
 					"libs/migrations/schematics/generate/schema.json",
 					"libs/migrations/schematics/generate/schema.d.ts",

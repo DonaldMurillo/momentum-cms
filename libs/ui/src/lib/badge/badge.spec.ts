@@ -20,7 +20,13 @@ describe('Badge', () => {
 		expect(component).toBeTruthy();
 	});
 
-	it('should have role="status"', () => {
+	it('should not have a role by default', () => {
+		expect(fixture.nativeElement.getAttribute('role')).toBeNull();
+	});
+
+	it('should apply role when provided', () => {
+		fixture.componentRef.setInput('role', 'status');
+		fixture.detectChanges();
 		expect(fixture.nativeElement.getAttribute('role')).toBe('status');
 	});
 

@@ -35,6 +35,8 @@ import { getPopoverPositions } from './popover.utils';
 	exportAs: 'mcmsPopoverTrigger',
 	host: {
 		'(click)': 'toggle()',
+		'(keydown.enter)': 'toggle(); $event.preventDefault()',
+		'(keydown.space)': 'toggle(); $event.preventDefault()',
 		'[attr.aria-expanded]': 'isOpen()',
 		'[attr.aria-haspopup]': '"dialog"',
 	},

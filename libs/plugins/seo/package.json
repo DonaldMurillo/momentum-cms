@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/plugins-seo",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"description": "SEO plugin for Momentum CMS — meta tags, sitemap, robots.txt, analysis",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
@@ -27,12 +27,26 @@
 	},
 	"main": "./index.cjs",
 	"types": "./src/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.d.ts",
+			"default": "./index.cjs"
+		},
+		"./admin-routes": {
+			"types": "./src/lib/seo-admin-routes.d.ts",
+			"default": "./lib/seo-admin-routes.cjs"
+		},
+		"./fields": {
+			"types": "./src/lib/seo-field-injector.d.ts",
+			"default": "./lib/seo-field-injector.cjs"
+		}
+	},
 	"dependencies": {
 		"@angular/common": "^21.0.0",
 		"@angular/core": "^21.0.0",
-		"@momentumcms/core": "0.3.0",
-		"@momentumcms/plugins-core": "0.3.0",
-		"@momentumcms/ui": "0.3.0",
+		"@momentumcms/core": "0.4.0",
+		"@momentumcms/plugins-core": "0.4.0",
+		"@momentumcms/ui": "0.4.0",
 		"@ng-icons/core": "^33.0.0",
 		"@ng-icons/heroicons": "^33.0.0",
 		"express": "^4.21.0"

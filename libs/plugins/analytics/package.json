@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/plugins-analytics",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"description": "Analytics and content tracking plugin for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
@@ -25,11 +25,29 @@
 	},
 	"main": "./index.cjs",
 	"types": "./src/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.d.ts",
+			"default": "./index.cjs"
+		},
+		"./admin-routes": {
+			"types": "./src/lib/analytics-admin-routes.d.ts",
+			"default": "./lib/analytics-admin-routes.cjs"
+		},
+		"./block-fields": {
+			"types": "./src/lib/collectors/block-field-injector.d.ts",
+			"default": "./lib/collectors/block-field-injector.cjs"
+		},
+		"./client": {
+			"types": "./src/lib/client/tracker.d.ts",
+			"default": "./lib/client/tracker.cjs"
+		}
+	},
 	"dependencies": {
-		"@momentumcms/core": "0.3.0",
-		"@momentumcms/logger": "0.3.0",
-		"@momentumcms/plugins-core": "0.3.0",
-		"@momentumcms/server-core": "0.3.0",
+		"@momentumcms/core": "0.4.0",
+		"@momentumcms/logger": "0.4.0",
+		"@momentumcms/plugins-core": "0.4.0",
+		"@momentumcms/server-core": "0.4.0",
 		"express": "^4.21.0"
 	},
 	"peerDependencies": {

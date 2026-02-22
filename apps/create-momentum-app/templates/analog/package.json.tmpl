@@ -7,11 +7,11 @@
 		"dev": "vite",
 		"build": "vite build",
 		"start": "node dist/analog/server/index.mjs",
-		"generate": "tsx node_modules/@momentumcms/core/generators/generator.cjs src/momentum.config.ts --types src/generated/momentum.types.ts --config src/generated/momentum.config.ts",
-		"migrate:generate": "tsx node_modules/@momentumcms/migrations/cli/generate.cjs src/momentum.config.ts",
-		"migrate:run": "tsx node_modules/@momentumcms/migrations/cli/run.cjs src/momentum.config.ts",
-		"migrate:status": "tsx node_modules/@momentumcms/migrations/cli/status.cjs src/momentum.config.ts",
-		"migrate:rollback": "tsx node_modules/@momentumcms/migrations/cli/rollback.cjs src/momentum.config.ts"
+		"generate": "tsx node_modules/@momentumcms/core/src/generators/generator.cjs src/momentum.config.ts --types src/generated/momentum.types.ts --config src/generated/momentum.config.ts",
+		"migrate:generate": "tsx node_modules/@momentumcms/migrations/src/cli/generate.cjs src/momentum.config.ts",
+		"migrate:run": "tsx node_modules/@momentumcms/migrations/src/cli/run.cjs src/momentum.config.ts",
+		"migrate:status": "tsx node_modules/@momentumcms/migrations/src/cli/status.cjs src/momentum.config.ts",
+		"migrate:rollback": "tsx node_modules/@momentumcms/migrations/src/cli/rollback.cjs src/momentum.config.ts"
 	},
 	"dependencies": {
 		"@analogjs/platform": "^2.2.3",

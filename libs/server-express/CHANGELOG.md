@@ -1,3 +1,20 @@
+## 0.4.0 (2026-02-22)
+
+### 🚀 Features
+
+- SEO plugin recovery, E2E fixes, and CLI templates ([#37](https://github.com/DonaldMurillo/momentum-cms/pull/37), [#33](https://github.com/DonaldMurillo/momentum-cms/issues/33))
+- blocks showcase with articles, pages, and UI fixes ([#36](https://github.com/DonaldMurillo/momentum-cms/pull/36))
+
+### 🩹 Fixes
+
+- remove unused CardContent import and duplicate peerDependency ([e67f149](https://github.com/DonaldMurillo/momentum-cms/commit/e67f149))
+- resolve lint errors, fix vitest config excludes, and fix CLI template test assertion ([5124f72](https://github.com/DonaldMurillo/momentum-cms/commit/5124f72))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.3.0 (2026-02-20)
 
 ### 🚀 Features

@@ -69,7 +69,7 @@ export function createRobotsRouter(options: RobotsHandlerOptions): {
 
 	const router = createRouter();
 
-	router.get('/robots.txt', async (_req: Request, res: Response) => {
+	router.get('/robots.txt', async (req: Request, res: Response) => {
 		// Try cached version first
 		const cached = cache.get(CACHE_KEY);
 		if (cached) {
@@ -77,6 +77,11 @@ export function createRobotsRouter(options: RobotsHandlerOptions): {
 			res.send(cached);
 			return;
 		}
+
+		// Use the request origin so URLs match the server the crawler is hitting.
+		// siteUrl from config is only a fallback when Host header is missing.
+		const host = req.get('host');
+		const effectiveSiteUrl = host ? `${req.protocol}://${host}` : siteUrl || 'http://localhost';
 
 		let effectiveConfig = config;
 
@@ -91,7 +96,7 @@ export function createRobotsRouter(options: RobotsHandlerOptions): {
 			}
 		}
 
-		const content = generateRobotsTxt(siteUrl, effectiveConfig);
+		const content = generateRobotsTxt(effectiveSiteUrl, effectiveConfig);
 		cache.set(CACHE_KEY, content);
 		res.set('Content-Type', 'text/plain');
 		res.send(content);

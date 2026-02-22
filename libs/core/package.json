@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/core",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"description": "Core collection config, fields, hooks, and access control for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
@@ -25,11 +25,12 @@
 	"engines": {
 		"node": ">=18"
 	},
-	"main": "./index.cjs",
+	"main": "./src/index.cjs",
+	"module": "./src/index.js",
 	"types": "./src/index.d.ts",
 	"schematics": "./schematics/collection.json",
 	"bin": {
-		"momentum-generate": "./generators/generator.cjs"
+		"momentum-generate": "./src/generators/generator.cjs"
 	},
 	"peerDependencies": {
 		"@angular-devkit/schematics": ">=17.0.0"

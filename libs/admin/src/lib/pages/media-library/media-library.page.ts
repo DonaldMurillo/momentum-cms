@@ -106,21 +106,23 @@ function getInputElement(event: Event): HTMLInputElement | null {
 					</p>
 				</div>
 				<div class="flex gap-2">
-					<label class="cursor-pointer">
-						<input
-							type="file"
-							class="sr-only"
-							multiple
-							(change)="onFilesSelected($event)"
-						/>
-						<span
-							mcms-button
-							class="inline-flex"
-						>
-							<ng-icon name="heroCloudArrowUp" class="h-4 w-4" />
-							Upload Files
-						</span>
-					</label>
+					<input
+						#fileInput
+						type="file"
+						class="sr-only"
+						multiple
+						aria-label="Upload media files"
+						(change)="onFilesSelected($event)"
+					/>
+					<button
+						mcms-button
+						type="button"
+						class="inline-flex"
+						(click)="fileInput.click()"
+					>
+						<ng-icon name="heroCloudArrowUp" class="h-4 w-4" />
+						Upload Files
+					</button>
 				</div>
 			</div>
 
@@ -144,7 +146,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 							size="sm"
 							(click)="deleteSelected()"
 						>
-							<ng-icon name="heroTrash" class="h-4 w-4" />
+							<ng-icon name="heroTrash" class="h-4 w-4" aria-hidden="true" />
 							Delete
 						</button>
 					</div>
@@ -235,7 +237,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 
 							<!-- Hover overlay -->
 							<div
-								class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-3 opacity-0 transition-opacity group-hover:opacity-100"
+								class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent p-3 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
 							>
 								<p class="truncate text-sm font-medium text-white">
 									{{ media.filename }}

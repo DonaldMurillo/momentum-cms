@@ -5,8 +5,8 @@
 
 import type { MomentumAdminConfig } from '@momentumcms/core';
 import type { CollectionSlug, GlobalSlug } from './momentum.types';
-import { analyticsAdminRoutes } from '@momentumcms/plugins/analytics/admin-routes';
-import { seoAdminRoutes } from '@momentumcms/plugins/seo/admin-routes';
+import { analyticsAdminRoutes } from '@momentumcms/plugins-analytics/admin-routes';
+import { seoAdminRoutes } from '@momentumcms/plugins-seo/admin-routes';
 
 export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 	collections: [

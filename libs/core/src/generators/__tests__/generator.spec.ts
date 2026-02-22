@@ -1405,7 +1405,7 @@ describe('generateAdminConfig', () => {
 					],
 					browserImports: {
 						adminRoutes: {
-							path: '@momentumcms/plugins/analytics/admin-routes',
+							path: '@momentumcms/plugins-analytics/admin-routes',
 							exportName: 'analyticsAdminRoutes',
 						},
 					},
@@ -1414,7 +1414,7 @@ describe('generateAdminConfig', () => {
 		};
 		const output = generateAdminConfig(config, './momentum.types');
 		expect(output).toContain(
-			"import { analyticsAdminRoutes } from '@momentumcms/plugins/analytics/admin-routes';",
+			"import { analyticsAdminRoutes } from '@momentumcms/plugins-analytics/admin-routes';",
 		);
 		expect(output).toContain('adminRoutes: analyticsAdminRoutes');
 	});

@@ -68,7 +68,7 @@ import {
 						}
 					</div>
 				} @else if (error()) {
-					<p class="text-sm text-destructive">{{ error() }}</p>
+					<p class="text-sm text-destructive" role="alert">{{ error() }}</p>
 				} @else if (versions().length === 0) {
 					<p class="text-sm text-muted-foreground">No version history available</p>
 				} @else {
@@ -110,6 +110,9 @@ import {
 										variant="outline"
 										size="sm"
 										[disabled]="isRestoring()"
+										[attr.aria-label]="
+											'Restore version from ' + (version.createdAt | date: 'medium')
+										"
 										(click)="onRestore(version)"
 									>
 										@if (isRestoring() && restoringVersionId() === version.id) {

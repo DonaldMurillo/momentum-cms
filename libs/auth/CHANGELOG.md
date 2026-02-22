@@ -1,3 +1,14 @@
+## 0.4.0 (2026-02-22)
+
+### 🚀 Features
+
+- blocks showcase with articles, pages, and UI fixes ([#36](https://github.com/DonaldMurillo/momentum-cms/pull/36))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.3.0 (2026-02-20)
 
 ### 🚀 Features

@@ -20,7 +20,7 @@ import {
 	type SeedingResult,
 } from '@momentumcms/server-core';
 import { initializeMomentumLogger, createLogger } from '@momentumcms/logger';
-import { PluginRunner } from '@momentumcms/plugins/core';
+import { PluginRunner, type PluginMiddlewareDescriptor } from '@momentumcms/plugins/core';
 import type { MomentumAuthPlugin } from '@momentumcms/auth';
 import type { MomentumAuth } from '@momentumcms/auth';
 import momentumConfig, {
@@ -34,6 +34,7 @@ let initPromise: Promise<void> | null = null;
 let authInstance: MomentumAuth | null = null;
 let isReady = false;
 let seedingResult: SeedingResult | null = null;
+let pluginMiddleware: PluginMiddlewareDescriptor[] = [];
 
 async function initialize(): Promise<void> {
 	// Initialize logger from config (must be first)
@@ -54,6 +55,7 @@ async function initialize(): Promise<void> {
 	if (plugins.length > 0) {
 		log.info(`Initializing ${plugins.length} plugin(s)...`);
 		await pluginRunner.runInit();
+		pluginMiddleware = pluginRunner.getMiddleware();
 	}
 
 	// 2. Auto-detect auth instance from the auth plugin
@@ -168,6 +170,13 @@ export function getSeedingStatus(): {
 		expected: seedingResult?.total ?? 0,
 		ready: isReady,
 	};
+}
+
+/**
+ * Get plugin middleware descriptors (available after initialization).
+ */
+export function getPluginMiddleware(): PluginMiddlewareDescriptor[] {
+	return pluginMiddleware;
 }
 
 // Re-export plugin instances for test endpoints

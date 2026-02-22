@@ -129,11 +129,11 @@ export function seoPlugin(config: SeoPluginConfig): MomentumPlugin {
 
 		browserImports: {
 			adminRoutes: {
-				path: '@momentumcms/plugins/seo/admin-routes',
+				path: '@momentumcms/plugins-seo/admin-routes',
 				exportName: 'seoAdminRoutes',
 			},
 			modifyCollections: {
-				path: '@momentumcms/plugins/seo/fields',
+				path: '@momentumcms/plugins-seo/fields',
 				exportName: 'injectSeoFields',
 			},
 		},

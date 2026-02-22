@@ -92,9 +92,10 @@ function getInputFromEvent(event: Event): HTMLInputElement | null {
 									variant="outline"
 									size="sm"
 									type="button"
+									[attr.aria-label]="'Change file for ' + label()"
 									(click)="openMediaPicker()"
 								>
-									<ng-icon [name]="photoIcon" class="h-4 w-4" />
+									<ng-icon [name]="photoIcon" class="h-4 w-4" aria-hidden="true" />
 									Change
 								</button>
 								<button
@@ -102,9 +103,10 @@ function getInputFromEvent(event: Event): HTMLInputElement | null {
 									variant="ghost"
 									size="sm"
 									type="button"
+									[attr.aria-label]="'Remove file for ' + label()"
 									(click)="removeMedia()"
 								>
-									<ng-icon [name]="xMarkIcon" class="h-4 w-4" />
+									<ng-icon [name]="xMarkIcon" class="h-4 w-4" aria-hidden="true" />
 									Remove
 								</button>
 							</div>
@@ -177,7 +179,7 @@ function getInputFromEvent(event: Event): HTMLInputElement | null {
 							type="button"
 							(click)="openMediaPicker()"
 						>
-							<ng-icon [name]="photoIcon" class="h-4 w-4" />
+							<ng-icon [name]="photoIcon" class="h-4 w-4" aria-hidden="true" />
 							Select from library
 						</button>
 					</div>
@@ -194,7 +196,7 @@ function getInputFromEvent(event: Event): HTMLInputElement | null {
 			}
 
 			@if (uploadError()) {
-				<p class="mt-1 text-sm text-mcms-destructive">{{ uploadError() }}</p>
+				<p class="mt-1 text-sm text-mcms-destructive" role="alert" aria-live="assertive">{{ uploadError() }}</p>
 			}
 		</mcms-form-field>
 	`,

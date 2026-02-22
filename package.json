@@ -19,6 +19,7 @@
 		"test:isolated": "npx tsx scripts/test-isolated.ts",
 		"test:isolated:prod": "npx tsx scripts/test-isolated.ts --prod",
 		"test:create-app": "npx tsx scripts/test-create-app.ts",
+		"test:all": "npx tsx scripts/test-all.ts",
 		"prepare": "husky"
 	},
 	"private": true,

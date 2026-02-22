@@ -196,7 +196,9 @@ import { DropdownMenuItem } from '../dropdown-menu/dropdown-menu-item.component'
 							<mcms-table-row
 								[class.bg-muted/50]="isSelected(item)"
 								[class.cursor-pointer]="clickableRows()"
+								[attr.tabindex]="clickableRows() ? 0 : null"
 								(click)="onRowClicked(item)"
+								(keydown.enter)="onRowClicked(item)"
 							>
 								@if (selectable()) {
 									<mcms-table-cell (click)="$event.stopPropagation()">

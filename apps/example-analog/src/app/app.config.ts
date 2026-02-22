@@ -14,15 +14,18 @@ import { collections } from '@momentumcms/example-config/collections';
 import { globals } from '@momentumcms/example-config/globals';
 import { BASE_AUTH_COLLECTIONS } from '@momentumcms/auth/collections';
 
-import { analyticsAdminRoutes } from '@momentumcms/plugins/analytics/admin-routes';
+import { analyticsAdminRoutes } from '@momentumcms/plugins-analytics/admin-routes';
+import { seoAdminRoutes } from '@momentumcms/plugins-seo/admin-routes';
 
-import { injectBlockAnalyticsFields } from '@momentumcms/plugins/analytics/block-fields';
+import { injectBlockAnalyticsFields } from '@momentumcms/plugins-analytics/block-fields';
+import { injectSeoFields } from '@momentumcms/plugins-seo/fields';
 
 import { providePageBlocks, pageResolver } from '@momentumcms/example-config/pages';
 
-// Merge all collections for admin routes, then inject analytics block fields
+// Merge all collections for admin routes, then inject plugin fields
 const adminCollections = [...collections, ...BASE_AUTH_COLLECTIONS];
 injectBlockAnalyticsFields(adminCollections);
+injectSeoFields(adminCollections, { collections: ['categories', 'articles', 'pages'] });
 
 // Page routes — defined explicitly so the PageComponent receives route params directly
 // (Analog's file-based routing wraps components in loadChildren, which can interfere with param inheritance)
@@ -54,7 +57,7 @@ const adminRoutes = momentumAdminRoutes({
 	branding: {
 		title: 'Momentum CMS',
 	},
-	pluginRoutes: analyticsAdminRoutes,
+	pluginRoutes: [...analyticsAdminRoutes, ...seoAdminRoutes],
 });
 
 export const appConfig: ApplicationConfig = {

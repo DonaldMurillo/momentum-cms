@@ -9,8 +9,12 @@ export default defineConfig({
 		exclude: [
 			'**/node_modules/**',
 			'**/e2e/**',
-			'apps/**/*.spec.ts', // Angular component tests handled separately
-			'libs/admin/**/*.spec.ts', // Angular component tests handled separately
+			'apps/**/*.spec.ts', // App-level tests handled separately (migration-tests, etc.)
+			'libs/admin/**/*.spec.ts', // Angular component tests handled separately (jsdom)
+			'libs/ui/**/*.spec.ts', // Angular component tests handled separately (jsdom)
+			'libs/e2e-tests/**/*.spec.ts', // Playwright E2E specs
+			'libs/e2e-fixtures/**/*.spec.ts', // E2E fixture tests
+			'libs/ui-e2e/**/*.spec.ts', // Storybook E2E specs
 		],
 		coverage: {
 			provider: 'v8',

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-function */
 /**
  * Integration tests: Breaking changes against real databases.
  *
@@ -266,15 +265,21 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 		dbName = result.dbName;
 		connectionString = result.connectionString;
 		pool = new Pool({ connectionString, max: 5 });
-		pool.on('error', () => {});
+		pool.on('error', () => {
+			/* noop */
+		});
 	});
 
 	afterEach(async () => {
 		for (const p of clonePools) {
-			await p.end().catch(() => {});
+			await p.end().catch(() => {
+				/* noop */
+			});
 		}
 		clonePools.length = 0;
-		await pool.end().catch(() => {});
+		await pool.end().catch(() => {
+			/* noop */
+		});
 		await dropTestPgDb(dbName);
 	});
 
@@ -313,14 +318,18 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 
 	function buildCloneTracker(cloneName: string): ReturnType<typeof pgTracker> {
 		const clonePool = new Pool({ connectionString: getDatabaseUrl(cloneName), max: 3 });
-		clonePool.on('error', () => {});
+		clonePool.on('error', () => {
+			/* noop */
+		});
 		clonePools.push(clonePool);
 		return pgTracker(clonePool);
 	}
 
 	function buildCloneContext(cloneName: string): MigrationContext {
 		const clonePool = new Pool({ connectionString: getDatabaseUrl(cloneName), max: 3 });
-		clonePool.on('error', () => {});
+		clonePool.on('error', () => {
+			/* noop */
+		});
 		clonePools.push(clonePool);
 		const dataDb = pgDataDb(clonePool);
 		const helpers = createDataHelpers(dataDb, 'postgresql');
@@ -337,13 +346,22 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 			},
 			data: helpers,
 			dialect: 'postgresql',
-			log: { info: (): void => {}, warn: (): void => {} },
+			log: {
+				info(): void {
+					/* noop */
+				},
+				warn(): void {
+					/* noop */
+				},
+			},
 		};
 	}
 
 	function refreshPool(): void {
 		pool = new Pool({ connectionString, max: 5 });
-		pool.on('error', () => {});
+		pool.on('error', () => {
+			/* noop */
+		});
 	}
 
 	async function seedPostsTable(): Promise<void> {
@@ -396,7 +414,14 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 				},
 				data: createDataHelpers(pgDataDb(pool), 'postgresql'),
 				dialect: 'postgresql',
-				log: { info: (): void => {}, warn: (): void => {} },
+				log: {
+					info(): void {
+						/* noop */
+					},
+					warn(): void {
+						/* noop */
+					},
+				},
 			}),
 			db: createCloneDb(),
 			buildCloneTracker,
@@ -448,7 +473,14 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 				},
 				data: createDataHelpers(pgDataDb(pool), 'postgresql'),
 				dialect: 'postgresql',
-				log: { info: (): void => {}, warn: (): void => {} },
+				log: {
+					info(): void {
+						/* noop */
+					},
+					warn(): void {
+						/* noop */
+					},
+				},
 			}),
 			db: createCloneDb(),
 			buildCloneTracker,
@@ -510,7 +542,14 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 				},
 				data: createDataHelpers(pgDataDb(pool), 'postgresql'),
 				dialect: 'postgresql',
-				log: { info: (): void => {}, warn: (): void => {} },
+				log: {
+					info(): void {
+						/* noop */
+					},
+					warn(): void {
+						/* noop */
+					},
+				},
 			}),
 			db: createCloneDb(),
 			buildCloneTracker,
@@ -586,7 +625,14 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 				},
 				data: createDataHelpers(pgDataDb(pool), 'postgresql'),
 				dialect: 'postgresql',
-				log: { info: (): void => {}, warn: (): void => {} },
+				log: {
+					info(): void {
+						/* noop */
+					},
+					warn(): void {
+						/* noop */
+					},
+				},
 			}),
 			db: createCloneDb(),
 			buildCloneTracker,
@@ -651,7 +697,14 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 				},
 				data: createDataHelpers(pgDataDb(pool), 'postgresql'),
 				dialect: 'postgresql',
-				log: { info: (): void => {}, warn: (): void => {} },
+				log: {
+					info(): void {
+						/* noop */
+					},
+					warn(): void {
+						/* noop */
+					},
+				},
 			}),
 			db: createCloneDb(),
 			buildCloneTracker,
@@ -727,7 +780,14 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 				},
 				data: createDataHelpers(pgDataDb(pool), 'postgresql'),
 				dialect: 'postgresql',
-				log: { info: (): void => {}, warn: (): void => {} },
+				log: {
+					info(): void {
+						/* noop */
+					},
+					warn(): void {
+						/* noop */
+					},
+				},
 			}),
 			db: createCloneDb(),
 			buildCloneTracker,

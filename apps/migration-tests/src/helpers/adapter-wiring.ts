@@ -29,7 +29,8 @@ export function pgTracker(pool: Pool): TrackerQueryFn {
 	return {
 		async query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> {
 			const result = await pool.query(sql, params);
-			return result.rows as T[];
+			const rows: T[] = result.rows;
+			return rows;
 		},
 		async execute(sql: string, params?: unknown[]): Promise<number> {
 			const result = await pool.query(sql, params);
@@ -61,7 +62,8 @@ export function pgDataDb(pool: Pool): DataHelperDb {
 		},
 		async query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> {
 			const result = await pool.query(sql, params);
-			return result.rows as T[];
+			const rows: T[] = result.rows;
+			return rows;
 		},
 	};
 }
@@ -70,9 +72,13 @@ export function pgDataDb(pool: Pool): DataHelperDb {
  * Create a QueryFunction (for introspection) from a pg.Pool.
  */
 export function pgQueryFn(pool: Pool): QueryFunction {
-	return async <T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> => {
+	return async <T extends Record<string, unknown>>(
+		sql: string,
+		params?: unknown[],
+	): Promise<T[]> => {
 		const result = await pool.query(sql, params);
-		return result.rows as T[];
+		const rows: T[] = result.rows;
+		return rows;
 	};
 }
 
@@ -88,11 +94,19 @@ export function buildPgContext(pool: Pool): MigrationContext {
 		},
 		async query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> {
 			const result = await pool.query(sql, params);
-			return result.rows as T[];
+			const rows: T[] = result.rows;
+			return rows;
 		},
 		data: helpers,
 		dialect: 'postgresql',
-		log: { info: (): void => {}, warn: (): void => {} },
+		log: {
+			info(): void {
+				/* noop */
+			},
+			warn(): void {
+				/* noop */
+			},
+		},
 	};
 }
 
@@ -138,9 +152,10 @@ export function pgCloneDb(connectionString: string): CloneCapableDb {
  */
 export function pgPoolForDb(dbName: string): Pool {
 	// Dynamic require to avoid top-level import issues
-	const pg = require('pg') as typeof import('pg');
-	const base = (process.env['PG_CONNECTION'] ?? 'postgresql://postgres:postgres@localhost:5432/postgres')
-		.replace(/\/[^/]*$/, '');
+	const pg: typeof import('pg') = require('pg');
+	const base = (
+		process.env['PG_CONNECTION'] ?? 'postgresql://postgres:postgres@localhost:5432/postgres'
+	).replace(/\/[^/]*$/, '');
 	return new pg.Pool({ connectionString: `${base}/${dbName}`, max: 5 });
 }
 
@@ -155,8 +170,9 @@ export function sqliteTracker(db: Database.Database): TrackerQueryFn {
 	return {
 		async query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> {
 			const stmt = db.prepare(sql);
-			const rows = params && params.length > 0 ? stmt.all(...params) : stmt.all();
-			return rows as T[];
+			const raw = params && params.length > 0 ? stmt.all(...params) : stmt.all();
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+			return raw as T[];
 		},
 		async execute(sql: string, params?: unknown[]): Promise<number> {
 			const stmt = db.prepare(sql);
@@ -190,8 +206,9 @@ export function sqliteDataDb(db: Database.Database): DataHelperDb {
 		},
 		async query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> {
 			const stmt = db.prepare(sql);
-			const rows = params && params.length > 0 ? stmt.all(...params) : stmt.all();
-			return rows as T[];
+			const raw = params && params.length > 0 ? stmt.all(...params) : stmt.all();
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+			return raw as T[];
 		},
 	};
 }
@@ -200,10 +217,14 @@ export function sqliteDataDb(db: Database.Database): DataHelperDb {
  * Create a SqliteQueryFunction (for introspection) from a better-sqlite3 Database.
  */
 export function sqliteQueryFn(db: Database.Database): SqliteQueryFunction {
-	return async <T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> => {
+	return async <T extends Record<string, unknown>>(
+		sql: string,
+		params?: unknown[],
+	): Promise<T[]> => {
 		const stmt = db.prepare(sql);
-		const rows = params && params.length > 0 ? stmt.all(...params) : stmt.all();
-		return rows as T[];
+		const raw = params && params.length > 0 ? stmt.all(...params) : stmt.all();
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+		return raw as T[];
 	};
 }
 
@@ -224,11 +245,19 @@ export function buildSqliteContext(db: Database.Database): MigrationContext {
 		},
 		async query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> {
 			const stmt = db.prepare(sql);
-			const rows = params && params.length > 0 ? stmt.all(...params) : stmt.all();
-			return rows as T[];
+			const raw = params && params.length > 0 ? stmt.all(...params) : stmt.all();
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+			return raw as T[];
 		},
 		data: helpers,
 		dialect: 'sqlite',
-		log: { info: (): void => {}, warn: (): void => {} },
+		log: {
+			info(): void {
+				/* noop */
+			},
+			warn(): void {
+				/* noop */
+			},
+		},
 	};
 }

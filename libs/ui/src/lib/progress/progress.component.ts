@@ -18,6 +18,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 		'[attr.aria-valuenow]': 'value()',
 		'[attr.aria-valuemin]': '0',
 		'[attr.aria-valuemax]': 'max()',
+		'[attr.aria-label]': 'ariaLabel() || null',
 	},
 	template: `
 		<div
@@ -49,6 +50,9 @@ export class Progress {
 
 	/** Maximum value. */
 	readonly max = input(100);
+
+	/** Accessible label for the progress bar. */
+	readonly ariaLabel = input<string | undefined>(undefined);
 
 	/** Additional CSS classes. */
 	readonly class = input('');

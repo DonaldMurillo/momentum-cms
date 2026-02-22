@@ -54,9 +54,15 @@ import { getFieldNodeState } from '../entity-form.types';
 			}
 			@if (showCharCount()) {
 				<p
-					class="mt-1 text-xs text-muted-foreground text-right"
+					class="mt-1 text-xs text-right"
 					[class.text-destructive]="charCountExceeded()"
+					[class.text-muted-foreground]="!charCountExceeded()"
+					aria-live="polite"
+					[attr.role]="charCountExceeded() ? 'alert' : null"
 				>
+					@if (charCountExceeded()) {
+						Limit exceeded:
+					}
 					{{ charCount() }}
 					@if (maxLength()) {
 						/ {{ maxLength() }}

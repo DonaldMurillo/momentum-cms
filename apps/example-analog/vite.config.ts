@@ -15,7 +15,7 @@ export default defineConfig(({ mode: _mode }) => {
 				// Vite client build doesn't resolve tsconfig subpath patterns that share a prefix
 				// with Nitro aliases. Explicitly resolve the analytics client subpath so the
 				// tracker + rule engine are bundled into the browser build.
-				'@momentumcms/plugins/analytics/client': resolve(
+				'@momentumcms/plugins-analytics/client': resolve(
 					__dirname,
 					'../../libs/plugins/analytics/src/lib/client/tracker.ts',
 				),

@@ -35,6 +35,8 @@
 			"@momentumcms/plugins/seo": ["libs/plugins/seo/src/index.ts"],
 			"@momentumcms/plugins/seo/admin-routes": ["libs/plugins/seo/src/lib/seo-admin-routes.ts"],
 			"@momentumcms/plugins/seo/fields": ["libs/plugins/seo/src/lib/seo-field-injector.ts"],
+			"@momentumcms/plugins-seo/admin-routes": ["libs/plugins/seo/src/lib/seo-admin-routes.ts"],
+			"@momentumcms/plugins-seo/fields": ["libs/plugins/seo/src/lib/seo-field-injector.ts"],
 			"@momentumcms/plugins/analytics/dashboard": [
 				"libs/plugins/analytics/src/lib/dashboard/analytics-dashboard.page.ts"
 			],
@@ -43,6 +45,13 @@
 			],
 			"@momentumcms/plugins/analytics/client": ["libs/plugins/analytics/src/lib/client/tracker.ts"],
 			"@momentumcms/plugins/analytics/block-fields": [
+				"libs/plugins/analytics/src/lib/collectors/block-field-injector.ts"
+			],
+			"@momentumcms/plugins-analytics/admin-routes": [
+				"libs/plugins/analytics/src/lib/analytics-admin-routes.ts"
+			],
+			"@momentumcms/plugins-analytics/client": ["libs/plugins/analytics/src/lib/client/tracker.ts"],
+			"@momentumcms/plugins-analytics/block-fields": [
 				"libs/plugins/analytics/src/lib/collectors/block-field-injector.ts"
 			],
 			"@momentumcms/example-config": ["libs/example-config/src/index.ts"],

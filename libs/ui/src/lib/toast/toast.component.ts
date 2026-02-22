@@ -7,7 +7,6 @@ import type { Toast } from './toast.types';
 @Component({
 	selector: 'mcms-toast',
 	host: {
-		role: 'status',
 		'[style.--toast-bg]': 'variantBg()',
 		'[style.--toast-border]': 'variantBorder()',
 		'[style.--toast-color]': 'variantColor()',
@@ -127,6 +126,14 @@ import type { Toast } from './toast.types';
 
 		.toast-close:hover {
 			opacity: 1;
+		}
+
+		.toast-action:focus-visible,
+		.toast-close:focus-visible {
+			outline: none;
+			box-shadow:
+				0 0 0 2px var(--toast-bg),
+				0 0 0 4px hsl(var(--mcms-ring, 215 20% 65%));
 		}
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,

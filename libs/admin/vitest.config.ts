@@ -11,6 +11,17 @@ export default defineConfig({
 		include: ['src/**/*.spec.ts'],
 		exclude: ['**/node_modules/**'],
 		passWithNoTests: true,
+		coverage: {
+			provider: 'v8',
+			include: ['libs/admin/src/**/*.ts'],
+			exclude: [
+				'**/*.spec.ts',
+				'**/*.test.ts',
+				'**/node_modules/**',
+				'libs/admin/src/index.ts',
+				'**/__tests__/**',
+			],
+		},
 		alias: {
 			'@momentumcms/core': resolve(__dirname, '../../libs/core/src/index.ts'),
 			'@momentumcms/server-core': resolve(__dirname, '../../libs/server-core/src/index.ts'),
