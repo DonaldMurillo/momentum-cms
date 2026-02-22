@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/server-express",
-	"version": "0.4.0",
+	"version": "0.4.1",
 	"description": "Express adapter for Momentum CMS with Angular SSR support",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
