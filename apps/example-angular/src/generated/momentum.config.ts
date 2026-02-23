@@ -1483,6 +1483,62 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			timestamps: true,
 		},
 		{
+			slug: 'redirects',
+			labels: {
+				singular: 'Redirect',
+				plural: 'Redirects',
+			},
+			fields: [
+				{
+					name: 'from',
+					type: 'text',
+					required: true,
+					label: 'From Path',
+				},
+				{
+					name: 'to',
+					type: 'text',
+					required: true,
+					label: 'To Path / URL',
+				},
+				{
+					name: 'type',
+					type: 'select',
+					label: 'Status Code',
+					options: [
+						{
+							label: '301 — Permanent',
+							value: 'permanent',
+						},
+						{
+							label: '302 — Temporary',
+							value: 'temporary',
+						},
+						{
+							label: '307 — Temporary (Preserve Method)',
+							value: 'temporary_preserve',
+						},
+						{
+							label: '308 — Permanent (Preserve Method)',
+							value: 'permanent_preserve',
+						},
+					],
+					defaultValue: 'permanent',
+				},
+				{
+					name: 'active',
+					type: 'checkbox',
+					label: 'Active',
+					defaultValue: true,
+				},
+			],
+			admin: {
+				useAsTitle: 'from',
+				group: 'Settings',
+			},
+			timestamps: true,
+		},
+		{
 			slug: 'auth-user',
 			labels: {
 				singular: 'User',

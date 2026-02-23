@@ -1,5 +1,4 @@
 import { betterAuth } from 'better-auth';
-import { twoFactor } from 'better-auth/plugins';
 import type { Pool } from 'pg';
 import type { Database } from 'better-sqlite3';
 import { createEmailService, type EmailConfig, type EmailService } from './email';
@@ -52,8 +51,6 @@ export interface MomentumAuthConfig {
 	email?: MomentumEmailOptions;
 	/** OAuth social login providers */
 	socialProviders?: OAuthProvidersConfig;
-	/** Enable two-factor authentication (TOTP). Default: false */
-	twoFactorAuth?: boolean;
 	/** Additional Better Auth plugins (from sub-plugins). */
 	plugins?: unknown[];
 	/** Extra user fields to register with Better Auth's user.additionalFields. */
@@ -76,8 +73,6 @@ export interface MomentumAuthConfigLegacy {
 	email?: MomentumEmailOptions;
 	/** OAuth social login providers */
 	socialProviders?: OAuthProvidersConfig;
-	/** Enable two-factor authentication (TOTP). Default: false */
-	twoFactorAuth?: boolean;
 }
 
 /**
@@ -216,14 +211,7 @@ export function createMomentumAuth(
 		? { type: 'sqlite', database: config.database }
 		: config.db;
 
-	const {
-		baseURL,
-		secret,
-		trustedOrigins,
-		email: emailConfig,
-		socialProviders,
-		twoFactorAuth,
-	} = config;
+	const { baseURL, secret, trustedOrigins, email: emailConfig, socialProviders } = config;
 
 	// Extract new plugin-related fields (only present on MomentumAuthConfig, not legacy)
 	const extraPlugins = !isLegacyConfig(config) ? (config.plugins ?? []) : [];
@@ -332,12 +320,8 @@ export function createMomentumAuth(
 	// Build social providers config from env vars or explicit config
 	const socialProvidersConfig = buildSocialProviders(socialProviders, baseURL);
 
-	// Build plugins array
+	// Build plugins array from sub-plugin Better Auth plugins
 	const plugins: unknown[] = [];
-	if (twoFactorAuth) {
-		plugins.push(twoFactor());
-	}
-	// Merge sub-plugin Better Auth plugins (filter out undefined stubs)
 	for (const p of extraPlugins) {
 		if (p !== undefined) {
 			plugins.push(p);

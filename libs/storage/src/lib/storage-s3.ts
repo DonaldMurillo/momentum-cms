@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
 import type { StorageAdapter, UploadedFile, StoredFile, UploadOptions } from '@momentumcms/core';
 import type { S3StorageOptions } from './storage.types';
+import { getExtensionFromMimeType } from './storage-utils';
 
 // Dynamic import for AWS SDK to avoid bundling issues
 let S3Client: typeof import('@aws-sdk/client-s3').S3Client;
@@ -222,30 +223,4 @@ export function s3StorageAdapter(options: S3StorageOptions): StorageAdapter {
 			}
 		},
 	};
-}
-
-/**
- * Get file extension from MIME type.
- */
-function getExtensionFromMimeType(mimeType: string): string {
-	const mimeToExt: Record<string, string> = {
-		'image/jpeg': '.jpg',
-		'image/png': '.png',
-		'image/gif': '.gif',
-		'image/webp': '.webp',
-		'image/svg+xml': '.svg',
-		'application/pdf': '.pdf',
-		'application/json': '.json',
-		'text/plain': '.txt',
-		'text/html': '.html',
-		'text/css': '.css',
-		'application/javascript': '.js',
-		'video/mp4': '.mp4',
-		'video/webm': '.webm',
-		'audio/mpeg': '.mp3',
-		'audio/wav': '.wav',
-		'application/zip': '.zip',
-	};
-
-	return mimeToExt[mimeType] ?? '';
 }

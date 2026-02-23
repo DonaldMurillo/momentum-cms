@@ -1,0 +1,33 @@
+{
+	"name": "plugins-redirects",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/plugins/redirects/src",
+	"projectType": "library",
+	"tags": ["scope:plugin"],
+	"targets": {
+		"test": {
+			"executor": "@nx/vitest:test",
+			"outputs": ["{workspaceRoot}/coverage/libs/plugins/redirects"],
+			"options": {
+				"config": "libs/plugins/redirects/vitest.config.ts"
+			}
+		},
+		"build": {
+			"executor": "@nx/esbuild:esbuild",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/libs/plugins/redirects",
+				"main": "libs/plugins/redirects/src/index.ts",
+				"tsConfig": "libs/plugins/redirects/tsconfig.lib.json",
+				"generatePackageJson": false,
+				"assets": ["libs/plugins/redirects/package.json"]
+			}
+		},
+		"nx-release-publish": {
+			"options": {
+				"packageRoot": "dist/{projectRoot}",
+				"access": "public"
+			}
+		}
+	}
+}

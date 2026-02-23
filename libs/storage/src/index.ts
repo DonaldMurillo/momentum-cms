@@ -5,6 +5,9 @@ export * from './lib/storage.types';
 export { localStorageAdapter } from './lib/storage-local';
 export { s3StorageAdapter } from './lib/storage-s3';
 
+// Utilities
+export { getExtensionFromMimeType } from './lib/storage-utils';
+
 // MIME validation
 export {
 	validateMimeType,

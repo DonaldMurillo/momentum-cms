@@ -8,6 +8,7 @@ import { join, extname, resolve, normalize } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { StorageAdapter, UploadedFile, StoredFile, UploadOptions } from '@momentumcms/core';
 import type { LocalStorageOptions } from './storage.types';
+import { getExtensionFromMimeType } from './storage-utils';
 
 /**
  * Creates a local filesystem storage adapter.
@@ -110,30 +111,4 @@ export function localStorageAdapter(options: LocalStorageOptions): StorageAdapte
 			return null;
 		},
 	};
-}
-
-/**
- * Get file extension from MIME type.
- */
-function getExtensionFromMimeType(mimeType: string): string {
-	const mimeToExt: Record<string, string> = {
-		'image/jpeg': '.jpg',
-		'image/png': '.png',
-		'image/gif': '.gif',
-		'image/webp': '.webp',
-		'image/svg+xml': '.svg',
-		'application/pdf': '.pdf',
-		'application/json': '.json',
-		'text/plain': '.txt',
-		'text/html': '.html',
-		'text/css': '.css',
-		'application/javascript': '.js',
-		'video/mp4': '.mp4',
-		'video/webm': '.webm',
-		'audio/mpeg': '.mp3',
-		'audio/wav': '.wav',
-		'application/zip': '.zip',
-	};
-
-	return mimeToExt[mimeType] ?? '';
 }
