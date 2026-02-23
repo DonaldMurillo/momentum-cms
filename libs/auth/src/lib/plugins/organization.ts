@@ -1,15 +1,13 @@
 /**
- * Organization Sub-Plugin (Stub)
+ * Organization Sub-Plugin
  *
  * Wraps Better Auth's organization plugin for multi-tenant capabilities:
  * - Organizations
  * - Members with roles
  * - Invitations
- *
- * This is a stub — the Better Auth organization plugin import will be added
- * when the full organization integration is implemented.
  */
 
+import { organization } from 'better-auth/plugins';
 import { defineCollection, text, select, date } from '@momentumcms/core';
 import type { MomentumAuthSubPlugin } from './sub-plugin.types';
 
@@ -117,14 +115,13 @@ const AuthInvitationCollection = defineCollection({
 /**
  * Creates the organization sub-plugin.
  *
- * Adds organization, member, and invitation collections.
- * The actual Better Auth organization plugin will be wired in a future iteration.
+ * Adds organization, member, and invitation collections
+ * and registers the Better Auth organization plugin for multi-tenant endpoints.
  */
 export function authOrganization(): MomentumAuthSubPlugin {
 	return {
 		name: 'organization',
-		// Stub: Better Auth organization plugin will be added here
-		betterAuthPlugin: undefined,
+		betterAuthPlugin: organization(),
 		collections: [AuthOrganizationCollection, AuthMemberCollection, AuthInvitationCollection],
 	};
 }

@@ -297,6 +297,16 @@ export interface UserNotes {
 	updatedAt: string;
 }
 
+export interface Redirects {
+	id: string;
+	from: string;
+	to: string;
+	type?: 'permanent' | 'temporary' | 'temporary_preserve' | 'permanent_preserve';
+	active?: boolean;
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface AuthUser {
 	id: string;
 	name: string;
@@ -585,6 +595,25 @@ export interface UserNotesWhereClause {
 	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
+export interface RedirectsWhereClause {
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	from?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	to?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	type?:
+		| 'permanent'
+		| 'temporary'
+		| 'temporary_preserve'
+		| 'permanent_preserve'
+		| {
+				equals?: 'permanent' | 'temporary' | 'temporary_preserve' | 'permanent_preserve';
+				not?: 'permanent' | 'temporary' | 'temporary_preserve' | 'permanent_preserve';
+				in?: ('permanent' | 'temporary' | 'temporary_preserve' | 'permanent_preserve')[];
+		  };
+	active?: boolean | { equals?: boolean };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+}
+
 export interface AuthUserWhereClause {
 	id?: string | { equals?: string; not?: string; in?: string[] };
 	name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
@@ -687,6 +716,7 @@ export type CollectionSlug =
 	| 'field-test-items'
 	| 'tags'
 	| 'user-notes'
+	| 'redirects'
 	| 'auth-user'
 	| 'auth-session'
 	| 'auth-account'
@@ -707,6 +737,7 @@ export interface MomentumCollections {
 	'field-test-items': FieldTestItems;
 	tags: Tags;
 	'user-notes': UserNotes;
+	redirects: Redirects;
 	'auth-user': AuthUser;
 	'auth-session': AuthSession;
 	'auth-account': AuthAccount;
@@ -730,6 +761,7 @@ export type TypedMomentumCollections = {
 	'field-test-items': { doc: FieldTestItems; where: FieldTestItemsWhereClause };
 	tags: { doc: Tags; where: TagsWhereClause };
 	'user-notes': { doc: UserNotes; where: UserNotesWhereClause };
+	redirects: { doc: Redirects; where: RedirectsWhereClause };
 	'auth-user': { doc: AuthUser; where: AuthUserWhereClause };
 	'auth-session': { doc: AuthSession; where: AuthSessionWhereClause };
 	'auth-account': { doc: AuthAccount; where: AuthAccountWhereClause };

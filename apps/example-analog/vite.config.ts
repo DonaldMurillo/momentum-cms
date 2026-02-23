@@ -70,6 +70,10 @@ export default defineConfig(({ mode: _mode }) => {
 							'../../libs/plugins/analytics/src/index.ts',
 						),
 						'@momentumcms/plugins/seo': resolve(__dirname, '../../libs/plugins/seo/src/index.ts'),
+						'@momentumcms/plugins/redirects': resolve(
+							__dirname,
+							'../../libs/plugins/redirects/src/index.ts',
+						),
 						'@momentumcms/storage': resolve(__dirname, '../../libs/storage/src/index.ts'),
 						'@momentumcms/logger': resolve(__dirname, '../../libs/logger/src/index.ts'),
 					},

@@ -194,7 +194,6 @@ These are planned features and improvements, in no particular priority order.
 
 - **Better Auth plugin adapters** — Pre-built adapters for Better Auth plugins (OAuth providers, magic links, passkeys, etc.) with easy opt-in configuration
 - **Resend adapter** — Email delivery via Resend for transactional emails and auth flows
-- **S3 storage adapter** — Production-ready S3-compatible object storage (AWS, Cloudflare R2, MinIO)
 
 ### Deployment & Infrastructure
 

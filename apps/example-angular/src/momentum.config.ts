@@ -6,6 +6,7 @@ import { localStorageAdapter } from '@momentumcms/storage';
 import { eventBusPlugin } from '@momentumcms/plugins/core';
 import { analyticsPlugin, MemoryAnalyticsAdapter } from '@momentumcms/plugins/analytics';
 import { seoPlugin } from '@momentumcms/plugins/seo';
+import { redirectsPlugin } from '@momentumcms/plugins/redirects';
 import { join } from 'node:path';
 import { collections } from '@momentumcms/example-config/collections';
 import { globals } from '@momentumcms/example-config/globals';
@@ -61,6 +62,10 @@ export const analytics = analyticsPlugin({
 	trackingRules: { cacheTtl: 0 }, // No cache for E2E testing
 });
 
+export const redirects = redirectsPlugin({
+	cacheTtl: 0, // No cache for E2E testing
+});
+
 export const seo = seoPlugin({
 	collections: ['categories', 'articles', 'pages'],
 	siteUrl: `http://localhost:${process.env['PORT'] || 4000}`,
@@ -105,7 +110,7 @@ const config = defineMomentumConfig({
 		level: 'debug',
 		format: 'pretty',
 	},
-	plugins: [events, analytics, seo, authPlugin],
+	plugins: [events, analytics, seo, redirects, authPlugin],
 	seeding: exampleSeedingConfig,
 });
 

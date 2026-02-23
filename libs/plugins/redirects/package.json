@@ -1,0 +1,40 @@
+{
+	"name": "@momentumcms/plugins-redirects",
+	"version": "0.4.1",
+	"description": "Redirects plugin for Momentum CMS — URL redirect management with caching",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/DonaldMurillo/momentum-cms.git",
+		"directory": "libs/plugins/redirects"
+	},
+	"homepage": "https://github.com/DonaldMurillo/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/DonaldMurillo/momentum-cms/issues"
+	},
+	"keywords": [
+		"cms",
+		"momentum-cms",
+		"redirects",
+		"url-redirect",
+		"301",
+		"302"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"main": "./index.cjs",
+	"types": "./src/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.d.ts",
+			"default": "./index.cjs"
+		}
+	},
+	"dependencies": {
+		"@momentumcms/core": "0.4.1",
+		"@momentumcms/plugins-core": "0.4.1",
+		"express": "^4.21.0"
+	}
+}

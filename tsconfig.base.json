@@ -57,6 +57,8 @@
 			"@momentumcms/plugins-analytics/page-tracker": [
 				"libs/plugins/analytics/src/lib/page-view-tracker.ts"
 			],
+			"@momentumcms/plugins-redirects": ["libs/plugins/redirects/src/index.ts"],
+			"@momentumcms/plugins/redirects": ["libs/plugins/redirects/src/index.ts"],
 			"@momentumcms/example-config": ["libs/example-config/src/index.ts"],
 			"@momentumcms/example-config/collections": ["libs/example-config/src/collections/index.ts"],
 			"@momentumcms/example-config/globals": ["libs/example-config/src/globals/index.ts"],

@@ -13,6 +13,7 @@ export default defineConfig(() => ({
 		environment: 'node',
 		include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
 		reporters: ['default'],
+		globalSetup: ['./src/test-setup/ensure-minio.ts'],
 		coverage: {
 			reportsDirectory: '../../coverage/libs/storage',
 			provider: 'v8' as const,

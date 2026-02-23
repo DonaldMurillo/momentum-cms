@@ -61,9 +61,9 @@ describe('Auth Sub-Plugins', () => {
 			expect(plugin.name).toBe('admin');
 		});
 
-		it('should have undefined betterAuthPlugin (stub)', () => {
+		it('should provide a Better Auth admin plugin instance', () => {
 			const plugin = authAdmin();
-			expect(plugin.betterAuthPlugin).toBeUndefined();
+			expect(plugin.betterAuthPlugin).toBeDefined();
 		});
 
 		it('should contribute ban-related user fields', () => {
@@ -92,9 +92,9 @@ describe('Auth Sub-Plugins', () => {
 			expect(plugin.name).toBe('organization');
 		});
 
-		it('should have undefined betterAuthPlugin (stub)', () => {
+		it('should provide a Better Auth organization plugin instance', () => {
 			const plugin = authOrganization();
-			expect(plugin.betterAuthPlugin).toBeUndefined();
+			expect(plugin.betterAuthPlugin).toBeDefined();
 		});
 
 		it('should contribute 3 managed collections', () => {
