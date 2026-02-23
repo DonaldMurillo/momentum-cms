@@ -49,10 +49,11 @@ Full documentation is available in the [docs/](docs/README.md) directory, coveri
 - **Angular 21** - Server-side rendered with Express or Analog/Nitro
 - **Admin Dashboard** - Auto-generated CRUD interface with rich text editing, relationships, file uploads, and dark mode
 - **Drizzle ORM** - Type-safe database access with PostgreSQL and SQLite adapters
-- **Authentication** - Built-in auth via Better Auth with email/password, sessions, and role-based access control
+- **Authentication** - Built-in auth via Better Auth with email/password, sessions, role-based access, admin tools (ban/impersonation), and organization multi-tenancy
 - **File Storage** - Local filesystem and S3-compatible storage adapters
 - **Plugin System** - Event bus architecture with analytics and OpenTelemetry plugins
 - **Soft Deletes** - Built-in trash/restore with configurable retention
+- **Redirects** - Collection-based URL redirect management with server middleware, supporting 301/302/307/308 status codes
 
 ## Define a Collection
 
@@ -92,6 +93,7 @@ export const Posts = defineCollection({
 | `@momentumcms/plugins-analytics` | `libs/plugins/analytics`   | Analytics and tracking plugin                        |
 | `@momentumcms/plugins-seo`       | `libs/plugins/seo`         | SEO plugin (meta tags, sitemap, robots.txt)          |
 | `@momentumcms/plugins-otel`      | `libs/plugins/otel`        | OpenTelemetry observability plugin                   |
+| `@momentumcms/plugins-redirects` | `libs/plugins/redirects`   | URL redirect management plugin                       |
 | `create-momentum-app`            | `apps/create-momentum-app` | CLI scaffolding tool                                 |
 
 ## Architecture
@@ -164,6 +166,24 @@ npx nx run-many -t lint
 npx nx graph
 ```
 
+### Docker Services (Development)
+
+The monorepo uses Docker Compose for local development infrastructure:
+
+```bash
+docker compose up -d
+```
+
+| Service                 | Port(s)    | Purpose                       |
+| ----------------------- | ---------- | ----------------------------- |
+| `postgres`              | 5435       | Main development database     |
+| `postgres-seeding-test` | 5434       | E2E seeding test database     |
+| `minio`                 | 9000, 9001 | S3-compatible storage (tests) |
+
+PostgreSQL is required for running the example apps. MinIO is only needed for S3 integration tests.
+
+The MinIO console is available at `http://localhost:9001` (credentials: `minioadmin` / `minioadmin`).
+
 ### Testing the CLI
 
 ```bash
@@ -185,14 +205,13 @@ These are planned features and improvements, in no particular priority order.
 
 ### CMS Features
 
-- **Redirects** — Manage URL redirects from the admin with pattern matching and status codes
 - **Forms** — Form builder plugin for creating and managing front-end forms with submissions
 - **Queueing** — Background job queue for async tasks (email sending, image processing, webhooks)
 - **Image processing without Sharp** — Lightweight image optimization and resizing that doesn't depend on native binaries
 
 ### Auth & Integrations
 
-- **Better Auth plugin adapters** — Pre-built adapters for Better Auth plugins (OAuth providers, magic links, passkeys, etc.) with easy opt-in configuration
+- **Better Auth plugin adapters** — Pre-built adapters for remaining Better Auth plugins (OAuth providers, magic links, passkeys); admin and organization plugins are shipped
 - **Resend adapter** — Email delivery via Resend for transactional emails and auth flows
 
 ### Deployment & Infrastructure
