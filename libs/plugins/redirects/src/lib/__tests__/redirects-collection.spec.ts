@@ -73,4 +73,117 @@ describe('RedirectsCollection', () => {
 		expect(RedirectsCollection.admin?.useAsTitle).toBe('from');
 		expect(RedirectsCollection.admin?.group).toBe('Settings');
 	});
+
+	describe('"from" field validation', () => {
+		function validateFrom(
+			value: unknown,
+			data: Record<string, unknown> = {},
+		): string | true | Promise<string | true> {
+			const from = RedirectsCollection.fields.find((f) => f.name === 'from');
+			expect(from?.validate).toBeDefined();
+			return from!.validate!(value, { data, req: {} });
+		}
+
+		it('should accept paths starting with /', () => {
+			expect(validateFrom('/about')).toBe(true);
+			expect(validateFrom('/blog/post-1')).toBe(true);
+			expect(validateFrom('/')).toBe(true);
+		});
+
+		it('should reject paths not starting with /', () => {
+			const result = validateFrom('about');
+			expect(result).not.toBe(true);
+			expect(typeof result).toBe('string');
+		});
+
+		it('should reject empty string', () => {
+			const result = validateFrom('');
+			expect(result).not.toBe(true);
+			expect(typeof result).toBe('string');
+		});
+
+		it('should reject paths with query strings', () => {
+			const result = validateFrom('/page?foo=bar');
+			expect(result).not.toBe(true);
+			expect(typeof result).toBe('string');
+		});
+
+		it('should reject paths with fragments', () => {
+			const result = validateFrom('/page#section');
+			expect(result).not.toBe(true);
+			expect(typeof result).toBe('string');
+		});
+	});
+
+	describe('"to" field validation', () => {
+		function validateTo(
+			value: unknown,
+			data: Record<string, unknown> = {},
+		): string | true | Promise<string | true> {
+			const to = RedirectsCollection.fields.find((f) => f.name === 'to');
+			expect(to?.validate).toBeDefined();
+			return to!.validate!(value, { data, req: {} });
+		}
+
+		it('should accept relative paths', () => {
+			expect(validateTo('/new-page')).toBe(true);
+			expect(validateTo('/blog/new-post')).toBe(true);
+		});
+
+		it('should accept https:// URLs', () => {
+			expect(validateTo('https://example.com/page')).toBe(true);
+		});
+
+		it('should accept http:// URLs', () => {
+			expect(validateTo('http://example.com/page')).toBe(true);
+		});
+
+		it('should reject javascript: URLs', () => {
+			const result = validateTo('javascript:alert(1)');
+			expect(result).not.toBe(true);
+			expect(typeof result).toBe('string');
+		});
+
+		it('should reject javascript: URLs with mixed case', () => {
+			const result = validateTo('JavaScript:alert(1)');
+			expect(result).not.toBe(true);
+			expect(typeof result).toBe('string');
+		});
+
+		it('should reject data: URLs', () => {
+			const result = validateTo('data:text/html,<script>alert(1)</script>');
+			expect(result).not.toBe(true);
+			expect(typeof result).toBe('string');
+		});
+
+		it('should reject protocol-relative URLs (//) ', () => {
+			const result = validateTo('//evil.com/phish');
+			expect(result).not.toBe(true);
+			expect(typeof result).toBe('string');
+		});
+
+		it('should reject URLs containing CRLF characters', () => {
+			const resultCR = validateTo('/page\rinjected');
+			expect(resultCR).not.toBe(true);
+
+			const resultLF = validateTo('/page\ninjected');
+			expect(resultLF).not.toBe(true);
+		});
+
+		it('should reject empty string', () => {
+			const result = validateTo('');
+			expect(result).not.toBe(true);
+			expect(typeof result).toBe('string');
+		});
+
+		it('should reject when "to" equals "from" (redirect loop)', () => {
+			const result = validateTo('/same-path', { from: '/same-path' });
+			expect(result).not.toBe(true);
+			expect(typeof result).toBe('string');
+		});
+
+		it('should accept when "to" differs from "from"', () => {
+			expect(validateTo('/new-path', { from: '/old-path' })).toBe(true);
+		});
+	});
 });

@@ -314,10 +314,3 @@ describe.runIf(process.env['MINIO_AVAILABLE'] === 'true')('S3 Storage Adapter (M
 		});
 	});
 });
-
-describe.runIf(process.env['MINIO_AVAILABLE'] !== 'true')('S3 Storage Adapter (skipped)', () => {
-	it.skip('requires MinIO — set MINIO_AVAILABLE=true or start MinIO via docker compose', () => {
-		// S3 integration tests are skipped when MinIO is not available.
-		// Run `docker compose up -d minio` to enable them.
-	});
-});
