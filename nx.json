@@ -144,6 +144,7 @@
 			"plugins-analytics",
 			"plugins-otel",
 			"plugins-seo",
+			"plugins-redirects",
 			"migrations",
 			"create-momentum-app"
 		],
