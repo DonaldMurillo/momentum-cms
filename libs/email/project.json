@@ -1,0 +1,35 @@
+{
+	"name": "email",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/email/src",
+	"projectType": "library",
+	"tags": ["scope:lib", "env:server"],
+	"targets": {
+		"test": {
+			"executor": "@nx/vitest:test",
+			"outputs": ["{workspaceRoot}/coverage/libs/email"],
+			"options": {
+				"config": "libs/email/vitest.config.ts"
+			}
+		},
+		"build": {
+			"executor": "@nx/esbuild:esbuild",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/libs/email",
+				"main": "libs/email/src/index.ts",
+				"tsConfig": "libs/email/tsconfig.lib.json",
+				"additionalEntryPoints": [
+					"libs/email/src/types.ts",
+					"libs/email/src/lib/templates/default-templates.ts"
+				]
+			}
+		},
+		"nx-release-publish": {
+			"options": {
+				"packageRoot": "dist/{projectRoot}",
+				"access": "public"
+			}
+		}
+	}
+}

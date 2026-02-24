@@ -59,6 +59,18 @@
 			],
 			"@momentumcms/plugins-redirects": ["libs/plugins/redirects/src/index.ts"],
 			"@momentumcms/plugins/redirects": ["libs/plugins/redirects/src/index.ts"],
+			"@momentumcms/email": ["libs/email/src/index.ts"],
+			"@momentumcms/email/types": ["libs/email/src/types.ts"],
+			"@momentumcms/email/templates": ["libs/email/src/lib/templates/default-templates.ts"],
+			"@momentumcms/email-builder": ["libs/email-builder/src/index.ts"],
+			"@momentumcms/email-builder/admin-routes": [
+				"libs/email-builder/src/lib/admin/email-builder-admin-routes.ts"
+			],
+			"@momentumcms/plugins/email": ["libs/plugins/email/src/index.ts"],
+			"@momentumcms/plugins-email": ["libs/plugins/email/src/index.ts"],
+			"@momentumcms/plugins-email/admin-routes": [
+				"libs/plugins/email/src/lib/email-admin-routes.ts"
+			],
 			"@momentumcms/example-config": ["libs/example-config/src/index.ts"],
 			"@momentumcms/example-config/collections": ["libs/example-config/src/collections/index.ts"],
 			"@momentumcms/example-config/globals": ["libs/example-config/src/globals/index.ts"],

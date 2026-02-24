@@ -1,0 +1,64 @@
+{
+	"name": "@momentumcms/email",
+	"version": "0.5.0",
+	"description": "Angular email templating library — render Angular components to email-safe HTML",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/DonaldMurillo/momentum-cms.git",
+		"directory": "libs/email"
+	},
+	"homepage": "https://github.com/DonaldMurillo/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/DonaldMurillo/momentum-cms/issues"
+	},
+	"keywords": [
+		"email",
+		"email-templates",
+		"angular",
+		"server-rendering",
+		"html-email",
+		"momentum-cms"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"main": "./index.cjs",
+	"types": "./src/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.d.ts",
+			"import": "./index.js",
+			"require": "./index.cjs"
+		},
+		"./types": {
+			"types": "./src/types.d.ts",
+			"import": "./types.js",
+			"require": "./types.cjs"
+		},
+		"./templates": {
+			"types": "./src/lib/templates/default-templates.d.ts",
+			"import": "./lib/templates/default-templates.js",
+			"require": "./lib/templates/default-templates.cjs"
+		}
+	},
+	"typesVersions": {
+		"*": {
+			"types": [
+				"src/types.d.ts"
+			],
+			"templates": [
+				"src/lib/templates/default-templates.d.ts"
+			]
+		}
+	},
+	"peerDependencies": {
+		"@angular/compiler": "^21.0.0",
+		"@angular/core": "^21.0.0",
+		"@angular/platform-browser": "^21.0.0",
+		"@angular/platform-server": "^21.0.0",
+		"juice": "^11.0.0"
+	},
+	"dependencies": {}
+}

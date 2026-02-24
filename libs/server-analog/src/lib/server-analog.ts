@@ -42,8 +42,42 @@ import type {
 	UploadedFile,
 	EndpointQueryHelper,
 	DatabaseAdapter,
+	CollectionConfig,
 } from '@momentumcms/core';
 import { isUploadCollection } from '@momentumcms/core';
+
+/**
+ * Find the email-builder json field in a collection, if any.
+ * Returns the field name or undefined.
+ */
+function getEmailBuilderFieldName(collection: CollectionConfig): string | undefined {
+	const field = collection.fields.find(
+		(f) => f.type === 'json' && f.admin?.editor === 'email-builder',
+	);
+	return field?.name;
+}
+
+/**
+ * Render a full email preview HTML from the doc's email blocks.
+ * Returns a complete HTML document (the rendered email) — no field labels or generic wrapper.
+ */
+async function renderEmailPreviewHTML(
+	doc: Record<string, unknown>,
+	blocksFieldName: string,
+): Promise<string> {
+	// Variable-based import prevents TypeScript/esbuild from resolving transitive deps
+	// (the email lib depends on `juice` which needs esModuleInterop)
+	const emailPkg = '@momentumcms/email';
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- dynamic import with variable path
+	const { renderEmailFromBlocks } = (await import(emailPkg)) as {
+		renderEmailFromBlocks: (template: { blocks: unknown[] }) => string;
+	};
+	const blocks = doc[blocksFieldName];
+	if (!Array.isArray(blocks) || blocks.length === 0) {
+		return '<html><body style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:#666;font-family:sans-serif"><p>No email blocks yet.</p></body></html>';
+	}
+	return renderEmailFromBlocks({ blocks });
+}
 
 // ============================================
 // H3 Type Definitions
@@ -1075,19 +1109,13 @@ export function createComprehensiveMomentumHandler(
 		}
 
 		// ============================================
-		// Preview: GET /:collection/:id/preview
+		// Preview: GET/POST /:collection/:id/preview
+		// GET loads from DB, POST renders from request body (live preview)
 		// ============================================
-		if (seg2 === 'preview' && seg1 && method === 'GET') {
+		if (seg2 === 'preview' && seg1 && (method === 'GET' || method === 'POST')) {
 			try {
 				const collectionSlug = seg0;
 				const docId = seg1;
-				const contextApi = getContextualAPI(user);
-
-				const doc = await contextApi.collection(collectionSlug).findById(docId);
-				if (!doc) {
-					utils.setResponseStatus(event, 404);
-					return { error: 'Document not found' };
-				}
 
 				const collectionConfig = config.collections.find((c) => c.slug === collectionSlug);
 				if (!collectionConfig) {
@@ -1095,11 +1123,31 @@ export function createComprehensiveMomentumHandler(
 					return { error: 'Collection not found' };
 				}
 
-				const html = renderPreviewHTML({
+				let docRecord: Record<string, unknown>;
+				if (method === 'POST') {
+					const body = await safeReadBody(event, utils, method);
+					if (body['data'] && typeof body['data'] === 'object') {
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- POST body contains form data
+						docRecord = body['data'] as Record<string, unknown>;
+					} else {
+						utils.setResponseStatus(event, 400);
+						return { error: 'POST preview requires { data: ... } body' };
+					}
+				} else {
+					const contextApi = getContextualAPI(user);
+					const doc = await contextApi.collection(collectionSlug).findById(docId);
+					if (!doc) {
+						utils.setResponseStatus(event, 404);
+						return { error: 'Document not found' };
+					}
 					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- doc type from API
-					doc: doc as Record<string, unknown>,
-					collection: collectionConfig,
-				});
+					docRecord = doc as Record<string, unknown>;
+				}
+
+				const emailField = getEmailBuilderFieldName(collectionConfig);
+				const html = emailField
+					? await renderEmailPreviewHTML(docRecord, emailField)
+					: renderPreviewHTML({ doc: docRecord, collection: collectionConfig });
 				utils.setResponseHeader(event, 'Content-Type', 'text/html; charset=utf-8');
 				return utils.send(event, html);
 			} catch (error) {

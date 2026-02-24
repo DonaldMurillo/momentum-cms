@@ -136,6 +136,8 @@
 			"ui",
 			"admin",
 			"auth",
+			"email",
+			"email-builder",
 			"db-drizzle",
 			"server-core",
 			"server-express",
@@ -145,6 +147,7 @@
 			"plugins-otel",
 			"plugins-seo",
 			"plugins-redirects",
+			"plugins-email",
 			"migrations",
 			"create-momentum-app"
 		],

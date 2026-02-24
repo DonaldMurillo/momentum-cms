@@ -7,6 +7,11 @@ import { eventBusPlugin } from '@momentumcms/plugins/core';
 import { analyticsPlugin, MemoryAnalyticsAdapter } from '@momentumcms/plugins/analytics';
 import { seoPlugin } from '@momentumcms/plugins/seo';
 import { redirectsPlugin } from '@momentumcms/plugins/redirects';
+import {
+	emailPlugin,
+	createFindEmailTemplate,
+	emailTemplateSeedData,
+} from '@momentumcms/plugins/email';
 import { join } from 'node:path';
 import { collections } from '@momentumcms/example-config/collections';
 import { globals } from '@momentumcms/example-config/globals';
@@ -27,6 +32,11 @@ const authBaseURL =
 	process.env['BETTER_AUTH_URL'] || `http://localhost:${process.env['PORT'] || 4000}`;
 
 /**
+ * Email template management plugin.
+ */
+export const email = emailPlugin();
+
+/**
  * Auth plugin — manages Better Auth integration, user tables, and middleware.
  */
 export const authPlugin = momentumAuth({
@@ -35,6 +45,7 @@ export const authPlugin = momentumAuth({
 	trustedOrigins: ['http://localhost:4200', authBaseURL],
 	email: {
 		appName: 'Momentum CMS',
+		findEmailTemplate: createFindEmailTemplate(email),
 	},
 });
 
@@ -110,8 +121,18 @@ const config = defineMomentumConfig({
 		level: 'debug',
 		format: 'pretty',
 	},
-	plugins: [events, analytics, seo, redirects, authPlugin],
-	seeding: exampleSeedingConfig,
+	plugins: [events, analytics, seo, redirects, email, authPlugin],
+	seeding: {
+		...exampleSeedingConfig,
+		defaults: (helpers) => [
+			...(exampleSeedingConfig.defaults?.(helpers) ?? []),
+			...emailTemplateSeedData.map((data) =>
+				helpers
+					.collection<Record<string, unknown>>('email-templates')
+					.create(`email-tpl-${data['slug']}`, data, { onConflict: 'skip' }),
+			),
+		],
+	},
 });
 
 export default config;

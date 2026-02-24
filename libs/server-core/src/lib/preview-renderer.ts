@@ -7,12 +7,21 @@
 
 import type { CollectionConfig, Field } from '@momentumcms/core';
 
+/** Custom field renderer: receives the field value and returns an HTML string to embed. */
+export type CustomFieldRenderer = (value: unknown, field: Field) => string;
+
 /** Options for rendering a preview HTML page. */
 export interface PreviewRenderOptions {
 	/** Document data to render */
 	doc: Record<string, unknown>;
 	/** Collection configuration */
 	collection: CollectionConfig;
+	/**
+	 * Optional custom field renderers keyed by `admin.editor` value.
+	 * When a field's `admin.editor` matches a key, the custom renderer is used
+	 * instead of the default switch-case logic.
+	 */
+	customFieldRenderers?: Record<string, CustomFieldRenderer>;
 }
 
 /**
@@ -28,14 +37,14 @@ export interface PreviewRenderOptions {
  * is trusted server-side content from the database.
  */
 export function renderPreviewHTML(options: PreviewRenderOptions): string {
-	const { doc, collection } = options;
+	const { doc, collection, customFieldRenderers } = options;
 	const titleField = collection.admin?.useAsTitle ?? 'id';
 	const title = escapeHtml(String(doc[titleField] ?? doc['id'] ?? 'Untitled'));
 	const fields = collection.fields ?? [];
 
 	const fieldHtml = fields
 		.filter((f) => !isHiddenField(f) && !isLayoutField(f) && f.name !== titleField)
-		.map((f) => renderField(f, doc))
+		.map((f) => renderField(f, doc, customFieldRenderers))
 		.filter(Boolean)
 		.join('\n');
 
@@ -96,10 +105,20 @@ if(titleEl){var tf=titleEl.getAttribute('data-field');if(d[tf]!==undefined)title
 }
 
 /** Render a single field as HTML. */
-function renderField(field: Field, doc: Record<string, unknown>): string {
+function renderField(
+	field: Field,
+	doc: Record<string, unknown>,
+	customRenderers?: Record<string, CustomFieldRenderer>,
+): string {
 	const value = doc[field.name];
 	if (value === undefined || value === null) {
 		return renderFieldWrapper(field, '');
+	}
+
+	// Check for a custom renderer keyed by admin.editor
+	const editorKey = field.admin?.editor;
+	if (editorKey && customRenderers?.[editorKey]) {
+		return renderFieldWrapper(field, customRenderers[editorKey](value, field));
 	}
 
 	switch (field.type) {

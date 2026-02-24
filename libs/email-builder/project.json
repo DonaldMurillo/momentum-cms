@@ -1,0 +1,46 @@
+{
+	"name": "email-builder",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/email-builder/src",
+	"prefix": "eml",
+	"projectType": "library",
+	"tags": ["scope:lib", "env:browser"],
+	"targets": {
+		"build": {
+			"executor": "@nx/angular:package",
+			"outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+			"options": {
+				"project": "libs/email-builder/ng-package.json",
+				"tsConfig": "libs/email-builder/tsconfig.lib.json"
+			},
+			"configurations": {
+				"production": {
+					"tsConfig": "libs/email-builder/tsconfig.lib.prod.json"
+				},
+				"development": {}
+			},
+			"defaultConfiguration": "production"
+		},
+		"copy-assets": {
+			"executor": "nx:run-commands",
+			"options": {
+				"commands": ["cp LICENSE dist/libs/email-builder/"]
+			},
+			"dependsOn": ["build"]
+		},
+		"nx-release-publish": {
+			"dependsOn": ["copy-assets"],
+			"options": {
+				"packageRoot": "dist/{projectRoot}",
+				"access": "public"
+			}
+		},
+		"test": {
+			"executor": "@nx/angular:unit-test",
+			"options": {}
+		},
+		"lint": {
+			"executor": "@nx/eslint:lint"
+		}
+	}
+}

@@ -100,6 +100,14 @@ test.describe('Password Reset Flow', { tag: ['@auth', '@admin'] }, () => {
 			const emailDetail = await getEmailById(email.ID);
 			expect(emailDetail.HTML).toContain('Reset Password');
 			expect(emailDetail.HTML).toContain('reset-password');
+
+			// Angular-rendered HTML structure (table-based email layout)
+			expect(emailDetail.HTML).toContain('role="presentation"');
+			expect(emailDetail.HTML).toContain('background-color');
+			// No Angular artifacts leaked into final HTML
+			expect(emailDetail.HTML).not.toContain('ng-reflect');
+			expect(emailDetail.HTML).not.toContain('_nghost');
+			expect(emailDetail.HTML).not.toContain('_ngcontent');
 		});
 	});
 

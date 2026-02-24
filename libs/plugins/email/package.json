@@ -1,0 +1,43 @@
+{
+	"name": "@momentumcms/plugins-email",
+	"version": "0.5.0",
+	"description": "Email template management plugin for Momentum CMS",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/DonaldMurillo/momentum-cms.git",
+		"directory": "libs/plugins/email"
+	},
+	"homepage": "https://github.com/DonaldMurillo/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/DonaldMurillo/momentum-cms/issues"
+	},
+	"keywords": [
+		"cms",
+		"momentum-cms",
+		"email",
+		"email-templates",
+		"email-builder"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"main": "./index.cjs",
+	"types": "./src/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.d.ts",
+			"default": "./index.cjs"
+		},
+		"./admin-routes": {
+			"types": "./src/lib/email-admin-routes.d.ts",
+			"default": "./lib/email-admin-routes.cjs"
+		}
+	},
+	"dependencies": {
+		"@momentumcms/core": "0.5.0",
+		"@momentumcms/email": "0.5.0",
+		"@momentumcms/email-builder": "0.5.0"
+	}
+}

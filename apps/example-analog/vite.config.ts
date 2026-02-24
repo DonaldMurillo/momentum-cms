@@ -52,6 +52,12 @@ export default defineConfig(({ mode: _mode }) => {
 						'@momentumcms/core': resolve(__dirname, '../../libs/core/src/index.ts'),
 						'@momentumcms/db-drizzle': resolve(__dirname, '../../libs/db-drizzle/src/index.ts'),
 						'@momentumcms/auth': resolve(__dirname, '../../libs/auth/src/index.ts'),
+						'@momentumcms/email/templates': resolve(
+							__dirname,
+							'../../libs/email/src/lib/templates/default-templates.ts',
+						),
+						'@momentumcms/email/types': resolve(__dirname, '../../libs/email/src/types.ts'),
+						'@momentumcms/email': resolve(__dirname, '../../libs/email/src/index.ts'),
 						'@momentumcms/example-config/collections': resolve(
 							__dirname,
 							'../../libs/example-config/src/collections/index.ts',
@@ -73,6 +79,10 @@ export default defineConfig(({ mode: _mode }) => {
 						'@momentumcms/plugins/redirects': resolve(
 							__dirname,
 							'../../libs/plugins/redirects/src/index.ts',
+						),
+						'@momentumcms/plugins/email': resolve(
+							__dirname,
+							'../../libs/plugins/email/src/index.ts',
 						),
 						'@momentumcms/storage': resolve(__dirname, '../../libs/storage/src/index.ts'),
 						'@momentumcms/logger': resolve(__dirname, '../../libs/logger/src/index.ts'),

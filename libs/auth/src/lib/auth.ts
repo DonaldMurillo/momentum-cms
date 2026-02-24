@@ -2,7 +2,11 @@ import { betterAuth } from 'better-auth';
 import type { Pool } from 'pg';
 import type { Database } from 'better-sqlite3';
 import { createEmailService, type EmailConfig, type EmailService } from './email';
-import { getPasswordResetEmail, getVerificationEmail } from './email-templates';
+import {
+	getPasswordResetEmail,
+	getVerificationEmail,
+	type FindEmailTemplateFn,
+} from './email-templates';
 import { createLogger } from '@momentumcms/logger';
 import type { Field } from '@momentumcms/core';
 import type { OAuthProviderConfig, OAuthProvidersConfig } from './auth-core';
@@ -33,6 +37,12 @@ export interface MomentumEmailOptions extends EmailConfig {
 	appName?: string;
 	/** Require email verification on signup. Default: false */
 	requireEmailVerification?: boolean;
+	/**
+	 * Optional callback to look up email templates from the database.
+	 * When provided, DB templates are used first; falls back to Angular SSR rendering.
+	 * Typically wired from the email plugin's API.
+	 */
+	findEmailTemplate?: FindEmailTemplateFn;
 }
 
 /**
@@ -252,11 +262,12 @@ export function createMomentumAuth(
 	// Add password reset callback if email is enabled
 	if (emailService) {
 		emailAndPasswordConfig.sendResetPassword = async ({ user, url }) => {
-			const { subject, text, html } = getPasswordResetEmail({
+			const { subject, text, html } = await getPasswordResetEmail({
 				name: user.name,
 				url,
 				appName,
 				expiresIn: '1 hour',
+				findEmailTemplate: emailConfig?.findEmailTemplate,
 			});
 			// Don't await to prevent timing attacks, but log errors for debugging
 			emailService
@@ -289,11 +300,12 @@ export function createMomentumAuth(
 					url: string;
 					token: string;
 				}) => {
-					const { subject, text, html } = getVerificationEmail({
+					const { subject, text, html } = await getVerificationEmail({
 						name: user.name,
 						url,
 						appName,
 						expiresIn: '24 hours',
+						findEmailTemplate: emailConfig?.findEmailTemplate,
 					});
 					// Don't await to prevent timing attacks, but log errors for debugging
 					emailService

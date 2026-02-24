@@ -30,6 +30,7 @@
 		"@angular/core": "^19.0.0 || ^20.0.0 || ^21.0.0",
 		"@momentumcms/auth": ">=0.0.1",
 		"@momentumcms/core": ">=0.0.1",
+		"@momentumcms/email": ">=0.0.1",
 		"@momentumcms/logger": ">=0.0.1",
 		"@momentumcms/plugins-core": ">=0.0.1",
 		"@momentumcms/server-core": ">=0.0.1",

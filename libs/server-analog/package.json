@@ -28,6 +28,7 @@
 	"types": "./src/index.d.ts",
 	"peerDependencies": {
 		"@momentumcms/core": ">=0.0.1",
-		"@momentumcms/server-core": ">=0.0.1"
+		"@momentumcms/server-core": ">=0.0.1",
+		"@momentumcms/storage": ">=0.0.1"
 	}
 }

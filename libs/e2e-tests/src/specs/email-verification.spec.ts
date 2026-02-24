@@ -110,8 +110,8 @@ test.describe('Email Verification Flow', { tag: ['@auth', '@api'] }, () => {
 
 		// Click the verification link (GET request via Playwright's request context)
 		const verifyResponse = await request.get(verifyUrl as string);
-		// Better Auth may redirect after verification - either 200 or 302 is fine
-		expect(verifyResponse.status()).toBeLessThan(400);
+		// Better Auth may redirect (302) or return success (200) after verification
+		expect([200, 302]).toContain(verifyResponse.status());
 
 		// Sign in with the verified user to confirm email is now verified
 		// Origin header required by Better Auth CSRF protection
@@ -155,6 +155,16 @@ test.describe('Email Verification Flow', { tag: ['@auth', '@api'] }, () => {
 		expect(detail.Text).toContain('verify your email');
 		// Should contain the app name
 		expect(detail.HTML).toContain('Momentum CMS');
+
+		// Angular-rendered HTML structure (table-based email layout)
+		expect(detail.HTML).toContain('role="presentation"');
+		expect(detail.HTML).toContain('background-color');
+		// No Angular artifacts leaked into final HTML
+		expect(detail.HTML).not.toContain('ng-reflect');
+		expect(detail.HTML).not.toContain('_nghost');
+		expect(detail.HTML).not.toContain('_ngcontent');
+		// Plain text version must exist
+		expect(detail.Text).toBeTruthy();
 	});
 
 	test('resend verification email works', async ({ request, baseURL }) => {
@@ -188,12 +198,11 @@ test.describe('Email Verification Flow', { tag: ['@auth', '@api'] }, () => {
 			data: { email: resendEmail },
 		});
 
-		// Better Auth should accept the resend request
-		// (may return 200 even if already verified as a security measure)
-		expect(resendResponse.status()).toBeLessThan(500);
+		// Better Auth may return 200 (accepted) or 429 (rate-limited) — not a server error
+		expect([200, 429]).toContain(resendResponse.status());
 
 		// If resend was accepted, wait for a NEW email (different ID from initial)
-		if (resendResponse.ok()) {
+		if (resendResponse.status() === 200) {
 			const startTime = Date.now();
 			const timeout = 15000;
 			let found = false;

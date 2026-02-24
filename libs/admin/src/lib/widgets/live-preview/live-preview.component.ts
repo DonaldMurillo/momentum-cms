@@ -24,8 +24,9 @@ export type DeviceSize = 'desktop' | 'tablet' | 'mobile';
  * Displays an iframe that shows a live preview of the document being edited.
  *
  * Two modes based on preview config type:
- * - `preview: true` (server-rendered HTML): iframe loads API endpoint with scripts enabled
- *   for postMessage live updates.
+ * - `preview: true` (server-rendered HTML): initial GET loads from database, then
+ *   subsequent form changes are POSTed to the same endpoint with the current form data
+ *   for realtime preview updates (no page reload needed).
  * - `preview: string/function` (URL-based): iframe loads the page URL with scripts DISABLED.
  *   This prevents loading a second Angular app instance (with Vite HMR, SSR hydration, etc.)
  *   which causes tab crashes in dev mode. The SSR-rendered HTML displays correctly without JS.
@@ -154,6 +155,9 @@ export class LivePreviewComponent {
 	/** Reference to the static iframe element (available when previewUrl is non-null) */
 	private readonly previewIframe = viewChild<ElementRef<HTMLIFrameElement>>('previewIframe');
 
+	/** Whether the initial iframe load from GET is complete */
+	private initialLoadDone = false;
+
 	/** Compute the raw preview URL */
 	readonly previewUrl = computed((): string | null => {
 		// Force recomputation on refresh
@@ -217,8 +221,11 @@ export class LivePreviewComponent {
 		return 'allow-same-origin allow-popups allow-forms';
 	});
 
-	/** Debounce timer for postMessage updates */
+	/** Debounce timer for live preview updates */
 	private debounceTimer: number | undefined = undefined;
+
+	/** AbortController for in-flight POST requests */
+	private fetchAbort: AbortController | undefined = undefined;
 
 	constructor() {
 		// Effect 1: Set iframe src and sandbox when URL or sandbox config changes.
@@ -231,10 +238,18 @@ export class LivePreviewComponent {
 			const url = this.previewUrl();
 			if (!url) return;
 
+			this.initialLoadDone = false;
 			iframe.setAttribute('sandbox', this.sandboxValue());
 			iframe.src = url;
 			// Set initial width without tracking the signal
 			iframe.style.width = untracked(() => this.iframeWidth());
+
+			// Mark initial load as done once the iframe finishes loading
+			const onLoad = (): void => {
+				this.initialLoadDone = true;
+				iframe.removeEventListener('load', onLoad);
+			};
+			iframe.addEventListener('load', onLoad);
 		});
 
 		// Effect 2: Update iframe width only (no reload).
@@ -246,26 +261,46 @@ export class LivePreviewComponent {
 			iframeRef.nativeElement.style.width = this.iframeWidth();
 		});
 
-		// Send form data to iframe via postMessage whenever data changes.
-		// Only effective for server-rendered previews (preview: true) where
-		// allow-scripts is enabled. URL-based previews have scripts disabled
-		// so the postMessage is a no-op (which is fine).
+		// Effect 3: Live preview updates via POST (for preview: true mode).
+		// When form data changes, POST it to the preview endpoint and write the
+		// response HTML directly to the iframe. This works for all collection types
+		// including email templates where postMessage isn't sufficient.
 		effect(() => {
 			const data = this.documentData();
-			const iframeRef = this.previewIframe();
-			if (!iframeRef?.nativeElement.contentWindow) return;
+			const previewConfig = this.preview();
 
-			// Debounce to avoid thrashing
+			// Only use POST-based updates for server-rendered previews (preview: true)
+			if (previewConfig !== true) {
+				// For URL-based previews, use postMessage as before
+				const iframeRef = this.previewIframe();
+				if (!iframeRef?.nativeElement.contentWindow) return;
+
+				if (this.debounceTimer) {
+					clearTimeout(this.debounceTimer);
+				}
+				this.debounceTimer = this.document.defaultView?.setTimeout(() => {
+					const iframeWindow = iframeRef.nativeElement.contentWindow;
+					if (iframeWindow) {
+						const targetOrigin = this.document.defaultView?.location?.origin ?? '';
+						iframeWindow.postMessage({ type: 'momentum-preview-update', data }, targetOrigin);
+					}
+				}, 300);
+				return;
+			}
+
+			// For preview: true, POST form data to the server preview endpoint
+			const url = untracked(() => this.previewUrl());
+			if (!url) return;
+
+			// Skip the first emission (initial load is handled by iframe src)
+			if (!this.initialLoadDone) return;
+
 			if (this.debounceTimer) {
 				clearTimeout(this.debounceTimer);
 			}
 
 			this.debounceTimer = this.document.defaultView?.setTimeout(() => {
-				const iframeWindow = iframeRef.nativeElement.contentWindow;
-				if (iframeWindow) {
-					const targetOrigin = this.document.defaultView?.location?.origin ?? '';
-					iframeWindow.postMessage({ type: 'momentum-preview-update', data }, targetOrigin);
-				}
+				this.fetchPreviewHtml(url, data);
 			}, 300);
 		});
 
@@ -284,17 +319,57 @@ export class LivePreviewComponent {
 			this.destroyRef.onDestroy(() => win.removeEventListener('message', editHandler));
 		}
 
-		// Clean up debounce timer on destroy
+		// Clean up on destroy
 		this.destroyRef.onDestroy(() => {
 			if (this.debounceTimer) {
 				clearTimeout(this.debounceTimer);
 				this.debounceTimer = undefined;
 			}
+			this.fetchAbort?.abort();
 		});
 	}
 
-	/** Force iframe to reload */
+	/** Force iframe to reload from server (GET) */
 	refreshPreview(): void {
 		this.refreshCounter.update((c) => c + 1);
+	}
+
+	/** POST form data to the preview endpoint and write the HTML response to the iframe. */
+	private fetchPreviewHtml(url: string, data: Record<string, unknown>): void {
+		// Cancel any in-flight request
+		this.fetchAbort?.abort();
+		this.fetchAbort = new AbortController();
+
+		const win = this.document.defaultView;
+		if (!win) return;
+
+		win
+			.fetch(url, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ data }),
+				credentials: 'include',
+				signal: this.fetchAbort.signal,
+			})
+			.then((response) => {
+				if (!response.ok) return null;
+				return response.text();
+			})
+			.then((html) => {
+				if (!html) return;
+				const iframeRef = this.previewIframe();
+				if (!iframeRef) return;
+
+				const doc = iframeRef.nativeElement.contentDocument;
+				if (doc) {
+					doc.open();
+					doc.write(html);
+					doc.close();
+				}
+			})
+			.catch((err: unknown) => {
+				// Ignore abort errors (expected when a new request supersedes)
+				if (err instanceof DOMException && err.name === 'AbortError') return;
+			});
 	}
 }
