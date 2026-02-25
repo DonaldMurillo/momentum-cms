@@ -34,6 +34,7 @@ export { inlineCss } from './lib/utils/css-inliner';
 export {
 	sanitizeAlignment,
 	sanitizeCssValue,
+	sanitizeFontFamily,
 	sanitizeCssNumber,
 	sanitizeUrl,
 } from './lib/utils/sanitize';

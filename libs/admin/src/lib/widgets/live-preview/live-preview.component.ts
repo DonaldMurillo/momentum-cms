@@ -370,6 +370,7 @@ export class LivePreviewComponent {
 			.catch((err: unknown) => {
 				// Ignore abort errors (expected when a new request supersedes)
 				if (err instanceof DOMException && err.name === 'AbortError') return;
+				console.warn('[momentum:live-preview] Preview fetch failed:', err);
 			});
 	}
 }

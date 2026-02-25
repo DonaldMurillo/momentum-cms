@@ -32,9 +32,8 @@ export interface PreviewRenderOptions {
  * - Inline CSS for responsive layout
  * - postMessage listener for live updates from the admin form
  *
- * Security: Rich text fields are rendered via textContent by default in the
- * postMessage handler to prevent XSS. The initial server render of rich text
- * is trusted server-side content from the database.
+ * Security: All field values (including rich text) are HTML-escaped in both
+ * the initial server render and the client-side postMessage handler.
  */
 export function renderPreviewHTML(options: PreviewRenderOptions): string {
 	const { doc, collection, customFieldRenderers } = options;
@@ -123,10 +122,11 @@ function renderField(
 
 	switch (field.type) {
 		case 'richText':
-			// Rich text is stored as HTML - server-side content from the database is trusted
+			// Preview is a summary view — always escape to prevent XSS
+			// (POST preview sends user input; even GET data could contain stored XSS)
 			return renderFieldWrapper(
 				field,
-				`<div class="field-value rich-text" data-field="${escapeHtml(field.name)}">${String(value)}</div>`,
+				`<div class="field-value rich-text" data-field="${escapeHtml(field.name)}">${escapeHtml(String(value))}</div>`,
 			);
 		case 'checkbox':
 			return renderFieldWrapper(

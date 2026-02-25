@@ -107,4 +107,25 @@ describe('blocksToPlainText', () => {
 		const result = blocksToPlainText([block('custom-unknown', { foo: 'bar' })]);
 		expect(result).toBe('');
 	});
+
+	it('should limit recursion depth on deeply nested columns', () => {
+		function makeNestedColumns(depth: number): EmailBlock {
+			if (depth === 0) {
+				return { type: 'text', data: { content: 'deep-leaf' }, id: `leaf-${depth}` };
+			}
+			return {
+				type: 'columns',
+				data: {
+					columns: [{ blocks: [makeNestedColumns(depth - 1)] }],
+				},
+				id: `col-${depth}`,
+			};
+		}
+
+		// 10 levels deep — should not throw
+		const result = blocksToPlainText([makeNestedColumns(10)]);
+		expect(typeof result).toBe('string');
+		// The deepest leaf should NOT appear due to depth limit
+		expect(result).not.toContain('deep-leaf');
+	});
 });

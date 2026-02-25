@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeAlignment, sanitizeCssValue, sanitizeCssNumber, sanitizeUrl } from './sanitize';
+import {
+	sanitizeAlignment,
+	sanitizeCssValue,
+	sanitizeCssNumber,
+	sanitizeUrl,
+	sanitizeFontFamily,
+} from './sanitize';
 
 describe('sanitizeAlignment', () => {
 	it('should accept "left"', () => {
@@ -74,6 +80,42 @@ describe('sanitizeCssValue', () => {
 	it('should return empty string for fully malicious input', () => {
 		const result = sanitizeCssValue(';{}()"\'<>\\');
 		expect(result).toBe('');
+	});
+});
+
+describe('sanitizeFontFamily', () => {
+	it('should preserve single quotes around font names with spaces', () => {
+		const input =
+			"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+		expect(sanitizeFontFamily(input)).toBe(input);
+	});
+
+	it('should strip dangerous characters like semicolons and angle brackets', () => {
+		expect(sanitizeFontFamily('Arial</style><script>alert(1)</script>')).toBe(
+			'Arial/stylescriptalert1/script',
+		);
+	});
+
+	it('should strip curly braces', () => {
+		expect(sanitizeFontFamily('Arial} body { color: red')).toBe('Arial body  color: red');
+	});
+
+	it('should strip parentheses to prevent url() injection', () => {
+		expect(sanitizeFontFamily("Arial; background: url('evil')")).toBe(
+			"Arial background: url'evil'",
+		);
+	});
+
+	it('should strip backslashes', () => {
+		expect(sanitizeFontFamily('Arial\\0a, monospace')).toBe('Arial0a, monospace');
+	});
+
+	it('should allow simple unquoted font names', () => {
+		expect(sanitizeFontFamily('monospace')).toBe('monospace');
+	});
+
+	it('should allow double quotes around font names', () => {
+		expect(sanitizeFontFamily('"Segoe UI", Arial')).toBe('"Segoe UI", Arial');
 	});
 });
 
@@ -174,6 +216,14 @@ describe('sanitizeUrl', () => {
 
 	it('should trim whitespace before validation', () => {
 		expect(sanitizeUrl('  https://example.com  ')).toBe('https://example.com');
+	});
+
+	it('should block javascript: with leading whitespace', () => {
+		expect(sanitizeUrl('  javascript:alert(1)')).toBe('#');
+	});
+
+	it('should block javascript: with tab character', () => {
+		expect(sanitizeUrl('\tjavascript:alert(1)')).toBe('#');
 	});
 
 	it('should block bare domain (ambiguous without protocol)', () => {

@@ -19,7 +19,7 @@ import {
  */
 
 // Unique email to avoid conflicts with other test users
-const VERIFY_USER_EMAIL = `verify-test-${Date.now()}@test.com`;
+const VERIFY_USER_EMAIL = `verify-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@test.com`;
 const VERIFY_USER_PASSWORD = 'VerifyTest123!';
 const VERIFY_USER_NAME = 'Verify Test User';
 
@@ -96,11 +96,8 @@ test.describe('Email Verification Flow', { tag: ['@auth', '@api'] }, () => {
 		const signupData = (await signupResponse.json()) as {
 			user?: { emailVerified: boolean };
 		};
-		// Better Auth may or may not return emailVerified in signup response
-		// It's expected to be false initially
-		if (signupData.user) {
-			expect(signupData.user.emailVerified).toBe(false);
-		}
+		expect(signupData.user, 'Signup response must include user object').toBeDefined();
+		expect(signupData.user!.emailVerified).toBe(false);
 
 		// Wait for verification email
 		const email = await waitForEmail(freshEmail, 'verify', 15000);
@@ -108,10 +105,9 @@ test.describe('Email Verification Flow', { tag: ['@auth', '@api'] }, () => {
 		const verifyUrl = extractVerificationUrl(detail.HTML);
 		expect(verifyUrl).not.toBeNull();
 
-		// Click the verification link (GET request via Playwright's request context)
+		// Click the verification link — Playwright follows redirects so final status is 200
 		const verifyResponse = await request.get(verifyUrl as string);
-		// Better Auth may redirect (302) or return success (200) after verification
-		expect([200, 302]).toContain(verifyResponse.status());
+		expect(verifyResponse.ok()).toBe(true);
 
 		// Sign in with the verified user to confirm email is now verified
 		// Origin header required by Better Auth CSRF protection
@@ -198,29 +194,26 @@ test.describe('Email Verification Flow', { tag: ['@auth', '@api'] }, () => {
 			data: { email: resendEmail },
 		});
 
-		// Better Auth may return 200 (accepted) or 429 (rate-limited) — not a server error
-		expect([200, 429]).toContain(resendResponse.status());
-
-		// If resend was accepted, wait for a NEW email (different ID from initial)
+		// Better Auth returns 200 (accepted) or 429 (rate-limited)
 		if (resendResponse.status() === 200) {
-			const startTime = Date.now();
-			const timeout = 15000;
-			let found = false;
-			while (Date.now() - startTime < timeout) {
-				const emails = await getEmails();
-				const newEmail = emails.find(
-					(e) =>
-						e.ID !== initialEmail.ID &&
-						e.To.some((t) => t.Address === resendEmail) &&
-						e.Subject.toLowerCase().includes('verify'),
-				);
-				if (newEmail) {
-					found = true;
-					break;
-				}
-				await new Promise((resolve) => setTimeout(resolve, 500));
-			}
-			expect(found, 'Resend verification email should arrive').toBe(true);
+			// Resend accepted — poll for a NEW email (different ID from initial)
+			await expect
+				.poll(
+					async () => {
+						const emails = await getEmails();
+						return emails.some(
+							(e) =>
+								e.ID !== initialEmail.ID &&
+								e.To.some((t) => t.Address === resendEmail) &&
+								e.Subject.toLowerCase().includes('verify'),
+						);
+					},
+					{ timeout: 15000, message: 'Resend verification email should arrive' },
+				)
+				.toBe(true);
+		} else {
+			// Rate-limited is acceptable behavior
+			expect(resendResponse.status()).toBe(429);
 		}
 	});
 });

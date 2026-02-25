@@ -131,16 +131,13 @@ test.describe('Email Templates — API', { tag: ['@api', '@crud'] }, () => {
 			expect(response.ok()).toBe(true);
 
 			const body = (await response.json()) as {
-				slug: string;
-				subject: string;
-				emailBlocks: unknown[];
-				isSystem: boolean;
+				doc: { slug: string; subject: string; emailBlocks: unknown[]; isSystem: boolean };
 			};
-			expect(body.slug).toBe('password-reset');
-			expect(body.subject).toContain('{{appName}}');
-			expect(body.isSystem).toBe(true);
-			expect(Array.isArray(body.emailBlocks)).toBe(true);
-			expect(body.emailBlocks.length).toBeGreaterThan(0);
+			expect(body.doc.slug).toBe('password-reset');
+			expect(body.doc.subject).toContain('{{appName}}');
+			expect(body.doc.isSystem).toBe(true);
+			expect(Array.isArray(body.doc.emailBlocks)).toBe(true);
+			expect(body.doc.emailBlocks.length).toBeGreaterThan(0);
 		});
 
 		test('should update an email template', async ({ authenticatedPage }) => {
@@ -171,8 +168,8 @@ test.describe('Email Templates — API', { tag: ['@api', '@crud'] }, () => {
 			const readResponse = await authenticatedPage.request.get(
 				`/api/email-templates/${created.doc.id}`,
 			);
-			const updated = (await readResponse.json()) as { subject: string };
-			expect(updated.subject).toBe('Updated Subject — {{appName}}');
+			const updated = (await readResponse.json()) as { doc: { subject: string } };
+			expect(updated.doc.subject).toBe('Updated Subject — {{appName}}');
 
 			// Cleanup
 			await authenticatedPage.request.delete(`/api/email-templates/${created.doc.id}`);
@@ -224,6 +221,81 @@ test.describe('Email Templates — API', { tag: ['@api', '@crud'] }, () => {
 
 			// Cleanup
 			await authenticatedPage.request.delete(`/api/email-templates/${firstDoc.doc.id}`);
+		});
+	});
+
+	test.describe('System Template Protection', { tag: ['@security'] }, () => {
+		test('should reject deletion of system templates', async ({ authenticatedPage }) => {
+			// Find the password-reset system template
+			const listResponse = await authenticatedPage.request.get(
+				'/api/email-templates?where[slug][equals]=password-reset',
+			);
+			expect(listResponse.ok()).toBe(true);
+			const list = (await listResponse.json()) as { docs: Array<{ id: string }> };
+			expect(list.docs).toHaveLength(1);
+			const templateId = list.docs[0].id;
+
+			// Attempt to delete it — should be rejected by beforeDelete hook
+			const deleteResponse = await authenticatedPage.request.delete(
+				`/api/email-templates/${templateId}`,
+			);
+			expect(deleteResponse.ok()).toBe(false);
+
+			// Verify the template still exists
+			const readResponse = await authenticatedPage.request.get(
+				`/api/email-templates/${templateId}`,
+			);
+			expect(readResponse.ok()).toBe(true);
+		});
+
+		test('should reject changing isSystem to false on system templates', async ({
+			authenticatedPage,
+		}) => {
+			const listResponse = await authenticatedPage.request.get(
+				'/api/email-templates?where[slug][equals]=password-reset',
+			);
+			const list = (await listResponse.json()) as { docs: Array<{ id: string }> };
+			const templateId = list.docs[0].id;
+
+			const updateResponse = await authenticatedPage.request.patch(
+				`/api/email-templates/${templateId}`,
+				{ data: { isSystem: false } },
+			);
+			expect(updateResponse.ok()).toBe(false);
+		});
+
+		test('should reject changing slug on system templates', async ({ authenticatedPage }) => {
+			const listResponse = await authenticatedPage.request.get(
+				'/api/email-templates?where[slug][equals]=password-reset',
+			);
+			const list = (await listResponse.json()) as { docs: Array<{ id: string }> };
+			const templateId = list.docs[0].id;
+
+			const updateResponse = await authenticatedPage.request.patch(
+				`/api/email-templates/${templateId}`,
+				{ data: { slug: 'hacked-slug' } },
+			);
+			expect(updateResponse.ok()).toBe(false);
+		});
+
+		test('should allow updating name and subject on system templates', async ({
+			authenticatedPage,
+		}) => {
+			const listResponse = await authenticatedPage.request.get(
+				'/api/email-templates?where[slug][equals]=password-reset',
+			);
+			const list = (await listResponse.json()) as {
+				docs: Array<{ id: string; name: string }>;
+			};
+			const templateId = list.docs[0].id;
+			const originalName = list.docs[0].name;
+
+			// Updating name on a system template should succeed
+			const updateResponse = await authenticatedPage.request.patch(
+				`/api/email-templates/${templateId}`,
+				{ data: { name: originalName } },
+			);
+			expect(updateResponse.ok()).toBe(true);
 		});
 	});
 

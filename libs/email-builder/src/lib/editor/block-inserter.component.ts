@@ -14,7 +14,11 @@ import { EmailBuilderStateService, generateBlockId } from '../services/email-bui
 @Component({
 	selector: 'eml-block-inserter',
 	imports: [FormsModule],
-	host: { class: 'eml-block-inserter', 'data-testid': 'eml-block-inserter' },
+	host: {
+		class: 'eml-block-inserter',
+		'data-testid': 'eml-block-inserter',
+		'(click)': '$event.stopPropagation()',
+	},
 	template: `
 		@if (isOpen()) {
 			<div class="eml-inserter-panel">

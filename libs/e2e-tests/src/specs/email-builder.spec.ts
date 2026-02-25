@@ -282,11 +282,13 @@ test.describe('Email Builder', { tag: ['@admin'] }, () => {
 		// Click export button
 		await authenticatedPage.locator('[data-testid="export-html-button"]').click();
 
-		// Output textarea should contain valid HTML
+		// Output textarea should contain valid HTML (poll to allow signal propagation)
 		const outputTextarea = authenticatedPage.locator('[data-testid="email-builder-output"]');
-		const htmlContent = await outputTextarea.inputValue();
+		await expect
+			.poll(() => outputTextarea.inputValue(), { timeout: 5000 })
+			.toContain('<!DOCTYPE html>');
 
-		expect(htmlContent).toContain('<!DOCTYPE html>');
+		const htmlContent = await outputTextarea.inputValue();
 		expect(htmlContent).toContain('role="presentation"');
 		expect(htmlContent).toContain('background-color');
 	});
@@ -413,7 +415,7 @@ test.describe('Email Builder', { tag: ['@admin'] }, () => {
 			const previewFrame = iframe.contentFrame();
 
 			// Default header title
-			await expect(previewFrame.locator('h1')).toContainText('Welcome', { timeout: 5000 });
+			await expect(previewFrame.locator('h1')).toContainText('Heading', { timeout: 5000 });
 
 			// Update the header title
 			const titleInput = editorContainer.locator('input').first();
@@ -606,7 +608,8 @@ test.describe('Email Builder', { tag: ['@admin'] }, () => {
 			const editor = block.locator('[data-testid="block-editor-container"]');
 			const labelInput = editor.locator('input[type="text"]').first();
 
-			await labelInput.clear();
+			await labelInput.click();
+			await labelInput.press('ControlOrMeta+a');
 			await labelInput.pressSequentially('Click Me', { delay: 50 });
 
 			await expect(labelInput).toHaveValue('Click Me');

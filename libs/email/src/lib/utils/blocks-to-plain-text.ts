@@ -1,5 +1,8 @@
 import type { EmailBlock } from '../../types';
 
+/** Maximum nesting depth for columns blocks to prevent stack overflow from recursive structures. */
+const MAX_BLOCK_DEPTH = 5;
+
 /**
  * Extract plain text content from email blocks.
  *
@@ -7,11 +10,11 @@ import type { EmailBlock } from '../../types';
  * plain text fallback in multipart emails. Visual-only blocks (divider,
  * spacer, image) are skipped; text-bearing blocks are joined with blank lines.
  */
-export function blocksToPlainText(blocks: EmailBlock[]): string {
+export function blocksToPlainText(blocks: EmailBlock[], depth = 0): string {
 	const lines: string[] = [];
 
 	for (const block of blocks) {
-		const text = blockToText(block);
+		const text = blockToText(block, depth);
 		if (text) {
 			lines.push(text);
 		}
@@ -20,7 +23,7 @@ export function blocksToPlainText(blocks: EmailBlock[]): string {
 	return lines.join('\n\n');
 }
 
-function blockToText(block: EmailBlock): string {
+function blockToText(block: EmailBlock, depth: number): string {
 	switch (block.type) {
 		case 'header':
 			return headerToText(block.data);
@@ -31,7 +34,11 @@ function blockToText(block: EmailBlock): string {
 		case 'footer':
 			return String(block.data['text'] ?? '');
 		case 'columns':
-			return columnsToText(block.data);
+			if (depth >= MAX_BLOCK_DEPTH) {
+				console.warn('[momentum:email] Max nesting depth reached, skipping columns block');
+				return '';
+			}
+			return columnsToText(block.data, depth);
 		case 'divider':
 		case 'spacer':
 		case 'image':
@@ -57,7 +64,7 @@ function buttonToText(data: Record<string, unknown>): string {
 	return `${label}: ${href}`;
 }
 
-function columnsToText(data: Record<string, unknown>): string {
+function columnsToText(data: Record<string, unknown>, depth: number): string {
 	const columns = data['columns'];
 	if (!Array.isArray(columns)) return '';
 
@@ -65,7 +72,7 @@ function columnsToText(data: Record<string, unknown>): string {
 	for (const col of columns) {
 		if (col && typeof col === 'object' && Array.isArray(col.blocks)) {
 			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- column blocks stored as unknown[], narrowed by array check
-			const colText = blocksToPlainText(col.blocks as EmailBlock[]);
+			const colText = blocksToPlainText(col.blocks as EmailBlock[], depth + 1);
 			if (colText) {
 				parts.push(colText);
 			}

@@ -1,5 +1,4 @@
-/* eslint-disable local/no-legacy-angular-decorators -- JIT mode (renderApplication) requires @Input() decorators */
-import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
 
 @Component({
 	selector: 'eml-footer',
@@ -9,10 +8,10 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
 			width="100%"
 			cellspacing="0"
 			cellpadding="0"
-			[attr.style]="tableStyle"
+			[attr.style]="tableStyle()"
 		>
 			<tr>
-				<td [attr.style]="cellStyle">
+				<td [attr.style]="cellStyle()">
 					<ng-content />
 				</td>
 			</tr>
@@ -21,17 +20,16 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmlFooter {
-	@Input() maxWidth = '480px';
-	@Input() color = '#71717a';
-	@Input() fontSize = '12px';
-	@Input() textAlign: 'left' | 'center' | 'right' = 'center';
-	@Input() padding = '20px 0 0';
+	readonly maxWidth = input('480px');
+	readonly color = input('#71717a');
+	readonly fontSize = input('12px');
+	readonly textAlign = input<'left' | 'center' | 'right'>('center');
+	readonly padding = input('20px 0 0');
 
-	get tableStyle(): string {
-		return `max-width: ${this.maxWidth}; margin: 0 auto;`;
-	}
+	readonly tableStyle = computed(() => `max-width: ${this.maxWidth()}; margin: 0 auto;`);
 
-	get cellStyle(): string {
-		return `text-align: ${this.textAlign}; color: ${this.color}; font-size: ${this.fontSize}; padding: ${this.padding};`;
-	}
+	readonly cellStyle = computed(
+		() =>
+			`text-align: ${this.textAlign()}; color: ${this.color()}; font-size: ${this.fontSize()}; padding: ${this.padding()};`,
+	);
 }

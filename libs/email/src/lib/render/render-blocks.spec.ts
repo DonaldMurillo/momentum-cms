@@ -14,6 +14,13 @@ describe('renderEmailFromBlocks', () => {
 		expect(html).toContain('</html>');
 	});
 
+	it('should render a valid HTML document with empty blocks array', () => {
+		const template: EmailTemplate = { blocks: [] };
+		const html = renderEmailFromBlocks(template);
+		expect(html).toContain('<!DOCTYPE html>');
+		expect(html).toContain('</html>');
+	});
+
 	it('should render a header block with title and subtitle', () => {
 		const template: EmailTemplate = {
 			blocks: [
@@ -359,7 +366,10 @@ describe('renderEmailFromBlocks', () => {
 				],
 			};
 			const html = renderEmailFromBlocks(template);
-			expect(html).toContain('<table');
+			expect(html).toContain('<!DOCTYPE html>');
+			expect(html).toContain('</html>');
+			// Should NOT produce column cells since data was invalid
+			expect(html).not.toContain('width: 50%');
 		});
 
 		it('should filter out invalid nested blocks in columns', () => {
@@ -383,6 +393,72 @@ describe('renderEmailFromBlocks', () => {
 			};
 			const html = renderEmailFromBlocks(template);
 			expect(html).toContain('Valid');
+		});
+	});
+
+	describe('recursion depth limit', () => {
+		it('should limit nesting depth to prevent stack overflow', () => {
+			// Build a deeply nested columns structure (10 levels)
+			function makeNestedColumns(depth: number): EmailBlock {
+				if (depth === 0) {
+					return { type: 'text', data: { content: `leaf-${depth}` }, id: `leaf-${depth}` };
+				}
+				return {
+					type: 'columns',
+					data: {
+						columns: [{ blocks: [makeNestedColumns(depth - 1)] }],
+					},
+					id: `col-${depth}`,
+				};
+			}
+
+			const template: EmailTemplate = {
+				blocks: [makeNestedColumns(10)],
+			};
+			// Should not throw (stack overflow) — should just stop rendering at the limit
+			const html = renderEmailFromBlocks(template);
+			expect(html).toContain('<!DOCTYPE html>');
+			// The deepest leaf should NOT appear because it exceeds max depth
+			expect(html).not.toContain('leaf-0');
+		});
+
+		it('should render columns within allowed depth', () => {
+			const template: EmailTemplate = {
+				blocks: [
+					{
+						type: 'columns',
+						data: {
+							columns: [
+								{
+									blocks: [
+										{
+											type: 'columns',
+											data: {
+												columns: [
+													{
+														blocks: [
+															{
+																type: 'text',
+																data: { content: 'nested-ok' },
+																id: 'inner-text',
+															},
+														],
+													},
+												],
+											},
+											id: 'inner-cols',
+										},
+									],
+								},
+							],
+						},
+						id: 'outer-cols',
+					},
+				],
+			};
+			const html = renderEmailFromBlocks(template);
+			// 2 levels of nesting — should be within limits
+			expect(html).toContain('nested-ok');
 		});
 	});
 
@@ -420,6 +496,35 @@ describe('renderEmailFromBlocks', () => {
 			};
 			const html = renderEmailFromBlocks(template);
 			expect(html).not.toContain('url(');
+		});
+	});
+
+	describe('font-family preservation', () => {
+		it('should preserve quoted font names in default theme', () => {
+			const template: EmailTemplate = {
+				blocks: [{ type: 'text', data: { content: 'Test' }, id: '1' }],
+			};
+			const html = renderEmailFromBlocks(template);
+			// Default theme has 'Segoe UI' and 'Helvetica Neue' which require quotes
+			expect(html).toContain("'Segoe UI'");
+			expect(html).toContain("'Helvetica Neue'");
+		});
+
+		it('should preserve quoted font names in custom theme', () => {
+			const template: EmailTemplate = {
+				blocks: [{ type: 'text', data: { content: 'Test' }, id: '1' }],
+				theme: {
+					primaryColor: '#000',
+					backgroundColor: '#fff',
+					textColor: '#333',
+					mutedColor: '#999',
+					fontFamily: "'Custom Font', 'Another Name', monospace",
+					borderRadius: '8px',
+				},
+			};
+			const html = renderEmailFromBlocks(template);
+			expect(html).toContain("'Custom Font'");
+			expect(html).toContain("'Another Name'");
 		});
 	});
 

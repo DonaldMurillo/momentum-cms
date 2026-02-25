@@ -45,10 +45,32 @@ export const EmailTemplatesCollection = defineCollection({
 			description: 'System templates are seeded by the platform and cannot be deleted.',
 		}),
 	],
+	indexes: [{ columns: ['slug'], unique: true }],
 	access: {
 		read: hasRole('admin'),
 		create: hasRole('admin'),
 		update: hasRole('admin'),
 		delete: hasRole('admin'),
+	},
+	hooks: {
+		beforeDelete: [
+			({ doc }) => {
+				if (doc?.['isSystem']) {
+					throw new Error('System templates cannot be deleted');
+				}
+			},
+		],
+		beforeChange: [
+			({ data, operation, originalDoc }) => {
+				if (operation === 'update' && originalDoc?.['isSystem']) {
+					if (data?.['isSystem'] === false) {
+						throw new Error('Cannot modify isSystem flag on system templates');
+					}
+					if (data?.['slug'] !== undefined && data['slug'] !== originalDoc['slug']) {
+						throw new Error('Cannot change slug on system templates');
+					}
+				}
+			},
+		],
 	},
 });

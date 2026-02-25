@@ -1,23 +1,23 @@
-/* eslint-disable local/no-legacy-angular-decorators -- JIT mode (renderApplication) requires @Input() decorators */
-import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
 
 @Component({
 	selector: 'eml-text',
 	template: `
-		<p [attr.style]="pStyle">
+		<p [attr.style]="pStyle()">
 			<ng-content />
 		</p>
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmlText {
-	@Input() color = '#3f3f46';
-	@Input() fontSize = '16px';
-	@Input() lineHeight = '1.6';
-	@Input() margin = '0 0 16px';
-	@Input() textAlign: 'left' | 'center' | 'right' = 'left';
+	readonly color = input('#3f3f46');
+	readonly fontSize = input('16px');
+	readonly lineHeight = input('1.6');
+	readonly margin = input('0 0 16px');
+	readonly textAlign = input<'left' | 'center' | 'right'>('left');
 
-	get pStyle(): string {
-		return `margin: ${this.margin}; color: ${this.color}; font-size: ${this.fontSize}; line-height: ${this.lineHeight}; text-align: ${this.textAlign};`;
-	}
+	readonly pStyle = computed(
+		() =>
+			`margin: ${this.margin()}; color: ${this.color()}; font-size: ${this.fontSize()}; line-height: ${this.lineHeight()}; text-align: ${this.textAlign()};`,
+	);
 }

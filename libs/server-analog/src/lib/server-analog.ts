@@ -1113,6 +1113,10 @@ export function createComprehensiveMomentumHandler(
 		// GET loads from DB, POST renders from request body (live preview)
 		// ============================================
 		if (seg2 === 'preview' && seg1 && (method === 'GET' || method === 'POST')) {
+			if (!user) {
+				utils.setResponseStatus(event, 401);
+				return { error: 'Authentication required to access preview' };
+			}
 			try {
 				const collectionSlug = seg0;
 				const docId = seg1;
@@ -1121,6 +1125,16 @@ export function createComprehensiveMomentumHandler(
 				if (!collectionConfig) {
 					utils.setResponseStatus(event, 404);
 					return { error: 'Collection not found' };
+				}
+
+				// Enforce collection-level access.read before rendering
+				const accessFn = collectionConfig.access?.read;
+				if (accessFn) {
+					const allowed = await Promise.resolve(accessFn({ req: { user } }));
+					if (!allowed) {
+						utils.setResponseStatus(event, 403);
+						return { error: 'Access denied' };
+					}
 				}
 
 				let docRecord: Record<string, unknown>;

@@ -61,7 +61,7 @@ test.describe('Redirects Admin UI - Dashboard & Sidebar', { tag: ['@redirects', 
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const settingsSection = authenticatedPage.getByRole('region', { name: 'Settings' });
-		await settingsSection.getByRole('link', { name: 'Create' }).click();
+		await settingsSection.locator('a[href="/admin/collections/redirects/new"]').click();
 
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/redirects\/new/);
 	});

@@ -1,27 +1,27 @@
-/* eslint-disable local/no-legacy-angular-decorators -- JIT mode (renderApplication) requires @Input() decorators */
-import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
 
 @Component({
 	selector: 'eml-image',
 	template: `
 		<img
-			[attr.src]="src"
-			[attr.alt]="alt"
-			[attr.width]="width"
-			[attr.height]="height"
-			[attr.style]="imgStyle"
+			[attr.src]="src()"
+			[attr.alt]="alt()"
+			[attr.width]="width()"
+			[attr.height]="height()"
+			[attr.style]="imgStyle()"
 		/>
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmlImage {
-	@Input() src = '';
-	@Input() alt = '';
-	@Input() width: string | undefined = undefined;
-	@Input() height: string | undefined = undefined;
-	@Input() borderRadius = '0';
+	readonly src = input('');
+	readonly alt = input('');
+	readonly width = input<string | undefined>(undefined);
+	readonly height = input<string | undefined>(undefined);
+	readonly borderRadius = input('0');
 
-	get imgStyle(): string {
-		return `display: block; max-width: 100%; border: 0; outline: none; border-radius: ${this.borderRadius};`;
-	}
+	readonly imgStyle = computed(
+		() =>
+			`display: block; max-width: 100%; border: 0; outline: none; border-radius: ${this.borderRadius()};`,
+	);
 }

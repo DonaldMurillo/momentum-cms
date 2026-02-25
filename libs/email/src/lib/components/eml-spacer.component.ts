@@ -1,15 +1,14 @@
-/* eslint-disable local/no-legacy-angular-decorators -- JIT mode (renderApplication) requires @Input() decorators */
-import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
 
 @Component({
 	selector: 'eml-spacer',
-	template: `<div [attr.style]="spacerStyle"></div>`,
+	template: `<div [attr.style]="spacerStyle()"></div>`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmlSpacer {
-	@Input() height = '24px';
+	readonly height = input('24px');
 
-	get spacerStyle(): string {
-		return `height: ${this.height}; line-height: ${this.height}; font-size: 1px;`;
-	}
+	readonly spacerStyle = computed(
+		() => `height: ${this.height()}; line-height: ${this.height()}; font-size: 1px;`,
+	);
 }

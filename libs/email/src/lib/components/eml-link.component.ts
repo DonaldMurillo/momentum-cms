@@ -1,21 +1,20 @@
-/* eslint-disable local/no-legacy-angular-decorators -- JIT mode (renderApplication) requires @Input() decorators */
-import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
 
 @Component({
 	selector: 'eml-link',
 	template: `
-		<a [attr.href]="href" [attr.style]="linkStyle" target="_blank">
+		<a [attr.href]="href()" [attr.style]="linkStyle()" target="_blank">
 			<ng-content />
 		</a>
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmlLink {
-	@Input() href = '';
-	@Input() color = '#18181b';
-	@Input() textDecoration = 'underline';
+	readonly href = input('');
+	readonly color = input('#18181b');
+	readonly textDecoration = input('underline');
 
-	get linkStyle(): string {
-		return `color: ${this.color}; text-decoration: ${this.textDecoration};`;
-	}
+	readonly linkStyle = computed(
+		() => `color: ${this.color()}; text-decoration: ${this.textDecoration()};`,
+	);
 }

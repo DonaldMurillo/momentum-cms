@@ -1,5 +1,4 @@
-/* eslint-disable local/no-legacy-angular-decorators -- JIT mode (renderApplication) requires @Input() decorators */
-import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
 
 @Component({
 	selector: 'eml-body',
@@ -9,10 +8,10 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
 			width="100%"
 			cellspacing="0"
 			cellpadding="0"
-			[attr.style]="tableStyle"
+			[attr.style]="tableStyle()"
 		>
 			<tr>
-				<td [attr.style]="cellStyle">
+				<td [attr.style]="cellStyle()">
 					<ng-content />
 				</td>
 			</tr>
@@ -21,16 +20,16 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmlBody {
-	@Input() backgroundColor = '#f4f4f5';
-	@Input() fontFamily =
-		"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
-	@Input() padding = '40px 20px';
+	readonly backgroundColor = input('#f4f4f5');
+	readonly fontFamily = input(
+		"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+	);
+	readonly padding = input('40px 20px');
 
-	get tableStyle(): string {
-		return `background-color: ${this.backgroundColor}; font-family: ${this.fontFamily}; line-height: 1.6; margin: 0; padding: 0;`;
-	}
+	readonly tableStyle = computed(
+		() =>
+			`background-color: ${this.backgroundColor()}; font-family: ${this.fontFamily()}; line-height: 1.6; margin: 0; padding: 0;`,
+	);
 
-	get cellStyle(): string {
-		return `padding: ${this.padding};`;
-	}
+	readonly cellStyle = computed(() => `padding: ${this.padding()};`);
 }

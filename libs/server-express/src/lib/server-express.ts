@@ -667,11 +667,25 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			const slug = req.params['collection'];
 			const id = req.params['id'];
 			const user = extractUserFromRequest(req);
+			if (!user) {
+				res.status(401).json({ error: 'Authentication required to access preview' });
+				return;
+			}
 
 			const collectionConfig = config.collections.find((c) => c.slug === slug);
 			if (!collectionConfig) {
 				res.status(404).json({ error: 'Collection not found' });
 				return;
+			}
+
+			// Enforce collection-level access.read before rendering
+			const accessFn = collectionConfig.access?.read;
+			if (accessFn) {
+				const allowed = await Promise.resolve(accessFn({ req: { user } }));
+				if (!allowed) {
+					res.status(403).json({ error: 'Access denied' });
+					return;
+				}
 			}
 
 			let doc: Record<string, unknown>;

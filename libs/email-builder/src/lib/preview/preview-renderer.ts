@@ -3,6 +3,7 @@ import {
 	DEFAULT_EMAIL_THEME,
 	sanitizeAlignment,
 	sanitizeCssValue,
+	sanitizeFontFamily,
 	sanitizeCssNumber,
 	sanitizeUrl,
 	isValidBlock,
@@ -23,7 +24,7 @@ export function blocksToPreviewHtml(blocks: EmailBlock[], theme?: Partial<EmailT
 		}
 		return true;
 	});
-	const blocksHtml = validBlocks.map((block) => renderBlock(block, t)).join('\n');
+	const blocksHtml = validBlocks.map((block) => renderBlock(block, t, 0)).join('\n');
 	return wrapPreviewDocument(blocksHtml, t);
 }
 
@@ -37,7 +38,7 @@ function escapeHtml(str: string): string {
 }
 
 function wrapPreviewDocument(content: string, theme: EmailTheme): string {
-	const fontFamily = sanitizeCssValue(theme.fontFamily);
+	const fontFamily = sanitizeFontFamily(theme.fontFamily);
 	const bgColor = sanitizeCssValue(theme.backgroundColor);
 	const borderRadius = sanitizeCssValue(theme.borderRadius);
 
@@ -65,7 +66,10 @@ function wrapPreviewDocument(content: string, theme: EmailTheme): string {
 </html>`;
 }
 
-function renderBlock(block: EmailBlock, theme: EmailTheme): string {
+/** Maximum nesting depth for columns blocks to prevent stack overflow from recursive structures. */
+const MAX_BLOCK_DEPTH = 5;
+
+function renderBlock(block: EmailBlock, theme: EmailTheme, depth: number): string {
 	switch (block.type) {
 		case 'header':
 			return renderHeaderBlock(block.data, theme);
@@ -80,7 +84,11 @@ function renderBlock(block: EmailBlock, theme: EmailTheme): string {
 		case 'spacer':
 			return renderSpacerBlock(block.data);
 		case 'columns':
-			return renderColumnsBlock(block.data, theme);
+			if (depth >= MAX_BLOCK_DEPTH) {
+				console.warn('[momentum:email-builder] Max nesting depth reached, skipping columns block');
+				return '';
+			}
+			return renderColumnsBlock(block.data, theme, depth);
 		case 'footer':
 			return renderFooterBlock(block.data, theme);
 		default:
@@ -152,20 +160,24 @@ function renderSpacerBlock(data: Record<string, unknown>): string {
 	return `<div style="height: ${height}px; line-height: ${height}px; font-size: 1px;">&nbsp;</div>`;
 }
 
-function renderColumnsBlock(data: Record<string, unknown>, theme: EmailTheme): string {
+function renderColumnsBlock(
+	data: Record<string, unknown>,
+	theme: EmailTheme,
+	depth: number,
+): string {
 	const rawColumns = data['columns'];
 	const columns = Array.isArray(rawColumns) ? rawColumns : [];
 	const width = Math.floor(100 / (columns.length || 1));
 
 	const tds = columns
 		.map((col: unknown) => {
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowing unknown column objects
 			const colObj =
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowing unknown column objects
 				typeof col === 'object' && col !== null ? (col as Record<string, unknown>) : {};
 			const rawBlocks = colObj['blocks'];
 			const colContent = (Array.isArray(rawBlocks) ? rawBlocks : [])
 				.filter(isValidBlock)
-				.map((b) => renderBlock(b, theme))
+				.map((b) => renderBlock(b, theme, depth + 1))
 				.join('\n');
 			return `<td style="width: ${width}%; vertical-align: top; padding: 0 8px;">${colContent}</td>`;
 		})

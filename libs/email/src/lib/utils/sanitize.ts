@@ -29,6 +29,23 @@ export function sanitizeCssValue(value: string): string {
 }
 
 /**
+ * Sanitize a CSS font-family value.
+ *
+ * Like `sanitizeCssValue` but preserves single and double quotes,
+ * which are required around font names containing spaces
+ * (e.g. `'Segoe UI'`, `"Helvetica Neue"`).
+ *
+ * Quotes are safe inside `style="font-family: ..."` because the
+ * HTML attribute uses double quotes and CSS font-family values are
+ * comma-delimited — quotes cannot break out of the style context.
+ *
+ * Strips: ; { } ( ) < > \
+ */
+export function sanitizeFontFamily(value: string): string {
+	return value.replace(/[;{}()<>\\]/g, '');
+}
+
+/**
  * Sanitize a numeric CSS value (e.g., fontSize, height).
  * Parses as a finite non-negative number; returns the fallback string if invalid.
  */
