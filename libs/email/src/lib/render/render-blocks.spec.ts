@@ -241,6 +241,188 @@ describe('renderEmailFromBlocks', () => {
 		});
 	});
 
+	// --- URL protocol sanitization ---
+
+	describe('URL sanitization', () => {
+		it('should block javascript: in button href', () => {
+			const template: EmailTemplate = {
+				blocks: [
+					{
+						type: 'button',
+						data: { label: 'Click', href: 'javascript:alert(1)' },
+						id: '1',
+					},
+				],
+			};
+			const html = renderEmailFromBlocks(template);
+			expect(html).not.toContain('javascript:');
+			expect(html).toContain('href="#"');
+		});
+
+		it('should block data: URLs in image src', () => {
+			const template: EmailTemplate = {
+				blocks: [
+					{
+						type: 'image',
+						data: { src: 'data:text/html,<script>alert(1)</script>', alt: 'x' },
+						id: '1',
+					},
+				],
+			};
+			const html = renderEmailFromBlocks(template);
+			expect(html).not.toContain('data:text/html');
+		});
+
+		it('should block javascript: in image href', () => {
+			const template: EmailTemplate = {
+				blocks: [
+					{
+						type: 'image',
+						data: { src: 'https://img.png', alt: 'x', href: 'javascript:void(0)' },
+						id: '1',
+					},
+				],
+			};
+			const html = renderEmailFromBlocks(template);
+			expect(html).not.toContain('javascript:');
+		});
+
+		it('should allow valid https URLs in button href', () => {
+			const template: EmailTemplate = {
+				blocks: [
+					{
+						type: 'button',
+						data: { label: 'Go', href: 'https://safe.com' },
+						id: '1',
+					},
+				],
+			};
+			const html = renderEmailFromBlocks(template);
+			expect(html).toContain('href="https://safe.com"');
+		});
+
+		it('should render empty image block as HTML comment', () => {
+			const template: EmailTemplate = {
+				blocks: [
+					{
+						type: 'image',
+						data: { src: '', alt: 'placeholder' },
+						id: '1',
+					},
+				],
+			};
+			const html = renderEmailFromBlocks(template);
+			expect(html).not.toContain('<img');
+			expect(html).toContain('<!-- image block: no src configured -->');
+		});
+	});
+
+	// --- Block ID validation ---
+
+	describe('block id validation', () => {
+		it('should skip blocks without an id field', () => {
+			const template: EmailTemplate = {
+				blocks: [{ type: 'text', data: { content: 'no-id' } } as unknown as EmailBlock],
+			};
+			const html = renderEmailFromBlocks(template);
+			expect(html).not.toContain('no-id');
+		});
+
+		it('should skip blocks with empty id', () => {
+			const template: EmailTemplate = {
+				blocks: [{ type: 'text', data: { content: 'empty-id' }, id: '' }],
+			};
+			const html = renderEmailFromBlocks(template);
+			expect(html).not.toContain('empty-id');
+		});
+
+		it('should skip blocks with non-string id', () => {
+			const template: EmailTemplate = {
+				blocks: [{ type: 'text', data: { content: 'num-id' }, id: 42 as unknown as string }],
+			};
+			const html = renderEmailFromBlocks(template);
+			expect(html).not.toContain('num-id');
+		});
+	});
+
+	// --- Columns block validation ---
+
+	describe('columns block hardening', () => {
+		it('should handle non-array columns data gracefully', () => {
+			const template: EmailTemplate = {
+				blocks: [
+					{
+						type: 'columns',
+						data: { columns: 'not-an-array' },
+						id: '1',
+					},
+				],
+			};
+			const html = renderEmailFromBlocks(template);
+			expect(html).toContain('<table');
+		});
+
+		it('should filter out invalid nested blocks in columns', () => {
+			const template: EmailTemplate = {
+				blocks: [
+					{
+						type: 'columns',
+						data: {
+							columns: [
+								{
+									blocks: [
+										{ type: 'text', data: { content: 'Valid' }, id: 'a' },
+										{ type: 'text', data: null } as unknown as EmailBlock,
+									],
+								},
+							],
+						},
+						id: '1',
+					},
+				],
+			};
+			const html = renderEmailFromBlocks(template);
+			expect(html).toContain('Valid');
+		});
+	});
+
+	// --- Theme sanitization ---
+
+	describe('theme sanitization', () => {
+		it('should sanitize theme fontFamily to prevent XSS breakout', () => {
+			const template: EmailTemplate = {
+				blocks: [{ type: 'text', data: { content: 'Test' }, id: '1' }],
+				theme: {
+					primaryColor: '#000',
+					backgroundColor: '#fff',
+					textColor: '#333',
+					mutedColor: '#999',
+					fontFamily: 'Arial</style><script>alert(1)</script>',
+					borderRadius: '8px',
+				},
+			};
+			const html = renderEmailFromBlocks(template);
+			expect(html).not.toContain('<script>');
+			expect(html).not.toContain('</style>');
+		});
+
+		it('should sanitize theme backgroundColor', () => {
+			const template: EmailTemplate = {
+				blocks: [{ type: 'text', data: { content: 'Test' }, id: '1' }],
+				theme: {
+					primaryColor: '#000',
+					backgroundColor: '#fff; background-image: url(evil)',
+					textColor: '#333',
+					mutedColor: '#999',
+					fontFamily: 'Arial',
+					borderRadius: '8px',
+				},
+			};
+			const html = renderEmailFromBlocks(template);
+			expect(html).not.toContain('url(');
+		});
+	});
+
 	// --- Issue #6: CSS/attribute sanitization ---
 
 	describe('CSS and attribute sanitization', () => {

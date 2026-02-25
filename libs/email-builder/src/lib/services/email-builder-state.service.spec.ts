@@ -212,9 +212,52 @@ describe('generateBlockId', () => {
 		expect(ids.size).toBe(100);
 	});
 
-	it('should generate short alphanumeric strings', () => {
+	it('should generate valid UUID strings', () => {
 		const id = generateBlockId();
-		expect(id).toMatch(/^[a-z0-9]+$/);
-		expect(id.length).toBeGreaterThanOrEqual(4);
+		expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+	});
+});
+
+describe('hardening', () => {
+	let service: EmailBuilderStateService;
+
+	beforeEach(() => {
+		TestBed.configureTestingModule({ providers: [EmailBuilderStateService] });
+		service = TestBed.inject(EmailBuilderStateService);
+	});
+
+	it('addBlock should clamp negative index to 0', () => {
+		service.setBlocks([makeBlock({ id: 'a' })]);
+		service.addBlock(makeBlock({ id: 'b' }), -5);
+		expect(service.blocks()[0].id).toBe('b');
+	});
+
+	it('addBlock should clamp index beyond length to end', () => {
+		service.setBlocks([makeBlock({ id: 'a' })]);
+		service.addBlock(makeBlock({ id: 'b' }), 999);
+		expect(service.blocks()[1].id).toBe('b');
+	});
+
+	it('updateBlockData should not overwrite block id', () => {
+		service.setBlocks([makeBlock({ id: 'a', data: { content: 'hi' } })]);
+		service.updateBlockData('a', { id: 'evil', content: 'new' });
+		expect(service.blocks()[0].id).toBe('a');
+		expect(service.blocks()[0].data['content']).toBe('new');
+	});
+
+	it('updateBlockData should not overwrite block type', () => {
+		service.setBlocks([makeBlock({ id: 'a', type: 'text', data: {} })]);
+		service.updateBlockData('a', { type: 'evil' });
+		expect(service.blocks()[0].type).toBe('text');
+	});
+
+	it('duplicateBlock should deep clone data (no shared references)', () => {
+		const nested = { blocks: [{ id: 'inner', type: 'text', data: { content: 'X' } }] };
+		service.setBlocks([makeBlock({ id: 'a', type: 'columns', data: { columns: [nested] } })]);
+		service.duplicateBlock('a');
+
+		const original = service.blocks()[0].data['columns'] as Array<{ blocks: unknown[] }>;
+		const duplicate = service.blocks()[1].data['columns'] as Array<{ blocks: unknown[] }>;
+		expect(original[0].blocks).not.toBe(duplicate[0].blocks);
 	});
 });

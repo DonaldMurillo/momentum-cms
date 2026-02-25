@@ -31,7 +31,12 @@ export { EmlFooter } from './lib/components/eml-footer.component';
 // Utilities
 export { escapeHtml } from './lib/utils/escape-html';
 export { inlineCss } from './lib/utils/css-inliner';
-export { sanitizeAlignment, sanitizeCssValue, sanitizeCssNumber } from './lib/utils/sanitize';
+export {
+	sanitizeAlignment,
+	sanitizeCssValue,
+	sanitizeCssNumber,
+	sanitizeUrl,
+} from './lib/utils/sanitize';
 export { blocksToPlainText } from './lib/utils/blocks-to-plain-text';
 
 // Validation

@@ -4,6 +4,7 @@ import {
 	sanitizeAlignment,
 	sanitizeCssValue,
 	sanitizeCssNumber,
+	sanitizeUrl,
 	isValidBlock,
 } from '@momentumcms/email';
 
@@ -36,17 +37,21 @@ function escapeHtml(str: string): string {
 }
 
 function wrapPreviewDocument(content: string, theme: EmailTheme): string {
+	const fontFamily = sanitizeCssValue(theme.fontFamily);
+	const bgColor = sanitizeCssValue(theme.backgroundColor);
+	const borderRadius = sanitizeCssValue(theme.borderRadius);
+
 	return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; font-family: ${theme.fontFamily}; background-color: ${theme.backgroundColor}; line-height: 1.6;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: ${theme.backgroundColor};">
+<body style="margin: 0; padding: 0; font-family: ${fontFamily}; background-color: ${bgColor}; line-height: 1.6;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: ${bgColor};">
     <tr>
       <td style="padding: 40px 20px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 480px; margin: 0 auto; background-color: #ffffff; border-radius: ${theme.borderRadius}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 480px; margin: 0 auto; background-color: #ffffff; border-radius: ${borderRadius}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
           <tr>
             <td style="padding: 40px;">
               ${content}
@@ -102,7 +107,7 @@ function renderTextBlock(data: Record<string, unknown>, theme: EmailTheme): stri
 
 function renderButtonBlock(data: Record<string, unknown>, theme: EmailTheme): string {
 	const label = escapeHtml(String(data['label'] ?? 'Click here'));
-	const href = escapeHtml(String(data['href'] ?? '#'));
+	const href = escapeHtml(sanitizeUrl(String(data['href'] ?? '#')));
 	const bgColor = sanitizeCssValue(String(data['backgroundColor'] ?? theme.primaryColor));
 	const color = sanitizeCssValue(String(data['color'] ?? '#ffffff'));
 	const alignment = sanitizeAlignment(String(data['alignment'] ?? 'left'));
@@ -117,14 +122,17 @@ function renderButtonBlock(data: Record<string, unknown>, theme: EmailTheme): st
 }
 
 function renderImageBlock(data: Record<string, unknown>): string {
-	const src = escapeHtml(String(data['src'] ?? ''));
+	const rawSrc = String(data['src'] ?? '').trim();
+	if (!rawSrc) return '<!-- image block: no src configured -->';
+
+	const src = escapeHtml(sanitizeUrl(rawSrc));
 	const alt = escapeHtml(String(data['alt'] ?? ''));
 	const width = sanitizeCssValue(String(data['width'] ?? '100%'));
 
 	const img = `<img src="${src}" alt="${alt}" width="${width}" style="display: block; max-width: 100%; height: auto; border: 0;">`;
 
 	if (data['href']) {
-		const href = escapeHtml(String(data['href']));
+		const href = escapeHtml(sanitizeUrl(String(data['href'])));
 		return `<a href="${href}" style="display: block;">${img}</a>`;
 	}
 
@@ -145,13 +153,20 @@ function renderSpacerBlock(data: Record<string, unknown>): string {
 }
 
 function renderColumnsBlock(data: Record<string, unknown>, theme: EmailTheme): string {
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-	const columns = (data['columns'] as Array<{ blocks: EmailBlock[] }>) ?? [];
+	const rawColumns = data['columns'];
+	const columns = Array.isArray(rawColumns) ? rawColumns : [];
 	const width = Math.floor(100 / (columns.length || 1));
 
 	const tds = columns
-		.map((col) => {
-			const colContent = (col.blocks ?? []).map((b) => renderBlock(b, theme)).join('\n');
+		.map((col: unknown) => {
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowing unknown column objects
+			const colObj =
+				typeof col === 'object' && col !== null ? (col as Record<string, unknown>) : {};
+			const rawBlocks = colObj['blocks'];
+			const colContent = (Array.isArray(rawBlocks) ? rawBlocks : [])
+				.filter(isValidBlock)
+				.map((b) => renderBlock(b, theme))
+				.join('\n');
 			return `<td style="width: ${width}%; vertical-align: top; padding: 0 8px;">${colContent}</td>`;
 		})
 		.join('\n');

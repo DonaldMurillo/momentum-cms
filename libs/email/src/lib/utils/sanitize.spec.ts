@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeAlignment, sanitizeCssValue, sanitizeCssNumber } from './sanitize';
+import { sanitizeAlignment, sanitizeCssValue, sanitizeCssNumber, sanitizeUrl } from './sanitize';
 
 describe('sanitizeAlignment', () => {
 	it('should accept "left"', () => {
@@ -116,5 +116,67 @@ describe('sanitizeCssNumber', () => {
 
 	it('should reject undefined and return fallback', () => {
 		expect(sanitizeCssNumber(undefined, 16)).toBe('16');
+	});
+});
+
+describe('sanitizeUrl', () => {
+	it('should allow https URLs', () => {
+		expect(sanitizeUrl('https://example.com')).toBe('https://example.com');
+	});
+
+	it('should allow http URLs', () => {
+		expect(sanitizeUrl('http://example.com/page')).toBe('http://example.com/page');
+	});
+
+	it('should allow mailto URLs', () => {
+		expect(sanitizeUrl('mailto:user@example.com')).toBe('mailto:user@example.com');
+	});
+
+	it('should allow anchor fragment', () => {
+		expect(sanitizeUrl('#section')).toBe('#section');
+	});
+
+	it('should allow relative paths', () => {
+		expect(sanitizeUrl('/about')).toBe('/about');
+	});
+
+	it('should return # for empty string', () => {
+		expect(sanitizeUrl('')).toBe('#');
+	});
+
+	it('should return # for whitespace-only string', () => {
+		expect(sanitizeUrl('   ')).toBe('#');
+	});
+
+	it('should pass through bare # unchanged', () => {
+		expect(sanitizeUrl('#')).toBe('#');
+	});
+
+	it('should block javascript: protocol', () => {
+		expect(sanitizeUrl('javascript:alert(1)')).toBe('#');
+	});
+
+	it('should block javascript: with mixed case', () => {
+		expect(sanitizeUrl('JavaScript:alert(1)')).toBe('#');
+	});
+
+	it('should block data: protocol', () => {
+		expect(sanitizeUrl('data:text/html,<script>alert(1)</script>')).toBe('#');
+	});
+
+	it('should block vbscript: protocol', () => {
+		expect(sanitizeUrl('vbscript:MsgBox("XSS")')).toBe('#');
+	});
+
+	it('should block ftp: protocol', () => {
+		expect(sanitizeUrl('ftp://evil.com/file')).toBe('#');
+	});
+
+	it('should trim whitespace before validation', () => {
+		expect(sanitizeUrl('  https://example.com  ')).toBe('https://example.com');
+	});
+
+	it('should block bare domain (ambiguous without protocol)', () => {
+		expect(sanitizeUrl('evil.com')).toBe('#');
 	});
 });

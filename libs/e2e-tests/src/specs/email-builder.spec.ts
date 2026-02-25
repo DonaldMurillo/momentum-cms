@@ -632,6 +632,102 @@ test.describe('Email Builder', { tag: ['@admin'] }, () => {
 		});
 	});
 
+	test.describe('Hardening: Duplicate Block Independence', { tag: ['@admin'] }, () => {
+		test('duplicated blocks should be independent (editing one does not affect the other)', async ({
+			authenticatedPage,
+		}) => {
+			await authenticatedPage.goto('/admin/email-builder');
+			const editorPanel = authenticatedPage.locator('[data-testid="email-editor-panel"]');
+			await expect(editorPanel).toBeVisible({ timeout: 10000 });
+
+			// Add a text block
+			const inserterToggle = authenticatedPage.locator('[data-testid="block-inserter-toggle"]');
+			await inserterToggle.first().click();
+			await authenticatedPage.locator('[data-testid="block-option-text"]').click();
+			await expect(authenticatedPage.locator('[data-testid="eml-block-wrapper"]')).toHaveCount(1, {
+				timeout: 5000,
+			});
+
+			// Type content into the first block
+			const firstBlock = authenticatedPage.locator('[data-testid="eml-block-wrapper"]').first();
+			await firstBlock.click();
+			const firstEditor = firstBlock.locator('[data-testid="block-editor-container"]');
+			await expect(firstEditor).toBeVisible({ timeout: 3000 });
+			const firstTextarea = firstEditor.locator('textarea');
+			await firstTextarea.fill('Original content');
+
+			// Duplicate the block
+			await firstBlock.locator('[data-testid="block-duplicate"]').click();
+			await expect(authenticatedPage.locator('[data-testid="eml-block-wrapper"]')).toHaveCount(2, {
+				timeout: 5000,
+			});
+
+			// Edit the duplicated block (second one, which is auto-selected)
+			const secondBlock = authenticatedPage.locator('[data-testid="eml-block-wrapper"]').nth(1);
+			const secondEditor = secondBlock.locator('[data-testid="block-editor-container"]');
+			await expect(secondEditor).toBeVisible({ timeout: 3000 });
+			const secondTextarea = secondEditor.locator('textarea');
+			await secondTextarea.fill('Modified duplicate');
+
+			// Verify original is unchanged
+			await firstBlock.click();
+			await expect(firstBlock.locator('[data-testid="block-editor-container"]')).toBeVisible({
+				timeout: 3000,
+			});
+			const originalTextarea = firstBlock
+				.locator('[data-testid="block-editor-container"]')
+				.locator('textarea');
+			await expect(originalTextarea).toHaveValue('Original content');
+
+			// Verify duplicate has new value
+			await secondBlock.click();
+			await expect(secondBlock.locator('[data-testid="block-editor-container"]')).toBeVisible({
+				timeout: 3000,
+			});
+			const dupTextarea = secondBlock
+				.locator('[data-testid="block-editor-container"]')
+				.locator('textarea');
+			await expect(dupTextarea).toHaveValue('Modified duplicate');
+		});
+	});
+
+	test.describe('Hardening: Export HTML Safety', { tag: ['@admin'] }, () => {
+		test('exported HTML should not contain javascript: in button href', async ({
+			authenticatedPage,
+		}) => {
+			await authenticatedPage.goto('/admin/email-builder');
+			const editorPanel = authenticatedPage.locator('[data-testid="email-editor-panel"]');
+			await expect(editorPanel).toBeVisible({ timeout: 10000 });
+
+			// Add a button block
+			const inserterToggle = authenticatedPage.locator('[data-testid="block-inserter-toggle"]');
+			await inserterToggle.first().click();
+			await authenticatedPage.locator('[data-testid="block-option-button"]').click();
+			await expect(authenticatedPage.locator('[data-testid="eml-block-wrapper"]')).toHaveCount(1, {
+				timeout: 5000,
+			});
+
+			// Select and enter a javascript: URL
+			const block = authenticatedPage.locator('[data-testid="eml-block-wrapper"]').first();
+			await block.click();
+			const editor = block.locator('[data-testid="block-editor-container"]');
+			await expect(editor).toBeVisible({ timeout: 3000 });
+
+			const urlInput = editor.locator('input[type="url"]');
+			await urlInput.fill('javascript:alert(1)');
+
+			// Export HTML
+			await authenticatedPage.locator('[data-testid="export-html-button"]').click();
+			const outputTextarea = authenticatedPage.locator('[data-testid="email-builder-output"]');
+			const htmlContent = await outputTextarea.inputValue();
+
+			// Should NOT contain javascript: in the href
+			expect(htmlContent).not.toContain('javascript:');
+			// Should contain sanitized href="#"
+			expect(htmlContent).toContain('href="#"');
+		});
+	});
+
 	test.describe('Block Collapse/Expand', { tag: ['@admin'] }, () => {
 		async function addBlock(
 			page: import('@playwright/test').Page,

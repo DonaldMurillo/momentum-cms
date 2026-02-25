@@ -37,3 +37,23 @@ export function sanitizeCssNumber(value: unknown, fallback: number): string {
 	const num = Number(value);
 	return Number.isFinite(num) && num >= 0 ? String(num) : String(fallback);
 }
+
+const SAFE_URL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
+
+/**
+ * Validate that a URL uses a safe protocol (http, https, mailto).
+ * Rejects javascript:, data:, vbscript:, and other dangerous schemes.
+ * Returns '#' for invalid/unsafe URLs.
+ */
+export function sanitizeUrl(url: string): string {
+	const trimmed = url.trim();
+	if (!trimmed || trimmed === '#') return trimmed || '#';
+	try {
+		const parsed = new URL(trimmed);
+		return SAFE_URL_PROTOCOLS.has(parsed.protocol) ? trimmed : '#';
+	} catch {
+		// Relative URLs and anchors are safe
+		if (trimmed.startsWith('/') || trimmed.startsWith('#')) return trimmed;
+		return '#';
+	}
+}

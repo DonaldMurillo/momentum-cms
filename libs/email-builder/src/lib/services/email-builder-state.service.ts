@@ -48,8 +48,9 @@ export class EmailBuilderStateService {
 
 	addBlock(block: EmailBlock, index: number): void {
 		this._blocks.update((blocks) => {
+			const clamped = Math.max(0, Math.min(index, blocks.length));
 			const next = [...blocks];
-			next.splice(index, 0, block);
+			next.splice(clamped, 0, block);
 			return next;
 		});
 		this.selectedBlockId.set(block.id);
@@ -76,7 +77,12 @@ export class EmailBuilderStateService {
 
 	updateBlockData(id: string, data: Record<string, unknown>): void {
 		this._blocks.update((blocks) =>
-			blocks.map((b) => (b.id === id ? { ...b, data: { ...b.data, ...data } } : b)),
+			blocks.map((b) => {
+				if (b.id !== id) return b;
+				// Prevent overwriting structural fields via data payload
+				const { ['id']: _id, ['type']: _type, ...safeData } = data;
+				return { ...b, data: { ...b.data, ...safeData } };
+			}),
 		);
 	}
 
@@ -89,7 +95,7 @@ export class EmailBuilderStateService {
 		const duplicate: EmailBlock = {
 			...original,
 			id: generateBlockId(),
-			data: { ...original.data },
+			data: structuredClone(original.data),
 		};
 		this.addBlock(duplicate, index + 1);
 	}
@@ -109,7 +115,7 @@ export class EmailBuilderStateService {
 	}
 }
 
-/** Generate a short unique block ID. */
+/** Generate a unique block ID using cryptographic randomness. */
 export function generateBlockId(): string {
-	return Math.random().toString(36).slice(2, 10);
+	return crypto.randomUUID();
 }
