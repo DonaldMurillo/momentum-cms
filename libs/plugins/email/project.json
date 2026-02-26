@@ -5,13 +5,6 @@
 	"projectType": "library",
 	"tags": ["scope:plugin"],
 	"targets": {
-		"test": {
-			"executor": "@nx/vitest:test",
-			"outputs": ["{workspaceRoot}/coverage/libs/plugins/email"],
-			"options": {
-				"config": "libs/plugins/email/vitest.config.ts"
-			}
-		},
 		"build": {
 			"executor": "@nx/esbuild:esbuild",
 			"outputs": ["{options.outputPath}"],

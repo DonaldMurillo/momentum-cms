@@ -53,18 +53,13 @@ function getFieldNodeState(formNode: unknown): FieldNodeState | null {
 	selector: 'eml-field-renderer',
 	imports: [EmailEditorPanelComponent],
 	providers: [provideEmailBuilder()],
-	host: { class: 'block' },
+	host: { class: 'block rounded-lg border border-border overflow-hidden' },
 	template: `
-		<div class="rounded-lg border border-border overflow-hidden">
-			<div class="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border">
-				<span class="text-sm font-medium text-foreground">{{ label() }}</span>
-				<span class="text-xs text-muted-foreground">{{ blockCount() }} blocks</span>
-			</div>
-			<eml-editor-panel
-				class="block"
-				style="min-height: 400px; max-height: 70vh; overflow-y: auto"
-			/>
+		<div class="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border">
+			<span class="text-sm font-medium text-foreground">{{ label() }}</span>
+			<span class="text-xs text-muted-foreground">{{ blockCount() }} blocks</span>
 		</div>
+		<eml-editor-panel class="block" style="min-height: 400px; max-height: 70vh; overflow-y: auto" />
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })

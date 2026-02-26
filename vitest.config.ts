@@ -13,6 +13,7 @@ export default defineConfig({
 			'libs/admin/**/*.spec.ts', // Angular component tests handled separately (jsdom)
 			'libs/ui/**/*.spec.ts', // Angular component tests handled separately (jsdom)
 			'libs/email-builder/**/*.spec.ts', // Angular component tests handled separately
+			'libs/email/src/lib/components/**/*.spec.ts', // Angular SSR tests need AOT (own vitest config)
 			'libs/e2e-tests/**/*.spec.ts', // Playwright E2E specs
 			'libs/e2e-fixtures/**/*.spec.ts', // E2E fixture tests
 			'libs/ui-e2e/**/*.spec.ts', // Storybook E2E specs

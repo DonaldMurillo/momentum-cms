@@ -16,36 +16,34 @@ import type { EmailBlock } from '@momentumcms/email';
 	imports: [EmailBuilderComponent],
 	providers: [provideEmailBuilder()],
 	host: {
-		class: 'block h-[calc(100vh-4rem)]',
+		class: 'flex h-[calc(100vh-4rem)] flex-col bg-background text-foreground',
 		'data-testid': 'email-builder-studio',
 	},
 	template: `
-		<div class="flex h-full flex-col bg-background text-foreground">
-			<div class="flex items-center justify-between border-b border-border px-4 py-2">
-				<h1 class="text-lg font-semibold text-foreground">Email Builder</h1>
-				<div class="flex items-center gap-2">
-					<span class="text-sm text-muted-foreground">{{ blockCount() }} blocks</span>
-					<button
-						type="button"
-						class="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-						data-testid="export-html-button"
-						(click)="exportHtml()"
-					>
-						Export HTML
-					</button>
-				</div>
+		<div class="flex items-center justify-between border-b border-border px-4 py-2">
+			<h1 class="text-lg font-semibold text-foreground">Email Builder</h1>
+			<div class="flex items-center gap-2">
+				<span class="text-sm text-muted-foreground">{{ blockCount() }} blocks</span>
+				<button
+					type="button"
+					class="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+					data-testid="export-html-button"
+					(click)="exportHtml()"
+				>
+					Export HTML
+				</button>
 			</div>
-			<div class="flex-1 overflow-hidden">
-				<eml-builder (blocksChange)="onBlocksChange($event)" />
-			</div>
-			<textarea
-				class="sr-only"
-				data-testid="email-builder-output"
-				[value]="htmlOutput()"
-				readonly
-				aria-label="Email HTML output"
-			></textarea>
 		</div>
+		<div class="flex-1 overflow-hidden">
+			<eml-builder (blocksChange)="onBlocksChange($event)" />
+		</div>
+		<textarea
+			class="sr-only"
+			data-testid="email-builder-output"
+			[value]="htmlOutput()"
+			readonly
+			aria-label="Email HTML output"
+		></textarea>
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
