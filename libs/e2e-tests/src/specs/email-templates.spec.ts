@@ -85,12 +85,14 @@ test.describe('Email Templates — API', { tag: ['@api', '@crud'] }, () => {
 				subject: 'Welcome to {{appName}}!',
 				emailBlocks: [
 					{
-						type: 'heading',
-						data: { text: 'Welcome!', level: 'h1' },
+						id: `header-${timestamp}`,
+						type: 'header',
+						data: { title: 'Welcome!', alignment: 'left' },
 					},
 					{
+						id: `text-${timestamp}`,
 						type: 'text',
-						data: { text: 'Thank you for joining {{appName}}.' },
+						data: { content: 'Thank you for joining {{appName}}.', fontSize: 16 },
 					},
 				],
 				isSystem: false,

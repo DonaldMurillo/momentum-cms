@@ -82,6 +82,7 @@ ${fieldHtml}
 (function(){
 var richTextFields=${JSON.stringify(richTextFields)};
 window.addEventListener('message',function(e){
+if(e.origin!==window.location.origin)return;
 if(!e.data||e.data.type!=='momentum-preview-update')return;
 var d=e.data.data;if(!d)return;
 document.querySelectorAll('[data-field]').forEach(function(el){

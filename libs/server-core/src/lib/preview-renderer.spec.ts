@@ -63,6 +63,14 @@ describe('renderPreviewHTML', () => {
 		expect(html).toContain('&lt;script&gt;');
 	});
 
+	it('should include origin check in postMessage handler', () => {
+		const html = renderPreviewHTML({
+			doc: { id: '1', title: 'Test', content: 'Safe' },
+			collection: mockCollection,
+		});
+		expect(html).toContain('e.origin!==window.location.origin');
+	});
+
 	it('should escape text field values', () => {
 		const textCollection: CollectionConfig = {
 			slug: 'pages',

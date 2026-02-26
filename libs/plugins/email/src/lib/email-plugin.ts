@@ -30,8 +30,8 @@ export function emailPlugin(config: EmailPluginConfig = {}): EmailPluginInstance
 	const adminRoutes = enabled
 		? [
 				{
-					path: 'email-playground',
-					label: 'Email Playground',
+					path: 'email-builder',
+					label: 'Email Builder',
 					icon: 'heroEnvelopeOpen',
 					loadComponent: (): Promise<unknown> =>
 						import(emailBuilderModule).then(

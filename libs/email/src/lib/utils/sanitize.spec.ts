@@ -114,8 +114,21 @@ describe('sanitizeFontFamily', () => {
 		expect(sanitizeFontFamily('monospace')).toBe('monospace');
 	});
 
-	it('should allow double quotes around font names', () => {
-		expect(sanitizeFontFamily('"Segoe UI", Arial')).toBe('"Segoe UI", Arial');
+	it('should strip double quotes to prevent HTML attribute breakout', () => {
+		expect(sanitizeFontFamily('"Segoe UI", Arial')).toBe('Segoe UI, Arial');
+	});
+
+	it('should block HTML attribute injection via double quotes', () => {
+		const malicious = 'Arial" onmouseover="alert(1)" x="';
+		const result = sanitizeFontFamily(malicious);
+		// Double quotes are the breakout vector — once stripped, remaining text
+		// is harmless inside style="font-family: ..."
+		expect(result).not.toContain('"');
+		expect(result).toBe('Arial onmouseover=alert1 x=');
+	});
+
+	it('should preserve single quotes for font names with spaces', () => {
+		expect(sanitizeFontFamily("'Segoe UI', Arial")).toBe("'Segoe UI', Arial");
 	});
 });
 
