@@ -84,6 +84,12 @@ export default defineConfig(({ mode: _mode }) => {
 							__dirname,
 							'../../libs/plugins/email/src/index.ts',
 						),
+						'@momentumcms/plugins/queue': resolve(
+							__dirname,
+							'../../libs/plugins/queue/src/index.ts',
+						),
+						'@momentumcms/plugins/cron': resolve(__dirname, '../../libs/plugins/cron/src/index.ts'),
+						'@momentumcms/queue': resolve(__dirname, '../../libs/queue/src/index.ts'),
 						'@momentumcms/storage': resolve(__dirname, '../../libs/storage/src/index.ts'),
 						'@momentumcms/logger': resolve(__dirname, '../../libs/logger/src/index.ts'),
 					},

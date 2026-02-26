@@ -99,7 +99,7 @@ describe('queuePlugin', () => {
 			expect(collections).toHaveLength(1);
 		});
 
-		it('should initialize the adapter', async () => {
+		it('should initialize the adapter during onReady (after schema creation)', async () => {
 			const adapter = createMockAdapter();
 			const plugin = queuePlugin({ adapter });
 
@@ -110,7 +110,14 @@ describe('queuePlugin', () => {
 				registerMiddleware: vi.fn(),
 				registerProvider: vi.fn(),
 			});
+			expect(adapter.initialize).not.toHaveBeenCalled();
 
+			await plugin.onReady?.({
+				config: {} as never,
+				collections: [],
+				logger: createMockLogger(),
+				api: { collection: vi.fn() } as never,
+			});
 			expect(adapter.initialize).toHaveBeenCalled();
 		});
 

@@ -82,10 +82,6 @@ export function queuePlugin(config: QueuePluginConfig): QueuePluginInstance {
 				collections.push(QueueJobsCollection);
 			}
 
-			// Initialize adapter (creates partial indexes, etc.)
-			await config.adapter.initialize();
-			logger.info('Queue adapter initialized');
-
 			// Register admin API endpoints
 			if (config.adminDashboard !== false) {
 				const adminRouter = createQueueAdminRouter({ adapter: config.adapter, logger });
@@ -99,6 +95,10 @@ export function queuePlugin(config: QueuePluginConfig): QueuePluginInstance {
 		},
 
 		async onReady({ api, logger }: PluginReadyContext): Promise<void> {
+			// Initialize adapter (creates partial indexes, etc.)
+			// Must run after schema creation, which happens between onInit and onReady.
+			await config.adapter.initialize();
+			logger.info('Queue adapter initialized');
 			// Start workers for each configured queue
 			const workerConfigs = config.workers ?? { default: {} };
 			for (const [queueName, workerConfig] of Object.entries(workerConfigs)) {
