@@ -24,8 +24,8 @@ export interface FieldAdminConfig {
 	readOnly?: boolean;
 	hidden?: boolean;
 	placeholder?: string;
-	/** For blocks fields: editor rendering mode. 'visual' enables the WYSIWYG block editor. */
-	editor?: 'visual' | 'form';
+	/** Editor rendering mode. 'visual' enables WYSIWYG block editor; 'email-builder' enables email template builder for json fields. */
+	editor?: 'visual' | 'form' | 'email-builder';
 	/** Render this group field as a collapsible accordion section */
 	collapsible?: boolean;
 	/** Whether the collapsible section starts expanded (default: false) */

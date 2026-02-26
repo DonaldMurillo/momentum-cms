@@ -12,6 +12,8 @@ export default defineConfig({
 			'apps/**/*.spec.ts', // App-level tests handled separately (migration-tests, etc.)
 			'libs/admin/**/*.spec.ts', // Angular component tests handled separately (jsdom)
 			'libs/ui/**/*.spec.ts', // Angular component tests handled separately (jsdom)
+			'libs/email-builder/**/*.spec.ts', // Angular component tests handled separately
+			'libs/email/src/lib/components/**/*.spec.ts', // Angular SSR tests need AOT (own vitest config)
 			'libs/e2e-tests/**/*.spec.ts', // Playwright E2E specs
 			'libs/e2e-fixtures/**/*.spec.ts', // E2E fixture tests
 			'libs/ui-e2e/**/*.spec.ts', // Storybook E2E specs
@@ -30,6 +32,8 @@ export default defineConfig({
 			'@momentumcms/admin': resolve(__dirname, 'libs/admin/src/index.ts'),
 			'@momentumcms/db-drizzle': resolve(__dirname, 'libs/db-drizzle/src/index.ts'),
 			'@momentumcms/auth': resolve(__dirname, 'libs/auth/src/index.ts'),
+			'@momentumcms/email': resolve(__dirname, 'libs/email/src/index.ts'),
+			'@momentumcms/email-builder': resolve(__dirname, 'libs/email-builder/src/index.ts'),
 			'@momentumcms/storage': resolve(__dirname, 'libs/storage/src/index.ts'),
 			'@momentumcms/logger': resolve(__dirname, 'libs/logger/src/index.ts'),
 			'@momentumcms/plugins/core': resolve(__dirname, 'libs/plugins/core/src/index.ts'),

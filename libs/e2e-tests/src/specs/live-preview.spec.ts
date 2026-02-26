@@ -162,7 +162,7 @@ test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 		await expect(iframe).not.toBeVisible();
 	});
 
-	test('postMessage payload contains correct field values after edit', async ({ page }) => {
+	test('preview iframe updates after editing a field', async ({ page }) => {
 		await signInPage(page);
 		await page.goto(`/admin/collections/events/${eventId}/edit`);
 		await page.waitForLoadState('domcontentloaded');
@@ -176,40 +176,6 @@ test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 			timeout: 15000,
 		});
 
-		// Helper to get a fresh frame reference (handles stale frames after iframe navigation)
-		const getFrame = async (): Promise<import('@playwright/test').Frame> => {
-			const handle = await iframe.elementHandle();
-			const f = await handle?.contentFrame();
-			if (!f) throw new Error('No iframe content frame');
-			return f;
-		};
-
-		// Set up postMessage listener in the iframe.
-		// Uses expect.poll which retries on thrown errors (e.g. if frame navigates during setup).
-		// The listener setup is idempotent via the _previewListenerReady flag.
-		await expect
-			.poll(
-				async () => {
-					const f = await getFrame();
-					return f.evaluate(() => {
-						if (!(window as unknown as Record<string, boolean>)['_previewListenerReady']) {
-							(window as unknown as Record<string, unknown>)['_previewMessages'] = [];
-							window.addEventListener('message', (event: MessageEvent) => {
-								if (event.data?.type === 'momentum-preview-update') {
-									(
-										(window as unknown as Record<string, unknown>)['_previewMessages'] as unknown[]
-									).push(event.data);
-								}
-							});
-							(window as unknown as Record<string, boolean>)['_previewListenerReady'] = true;
-						}
-						return true;
-					});
-				},
-				{ timeout: 10000, message: 'Should set up postMessage listener in iframe' },
-			)
-			.toBe(true);
-
 		// Edit the location field using pressSequentially to trigger signal form change detection
 		const locationInput = page.getByLabel('Location');
 		await expect(locationInput).toBeVisible({ timeout: 10000 });
@@ -217,38 +183,21 @@ test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 		await page.keyboard.press('ControlOrMeta+a');
 		await locationInput.pressSequentially('Updated Preview City', { delay: 20 });
 
-		// Wait for debounced postMessage containing the UPDATED location value.
-		// The admin component may send initial messages with original values before the
-		// edit propagates, so poll for the last message to contain the edited value.
+		// Events collection uses preview: true (server-rendered).
+		// The component POSTs form data to the preview endpoint and rewrites the iframe HTML.
+		// Wait for the iframe content to reflect the updated location value.
 		await expect
 			.poll(
 				async () => {
-					const f = await getFrame();
-					return f.evaluate(() => {
-						const msgs = (window as unknown as Record<string, unknown>)[
-							'_previewMessages'
-						] as Array<{ data: Record<string, unknown> }>;
-						if (msgs.length === 0) return null;
-						return msgs[msgs.length - 1].data?.['location'] ?? null;
-					});
+					try {
+						return await iframeLocator.locator('body').textContent();
+					} catch {
+						return '';
+					}
 				},
-				{ timeout: 10000 },
+				{ timeout: 15000, message: 'Iframe should contain updated location value' },
 			)
-			.toBe('Updated Preview City');
-
-		// Verify the full message structure
-		const frame = await getFrame();
-		const lastMessage = await frame.evaluate(() => {
-			const messages = (window as unknown as Record<string, unknown>)['_previewMessages'] as Array<{
-				type: string;
-				data: Record<string, unknown>;
-			}>;
-			return messages.length > 0 ? messages[messages.length - 1] : null;
-		});
-
-		expect(lastMessage).toBeTruthy();
-		expect(lastMessage!.type).toBe('momentum-preview-update');
-		expect(lastMessage!.data['title']).toBe('LP-Preview Test Event');
+			.toContain('Updated Preview City');
 	});
 
 	test('refresh button reloads preview iframe', async ({ page }) => {
@@ -282,5 +231,19 @@ test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 			});
 			expect(h1Text).toContain('LP-Preview Test Event');
 		}
+	});
+});
+
+test.describe('Preview Endpoint Auth', { tag: ['@api', '@security'] }, () => {
+	test('GET preview should return 401 for unauthenticated requests', async ({ request }) => {
+		const response = await request.get('/api/events/any-id/preview');
+		expect(response.status()).toBe(401);
+	});
+
+	test('POST preview should return 401 for unauthenticated requests', async ({ request }) => {
+		const response = await request.post('/api/events/any-id/preview', {
+			data: { data: { title: 'injected' } },
+		});
+		expect(response.status()).toBe(401);
 	});
 });

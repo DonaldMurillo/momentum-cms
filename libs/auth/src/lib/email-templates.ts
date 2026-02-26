@@ -1,19 +1,25 @@
+import type { PasswordResetEmailData } from './email-components/password-reset-email.component';
+import type { VerificationEmailData } from './email-components/verification-email.component';
+
 /**
- * Escape HTML special characters to prevent XSS in email templates.
+ * Result of looking up an email template from the database.
+ * Returned by `findEmailTemplate` callbacks.
  */
-function escapeHtml(unsafe: string): string {
-	return unsafe
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;')
-		.replace(/'/g, '&#039;');
+export interface DbEmailTemplate {
+	subject?: string;
+	emailBlocks?: unknown[];
 }
+
+/**
+ * Callback type for looking up email templates from the database.
+ * Returns null if no template is found (falls back to Angular SSR rendering).
+ */
+export type FindEmailTemplateFn = (slug: string) => Promise<DbEmailTemplate | null>;
 
 /**
  * Email template options.
  */
-interface EmailTemplateOptions {
+export interface EmailTemplateOptions {
 	/** Recipient's name */
 	name?: string;
 	/** Action URL (reset link, verification link, etc.) */
@@ -22,69 +28,75 @@ interface EmailTemplateOptions {
 	appName?: string;
 	/** Expiration time for the link (e.g., '1 hour') */
 	expiresIn?: string;
+	/** Optional callback to look up templates from the database (DB-first). */
+	findEmailTemplate?: FindEmailTemplateFn;
 }
 
 /**
- * Base email wrapper with consistent styling.
+ * Render an email from DB-stored blocks with variable substitution.
+ * Returns null if the template has no blocks (falls back to Angular SSR).
  */
-function wrapEmail(content: string, safeAppName: string): string {
-	return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${safeAppName}</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f4f5; line-height: 1.6;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f4f4f5;">
-    <tr>
-      <td style="padding: 40px 20px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 480px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-          <tr>
-            <td style="padding: 40px;">
-              ${content}
-            </td>
-          </tr>
-        </table>
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 480px; margin: 20px auto 0;">
-          <tr>
-            <td style="text-align: center; color: #71717a; font-size: 12px;">
-              <p style="margin: 0;">&copy; ${new Date().getFullYear()} ${safeAppName}. All rights reserved.</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-`.trim();
+async function renderFromDbTemplate(
+	template: DbEmailTemplate,
+	variables: Record<string, string>,
+	defaultSubject: string,
+	defaultText: string,
+): Promise<{ subject: string; text: string; html: string } | null> {
+	if (
+		!template.emailBlocks ||
+		!Array.isArray(template.emailBlocks) ||
+		template.emailBlocks.length === 0
+	) {
+		return null;
+	}
+
+	const { renderEmailFromBlocks, replaceVariables, blocksToPlainText } = await import(
+		'@momentumcms/email'
+	);
+
+	const subject = template.subject ? replaceVariables(template.subject, variables) : defaultSubject;
+
+	const blocks = template.emailBlocks; // already validated as non-empty array
+	const html = renderEmailFromBlocks(
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- DB blocks stored as unknown[], narrowed by array check above
+		{ blocks: blocks as never[] },
+		{ variables },
+	);
+
+	// Auto-generate plain text from the rendered blocks, fall back to default
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- DB blocks stored as unknown[], narrowed by array check above
+	const generatedText = blocksToPlainText(blocks as never[]);
+	const text = generatedText ? replaceVariables(generatedText, variables) : defaultText;
+
+	return { subject, text, html };
 }
 
 /**
  * Generate password reset email content.
  *
+ * If `findEmailTemplate` is provided, queries the DB for a 'password-reset' template first.
+ * Falls back to Angular SSR rendering if no DB template is found.
+ *
  * @example
  * ```typescript
- * const { subject, text, html } = getPasswordResetEmail({
+ * const { subject, text, html } = await getPasswordResetEmail({
  *   name: 'John',
  *   url: 'https://example.com/admin/reset-password?token=abc123',
  *   expiresIn: '1 hour',
  * });
  * ```
  */
-export function getPasswordResetEmail(options: EmailTemplateOptions): {
+export async function getPasswordResetEmail(options: EmailTemplateOptions): Promise<{
 	subject: string;
 	text: string;
 	html: string;
-} {
+}> {
 	const { name, url, appName = 'Momentum CMS', expiresIn = '1 hour' } = options;
 	const greeting = name ? `Hi ${name},` : 'Hi,';
 
-	const subject = `Reset your password - ${appName}`;
+	const defaultSubject = `Reset your password - ${appName}`;
 
-	const text = `
+	const defaultText = `
 ${greeting}
 
 We received a request to reset your password. Click the link below to choose a new password:
@@ -99,59 +111,63 @@ Thanks,
 The ${appName} Team
 `.trim();
 
-	// Escape user-supplied values for safe HTML interpolation
-	const safeGreeting = name ? `Hi ${escapeHtml(name)},` : 'Hi,';
-	const safeUrl = escapeHtml(url);
-	const safeAppName = escapeHtml(appName);
-	const safeExpiresIn = escapeHtml(expiresIn);
+	// Try DB-first if a template finder is provided
+	if (options.findEmailTemplate) {
+		try {
+			const template = await options.findEmailTemplate('password-reset');
+			if (template) {
+				const variables = { greeting, url, appName, expiresIn };
+				const result = await renderFromDbTemplate(template, variables, defaultSubject, defaultText);
+				if (result) return result;
+			}
+		} catch (error) {
+			console.warn(
+				'[momentum:email] Failed to render DB template for password-reset, falling back to SSR:',
+				error,
+			);
+		}
+	}
 
-	const html = wrapEmail(
-		`
-      <h1 style="margin: 0 0 24px; font-size: 24px; font-weight: 600; color: #18181b;">Reset your password</h1>
-      <p style="margin: 0 0 16px; color: #3f3f46;">${safeGreeting}</p>
-      <p style="margin: 0 0 24px; color: #3f3f46;">We received a request to reset your password. Click the button below to choose a new password:</p>
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-        <tr>
-          <td style="padding: 0 0 24px;">
-            <a href="${safeUrl}" style="display: inline-block; padding: 12px 24px; background-color: #18181b; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 500;">Reset Password</a>
-          </td>
-        </tr>
-      </table>
-      <p style="margin: 0 0 8px; color: #71717a; font-size: 14px;">This link will expire in ${safeExpiresIn}.</p>
-      <p style="margin: 0 0 24px; color: #71717a; font-size: 14px;">If you didn't request a password reset, you can safely ignore this email.</p>
-      <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 24px 0;">
-      <p style="margin: 0; color: #71717a; font-size: 12px;">If the button doesn't work, copy and paste this URL into your browser:</p>
-      <p style="margin: 8px 0 0; color: #71717a; font-size: 12px; word-break: break-all;">${safeUrl}</p>
-    `,
-		safeAppName,
+	// Dynamic imports to avoid loading Angular decorators at module evaluation time.
+	// The generator (tsx) loads momentum.config.ts → auth → this file, and Angular
+	// JIT is not available in that context.
+	const { renderEmail } = await import('@momentumcms/email');
+	const { PasswordResetEmailComponent } = await import(
+		'./email-components/password-reset-email.component'
 	);
 
-	return { subject, text, html };
+	const data: PasswordResetEmailData = { name, url, appName, expiresIn };
+	const html = await renderEmail(PasswordResetEmailComponent, data);
+
+	return { subject: defaultSubject, text: defaultText, html };
 }
 
 /**
  * Generate email verification email content.
  *
+ * If `findEmailTemplate` is provided, queries the DB for a 'verification' template first.
+ * Falls back to Angular SSR rendering if no DB template is found.
+ *
  * @example
  * ```typescript
- * const { subject, text, html } = getVerificationEmail({
+ * const { subject, text, html } = await getVerificationEmail({
  *   name: 'John',
  *   url: 'https://example.com/admin/verify-email?token=abc123',
  *   expiresIn: '24 hours',
  * });
  * ```
  */
-export function getVerificationEmail(options: EmailTemplateOptions): {
+export async function getVerificationEmail(options: EmailTemplateOptions): Promise<{
 	subject: string;
 	text: string;
 	html: string;
-} {
+}> {
 	const { name, url, appName = 'Momentum CMS', expiresIn = '24 hours' } = options;
 	const greeting = name ? `Hi ${name},` : 'Hi,';
 
-	const subject = `Verify your email - ${appName}`;
+	const defaultSubject = `Verify your email - ${appName}`;
 
-	const text = `
+	const defaultText = `
 ${greeting}
 
 Welcome to ${appName}! Please verify your email address by clicking the link below:
@@ -166,32 +182,30 @@ Thanks,
 The ${appName} Team
 `.trim();
 
-	// Escape user-supplied values for safe HTML interpolation
-	const safeGreeting = name ? `Hi ${escapeHtml(name)},` : 'Hi,';
-	const safeUrl = escapeHtml(url);
-	const safeAppName = escapeHtml(appName);
-	const safeExpiresIn = escapeHtml(expiresIn);
+	// Try DB-first if a template finder is provided
+	if (options.findEmailTemplate) {
+		try {
+			const template = await options.findEmailTemplate('verification');
+			if (template) {
+				const variables = { greeting, url, appName, expiresIn };
+				const result = await renderFromDbTemplate(template, variables, defaultSubject, defaultText);
+				if (result) return result;
+			}
+		} catch (error) {
+			console.warn(
+				'[momentum:email] Failed to render DB template for verification, falling back to SSR:',
+				error,
+			);
+		}
+	}
 
-	const html = wrapEmail(
-		`
-      <h1 style="margin: 0 0 24px; font-size: 24px; font-weight: 600; color: #18181b;">Verify your email</h1>
-      <p style="margin: 0 0 16px; color: #3f3f46;">${safeGreeting}</p>
-      <p style="margin: 0 0 24px; color: #3f3f46;">Welcome to ${safeAppName}! Please verify your email address by clicking the button below:</p>
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-        <tr>
-          <td style="padding: 0 0 24px;">
-            <a href="${safeUrl}" style="display: inline-block; padding: 12px 24px; background-color: #18181b; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 500;">Verify Email</a>
-          </td>
-        </tr>
-      </table>
-      <p style="margin: 0 0 8px; color: #71717a; font-size: 14px;">This link will expire in ${safeExpiresIn}.</p>
-      <p style="margin: 0 0 24px; color: #71717a; font-size: 14px;">If you didn't create an account, you can safely ignore this email.</p>
-      <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 24px 0;">
-      <p style="margin: 0; color: #71717a; font-size: 12px;">If the button doesn't work, copy and paste this URL into your browser:</p>
-      <p style="margin: 8px 0 0; color: #71717a; font-size: 12px; word-break: break-all;">${safeUrl}</p>
-    `,
-		safeAppName,
+	const { renderEmail } = await import('@momentumcms/email');
+	const { VerificationEmailComponent } = await import(
+		'./email-components/verification-email.component'
 	);
 
-	return { subject, text, html };
+	const data: VerificationEmailData = { name, url, appName, expiresIn };
+	const html = await renderEmail(VerificationEmailComponent, data);
+
+	return { subject: defaultSubject, text: defaultText, html };
 }

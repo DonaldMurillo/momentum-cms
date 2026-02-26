@@ -7,6 +7,7 @@ import {
 	momentumAdminRoutes,
 	crudToastInterceptor,
 	provideMomentumFieldRenderers,
+	provideFieldRenderer,
 } from '@momentumcms/admin';
 
 import { collections } from '@momentumcms/example-config/collections';
@@ -16,14 +17,16 @@ import { BASE_AUTH_COLLECTIONS } from '@momentumcms/auth/collections';
 
 import { analyticsAdminRoutes } from '@momentumcms/plugins-analytics/admin-routes';
 import { seoAdminRoutes } from '@momentumcms/plugins-seo/admin-routes';
+import { emailAdminRoutes } from '@momentumcms/plugins-email/admin-routes';
 
 import { injectBlockAnalyticsFields } from '@momentumcms/plugins-analytics/block-fields';
 import { injectSeoFields } from '@momentumcms/plugins-seo/fields';
+import { EmailTemplatesCollection } from '@momentumcms/plugins/email';
 
 import { providePageBlocks, pageResolver } from '@momentumcms/example-config/pages';
 
 // Merge all collections for admin routes, then inject plugin fields
-const adminCollections = [...collections, ...BASE_AUTH_COLLECTIONS];
+const adminCollections = [...collections, ...BASE_AUTH_COLLECTIONS, EmailTemplatesCollection];
 injectBlockAnalyticsFields(adminCollections);
 injectSeoFields(adminCollections, { collections: ['categories', 'articles', 'pages'] });
 
@@ -57,7 +60,7 @@ const adminRoutes = momentumAdminRoutes({
 	branding: {
 		title: 'Momentum CMS',
 	},
-	pluginRoutes: [...analyticsAdminRoutes, ...seoAdminRoutes],
+	pluginRoutes: [...analyticsAdminRoutes, ...seoAdminRoutes, ...emailAdminRoutes],
 });
 
 export const appConfig: ApplicationConfig = {
@@ -74,6 +77,9 @@ export const appConfig: ApplicationConfig = {
 			withInterceptors([crudToastInterceptor, requestContextInterceptor]),
 		),
 		provideMomentumFieldRenderers(),
+		provideFieldRenderer('json-email-builder', () =>
+			import('@momentumcms/email-builder').then((m) => m.EmailBuilderFieldRendererComponent),
+		),
 		...providePageBlocks(),
 	],
 };

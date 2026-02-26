@@ -31,6 +31,12 @@ export default [
 						'@momentumcms/plugins/analytics/admin-routes',
 						'@momentumcms/plugins/analytics/client',
 						'@momentumcms/plugins/analytics/block-fields',
+						// Email plugin browser-safe sub-paths
+						'@momentumcms/plugins/email',
+						'@momentumcms/plugins-email/admin-routes',
+						// Email lib exports browser-safe types used by email-builder
+						'@momentumcms/email',
+						'@momentumcms/email/templates',
 						// Example config sub-paths (mixed lazy/static usage in apps)
 						'@momentumcms/example-config',
 						'@momentumcms/example-config/collections',

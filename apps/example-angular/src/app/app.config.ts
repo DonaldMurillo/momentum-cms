@@ -7,7 +7,11 @@ import {
 	withEventReplay,
 	withIncrementalHydration,
 } from '@angular/platform-browser';
-import { crudToastInterceptor, provideMomentumFieldRenderers } from '@momentumcms/admin';
+import {
+	crudToastInterceptor,
+	provideMomentumFieldRenderers,
+	provideFieldRenderer,
+} from '@momentumcms/admin';
 import { providePageViewTracking } from '@momentumcms/plugins-analytics/page-tracker';
 
 import { providePageBlocks } from '@momentumcms/example-config/pages';
@@ -19,6 +23,9 @@ export const appConfig: ApplicationConfig = {
 		provideBrowserGlobalErrorListeners(),
 		provideRouter(appRoutes, withViewTransitions()),
 		provideMomentumFieldRenderers(),
+		provideFieldRenderer('json-email-builder', () =>
+			import('@momentumcms/email-builder').then((m) => m.EmailBuilderFieldRendererComponent),
+		),
 		...providePageBlocks(),
 		providePageViewTracking({
 			contentRoutes: {

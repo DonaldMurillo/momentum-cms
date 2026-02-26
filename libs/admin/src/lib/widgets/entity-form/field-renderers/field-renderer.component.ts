@@ -71,11 +71,14 @@ export class FieldRenderer {
 	/** Error from lazy loading failure */
 	readonly loadError = signal<Error | null>(null);
 
-	/** Registry key: 'blocks-visual' when blocks field has visual editor, otherwise field.type */
+	/** Registry key: maps field type + editor config to renderer registry keys */
 	readonly registryKey = computed(() => {
 		const f = this.field();
 		if (f.type === 'blocks' && f.admin?.editor === 'visual') {
 			return 'blocks-visual';
+		}
+		if (f.type === 'json' && f.admin?.editor === 'email-builder') {
+			return 'json-email-builder';
 		}
 		return f.type;
 	});

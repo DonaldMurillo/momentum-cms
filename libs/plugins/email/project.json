@@ -1,0 +1,35 @@
+{
+	"name": "plugins-email",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/plugins/email/src",
+	"projectType": "library",
+	"tags": ["scope:plugin"],
+	"targets": {
+		"build": {
+			"executor": "@nx/esbuild:esbuild",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/libs/plugins/email",
+				"main": "libs/plugins/email/src/index.ts",
+				"additionalEntryPoints": ["libs/plugins/email/src/lib/email-admin-routes.ts"],
+				"tsConfig": "libs/plugins/email/tsconfig.lib.json",
+				"generatePackageJson": false,
+				"assets": [
+					"libs/plugins/email/package.json",
+					{
+						"input": "libs/plugins/email/src/lib",
+						"glob": "email-admin-routes.d.ts",
+						"output": "src/lib"
+					}
+				],
+				"external": ["@angular/*", "@ng-icons/*", "@momentumcms/email-builder"]
+			}
+		},
+		"nx-release-publish": {
+			"options": {
+				"packageRoot": "dist/{projectRoot}",
+				"access": "public"
+			}
+		}
+	}
+}

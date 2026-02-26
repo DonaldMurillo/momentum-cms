@@ -307,6 +307,17 @@ export interface Redirects {
 	updatedAt: string;
 }
 
+export interface EmailTemplates {
+	id: string;
+	name: string;
+	slug: string;
+	subject: string;
+	emailBlocks?: Record<string, unknown>;
+	isSystem?: boolean;
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface AuthUser {
 	id: string;
 	name: string;
@@ -614,6 +625,16 @@ export interface RedirectsWhereClause {
 	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
+export interface EmailTemplatesWhereClause {
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	slug?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	subject?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	isSystem?: boolean | { equals?: boolean };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+}
+
 export interface AuthUserWhereClause {
 	id?: string | { equals?: string; not?: string; in?: string[] };
 	name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
@@ -717,6 +738,7 @@ export type CollectionSlug =
 	| 'tags'
 	| 'user-notes'
 	| 'redirects'
+	| 'email-templates'
 	| 'auth-user'
 	| 'auth-session'
 	| 'auth-account'
@@ -738,6 +760,7 @@ export interface MomentumCollections {
 	tags: Tags;
 	'user-notes': UserNotes;
 	redirects: Redirects;
+	'email-templates': EmailTemplates;
 	'auth-user': AuthUser;
 	'auth-session': AuthSession;
 	'auth-account': AuthAccount;
@@ -762,6 +785,7 @@ export type TypedMomentumCollections = {
 	tags: { doc: Tags; where: TagsWhereClause };
 	'user-notes': { doc: UserNotes; where: UserNotesWhereClause };
 	redirects: { doc: Redirects; where: RedirectsWhereClause };
+	'email-templates': { doc: EmailTemplates; where: EmailTemplatesWhereClause };
 	'auth-user': { doc: AuthUser; where: AuthUserWhereClause };
 	'auth-session': { doc: AuthSession; where: AuthSessionWhereClause };
 	'auth-account': { doc: AuthAccount; where: AuthAccountWhereClause };

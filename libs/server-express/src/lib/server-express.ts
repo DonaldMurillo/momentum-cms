@@ -37,10 +37,39 @@ import type {
 	UploadedFile,
 	DatabaseAdapter,
 	EndpointQueryHelper,
+	CollectionConfig,
 } from '@momentumcms/core';
 import { isUploadCollection } from '@momentumcms/core';
 import { createLogger } from '@momentumcms/logger';
 import { getPluginMiddleware } from './plugin-middleware-registry';
+
+/**
+ * Find the email-builder json field in a collection, if any.
+ * Returns the field name or undefined.
+ */
+function getEmailBuilderFieldName(collection: CollectionConfig): string | undefined {
+	const field = collection.fields.find(
+		(f) => f.type === 'json' && f.admin?.editor === 'email-builder',
+	);
+	return field?.name;
+}
+
+/**
+ * Render a full email preview HTML from the doc's email blocks.
+ * Returns a complete HTML document (the rendered email) — no field labels or generic wrapper.
+ */
+async function renderEmailPreviewHTML(
+	doc: Record<string, unknown>,
+	blocksFieldName: string,
+): Promise<string> {
+	const { renderEmailFromBlocks } = await import('@momentumcms/email');
+	const blocks = doc[blocksFieldName];
+	if (!Array.isArray(blocks) || blocks.length === 0) {
+		return '<html><body style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:#666;font-family:sans-serif"><p>No email blocks yet.</p></body></html>';
+	}
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- email blocks stored as unknown[]
+	return renderEmailFromBlocks({ blocks: blocks as never[] });
+}
 
 // sanitizeErrorMessage and parseWhereParam are imported from @momentumcms/server-core
 
@@ -632,29 +661,55 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	// Must be defined BEFORE generic /:collection/:id routes
 	// ============================================
 
-	router.get('/:collection/:id/preview', async (req: Request, res: Response) => {
+	/** Shared handler for preview rendering (GET loads from DB, POST uses request body). */
+	async function handlePreviewRequest(req: Request, res: Response): Promise<void> {
 		try {
 			const slug = req.params['collection'];
 			const id = req.params['id'];
 			const user = extractUserFromRequest(req);
-
-			const api = getMomentumAPI();
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const doc = await contextApi.collection(slug).findById(id);
-			if (!doc) {
-				res.status(404).json({ error: 'Document not found' });
+			if (!user) {
+				res.status(401).json({ error: 'Authentication required to access preview' });
 				return;
 			}
 
-			// Find collection config
 			const collectionConfig = config.collections.find((c) => c.slug === slug);
 			if (!collectionConfig) {
 				res.status(404).json({ error: 'Collection not found' });
 				return;
 			}
 
-			const html = renderPreviewHTML({ doc, collection: collectionConfig });
+			// Enforce collection-level access.read before rendering
+			const accessFn = collectionConfig.access?.read;
+			if (accessFn) {
+				const allowed = await Promise.resolve(accessFn({ req: { user } }));
+				if (!allowed) {
+					res.status(403).json({ error: 'Access denied' });
+					return;
+				}
+			}
+
+			let doc: Record<string, unknown>;
+			if (req.method === 'POST' && req.body?.data) {
+				// Live preview: render from form data sent by the client
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- POST body contains form data
+				doc = req.body.data as Record<string, unknown>;
+			} else {
+				// Initial load: render from database
+				const api = getMomentumAPI();
+				const contextApi = user ? api.setContext({ user }) : api;
+				const dbDoc = await contextApi.collection(slug).findById(id);
+				if (!dbDoc) {
+					res.status(404).json({ error: 'Document not found' });
+					return;
+				}
+				doc = dbDoc;
+			}
+
+			// For collections with an email-builder field, render the email directly
+			const emailField = getEmailBuilderFieldName(collectionConfig);
+			const html = emailField
+				? await renderEmailPreviewHTML(doc, emailField)
+				: renderPreviewHTML({ doc, collection: collectionConfig });
 			res.setHeader('Content-Type', 'text/html; charset=utf-8');
 			res.send(html);
 		} catch (error) {
@@ -669,7 +724,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			}
 			res.status(500).json({ error: 'Preview failed', message });
 		}
-	});
+	}
+
+	router.get('/:collection/:id/preview', handlePreviewRequest);
+	router.post('/:collection/:id/preview', handlePreviewRequest);
 
 	// ============================================
 	// Media Upload Routes

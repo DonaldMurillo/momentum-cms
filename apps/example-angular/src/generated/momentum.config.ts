@@ -7,6 +7,7 @@ import type { MomentumAdminConfig } from '@momentumcms/core';
 import type { CollectionSlug, GlobalSlug } from './momentum.types';
 import { analyticsAdminRoutes } from '@momentumcms/plugins-analytics/admin-routes';
 import { seoAdminRoutes } from '@momentumcms/plugins-seo/admin-routes';
+import { emailAdminRoutes } from '@momentumcms/plugins-email/admin-routes';
 
 export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 	collections: [
@@ -1539,6 +1540,61 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			timestamps: true,
 		},
 		{
+			slug: 'email-templates',
+			labels: {
+				singular: 'Email Template',
+				plural: 'Email Templates',
+			},
+			fields: [
+				{
+					name: 'name',
+					type: 'text',
+					required: true,
+					label: 'Template Name',
+				},
+				{
+					name: 'slug',
+					type: 'text',
+					required: true,
+					unique: true,
+					label: 'Template Slug',
+					description: 'System identifier (e.g., "password-reset", "verification")',
+				},
+				{
+					name: 'subject',
+					type: 'text',
+					required: true,
+					label: 'Email Subject',
+					description: 'Supports {{variables}} — e.g., "Reset your password - {{appName}}"',
+				},
+				{
+					name: 'emailBlocks',
+					type: 'json',
+					label: 'Email Content',
+					admin: {
+						editor: 'email-builder',
+					},
+				},
+				{
+					name: 'isSystem',
+					type: 'checkbox',
+					label: 'System Template',
+					defaultValue: false,
+					admin: {
+						readOnly: true,
+					},
+					description: 'System templates are seeded by the platform and cannot be deleted.',
+				},
+			],
+			admin: {
+				group: 'Settings',
+				useAsTitle: 'name',
+				defaultColumns: ['name', 'slug', 'isSystem', 'updatedAt'],
+				preview: true,
+			},
+			timestamps: true,
+		},
+		{
 			slug: 'auth-user',
 			labels: {
 				singular: 'User',
@@ -1828,5 +1884,6 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 	plugins: [
 		{ name: 'analytics', adminRoutes: analyticsAdminRoutes },
 		{ name: 'seo', adminRoutes: seoAdminRoutes },
+		{ name: 'email', adminRoutes: emailAdminRoutes },
 	],
 };

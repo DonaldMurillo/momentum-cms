@@ -7,12 +7,21 @@
 
 import type { CollectionConfig, Field } from '@momentumcms/core';
 
+/** Custom field renderer: receives the field value and returns an HTML string to embed. */
+export type CustomFieldRenderer = (value: unknown, field: Field) => string;
+
 /** Options for rendering a preview HTML page. */
 export interface PreviewRenderOptions {
 	/** Document data to render */
 	doc: Record<string, unknown>;
 	/** Collection configuration */
 	collection: CollectionConfig;
+	/**
+	 * Optional custom field renderers keyed by `admin.editor` value.
+	 * When a field's `admin.editor` matches a key, the custom renderer is used
+	 * instead of the default switch-case logic.
+	 */
+	customFieldRenderers?: Record<string, CustomFieldRenderer>;
 }
 
 /**
@@ -23,19 +32,18 @@ export interface PreviewRenderOptions {
  * - Inline CSS for responsive layout
  * - postMessage listener for live updates from the admin form
  *
- * Security: Rich text fields are rendered via textContent by default in the
- * postMessage handler to prevent XSS. The initial server render of rich text
- * is trusted server-side content from the database.
+ * Security: All field values (including rich text) are HTML-escaped in both
+ * the initial server render and the client-side postMessage handler.
  */
 export function renderPreviewHTML(options: PreviewRenderOptions): string {
-	const { doc, collection } = options;
+	const { doc, collection, customFieldRenderers } = options;
 	const titleField = collection.admin?.useAsTitle ?? 'id';
 	const title = escapeHtml(String(doc[titleField] ?? doc['id'] ?? 'Untitled'));
 	const fields = collection.fields ?? [];
 
 	const fieldHtml = fields
 		.filter((f) => !isHiddenField(f) && !isLayoutField(f) && f.name !== titleField)
-		.map((f) => renderField(f, doc))
+		.map((f) => renderField(f, doc, customFieldRenderers))
 		.filter(Boolean)
 		.join('\n');
 
@@ -74,6 +82,7 @@ ${fieldHtml}
 (function(){
 var richTextFields=${JSON.stringify(richTextFields)};
 window.addEventListener('message',function(e){
+if(e.origin!==window.location.origin)return;
 if(!e.data||e.data.type!=='momentum-preview-update')return;
 var d=e.data.data;if(!d)return;
 document.querySelectorAll('[data-field]').forEach(function(el){
@@ -96,18 +105,29 @@ if(titleEl){var tf=titleEl.getAttribute('data-field');if(d[tf]!==undefined)title
 }
 
 /** Render a single field as HTML. */
-function renderField(field: Field, doc: Record<string, unknown>): string {
+function renderField(
+	field: Field,
+	doc: Record<string, unknown>,
+	customRenderers?: Record<string, CustomFieldRenderer>,
+): string {
 	const value = doc[field.name];
 	if (value === undefined || value === null) {
 		return renderFieldWrapper(field, '');
 	}
 
+	// Check for a custom renderer keyed by admin.editor
+	const editorKey = field.admin?.editor;
+	if (editorKey && customRenderers?.[editorKey]) {
+		return renderFieldWrapper(field, customRenderers[editorKey](value, field));
+	}
+
 	switch (field.type) {
 		case 'richText':
-			// Rich text is stored as HTML - server-side content from the database is trusted
+			// Preview is a summary view — always escape to prevent XSS
+			// (POST preview sends user input; even GET data could contain stored XSS)
 			return renderFieldWrapper(
 				field,
-				`<div class="field-value rich-text" data-field="${escapeHtml(field.name)}">${String(value)}</div>`,
+				`<div class="field-value rich-text" data-field="${escapeHtml(field.name)}">${escapeHtml(String(value))}</div>`,
 			);
 		case 'checkbox':
 			return renderFieldWrapper(
