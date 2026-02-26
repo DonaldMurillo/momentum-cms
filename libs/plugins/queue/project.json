@@ -3,7 +3,7 @@
 	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
 	"sourceRoot": "libs/plugins/queue/src",
 	"projectType": "library",
-	"tags": ["scope:plugin", "scope:plugin-infra"],
+	"tags": ["scope:plugin", "scope:plugin-infra", "env:server"],
 	"targets": {
 		"test": {
 			"executor": "@nx/vitest:test",

@@ -49,6 +49,35 @@ describe('postgresQueueAdapter', () => {
 		adapter = postgresQueueAdapter({ pool: mock.pool });
 	});
 
+	describe('tableName validation', () => {
+		it('should accept valid table names', () => {
+			expect(() =>
+				postgresQueueAdapter({ pool: mock.pool, tableName: 'queue-jobs' }),
+			).not.toThrow();
+			expect(() => postgresQueueAdapter({ pool: mock.pool, tableName: 'my_queue' })).not.toThrow();
+			expect(() => postgresQueueAdapter({ pool: mock.pool, tableName: '_private' })).not.toThrow();
+			expect(() => postgresQueueAdapter({ pool: mock.pool, tableName: 'Jobs123' })).not.toThrow();
+		});
+
+		it('should reject table names with SQL injection characters', () => {
+			expect(() =>
+				postgresQueueAdapter({ pool: mock.pool, tableName: 'jobs"; DROP TABLE users; --' }),
+			).toThrow('Invalid table name');
+			expect(() => postgresQueueAdapter({ pool: mock.pool, tableName: "jobs'; --" })).toThrow(
+				'Invalid table name',
+			);
+			expect(() => postgresQueueAdapter({ pool: mock.pool, tableName: 'jobs spaces' })).toThrow(
+				'Invalid table name',
+			);
+			expect(() => postgresQueueAdapter({ pool: mock.pool, tableName: '' })).toThrow(
+				'Invalid table name',
+			);
+			expect(() => postgresQueueAdapter({ pool: mock.pool, tableName: '123queue' })).toThrow(
+				'Invalid table name',
+			);
+		});
+	});
+
 	describe('initialize', () => {
 		it('should create partial unique index for deduplication', async () => {
 			await adapter.initialize();
@@ -597,14 +626,64 @@ describe('postgresQueueAdapter', () => {
 
 			expect(job.id).toBe('retry-id');
 			expect(mock.getQueries()).toHaveLength(3); // INSERT, SELECT, retry INSERT
+
+			// Verify retry INSERT also uses ON CONFLICT for safety
+			const retryQuery = mock.getQueries()[2];
+			expect(retryQuery?.text).toContain('ON CONFLICT');
+			expect(retryQuery?.text).toContain('"uniqueKey"');
 		});
 
-		it('should throw when retry insert also fails', async () => {
+		it('should return existing job when retry insert hits concurrent conflict', async () => {
+			// INSERT returns empty (conflict)
+			mock.queueResult({ rows: [] });
+			// SELECT returns empty (job completed between insert and select)
+			mock.queueResult({ rows: [] });
+			// Retry INSERT also returns empty (another concurrent enqueue won)
+			mock.queueResult({ rows: [] });
+			// Final SELECT finds the concurrent winner
+			mock.queueResult({
+				rows: [
+					{
+						id: 'winner-id',
+						type: 'email:send',
+						payload: {},
+						status: 'pending',
+						queue: 'default',
+						priority: 5,
+						attempts: 0,
+						maxRetries: 3,
+						backoff: { type: 'exponential', delay: 1000 },
+						timeout: 30000,
+						uniqueKey: 'race-key',
+						createdAt: '2025-01-01T00:00:00.000Z',
+						updatedAt: '2025-01-01T00:00:00.000Z',
+					},
+				],
+			});
+
+			const job = await adapter.enqueue('email:send', {}, { uniqueKey: 'race-key' });
+
+			expect(job.id).toBe('winner-id');
+			expect(mock.getQueries()).toHaveLength(4); // INSERT, SELECT, retry INSERT, final SELECT
+
+			// Verify retry INSERT uses ON CONFLICT
+			const retryQuery = mock.getQueries()[2];
+			expect(retryQuery?.text).toContain('ON CONFLICT');
+
+			// Verify final SELECT targets uniqueKey
+			const finalSelect = mock.getQueries()[3];
+			expect(finalSelect?.text).toContain('SELECT');
+			expect(finalSelect?.text).toContain('"uniqueKey"');
+		});
+
+		it('should throw when retry insert and final select both fail', async () => {
 			// INSERT returns empty (conflict)
 			mock.queueResult({ rows: [] });
 			// SELECT returns empty (race condition)
 			mock.queueResult({ rows: [] });
-			// Retry INSERT also returns empty
+			// Retry INSERT also returns empty (concurrent conflict)
+			mock.queueResult({ rows: [] });
+			// Final SELECT also returns empty (job completed again)
 			mock.queueResult({ rows: [] });
 
 			await expect(adapter.enqueue('email:send', {}, { uniqueKey: 'fail-key' })).rejects.toThrow(

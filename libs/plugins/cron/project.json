@@ -3,7 +3,7 @@
 	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
 	"sourceRoot": "libs/plugins/cron/src",
 	"projectType": "library",
-	"tags": ["scope:plugin"],
+	"tags": ["scope:plugin", "env:server"],
 	"targets": {
 		"test": {
 			"executor": "@nx/vitest:test",

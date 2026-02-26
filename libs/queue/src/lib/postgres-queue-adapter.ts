@@ -168,6 +168,11 @@ function calculateBackoffDelay(backoff: BackoffStrategy, attempt: number): numbe
  */
 export function postgresQueueAdapter(options: PostgresQueueAdapterOptions): QueueAdapter {
 	const { pool, tableName = 'queue-jobs' } = options;
+	if (!/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(tableName)) {
+		throw new Error(
+			`Invalid table name: "${tableName}". Only alphanumeric characters, hyphens, and underscores are allowed.`,
+		);
+	}
 	const table = `"${tableName}"`;
 
 	async function query(text: string, values?: unknown[]): Promise<Record<string, unknown>[]> {
@@ -273,14 +278,25 @@ export function postgresQueueAdapter(options: PostgresQueueAdapterOptions): Queu
 					 "attempts", "maxRetries", "backoff", "timeout",
 					 "uniqueKey", "runAt", "metadata", "createdAt", "updatedAt")
 					VALUES ($1, $2, $3, 'pending', $4, $5, 0, $6, $7, $8, $9, $10, $11, $12, $12)
+					ON CONFLICT ("uniqueKey") WHERE "uniqueKey" IS NOT NULL AND "status" IN ('pending', 'active') DO NOTHING
 					RETURNING *`,
 					values,
 				);
 				const retryRow = retryRows[0];
-				if (!retryRow) {
-					throw new Error('Failed to enqueue job after deduplication retry');
+				if (retryRow) {
+					return mapRow(retryRow);
 				}
-				return mapRow(retryRow);
+				// Another concurrent enqueue won the race — return that job
+				const raceWinner = await queryOne(
+					`SELECT * FROM ${table}
+					WHERE "uniqueKey" = $1 AND "status" IN ('pending', 'active')
+					LIMIT 1`,
+					[uniqueKey],
+				);
+				if (raceWinner) {
+					return mapRow(raceWinner);
+				}
+				throw new Error('Failed to enqueue job after deduplication retry');
 			}
 
 			const firstRow = rows[0];
