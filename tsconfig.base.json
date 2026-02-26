@@ -71,6 +71,15 @@
 			"@momentumcms/plugins-email/admin-routes": [
 				"libs/plugins/email/src/lib/email-admin-routes.ts"
 			],
+			"@momentumcms/queue": ["libs/queue/src/index.ts"],
+			"@momentumcms/plugins/queue": ["libs/plugins/queue/src/index.ts"],
+			"@momentumcms/plugins-queue": ["libs/plugins/queue/src/index.ts"],
+			"@momentumcms/plugins-queue/admin-routes": [
+				"libs/plugins/queue/src/lib/queue-admin-routes.ts"
+			],
+			"@momentumcms/plugins/cron": ["libs/plugins/cron/src/index.ts"],
+			"@momentumcms/plugins-cron": ["libs/plugins/cron/src/index.ts"],
+			"@momentumcms/plugins-cron/admin-routes": ["libs/plugins/cron/src/lib/cron-admin-routes.ts"],
 			"@momentumcms/example-config": ["libs/example-config/src/index.ts"],
 			"@momentumcms/example-config/collections": ["libs/example-config/src/collections/index.ts"],
 			"@momentumcms/example-config/globals": ["libs/example-config/src/globals/index.ts"],

@@ -1,0 +1,35 @@
+{
+	"name": "plugins-cron",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/plugins/cron/src",
+	"projectType": "library",
+	"tags": ["scope:plugin"],
+	"targets": {
+		"test": {
+			"executor": "@nx/vitest:test",
+			"outputs": ["{workspaceRoot}/coverage/libs/plugins/cron"],
+			"options": {
+				"config": "libs/plugins/cron/vitest.config.mts"
+			}
+		},
+		"build": {
+			"executor": "@nx/esbuild:esbuild",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/libs/plugins/cron",
+				"main": "libs/plugins/cron/src/index.ts",
+				"additionalEntryPoints": ["libs/plugins/cron/src/lib/cron-admin-routes.ts"],
+				"tsConfig": "libs/plugins/cron/tsconfig.lib.json",
+				"generatePackageJson": false,
+				"assets": ["libs/plugins/cron/package.json"],
+				"external": ["@angular/*", "@ng-icons/*", "@momentumcms/ui"]
+			}
+		},
+		"nx-release-publish": {
+			"options": {
+				"packageRoot": "dist/{projectRoot}",
+				"access": "public"
+			}
+		}
+	}
+}

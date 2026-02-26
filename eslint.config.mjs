@@ -151,6 +151,9 @@ export default [
 			'libs/server-core/**/*.ts',
 			'libs/server-express/**/*.ts',
 			'libs/server-analog/**/*.ts',
+			'libs/queue/**/*.ts',
+			'libs/plugins/queue/**/*.ts',
+			'libs/plugins/cron/**/*.ts',
 		],
 		rules: {
 			'local/no-direct-browser-apis': 'off',

@@ -8,6 +8,8 @@ import type { CollectionSlug, GlobalSlug } from './momentum.types';
 import { analyticsAdminRoutes } from '@momentumcms/plugins-analytics/admin-routes';
 import { seoAdminRoutes } from '@momentumcms/plugins-seo/admin-routes';
 import { emailAdminRoutes } from '@momentumcms/plugins-email/admin-routes';
+import { queueAdminRoutes } from '@momentumcms/plugins-queue/admin-routes';
+import { cronAdminRoutes } from '@momentumcms/plugins-cron/admin-routes';
 
 export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 	collections: [
@@ -1848,6 +1850,220 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			},
 			timestamps: true,
 		},
+		{
+			slug: 'queue-jobs',
+			labels: {
+				singular: 'Job',
+				plural: 'Jobs',
+			},
+			fields: [
+				{
+					name: 'type',
+					type: 'text',
+					required: true,
+					label: 'Job Type',
+				},
+				{
+					name: 'payload',
+					type: 'json',
+					label: 'Payload',
+				},
+				{
+					name: 'status',
+					type: 'select',
+					required: true,
+					defaultValue: 'pending',
+					label: 'Status',
+					options: [
+						{
+							label: 'Pending',
+							value: 'pending',
+						},
+						{
+							label: 'Active',
+							value: 'active',
+						},
+						{
+							label: 'Completed',
+							value: 'completed',
+						},
+						{
+							label: 'Failed',
+							value: 'failed',
+						},
+						{
+							label: 'Dead',
+							value: 'dead',
+						},
+					],
+				},
+				{
+					name: 'queue',
+					type: 'text',
+					required: true,
+					defaultValue: 'default',
+					label: 'Queue',
+				},
+				{
+					name: 'priority',
+					type: 'number',
+					required: true,
+					defaultValue: 5,
+					min: 0,
+					max: 9,
+					label: 'Priority',
+					description: '0 = highest, 9 = lowest',
+				},
+				{
+					name: 'attempts',
+					type: 'number',
+					required: true,
+					defaultValue: 0,
+					label: 'Attempts',
+				},
+				{
+					name: 'maxRetries',
+					type: 'number',
+					required: true,
+					defaultValue: 3,
+					label: 'Max Retries',
+				},
+				{
+					name: 'backoff',
+					type: 'json',
+					label: 'Backoff Strategy',
+				},
+				{
+					name: 'timeout',
+					type: 'number',
+					required: true,
+					defaultValue: 30000,
+					label: 'Timeout (ms)',
+				},
+				{
+					name: 'uniqueKey',
+					type: 'text',
+					label: 'Unique Key',
+				},
+				{
+					name: 'runAt',
+					type: 'date',
+					label: 'Run At',
+				},
+				{
+					name: 'startedAt',
+					type: 'date',
+					label: 'Started At',
+				},
+				{
+					name: 'finishedAt',
+					type: 'date',
+					label: 'Finished At',
+				},
+				{
+					name: 'lastError',
+					type: 'text',
+					label: 'Last Error',
+				},
+				{
+					name: 'metadata',
+					type: 'json',
+					label: 'Metadata',
+				},
+			],
+			admin: {
+				group: 'System',
+				useAsTitle: 'type',
+				defaultColumns: ['type', 'status', 'queue', 'priority', 'attempts', 'createdAt'],
+				pagination: {
+					defaultLimit: 50,
+				},
+			},
+			timestamps: true,
+		},
+		{
+			slug: 'cron-schedules',
+			labels: {
+				singular: 'Cron Schedule',
+				plural: 'Cron Schedules',
+			},
+			fields: [
+				{
+					name: 'name',
+					type: 'text',
+					required: true,
+					unique: true,
+					label: 'Schedule Name',
+				},
+				{
+					name: 'type',
+					type: 'text',
+					required: true,
+					label: 'Job Type',
+				},
+				{
+					name: 'cron',
+					type: 'text',
+					required: true,
+					label: 'Cron Expression',
+					description: '5-field cron: minute hour day-of-month month day-of-week',
+				},
+				{
+					name: 'payload',
+					type: 'json',
+					label: 'Job Payload',
+				},
+				{
+					name: 'queue',
+					type: 'text',
+					defaultValue: 'default',
+					label: 'Queue',
+				},
+				{
+					name: 'priority',
+					type: 'number',
+					defaultValue: 5,
+					min: 0,
+					max: 9,
+					label: 'Priority',
+					description: '0 = highest, 9 = lowest',
+				},
+				{
+					name: 'maxRetries',
+					type: 'number',
+					defaultValue: 3,
+					label: 'Max Retries',
+				},
+				{
+					name: 'timeout',
+					type: 'number',
+					defaultValue: 30000,
+					label: 'Timeout (ms)',
+				},
+				{
+					name: 'enabled',
+					type: 'checkbox',
+					defaultValue: true,
+					label: 'Enabled',
+				},
+				{
+					name: 'lastRunAt',
+					type: 'date',
+					label: 'Last Run At',
+				},
+				{
+					name: 'nextRunAt',
+					type: 'date',
+					label: 'Next Run At',
+				},
+			],
+			admin: {
+				group: 'System',
+				useAsTitle: 'name',
+				defaultColumns: ['name', 'type', 'cron', 'enabled', 'lastRunAt', 'nextRunAt'],
+			},
+			timestamps: true,
+		},
 	],
 	globals: [
 		{
@@ -1885,5 +2101,7 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 		{ name: 'analytics', adminRoutes: analyticsAdminRoutes },
 		{ name: 'seo', adminRoutes: seoAdminRoutes },
 		{ name: 'email', adminRoutes: emailAdminRoutes },
+		{ name: 'queue', adminRoutes: queueAdminRoutes },
+		{ name: 'cron', adminRoutes: cronAdminRoutes },
 	],
 };

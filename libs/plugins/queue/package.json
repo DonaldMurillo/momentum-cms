@@ -1,0 +1,50 @@
+{
+	"name": "@momentumcms/plugins-queue",
+	"version": "0.5.0",
+	"description": "Job queue plugin for Momentum CMS with PostgreSQL SKIP LOCKED support",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/DonaldMurillo/momentum-cms.git",
+		"directory": "libs/plugins/queue"
+	},
+	"homepage": "https://github.com/DonaldMurillo/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/DonaldMurillo/momentum-cms/issues"
+	},
+	"keywords": [
+		"cms",
+		"momentum-cms",
+		"queue",
+		"job-queue",
+		"plugin"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"main": "./index.cjs",
+	"types": "./src/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.d.ts",
+			"default": "./index.cjs"
+		},
+		"./admin-routes": {
+			"types": "./src/lib/queue-admin-routes.d.ts",
+			"default": "./lib/queue-admin-routes.cjs"
+		}
+	},
+	"dependencies": {
+		"@momentumcms/core": "0.5.0",
+		"express": "^4.21.0"
+	},
+	"peerDependencies": {
+		"pg": "^8.0.0"
+	},
+	"peerDependenciesMeta": {
+		"pg": {
+			"optional": true
+		}
+	}
+}

@@ -1,0 +1,35 @@
+{
+	"name": "plugins-queue",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/plugins/queue/src",
+	"projectType": "library",
+	"tags": ["scope:plugin", "scope:plugin-infra"],
+	"targets": {
+		"test": {
+			"executor": "@nx/vitest:test",
+			"outputs": ["{workspaceRoot}/coverage/libs/plugins/queue"],
+			"options": {
+				"config": "libs/plugins/queue/vitest.config.mts"
+			}
+		},
+		"build": {
+			"executor": "@nx/esbuild:esbuild",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/libs/plugins/queue",
+				"main": "libs/plugins/queue/src/index.ts",
+				"additionalEntryPoints": ["libs/plugins/queue/src/lib/queue-admin-routes.ts"],
+				"tsConfig": "libs/plugins/queue/tsconfig.lib.json",
+				"generatePackageJson": false,
+				"assets": ["libs/plugins/queue/package.json"],
+				"external": ["@angular/*", "@ng-icons/*", "@momentumcms/ui"]
+			}
+		},
+		"nx-release-publish": {
+			"options": {
+				"packageRoot": "dist/{projectRoot}",
+				"access": "public"
+			}
+		}
+	}
+}
