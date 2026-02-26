@@ -32,39 +32,39 @@ describe('SeoSitemapSettings collection', () => {
 	it('should allow read access for internal calls (no user)', () => {
 		const readFn = SeoSitemapSettings.access?.read;
 		expect(readFn).toBeDefined();
-		expect(readFn!(buildAccessArgs(undefined))).toBe(true);
+		expect(readFn?.(buildAccessArgs(undefined))).toBe(true);
 	});
 
 	it('should allow read access for admin users', () => {
 		const readFn = SeoSitemapSettings.access?.read;
-		expect(readFn!(buildAccessArgs({ role: 'admin' }))).toBe(true);
+		expect(readFn?.(buildAccessArgs({ role: 'admin' }))).toBe(true);
 	});
 
 	it('should deny read access for non-admin users', () => {
 		const readFn = SeoSitemapSettings.access?.read;
-		expect(readFn!(buildAccessArgs({ role: 'editor' }))).toBe(false);
+		expect(readFn?.(buildAccessArgs({ role: 'editor' }))).toBe(false);
 	});
 
 	it('should allow create access for internal calls (no user)', () => {
 		const createFn = SeoSitemapSettings.access?.create;
 		expect(createFn).toBeDefined();
-		expect(createFn!(buildAccessArgs(undefined))).toBe(true);
+		expect(createFn?.(buildAccessArgs(undefined))).toBe(true);
 	});
 
 	it('should allow update access for admin users', () => {
 		const updateFn = SeoSitemapSettings.access?.update;
 		expect(updateFn).toBeDefined();
-		expect(updateFn!(buildAccessArgs({ role: 'admin' }))).toBe(true);
+		expect(updateFn?.(buildAccessArgs({ role: 'admin' }))).toBe(true);
 	});
 
 	it('should deny delete access to unauthenticated requests', () => {
 		const deleteFn = SeoSitemapSettings.access?.delete;
 		expect(deleteFn).toBeDefined();
-		expect(deleteFn!(buildAccessArgs(undefined))).toBe(false);
+		expect(deleteFn?.(buildAccessArgs(undefined))).toBe(false);
 	});
 
 	it('should allow delete access to admin users', () => {
 		const deleteFn = SeoSitemapSettings.access?.delete;
-		expect(deleteFn!(buildAccessArgs({ role: 'admin' }))).toBe(true);
+		expect(deleteFn?.(buildAccessArgs({ role: 'admin' }))).toBe(true);
 	});
 });

@@ -147,8 +147,8 @@ describe.skipIf(!pgAvailable)('breaking-changes: danger detection (PostgreSQL)',
 			(w) => w.severity === 'error' && w.message.includes('slug'),
 		);
 		expect(addColError).toBeDefined();
-		expect(addColError!.message).toContain('NOT NULL');
-		expect(addColError!.message).toContain('without a default');
+		expect(addColError?.message).toContain('NOT NULL');
+		expect(addColError?.message).toContain('without a default');
 	});
 
 	it('should flag DROP TABLE as ERROR', () => {
@@ -163,7 +163,7 @@ describe.skipIf(!pgAvailable)('breaking-changes: danger detection (PostgreSQL)',
 			(w) => w.severity === 'error' && w.message.includes('Dropping table'),
 		);
 		expect(dropError).toBeDefined();
-		expect(dropError!.message).toContain('posts');
+		expect(dropError?.message).toContain('posts');
 	});
 
 	it('should flag DROP COLUMN as WARNING', () => {
@@ -178,7 +178,7 @@ describe.skipIf(!pgAvailable)('breaking-changes: danger detection (PostgreSQL)',
 			(w) => w.severity === 'warning' && w.message.includes('Dropping column'),
 		);
 		expect(dropColWarning).toBeDefined();
-		expect(dropColWarning!.message).toContain('body');
+		expect(dropColWarning?.message).toContain('body');
 	});
 
 	it('should flag SET NOT NULL as WARNING', () => {
@@ -191,7 +191,7 @@ describe.skipIf(!pgAvailable)('breaking-changes: danger detection (PostgreSQL)',
 			(w) => w.severity === 'warning' && w.message.includes('NOT NULL'),
 		);
 		expect(notNullWarning).toBeDefined();
-		expect(notNullWarning!.suggestion).toContain('backfill');
+		expect(notNullWarning?.suggestion).toContain('backfill');
 	});
 
 	it('should flag lossy type change as WARNING', () => {
@@ -237,7 +237,7 @@ describe.skipIf(!pgAvailable)('breaking-changes: danger detection (PostgreSQL)',
 			// Should be blocked
 			expect(result.applied).toBe(false);
 			expect(result.dangers).not.toBeNull();
-			expect(result.dangers!.hasErrors).toBe(true);
+			expect(result.dangers?.hasErrors).toBe(true);
 			expect(result.sqlStatements).toHaveLength(0);
 
 			// Table should still be intact
@@ -272,14 +272,18 @@ describe.skipIf(!pgAvailable)('breaking-changes: clone catches real failures (Po
 
 	afterEach(async () => {
 		for (const p of clonePools) {
-			await p.end().catch(() => {
-				/* noop */
-			});
+			try {
+				await p.end();
+			} catch {
+				// Pool may already be closed
+			}
 		}
 		clonePools.length = 0;
-		await pool.end().catch(() => {
-			/* noop */
-		});
+		try {
+			await pool.end();
+		} catch {
+			// Pool may already be closed
+		}
 		await dropTestPgDb(dbName);
 	});
 

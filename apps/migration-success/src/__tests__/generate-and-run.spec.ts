@@ -132,8 +132,8 @@ describe('generate-and-run (PostgreSQL)', () => {
 		// Verify snapshot was written
 		const snapshot = readSnapshot(migrationDir);
 		expect(snapshot).not.toBeNull();
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		expect(snapshot!.tables.length).toBeGreaterThan(0);
+		 
+		expect(snapshot?.tables.length).toBeGreaterThan(0);
 	});
 
 	it('should load generated migration from disk', async () => {
@@ -195,8 +195,8 @@ describe('generate-and-run (PostgreSQL)', () => {
 		writeSnapshot(migrationDir, desired);
 
 		// Diff against same snapshot → no changes
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const previous = readSnapshot(migrationDir)!;
+		 
+		const previous = readSnapshot(migrationDir);
 		const diff = diffSchemas(desired, previous, 'postgresql');
 		expect(diff.operations).toHaveLength(0);
 	});
@@ -227,8 +227,8 @@ describe('generate-and-run (PostgreSQL)', () => {
 
 		// Generate V2 migration (adds status + slug columns)
 		const desiredV2 = collectionsToSchema([BlogV2], 'postgresql');
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const snapshotV1 = readSnapshot(migrationDir)!;
+		 
+		const snapshotV1 = readSnapshot(migrationDir);
 		const diff2 = diffSchemas(desiredV2, snapshotV1, 'postgresql');
 		expect(diff2.operations.length).toBeGreaterThan(0);
 
@@ -285,8 +285,8 @@ describe('generate-and-run (PostgreSQL)', () => {
 		});
 
 		const desiredV2 = collectionsToSchema([BlogV2], 'postgresql');
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const diff2 = diffSchemas(desiredV2, readSnapshot(migrationDir)!, 'postgresql');
+		 
+		const diff2 = diffSchemas(desiredV2, readSnapshot(migrationDir), 'postgresql');
 		const name2 = generateMigrationName('add_fields', new Date('2024-02-01T12:00:00Z'));
 		writeFileSync(
 			join(migrationDir, `${name2}.ts`),
@@ -335,8 +335,8 @@ describe('generate-and-run (PostgreSQL)', () => {
 		});
 
 		const desiredV2 = collectionsToSchema([BlogV2], 'postgresql');
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const diff2 = diffSchemas(desiredV2, readSnapshot(migrationDir)!, 'postgresql');
+		 
+		const diff2 = diffSchemas(desiredV2, readSnapshot(migrationDir), 'postgresql');
 		const name2 = generateMigrationName('add_fields', new Date('2024-02-01T12:00:00Z'));
 		writeFileSync(
 			join(migrationDir, `${name2}.ts`),
@@ -393,8 +393,8 @@ describe('generate-and-run (PostgreSQL)', () => {
 		});
 
 		const desiredV2 = collectionsToSchema([BlogV2], 'postgresql');
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const diff2 = diffSchemas(desiredV2, readSnapshot(migrationDir)!, 'postgresql');
+		 
+		const diff2 = diffSchemas(desiredV2, readSnapshot(migrationDir), 'postgresql');
 		const name2 = generateMigrationName('add_fields', new Date('2024-02-01T12:00:00Z'));
 		writeFileSync(
 			join(migrationDir, `${name2}.ts`),
@@ -486,8 +486,8 @@ describe('generate-and-run (PostgreSQL)', () => {
 
 		// Introspect and compare
 		const introspected = await introspectPostgres(pgQueryFn(pool));
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const snapshot = readSnapshot(migrationDir)!;
+		 
+		const snapshot = readSnapshot(migrationDir);
 
 		// Both should have the same user tables (snapshot has all, introspected filters internal)
 		const snapshotTableNames = snapshot.tables.map((t) => t.name).sort();
@@ -581,8 +581,8 @@ describe('generate-and-run (SQLite)', () => {
 
 		// V2
 		const desiredV2 = collectionsToSchema([BlogV2], 'sqlite');
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const diff2 = diffSchemas(desiredV2, readSnapshot(migrationDir)!, 'sqlite');
+		 
+		const diff2 = diffSchemas(desiredV2, readSnapshot(migrationDir), 'sqlite');
 		expect(diff2.operations.length).toBeGreaterThan(0);
 
 		const name2 = generateMigrationName('add_fields', new Date('2024-02-01T12:00:00Z'));
@@ -671,8 +671,8 @@ describe('generate-and-run (SQLite)', () => {
 		});
 
 		const introspected = await introspectSqlite(sqliteQueryFn(db));
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const snapshot = readSnapshot(migrationDir)!;
+		 
+		const snapshot = readSnapshot(migrationDir);
 
 		const snapshotTableNames = snapshot.tables.map((t) => t.name).sort();
 		const introspectedTableNames = introspected.tables.map((t) => t.name).sort();

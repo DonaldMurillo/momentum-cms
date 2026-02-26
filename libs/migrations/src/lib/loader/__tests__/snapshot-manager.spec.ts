@@ -40,11 +40,11 @@ describe('snapshot-manager', () => {
 
 		const read = readSnapshot(tempDir);
 		expect(read).not.toBeNull();
-		expect(read!.dialect).toBe('postgresql');
-		expect(read!.tables).toHaveLength(1);
-		expect(read!.tables[0].name).toBe('posts');
-		expect(read!.tables[0].columns).toHaveLength(2);
-		expect(read!.checksum).toBe(snapshot.checksum);
+		expect(read?.dialect).toBe('postgresql');
+		expect(read?.tables).toHaveLength(1);
+		expect(read?.tables[0].name).toBe('posts');
+		expect(read?.tables[0].columns).toHaveLength(2);
+		expect(read?.checksum).toBe(snapshot.checksum);
 	});
 
 	it('overwrites existing snapshot', () => {
@@ -63,9 +63,9 @@ describe('snapshot-manager', () => {
 
 		const read = readSnapshot(tempDir);
 		expect(read).not.toBeNull();
-		expect(read!.tables[0].columns).toHaveLength(3);
-		expect(read!.checksum).toBe(snapshot2.checksum);
-		expect(read!.checksum).not.toBe(snapshot1.checksum);
+		expect(read?.tables[0].columns).toHaveLength(3);
+		expect(read?.checksum).toBe(snapshot2.checksum);
+		expect(read?.checksum).not.toBe(snapshot1.checksum);
 	});
 
 	it('creates directory if it does not exist', () => {
@@ -77,7 +77,7 @@ describe('snapshot-manager', () => {
 		expect(existsSync(nestedDir)).toBe(true);
 		const read = readSnapshot(nestedDir);
 		expect(read).not.toBeNull();
-		expect(read!.dialect).toBe('sqlite');
+		expect(read?.dialect).toBe('sqlite');
 	});
 
 	it('getSnapshotPath returns correct path', () => {

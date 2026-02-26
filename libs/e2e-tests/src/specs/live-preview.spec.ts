@@ -89,17 +89,17 @@ test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 		const frame = await iframeHandle?.contentFrame();
 		expect(frame).toBeTruthy();
 
-		await frame!.waitForLoadState('domcontentloaded');
+		await frame?.waitForLoadState('domcontentloaded');
 
 		// The preview should render the title as an <h1> element
-		const h1Text = await frame!.evaluate(() => {
+		const h1Text = await frame?.evaluate(() => {
 			const h1 = document.querySelector('h1');
 			return h1?.textContent ?? '';
 		});
 		expect(h1Text).toContain('LP-Preview Test Event');
 
 		// Verify field labels are rendered
-		const bodyText = await frame!.evaluate(() => document.body.innerText);
+		const bodyText = await frame?.evaluate(() => document.body.innerText);
 		expect(bodyText).toContain('Preview City');
 	});
 
@@ -159,7 +159,7 @@ test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 		await expect(previewLayout).not.toBeVisible({ timeout: 5000 });
 
 		const iframe = page.locator('[data-testid="preview-iframe"]');
-		await expect(iframe).not.toBeVisible();
+		await expect(iframe).toBeHidden();
 	});
 
 	test('preview iframe updates after editing a field', async ({ page }) => {

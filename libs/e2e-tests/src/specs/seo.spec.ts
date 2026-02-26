@@ -297,9 +297,9 @@ test.describe('SEO Plugin', { tag: ['@seo', '@api', '@crud'] }, () => {
 
 		const updated = verifyData.settings.find((s) => s.collection === targetCollection);
 		expect(updated).toBeDefined();
-		expect(updated!.includeInSitemap).toBe(true);
-		expect(Number(updated!.priority)).toBe(0.8);
-		expect(updated!.changeFreq).toBe('daily');
+		expect(updated?.includeInSitemap).toBe(true);
+		expect(Number(updated?.priority)).toBe(0.8);
+		expect(updated?.changeFreq).toBe('daily');
 	});
 
 	test('GET /api/seo/seo-settings returns defaults', async ({ request }) => {
@@ -365,7 +365,7 @@ test.describe('SEO Plugin', { tag: ['@seo', '@api', '@crud'] }, () => {
 		const doc = (await create.json()) as { doc: { id: string } };
 
 		// Use a truly fresh request context without any auth cookies
-		const anonContext = await playwright.request.newContext({ baseURL: baseURL! });
+		const anonContext = await playwright.request.newContext({ baseURL: baseURL });
 		const unauthResponse = await anonContext.get(`/api/seo/meta/pages/${doc.doc.id}`);
 		expect(unauthResponse.status()).toBe(401);
 		await anonContext.dispose();

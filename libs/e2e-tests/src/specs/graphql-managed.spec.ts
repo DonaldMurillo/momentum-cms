@@ -121,6 +121,6 @@ test.describe('GraphQL managed collection mutations', { tag: ['@graphql', '@crud
 		};
 
 		expect(data.errors).toBeDefined();
-		expect(data.errors!.length).toBeGreaterThan(0);
+		expect(data.errors?.length).toBeGreaterThan(0);
 	});
 });

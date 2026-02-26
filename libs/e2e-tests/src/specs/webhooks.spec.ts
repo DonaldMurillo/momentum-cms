@@ -56,16 +56,16 @@ test.describe('Webhooks', { tag: ['@api', '@hooks'] }, () => {
 
 		const createWebhook = data.webhooks.find((w) => w.body.event === 'afterCreate');
 		expect(createWebhook).toBeDefined();
-		expect(createWebhook!.body.collection).toBe('categories');
-		expect(createWebhook!.body.operation).toBe('create');
-		expect(createWebhook!.body.doc).toBeDefined();
-		expect(createWebhook!.body.timestamp).toBeDefined();
+		expect(createWebhook?.body.collection).toBe('categories');
+		expect(createWebhook?.body.operation).toBe('create');
+		expect(createWebhook?.body.doc).toBeDefined();
+		expect(createWebhook?.body.timestamp).toBeDefined();
 
 		// Verify webhook headers
-		expect(createWebhook!.headers['x-momentum-event']).toBe('afterCreate');
-		expect(createWebhook!.headers['x-momentum-collection']).toBe('categories');
-		expect(createWebhook!.headers['x-momentum-signature']).toBeDefined();
-		expect(createWebhook!.headers['x-momentum-delivery']).toBeDefined();
+		expect(createWebhook?.headers['x-momentum-event']).toBe('afterCreate');
+		expect(createWebhook?.headers['x-momentum-collection']).toBe('categories');
+		expect(createWebhook?.headers['x-momentum-signature']).toBeDefined();
+		expect(createWebhook?.headers['x-momentum-delivery']).toBeDefined();
 
 		// Clean up
 
@@ -109,7 +109,7 @@ test.describe('Webhooks', { tag: ['@api', '@hooks'] }, () => {
 
 		const updateWebhook = data.webhooks.find((w) => w.body.event === 'afterUpdate');
 		expect(updateWebhook).toBeDefined();
-		expect(updateWebhook!.body.operation).toBe('update');
+		expect(updateWebhook?.body.operation).toBe('update');
 
 		// Clean up
 		await request.delete(`/api/categories/${created.doc.id}`);
@@ -148,7 +148,7 @@ test.describe('Webhooks', { tag: ['@api', '@hooks'] }, () => {
 
 		const deleteWebhook = data.webhooks.find((w) => w.body.event === 'afterDelete');
 		expect(deleteWebhook).toBeDefined();
-		expect(deleteWebhook!.body.operation).toBe('delete');
+		expect(deleteWebhook?.body.operation).toBe('delete');
 	});
 
 	test('webhook signature is valid HMAC-SHA256', async ({ request }) => {
@@ -180,11 +180,11 @@ test.describe('Webhooks', { tag: ['@api', '@hooks'] }, () => {
 		});
 		expect(webhook).toBeDefined();
 
-		const signature = webhook!.headers['x-momentum-signature'];
+		const signature = webhook?.headers['x-momentum-signature'];
 		expect(signature).toBeDefined();
 
 		// Verify the signature matches HMAC-SHA256 of the body with the test secret
-		const bodyStr = JSON.stringify(webhook!.body);
+		const bodyStr = JSON.stringify(webhook?.body);
 		const expectedSig = createHmac('sha256', 'test-webhook-secret').update(bodyStr).digest('hex');
 		expect(signature).toBe(expectedSig);
 

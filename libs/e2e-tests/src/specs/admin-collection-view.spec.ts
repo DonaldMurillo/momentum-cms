@@ -46,7 +46,7 @@ test.describe('Admin Collection View', { tag: ['@admin'] }, () => {
 			await expect(heading).not.toHaveText('Momentum CMS');
 
 			// Should NOT have a preview iframe (view page is read-only)
-			await expect(page.locator('[data-testid="preview-iframe"]')).not.toBeVisible();
+			await expect(page.locator('[data-testid="preview-iframe"]')).toBeHidden();
 
 			// "Open Page" link should be visible for articles with preview config
 			const openPageLink = page.locator('[data-testid="open-page-link"]');
@@ -114,7 +114,7 @@ test.describe('Admin Collection View', { tag: ['@admin'] }, () => {
 			await expect(heading).not.toHaveText('Momentum CMS');
 
 			// No preview iframe on view page
-			await expect(page.locator('[data-testid="preview-iframe"]')).not.toBeVisible();
+			await expect(page.locator('[data-testid="preview-iframe"]')).toBeHidden();
 
 			// "Open Page" link should work for pages with preview config
 			const openPageLink = page.locator('[data-testid="open-page-link"]');
@@ -152,8 +152,6 @@ test.describe('Admin Collection View', { tag: ['@admin'] }, () => {
 							return currentUrl;
 						}
 						await firstDataCell.click({ timeout: 2000 }).catch((_e: unknown) => undefined);
-						// Give Angular router a moment to navigate
-						await page.waitForTimeout(300);
 						return page.url();
 					},
 					{ timeout: 15000, intervals: [500, 1000, 1500, 2000] },

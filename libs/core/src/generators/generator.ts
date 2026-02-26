@@ -872,7 +872,8 @@ export function generateAdminConfig(config: MomentumConfig, typesRelPath: string
 
 	// Import plugin admin routes
 	for (const plugin of pluginsWithAdminRoutes) {
-		const imp = plugin.browserImports!.adminRoutes!;
+		const imp = plugin.browserImports?.adminRoutes;
+		if (!imp) continue;
 		lines.push(`import { ${imp.exportName} } from '${imp.path}';`);
 	}
 
@@ -912,9 +913,10 @@ export function generateAdminConfig(config: MomentumConfig, typesRelPath: string
 	// Plugin descriptors (only those with admin routes)
 	if (pluginsWithAdminRoutes.length > 0) {
 		const pluginItems = pluginsWithAdminRoutes
-			.map((p) => {
-				const imp = p.browserImports!.adminRoutes!;
-				return `\t\t{ name: ${JSON.stringify(p.name)}, adminRoutes: ${imp.exportName} }`;
+			.flatMap((p) => {
+				const imp = p.browserImports?.adminRoutes;
+				if (!imp) return [];
+				return [`\t\t{ name: ${JSON.stringify(p.name)}, adminRoutes: ${imp.exportName} }`];
 			})
 			.join(',\n');
 		lines.push(`\tplugins: [\n${pluginItems},\n\t],`);

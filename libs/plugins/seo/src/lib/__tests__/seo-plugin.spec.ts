@@ -69,13 +69,13 @@ describe('seoPlugin', () => {
 	it('should declare adminRoutes by default', () => {
 		const plugin = seoPlugin(makeConfig());
 		expect(plugin.adminRoutes).toBeDefined();
-		expect(plugin.adminRoutes!.length).toBeGreaterThanOrEqual(3);
-		expect(plugin.adminRoutes![0].path).toBe('seo');
-		expect(plugin.adminRoutes![0].label).toBe('SEO');
-		expect(plugin.adminRoutes![1].path).toBe('seo/sitemap');
-		expect(plugin.adminRoutes![1].label).toBe('Sitemap');
-		expect(plugin.adminRoutes![2].path).toBe('seo/robots');
-		expect(plugin.adminRoutes![2].label).toBe('Robots');
+		expect(plugin.adminRoutes?.length).toBeGreaterThanOrEqual(3);
+		expect(plugin.adminRoutes?.[0].path).toBe('seo');
+		expect(plugin.adminRoutes?.[0].label).toBe('SEO');
+		expect(plugin.adminRoutes?.[1].path).toBe('seo/sitemap');
+		expect(plugin.adminRoutes?.[1].label).toBe('Sitemap');
+		expect(plugin.adminRoutes?.[2].path).toBe('seo/robots');
+		expect(plugin.adminRoutes?.[2].label).toBe('Robots');
 	});
 
 	it('should declare no adminRoutes when adminDashboard is false', () => {
@@ -86,22 +86,22 @@ describe('seoPlugin', () => {
 	it('should declare browserImports for admin config generator', () => {
 		const plugin = seoPlugin(makeConfig());
 		expect(plugin.browserImports).toBeDefined();
-		expect(plugin.browserImports!['adminRoutes']).toBeDefined();
-		expect(plugin.browserImports!['modifyCollections']).toBeDefined();
+		expect(plugin.browserImports?.['adminRoutes']).toBeDefined();
+		expect(plugin.browserImports?.['modifyCollections']).toBeDefined();
 	});
 
 	it('should have a modifyCollections function that injects seo fields', () => {
 		const plugin = seoPlugin(makeConfig({ collections: ['posts'] }));
 		const collections = [makeCollection('posts')];
-		plugin.modifyCollections!(collections);
+		plugin.modifyCollections?.(collections);
 		expect(hasSeoField(collections[0])).toBe(true);
 	});
 
 	it('modifyCollections should be idempotent', () => {
 		const plugin = seoPlugin(makeConfig({ collections: ['posts'] }));
 		const collections = [makeCollection('posts')];
-		plugin.modifyCollections!(collections);
-		plugin.modifyCollections!(collections);
+		plugin.modifyCollections?.(collections);
+		plugin.modifyCollections?.(collections);
 		// Should still have exactly one tabs field with one seo tab
 		const tabsFields = collections[0].fields.filter((f) => f.type === 'tabs');
 		expect(tabsFields).toHaveLength(1);
@@ -112,7 +112,7 @@ describe('seoPlugin', () => {
 	it('modifyCollections should skip when enabled is false', () => {
 		const plugin = seoPlugin(makeConfig({ enabled: false }));
 		const collections = [makeCollection('posts')];
-		plugin.modifyCollections!(collections);
+		plugin.modifyCollections?.(collections);
 		expect(hasSeoField(collections[0])).toBe(false);
 	});
 
@@ -121,14 +121,14 @@ describe('seoPlugin', () => {
 			const plugin = seoPlugin(makeConfig({ collections: ['posts'] }));
 			const collections = [makeCollection('posts')];
 			const ctx = makePluginContext(collections);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			expect(hasSeoField(collections[0])).toBe(true);
 		});
 
 		it('should register sitemap middleware at root level', async () => {
 			const plugin = seoPlugin(makeConfig({ sitemap: true }));
 			const ctx = makePluginContext([]);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			expect(ctx.registerMiddleware).toHaveBeenCalledWith(
 				expect.objectContaining({ path: '/', position: 'root' }),
 			);
@@ -137,7 +137,7 @@ describe('seoPlugin', () => {
 		it('should register robots middleware at root level', async () => {
 			const plugin = seoPlugin(makeConfig({ robots: true }));
 			const ctx = makePluginContext([]);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			expect(ctx.registerMiddleware).toHaveBeenCalledWith(
 				expect.objectContaining({ path: '/', position: 'root' }),
 			);
@@ -146,7 +146,7 @@ describe('seoPlugin', () => {
 		it('should register meta API middleware when enabled', async () => {
 			const plugin = seoPlugin(makeConfig({ metaApi: true }));
 			const ctx = makePluginContext([]);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			expect(ctx.registerMiddleware).toHaveBeenCalledWith(
 				expect.objectContaining({ path: '/seo' }),
 			);
@@ -155,7 +155,7 @@ describe('seoPlugin', () => {
 		it('should only register dashboard middleware when sitemap/robots/meta disabled', async () => {
 			const plugin = seoPlugin(makeConfig({ sitemap: false, robots: false, metaApi: false }));
 			const ctx = makePluginContext([]);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			// Only the dashboard analyses endpoint should be registered
 			expect(ctx.registerMiddleware).toHaveBeenCalledTimes(1);
 		});
@@ -163,7 +163,7 @@ describe('seoPlugin', () => {
 		it('should skip all when enabled is false', async () => {
 			const plugin = seoPlugin(makeConfig({ enabled: false }));
 			const ctx = makePluginContext([makeCollection('posts')]);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			expect(ctx.registerMiddleware).not.toHaveBeenCalled();
 			expect(hasSeoField(ctx.collections[0])).toBe(false);
 		});
@@ -172,7 +172,7 @@ describe('seoPlugin', () => {
 			const plugin = seoPlugin(makeConfig({ analysis: true }));
 			const collections: CollectionConfig[] = [makeCollection('posts')];
 			const ctx = makePluginContext(collections);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			expect(collections.some((c) => c.slug === 'seo-analysis')).toBe(true);
 		});
 
@@ -180,7 +180,7 @@ describe('seoPlugin', () => {
 			const plugin = seoPlugin(makeConfig({ analysis: false }));
 			const collections: CollectionConfig[] = [makeCollection('posts')];
 			const ctx = makePluginContext(collections);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			expect(collections.some((c) => c.slug === 'seo-analysis')).toBe(false);
 		});
 
@@ -188,8 +188,8 @@ describe('seoPlugin', () => {
 			const plugin = seoPlugin(makeConfig({ collections: ['posts'], analysis: true }));
 			const collections: CollectionConfig[] = [makeCollection('posts')];
 			const ctx = makePluginContext(collections);
-			await plugin.onInit!(ctx);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
+			await plugin.onInit?.(ctx);
 			// seo-analysis should appear exactly once despite two onInit calls
 			const analysisCollections = collections.filter((c) => c.slug === 'seo-analysis');
 			expect(analysisCollections).toHaveLength(1);
@@ -202,7 +202,7 @@ describe('seoPlugin', () => {
 			const plugin = seoPlugin(makeConfig({ sitemap: true }));
 			const collections: CollectionConfig[] = [makeCollection('posts')];
 			const ctx = makePluginContext(collections);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			expect(collections.some((c) => c.slug === 'seo-sitemap-settings')).toBe(true);
 		});
 
@@ -210,7 +210,7 @@ describe('seoPlugin', () => {
 			const plugin = seoPlugin(makeConfig({ sitemap: false }));
 			const collections: CollectionConfig[] = [makeCollection('posts')];
 			const ctx = makePluginContext(collections);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			expect(collections.some((c) => c.slug === 'seo-sitemap-settings')).toBe(false);
 		});
 
@@ -218,7 +218,7 @@ describe('seoPlugin', () => {
 			const plugin = seoPlugin(makeConfig({ robots: true }));
 			const collections: CollectionConfig[] = [makeCollection('posts')];
 			const ctx = makePluginContext(collections);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			expect(collections.some((c) => c.slug === 'seo-settings')).toBe(true);
 		});
 
@@ -226,7 +226,7 @@ describe('seoPlugin', () => {
 			const plugin = seoPlugin(makeConfig({ robots: false }));
 			const collections: CollectionConfig[] = [makeCollection('posts')];
 			const ctx = makePluginContext(collections);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			expect(collections.some((c) => c.slug === 'seo-settings')).toBe(false);
 		});
 
@@ -234,8 +234,8 @@ describe('seoPlugin', () => {
 			const plugin = seoPlugin(makeConfig({ sitemap: true, collections: ['posts'] }));
 			const collections: CollectionConfig[] = [makeCollection('posts')];
 			const ctx = makePluginContext(collections);
-			await plugin.onInit!(ctx);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
+			await plugin.onInit?.(ctx);
 			const settingsCollections = collections.filter((c) => c.slug === 'seo-sitemap-settings');
 			expect(settingsCollections).toHaveLength(1);
 		});
@@ -243,7 +243,7 @@ describe('seoPlugin', () => {
 		it('should register sitemap settings middleware when sitemap enabled', async () => {
 			const plugin = seoPlugin(makeConfig({ sitemap: true, robots: false, metaApi: false }));
 			const ctx = makePluginContext([]);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			// Sitemap router + sitemap settings router + dashboard = 3
 			expect(ctx.registerMiddleware).toHaveBeenCalledTimes(3);
 		});
@@ -253,10 +253,10 @@ describe('seoPlugin', () => {
 			const collections: CollectionConfig[] = [makeCollection('posts')];
 			const ctx = makePluginContext(collections);
 			// First, fields are injected, then hooks
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			// The collection should now have seo field + afterChange hook
 			expect(collections[0].hooks?.afterChange).toBeDefined();
-			expect(collections[0].hooks!.afterChange!.length).toBeGreaterThanOrEqual(1);
+			expect(collections[0].hooks?.afterChange?.length).toBeGreaterThanOrEqual(1);
 		});
 	});
 
@@ -265,7 +265,7 @@ describe('seoPlugin', () => {
 			const plugin = seoPlugin(makeConfig());
 			const api = makeMomentumApi();
 			const readyCtx = makeReadyContext(api);
-			await plugin.onReady!(readyCtx);
+			await plugin.onReady?.(readyCtx);
 			// Verify it doesn't throw — API is stored internally
 			expect(readyCtx.logger.info).toHaveBeenCalled();
 		});
@@ -273,7 +273,7 @@ describe('seoPlugin', () => {
 		it('should skip when enabled is false', async () => {
 			const plugin = seoPlugin(makeConfig({ enabled: false }));
 			const readyCtx = makeReadyContext();
-			await plugin.onReady!(readyCtx);
+			await plugin.onReady?.(readyCtx);
 			expect(readyCtx.logger.info).not.toHaveBeenCalled();
 		});
 	});
@@ -284,7 +284,7 @@ describe('seoPlugin', () => {
 			const shutdownCtx = {
 				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 			};
-			await plugin.onShutdown!(shutdownCtx as unknown as PluginContext);
+			await plugin.onShutdown?.(shutdownCtx as unknown as PluginContext);
 			expect(shutdownCtx.logger.info).toHaveBeenCalled();
 		});
 	});

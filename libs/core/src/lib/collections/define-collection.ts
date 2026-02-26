@@ -116,7 +116,8 @@ export interface UploadFieldMapping {
  */
 export function getUploadFieldMapping(config: CollectionConfig): UploadFieldMapping | null {
 	if (!isUploadCollection(config)) return null;
-	const u = config.upload!;
+	const u = config.upload;
+	if (!u) return null;
 	return {
 		filename: u.filenameField ?? 'filename',
 		mimeType: u.mimeTypeField ?? 'mimeType',

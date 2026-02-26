@@ -35,7 +35,7 @@ export const Default: Story = {
 		props: {
 			value: '',
 			onSearch: (query: string) => {
-				// eslint-disable-next-line no-console
+				 
 				console.log('Search:', query);
 			},
 		},
@@ -53,7 +53,7 @@ export const WithPlaceholder: Story = {
 		props: {
 			value: '',
 			onSearch: (query: string) => {
-				// eslint-disable-next-line no-console
+				 
 				console.log('Search:', query);
 			},
 		},
@@ -72,7 +72,7 @@ export const WithValue: Story = {
 		props: {
 			value: 'Current search',
 			onClear: () => {
-				// eslint-disable-next-line no-console
+				 
 				console.log('Cleared');
 			},
 		},
@@ -90,7 +90,7 @@ export const CustomDebounce: Story = {
 		props: {
 			value: '',
 			onSearch: (query: string) => {
-				// eslint-disable-next-line no-console
+				 
 				console.log('Search:', query);
 			},
 		},

@@ -59,10 +59,10 @@ describe.skipIf(!pgAvailable)('introspection-roundtrip (PostgreSQL)', () => {
 
 		const table = findTable(snapshot.tables, 'posts');
 		expect(table).toBeDefined();
-		expect(findColumn(table!, 'id')).toBeDefined();
-		expect(findColumn(table!, 'title')!.nullable).toBe(false);
-		expect(findColumn(table!, 'body')!.nullable).toBe(true);
-		expect(findColumn(table!, 'createdAt')).toBeDefined();
+		expect(findColumn(table, 'id')).toBeDefined();
+		expect(findColumn(table, 'title')?.nullable).toBe(false);
+		expect(findColumn(table, 'body')?.nullable).toBe(true);
+		expect(findColumn(table, 'createdAt')).toBeDefined();
 	});
 
 	it('should introspect foreign keys', async () => {
@@ -73,8 +73,8 @@ describe.skipIf(!pgAvailable)('introspection-roundtrip (PostgreSQL)', () => {
 
 		const articlesTable = findTable(snapshot.tables, 'articles');
 		expect(articlesTable).toBeDefined();
-		expect(articlesTable!.foreignKeys).toBeDefined();
-		const fks = articlesTable!.foreignKeys;
+		expect(articlesTable?.foreignKeys).toBeDefined();
+		const fks = articlesTable?.foreignKeys;
 		expect(fks.length).toBeGreaterThan(0);
 		const fk = fks[0];
 		expect(fk.column).toBe('authorId');
@@ -90,10 +90,10 @@ describe.skipIf(!pgAvailable)('introspection-roundtrip (PostgreSQL)', () => {
 
 		const usersTable = findTable(snapshot.tables, 'users');
 		expect(usersTable).toBeDefined();
-		const emailIdx = usersTable!.indexes.find((i) => i.name === 'users_email_idx');
+		const emailIdx = usersTable?.indexes.find((i) => i.name === 'users_email_idx');
 		expect(emailIdx).toBeDefined();
-		expect(emailIdx!.unique).toBe(true);
-		expect(emailIdx!.columns).toContain('email');
+		expect(emailIdx?.unique).toBe(true);
+		expect(emailIdx?.columns).toContain('email');
 	});
 
 	it('should exclude internal tables', async () => {
@@ -119,9 +119,9 @@ describe.skipIf(!pgAvailable)('introspection-roundtrip (PostgreSQL)', () => {
 		const table = findTable(snapshot.tables, 'mixed');
 		expect(table).toBeDefined();
 
-		expect(findColumn(table!, 'required_col')!.nullable).toBe(false);
-		expect(findColumn(table!, 'optional_col')!.nullable).toBe(true);
-		expect(findColumn(table!, 'has_default')!.nullable).toBe(false);
+		expect(findColumn(table, 'required_col')?.nullable).toBe(false);
+		expect(findColumn(table, 'optional_col')?.nullable).toBe(true);
+		expect(findColumn(table, 'has_default')?.nullable).toBe(false);
 	});
 });
 
@@ -152,9 +152,9 @@ describe('introspection-roundtrip (SQLite)', () => {
 
 		const table = findTable(snapshot.tables, 'posts');
 		expect(table).toBeDefined();
-		expect(findColumn(table!, 'id')).toBeDefined();
-		expect(findColumn(table!, 'title')!.nullable).toBe(false);
-		expect(findColumn(table!, 'body')!.nullable).toBe(true);
+		expect(findColumn(table, 'id')).toBeDefined();
+		expect(findColumn(table, 'title')?.nullable).toBe(false);
+		expect(findColumn(table, 'body')?.nullable).toBe(true);
 	});
 
 	it('should introspect indexes', async () => {
@@ -165,10 +165,10 @@ describe('introspection-roundtrip (SQLite)', () => {
 
 		const usersTable = findTable(snapshot.tables, 'users');
 		expect(usersTable).toBeDefined();
-		const emailIdx = usersTable!.indexes.find((i) => i.name === 'users_email_idx');
+		const emailIdx = usersTable?.indexes.find((i) => i.name === 'users_email_idx');
 		expect(emailIdx).toBeDefined();
-		expect(emailIdx!.unique).toBe(true);
-		expect(emailIdx!.columns).toContain('email');
+		expect(emailIdx?.unique).toBe(true);
+		expect(emailIdx?.columns).toContain('email');
 	});
 
 	it('should exclude internal tables', async () => {

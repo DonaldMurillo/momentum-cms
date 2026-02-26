@@ -55,7 +55,7 @@ describe('momentumAdminRoutes - extended coverage', () => {
 			const adminRoute = routes.find((r) => r.path === 'admin');
 			expect(adminRoute).toBeDefined();
 
-			const data = adminRoute!.data as MomentumAdminRouteData;
+			const data = adminRoute?.data as MomentumAdminRouteData;
 			// 'pages' from plugin should be deduped
 			const pageSlugs = data.collections.filter((c) => c.slug === 'pages');
 			expect(pageSlugs).toHaveLength(1);
@@ -87,14 +87,14 @@ describe('momentumAdminRoutes - extended coverage', () => {
 
 			const routes = momentumAdminRoutes(config);
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			const analyticsChild = adminRoute!.children!.find((r) => r.path === 'analytics');
+			const analyticsChild = adminRoute?.children?.find((r) => r.path === 'analytics');
 			expect(analyticsChild).toBeDefined();
 
 			// pluginRoutes in data should include the converted route
-			const data = adminRoute!.data as MomentumAdminRouteData;
+			const data = adminRoute?.data as MomentumAdminRouteData;
 			expect(data.pluginRoutes).toBeDefined();
-			expect(data.pluginRoutes!.length).toBe(1);
-			expect(data.pluginRoutes![0].label).toBe('Analytics');
+			expect(data.pluginRoutes?.length).toBe(1);
+			expect(data.pluginRoutes?.[0].label).toBe('Analytics');
 		});
 
 		it('should call modifyCollections on plugins', () => {
@@ -136,7 +136,7 @@ describe('momentumAdminRoutes - extended coverage', () => {
 			const adminRoute = routes.find((r) => r.path === 'cms');
 			expect(adminRoute).toBeDefined();
 
-			const data = adminRoute!.data as MomentumAdminRouteData;
+			const data = adminRoute?.data as MomentumAdminRouteData;
 			const pageSlugs = data.collections.filter((c) => c.slug === 'pages');
 			expect(pageSlugs).toHaveLength(1);
 			expect(data.globals).toEqual([settingsGlobal]);
@@ -164,13 +164,13 @@ describe('momentumAdminRoutes - extended coverage', () => {
 
 			const routes = momentumAdminRoutes(adminConfig);
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			const seoChild = adminRoute!.children!.find((r) => r.path === 'seo');
+			const seoChild = adminRoute?.children?.find((r) => r.path === 'seo');
 			expect(seoChild).toBeDefined();
 
-			const data = adminRoute!.data as MomentumAdminRouteData;
+			const data = adminRoute?.data as MomentumAdminRouteData;
 			expect(data.pluginRoutes).toBeDefined();
-			expect(data.pluginRoutes![0].label).toBe('SEO');
-			expect(data.pluginRoutes![0].data).toEqual({ custom: true });
+			expect(data.pluginRoutes?.[0].label).toBe('SEO');
+			expect(data.pluginRoutes?.[0].data).toEqual({ custom: true });
 		});
 
 		it('should call modifyCollections on plugins', () => {
@@ -217,7 +217,7 @@ describe('momentumAdminRoutes - extended coverage', () => {
 
 			const routes = momentumAdminRoutes(adminConfig);
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			const data = adminRoute!.data as MomentumAdminRouteData;
+			const data = adminRoute?.data as MomentumAdminRouteData;
 			expect(data.collections).toHaveLength(2);
 			expect(data.collections.find((c) => c.slug === 'users')).toBeDefined();
 		});

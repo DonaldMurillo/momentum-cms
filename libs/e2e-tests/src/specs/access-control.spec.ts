@@ -138,7 +138,7 @@ test.describe('Frontend Access Control', { tag: ['@security', '@admin'] }, () =>
 
 		// Should be redirected to login or setup (depending on whether users exist)
 		const url = page.url();
-		expect(url.includes('/login') || url.includes('/setup')).toBeTruthy();
+		expect(url).toMatch(/\/(login|setup)/);
 	});
 
 	test('unauthenticated user redirected to login from dashboard', async ({ page }) => {
@@ -149,7 +149,7 @@ test.describe('Frontend Access Control', { tag: ['@security', '@admin'] }, () =>
 		await page.waitForURL(/\/(login|setup)/, { timeout: 15000 });
 
 		const url = page.url();
-		expect(url.includes('/login') || url.includes('/setup')).toBeTruthy();
+		expect(url).toMatch(/\/(login|setup)/);
 	});
 });
 

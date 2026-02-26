@@ -64,7 +64,7 @@ describe('analyticsPlugin', () => {
 		initAdapter.initialize = vi.fn().mockResolvedValue(undefined);
 
 		const plugin = analyticsPlugin({ adapter: initAdapter });
-		await plugin.onInit!(createMockContext());
+		await plugin.onInit?.(createMockContext());
 
 		expect(initAdapter.initialize).toHaveBeenCalledOnce();
 	});
@@ -73,7 +73,7 @@ describe('analyticsPlugin', () => {
 		const collections = [makeCollection('posts'), makeCollection('users')];
 
 		const plugin = analyticsPlugin(config);
-		await plugin.onInit!(createMockContext({ collections }));
+		await plugin.onInit?.(createMockContext({ collections }));
 
 		// Collections should have hooks injected
 		expect(collections[0].hooks?.afterChange).toHaveLength(1);
@@ -88,7 +88,7 @@ describe('analyticsPlugin', () => {
 			...config,
 			excludeCollections: ['_seed_tracking'],
 		});
-		await plugin.onInit!(createMockContext({ collections }));
+		await plugin.onInit?.(createMockContext({ collections }));
 
 		expect(collections[0].hooks?.afterChange).toHaveLength(1);
 		expect(collections[1].hooks).toBeUndefined();
@@ -98,7 +98,7 @@ describe('analyticsPlugin', () => {
 		const collections = [makeCollection('posts')];
 
 		const plugin = analyticsPlugin({ ...config, trackCollections: false });
-		await plugin.onInit!(createMockContext({ collections }));
+		await plugin.onInit?.(createMockContext({ collections }));
 
 		expect(collections[0].hooks).toBeUndefined();
 	});
@@ -109,7 +109,7 @@ describe('analyticsPlugin', () => {
 		const registerMiddleware = vi.fn();
 
 		const plugin = analyticsPlugin({ ...config, enabled: false });
-		await plugin.onInit!(createMockContext({ collections, logger, registerMiddleware }));
+		await plugin.onInit?.(createMockContext({ collections, logger, registerMiddleware }));
 
 		expect(collections[0].hooks).toBeUndefined();
 		expect(logger.info).toHaveBeenCalledWith('Analytics disabled');
@@ -123,7 +123,7 @@ describe('analyticsPlugin', () => {
 		);
 
 		const plugin = analyticsPlugin(config);
-		await plugin.onInit!(createMockContext({ registerMiddleware }));
+		await plugin.onInit?.(createMockContext({ registerMiddleware }));
 
 		// Verify each middleware is registered by checking paths
 		const paths = registeredMiddleware.map((m) => m.path);
@@ -156,7 +156,7 @@ describe('analyticsPlugin', () => {
 		);
 
 		const plugin = analyticsPlugin({ ...config, ingestPath: '/custom/ingest' });
-		await plugin.onInit!(createMockContext({ registerMiddleware }));
+		await plugin.onInit?.(createMockContext({ registerMiddleware }));
 
 		expect(registeredMiddleware[0].path).toBe('/custom/ingest');
 	});
@@ -168,7 +168,7 @@ describe('analyticsPlugin', () => {
 		);
 
 		const plugin = analyticsPlugin({ ...config, trackApi: false });
-		await plugin.onInit!(createMockContext({ registerMiddleware }));
+		await plugin.onInit?.(createMockContext({ registerMiddleware }));
 
 		// API collector (before-api at '/') should NOT be registered, but page view collector (root) still present
 		const beforeApiRoot = registeredMiddleware.filter(
@@ -191,7 +191,7 @@ describe('analyticsPlugin', () => {
 		);
 
 		const plugin = analyticsPlugin({ ...config, contentPerformance: false });
-		await plugin.onInit!(createMockContext({ registerMiddleware }));
+		await plugin.onInit?.(createMockContext({ registerMiddleware }));
 
 		// query + tracking rules = 2 at /analytics (no content perf)
 		const analyticsPaths = registeredMiddleware.filter((m) => m.path === '/analytics');
@@ -209,7 +209,7 @@ describe('analyticsPlugin', () => {
 
 		const collections: CollectionConfig[] = [];
 		const plugin = analyticsPlugin({ ...config, trackingRules: false });
-		await plugin.onInit!(createMockContext({ registerMiddleware, collections }));
+		await plugin.onInit?.(createMockContext({ registerMiddleware, collections }));
 
 		// query + content perf = 2 at /analytics (no tracking rules)
 		const analyticsPaths = registeredMiddleware.filter((m) => m.path === '/analytics');
@@ -229,7 +229,7 @@ describe('analyticsPlugin', () => {
 		);
 
 		const plugin = analyticsPlugin({ ...config, trackPageViews: false });
-		await plugin.onInit!(createMockContext({ registerMiddleware }));
+		await plugin.onInit?.(createMockContext({ registerMiddleware }));
 
 		const rootMiddleware = registeredMiddleware.filter((m) => m.position === 'root');
 		expect(rootMiddleware).toHaveLength(0);
@@ -248,7 +248,7 @@ describe('analyticsPlugin', () => {
 			...config,
 			trackPageViews: { excludePaths: ['/admin'], trackBots: true },
 		});
-		await plugin.onInit!(createMockContext({ registerMiddleware }));
+		await plugin.onInit?.(createMockContext({ registerMiddleware }));
 
 		const rootMiddleware = registeredMiddleware.filter((m) => m.position === 'root');
 		expect(rootMiddleware).toHaveLength(1);
@@ -259,7 +259,7 @@ describe('analyticsPlugin', () => {
 		const collections: CollectionConfig[] = [];
 
 		const plugin = analyticsPlugin(config);
-		await plugin.onInit!(createMockContext({ collections }));
+		await plugin.onInit?.(createMockContext({ collections }));
 
 		expect(collections.some((c) => c.slug === 'tracking-rules')).toBe(true);
 	});
@@ -268,7 +268,7 @@ describe('analyticsPlugin', () => {
 		const plugin = analyticsPlugin(config);
 		const startSpy = vi.spyOn(plugin.eventStore, 'start');
 
-		await plugin.onReady!({
+		await plugin.onReady?.({
 			...createMockContext(),
 			api: {} as never,
 		});
@@ -280,7 +280,7 @@ describe('analyticsPlugin', () => {
 		const plugin = analyticsPlugin({ ...config, enabled: false });
 		const startSpy = vi.spyOn(plugin.eventStore, 'start');
 
-		await plugin.onReady!({
+		await plugin.onReady?.({
 			...createMockContext(),
 			api: {} as never,
 		});
@@ -292,7 +292,7 @@ describe('analyticsPlugin', () => {
 		const plugin = analyticsPlugin(config);
 		const shutdownSpy = vi.spyOn(plugin.eventStore, 'shutdown');
 
-		await plugin.onShutdown!(createMockContext());
+		await plugin.onShutdown?.(createMockContext());
 
 		expect(shutdownSpy).toHaveBeenCalledOnce();
 	});
@@ -302,7 +302,7 @@ describe('analyticsPlugin', () => {
 		shutdownAdapter.shutdown = vi.fn().mockResolvedValue(undefined);
 
 		const plugin = analyticsPlugin({ adapter: shutdownAdapter });
-		await plugin.onShutdown!(createMockContext());
+		await plugin.onShutdown?.(createMockContext());
 
 		expect(shutdownAdapter.shutdown).toHaveBeenCalledOnce();
 	});
@@ -311,10 +311,10 @@ describe('analyticsPlugin', () => {
 		const collections = [makeCollection('posts')];
 
 		const plugin = analyticsPlugin(config);
-		await plugin.onInit!(createMockContext({ collections }));
+		await plugin.onInit?.(createMockContext({ collections }));
 
 		// Trigger the afterChange hook
-		const hook = collections[0].hooks!.afterChange![0];
+		const hook = collections[0].hooks?.afterChange?.[0];
 		hook({
 			operation: 'create',
 			doc: { id: 'doc-1' },

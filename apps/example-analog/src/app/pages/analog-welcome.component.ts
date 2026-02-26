@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 
 @Component({
 	selector: 'app-analog-welcome',
@@ -55,16 +55,17 @@ import { Component } from '@angular/core';
 						(click)="increment()"
 						class="inline-flex items-center justify-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background border border-input hover:bg-zinc-100 hover:text-zinc-950 h-11 px-8 rounded-md"
 					>
-						Count: <span class="ml-1 font-mono">{{ count }}</span>
+						Count: <span class="ml-1 font-mono">{{ count() }}</span>
 					</button>
 				</div>
 			</section>
 		</main>
 	`,
+	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AnalogWelcomeComponent {
-	public count = 0;
-	public increment(): void {
-		this.count++;
+	readonly count = signal(0);
+	increment(): void {
+		this.count.update((c) => c + 1);
 	}
 }

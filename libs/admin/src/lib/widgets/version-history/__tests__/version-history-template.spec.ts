@@ -206,7 +206,7 @@ describe('VersionHistoryWidget (template coverage)', () => {
 			// "current" should appear once
 			const currentMatches = allText.match(/current/g);
 			expect(currentMatches).toBeTruthy();
-			expect(currentMatches!.length).toBe(1);
+			expect(currentMatches?.length).toBe(1);
 		});
 
 		it('should render "autosave" badge for autosave versions', () => {

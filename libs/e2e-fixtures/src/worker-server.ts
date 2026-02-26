@@ -86,7 +86,7 @@ async function waitForHealth(
 			lastError = err instanceof Error ? err.message : String(err);
 		}
 
-		// eslint-disable-next-line local/no-direct-browser-apis -- Node.js context, not Angular
+		 
 		await new Promise((r) => setTimeout(r, 1000));
 	}
 
@@ -301,7 +301,7 @@ export function createWorkerFixture(config: WorkerServerConfig): ReturnType<type
 						serverProcess.kill('SIGTERM');
 						// Wait for graceful shutdown
 						await new Promise<void>((resolve) => {
-							// eslint-disable-next-line local/no-direct-browser-apis -- Node.js context, not Angular
+							 
 							const timeout = setTimeout(() => {
 								serverProcess?.kill('SIGKILL');
 								resolve();

@@ -123,7 +123,7 @@ test.describe('Analytics', { tag: ['@analytics', '@api'] }, () => {
 		expect(apiEvent).toBeDefined();
 		expect(apiEvent?.context.statusCode).toBe(200);
 		expect(typeof apiEvent?.context.duration).toBe('number');
-		expect(apiEvent!.context.duration!).toBeGreaterThanOrEqual(0); // eslint-disable-line @typescript-eslint/no-non-null-assertion -- verified above
+		expect(apiEvent?.context.duration).toBeGreaterThanOrEqual(0);  
 	});
 
 	test('ingest endpoint accepts client events', async ({ request }) => {

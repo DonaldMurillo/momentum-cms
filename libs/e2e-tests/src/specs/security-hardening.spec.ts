@@ -138,7 +138,7 @@ test.describe('Security hardening @security @api', { tag: ['@security', '@api'] 
 			// Extract filename from header — should only contain word chars, hyphens, dots
 			const filenameMatch = disposition.match(/filename="([^"]+)"/);
 			expect(filenameMatch, 'Content-Disposition must have a filename').toBeTruthy();
-			const filename = filenameMatch![1];
+			const filename = filenameMatch?.[1];
 			expect(
 				/^[\w.-]+$/.test(filename),
 				`Filename must contain only safe characters (word chars, dots, hyphens), got: "${filename}"`,
@@ -154,7 +154,7 @@ test.describe('Security hardening @security @api', { tag: ['@security', '@api'] 
 
 			const filenameMatch = disposition.match(/filename="([^"]+)"/);
 			expect(filenameMatch, 'Content-Disposition must have a filename').toBeTruthy();
-			const filename = filenameMatch![1];
+			const filename = filenameMatch?.[1];
 			expect(
 				/^[\w.-]+$/.test(filename),
 				`Filename must contain only safe characters, got: "${filename}"`,
