@@ -80,10 +80,10 @@ describe('getUploadFieldMapping', () => {
 		const mapping = getUploadFieldMapping(config);
 
 		expect(mapping).not.toBeNull();
-		expect(mapping!.filename).toBe('file_name');
-		expect(mapping!.mimeType).toBe('mimeType');
-		expect(mapping!.filesize).toBe('filesize');
-		expect(mapping!.path).toBe('path');
-		expect(mapping!.url).toBe('url');
+		expect(mapping?.filename).toBe('file_name');
+		expect(mapping?.mimeType).toBe('mimeType');
+		expect(mapping?.filesize).toBe('filesize');
+		expect(mapping?.path).toBe('path');
+		expect(mapping?.url).toBe('url');
 	});
 });

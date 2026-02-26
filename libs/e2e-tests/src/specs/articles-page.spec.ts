@@ -243,7 +243,7 @@ test.describe('Articles Page', { tag: ['@frontend', '@articles'] }, () => {
 		for (let i = 0; i < count; i++) {
 			const href = await cards.nth(i).getAttribute('href');
 			expect(href, `Card ${i} must have an href attribute`).toBeTruthy();
-			hrefs.push(href!);
+			hrefs.push(href ?? '');
 		}
 
 		// Every href must be /articles/<non-empty-slug> (at least 2 chars after /articles/)

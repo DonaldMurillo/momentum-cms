@@ -101,7 +101,7 @@ describe('AdminSidebarWidget', () => {
 			// The default group name from groupCollections is "Collections"
 			const defaultGroup = groups.find((g) => g.name === 'Collections');
 			expect(defaultGroup).toBeDefined();
-			expect(defaultGroup!.collections).toHaveLength(2);
+			expect(defaultGroup?.collections).toHaveLength(2);
 		});
 
 		it('should return empty when no collections provided', () => {
@@ -191,9 +191,9 @@ describe('AdminSidebarWidget', () => {
 			const layoutGroup = groups.find((g) => g.name === 'Layout');
 
 			expect(defaultGroup).toBeDefined();
-			expect(defaultGroup!.globals).toHaveLength(2);
+			expect(defaultGroup?.globals).toHaveLength(2);
 			expect(layoutGroup).toBeDefined();
-			expect(layoutGroup!.globals).toHaveLength(1);
+			expect(layoutGroup?.globals).toHaveLength(1);
 		});
 	});
 

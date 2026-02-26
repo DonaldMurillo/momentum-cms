@@ -164,7 +164,7 @@ test.describe('Content Performance', { tag: ['@analytics', '@api'] }, () => {
 		await searchInput.fill('home');
 
 		await expect(authenticatedPage.getByText('/home')).toBeVisible();
-		await expect(authenticatedPage.getByText('/about')).not.toBeVisible();
+		await expect(authenticatedPage.getByText('/about')).toBeHidden();
 
 		// Clear search → all rows return
 		await searchInput.clear();

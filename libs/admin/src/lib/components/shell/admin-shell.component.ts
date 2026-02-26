@@ -129,7 +129,7 @@ import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
 		<!-- Main Content (with top padding on mobile for header, normal padding at md+) -->
 		<main id="mcms-main-content" class="flex-1 p-8 overflow-y-auto overflow-x-hidden pt-20 md:pt-8">
 			@defer (hydrate on immediate) {
-				<router-outlet></router-outlet>
+				<router-outlet />
 			}
 		</main>
 

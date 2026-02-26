@@ -102,12 +102,12 @@ describe.skipIf(!pgAvailable)('push-pipeline (PostgreSQL)', () => {
 		const snapshot = await introspectPostgres(pgQueryFn(pool));
 		const table = findTable(snapshot.tables, 'push-test');
 		expect(table).toBeDefined();
-		expect(findColumn(table!, 'id')).toBeDefined();
-		expect(findColumn(table!, 'title')).toBeDefined();
-		expect(findColumn(table!, 'description')).toBeDefined();
-		expect(findColumn(table!, 'order')).toBeDefined();
-		expect(findColumn(table!, 'createdAt')).toBeDefined();
-		expect(findColumn(table!, 'updatedAt')).toBeDefined();
+		expect(findColumn(table, 'id')).toBeDefined();
+		expect(findColumn(table, 'title')).toBeDefined();
+		expect(findColumn(table, 'description')).toBeDefined();
+		expect(findColumn(table, 'order')).toBeDefined();
+		expect(findColumn(table, 'createdAt')).toBeDefined();
+		expect(findColumn(table, 'updatedAt')).toBeDefined();
 	});
 
 	it('should add and drop columns on schema change', async () => {
@@ -134,9 +134,9 @@ describe.skipIf(!pgAvailable)('push-pipeline (PostgreSQL)', () => {
 		const snapshot = await introspectPostgres(pgQueryFn(pool));
 		const table = findTable(snapshot.tables, 'push-test');
 		expect(table).toBeDefined();
-		expect(findColumn(table!, 'status')).toBeDefined();
+		expect(findColumn(table, 'status')).toBeDefined();
 		// Verify status column was added
-		expect(findColumn(table!, 'status')).toBeDefined();
+		expect(findColumn(table, 'status')).toBeDefined();
 	});
 
 	it('should be no-op when schema matches', async () => {
@@ -196,11 +196,11 @@ describe.skipIf(!pgAvailable)('push-pipeline (PostgreSQL)', () => {
 		const snapshot = await introspectPostgres(pgQueryFn(pool));
 		const childTable = findTable(snapshot.tables, 'push-child');
 		expect(childTable).toBeDefined();
-		expect(childTable!.foreignKeys.length).toBeGreaterThan(0);
-		const fk = childTable!.foreignKeys.find((f) => f.column === 'parent');
+		expect(childTable?.foreignKeys.length).toBeGreaterThan(0);
+		const fk = childTable?.foreignKeys.find((f) => f.column === 'parent');
 		expect(fk).toBeDefined();
-		expect(fk!.referencedTable).toBe('push-parent');
-		expect(fk!.referencedColumn).toBe('id');
+		expect(fk?.referencedTable).toBe('push-parent');
+		expect(fk?.referencedColumn).toBe('id');
 	});
 
 	it('should create multiple tables from multiple collections', async () => {
@@ -253,12 +253,12 @@ describe('push-pipeline (SQLite)', () => {
 		const snapshot = await introspectSqlite(sqliteQueryFn(db));
 		const table = findTable(snapshot.tables, 'push-test');
 		expect(table).toBeDefined();
-		expect(findColumn(table!, 'id')).toBeDefined();
-		expect(findColumn(table!, 'title')).toBeDefined();
-		expect(findColumn(table!, 'description')).toBeDefined();
-		expect(findColumn(table!, 'order')).toBeDefined();
-		expect(findColumn(table!, 'createdAt')).toBeDefined();
-		expect(findColumn(table!, 'updatedAt')).toBeDefined();
+		expect(findColumn(table, 'id')).toBeDefined();
+		expect(findColumn(table, 'title')).toBeDefined();
+		expect(findColumn(table, 'description')).toBeDefined();
+		expect(findColumn(table, 'order')).toBeDefined();
+		expect(findColumn(table, 'createdAt')).toBeDefined();
+		expect(findColumn(table, 'updatedAt')).toBeDefined();
 	});
 
 	it('should be no-op when schema matches', async () => {

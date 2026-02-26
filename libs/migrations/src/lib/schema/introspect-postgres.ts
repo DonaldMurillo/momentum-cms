@@ -134,10 +134,12 @@ export async function introspectPostgres(
 	const pkLookup = new Map<string, Set<string>>();
 	for (const row of pkRows) {
 		const tableName = row.table_name;
-		if (!pkLookup.has(tableName)) {
-			pkLookup.set(tableName, new Set());
+		let pkSet = pkLookup.get(tableName);
+		if (!pkSet) {
+			pkSet = new Set();
+			pkLookup.set(tableName, pkSet);
 		}
-		pkLookup.get(tableName)!.add(row.column_name);
+		pkSet.add(row.column_name);
 	}
 
 	// Group columns by table
@@ -146,14 +148,16 @@ export async function introspectPostgres(
 		const tableName = row.table_name;
 		if (INTERNAL_TABLES.has(tableName)) continue;
 
-		if (!tableColumnsMap.has(tableName)) {
-			tableColumnsMap.set(tableName, []);
+		let columnList = tableColumnsMap.get(tableName);
+		if (!columnList) {
+			columnList = [];
+			tableColumnsMap.set(tableName, columnList);
 		}
 
 		const rawType = buildPgColumnType(row);
 		const pkSet = pkLookup.get(tableName);
 
-		tableColumnsMap.get(tableName)!.push({
+		columnList.push({
 			name: row.column_name,
 			type: normalizeColumnType(rawType, 'postgresql'),
 			nullable: row.is_nullable === 'YES',
@@ -168,11 +172,13 @@ export async function introspectPostgres(
 		const tableName = row.table_name;
 		if (INTERNAL_TABLES.has(tableName)) continue;
 
-		if (!tableFkMap.has(tableName)) {
-			tableFkMap.set(tableName, []);
+		let fkList = tableFkMap.get(tableName);
+		if (!fkList) {
+			fkList = [];
+			tableFkMap.set(tableName, fkList);
 		}
 
-		tableFkMap.get(tableName)!.push({
+		fkList.push({
 			constraintName: row.constraint_name,
 			column: row.column_name,
 			referencedTable: row.foreign_table_name,
@@ -196,14 +202,16 @@ export async function introspectPostgres(
 		// Skip PK-named indexes (pattern: {table}_pkey)
 		if (row.indexname.endsWith('_pkey')) continue;
 
-		if (!tableIndexMap.has(tableName)) {
-			tableIndexMap.set(tableName, []);
+		let indexList = tableIndexMap.get(tableName);
+		if (!indexList) {
+			indexList = [];
+			tableIndexMap.set(tableName, indexList);
 		}
 
 		const columns = extractIndexColumns(row.indexdef);
 		const unique = row.indexdef.toUpperCase().includes('UNIQUE');
 
-		tableIndexMap.get(tableName)!.push({
+		indexList.push({
 			name: row.indexname,
 			columns,
 			unique,

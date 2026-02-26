@@ -191,28 +191,28 @@ describe('sqliteAdapter', () => {
 			const doc = await adapter.create('articles', { title: 'Test Article' });
 			const fetched = await adapter.findById('articles', doc.id as string);
 			expect(fetched).toBeTruthy();
-			expect(fetched!['deletedAt']).toBeNull();
+			expect(fetched?.['deletedAt']).toBeNull();
 		});
 
 		it('should soft delete a document by setting deletedAt', async () => {
 			const doc = await adapter.create('articles', { title: 'To Delete' });
 			const id = doc.id as string;
 
-			const result = await adapter.softDelete!('articles', id);
+			const result = await adapter.softDelete?.('articles', id);
 			expect(result).toBe(true);
 
 			// Verify deletedAt is set
 			const found = await adapter.findById('articles', id);
 			expect(found).toBeTruthy();
-			expect(found!['deletedAt']).toBeTruthy();
+			expect(found?.['deletedAt']).toBeTruthy();
 		});
 
 		it('should restore a soft-deleted document', async () => {
 			const doc = await adapter.create('articles', { title: 'To Restore' });
 			const id = doc.id as string;
 
-			await adapter.softDelete!('articles', id);
-			const restored = await adapter.restore!('articles', id);
+			await adapter.softDelete?.('articles', id);
+			const restored = await adapter.restore?.('articles', id);
 
 			expect(restored['deletedAt']).toBeNull();
 			expect(restored['title']).toBe('To Restore');
@@ -221,7 +221,7 @@ describe('sqliteAdapter', () => {
 		it('should filter out soft-deleted docs with null where clause', async () => {
 			await adapter.create('articles', { title: 'Active' });
 			const toDelete = await adapter.create('articles', { title: 'Deleted' });
-			await adapter.softDelete!('articles', toDelete.id as string);
+			await adapter.softDelete?.('articles', toDelete.id as string);
 
 			// Find with deletedAt: null should only return active docs
 			const activeDocs = await adapter.find('articles', { deletedAt: null });
@@ -232,7 +232,7 @@ describe('sqliteAdapter', () => {
 		it('should find only soft-deleted docs with $ne null', async () => {
 			await adapter.create('articles', { title: 'Active' });
 			const toDelete = await adapter.create('articles', { title: 'Deleted' });
-			await adapter.softDelete!('articles', toDelete.id as string);
+			await adapter.softDelete?.('articles', toDelete.id as string);
 
 			// Find with deletedAt: { $ne: null } should only return deleted docs
 			const deletedDocs = await adapter.find('articles', { deletedAt: { $ne: null } });
@@ -241,7 +241,7 @@ describe('sqliteAdapter', () => {
 		});
 
 		it('should return false when soft-deleting non-existent document', async () => {
-			const result = await adapter.softDelete!('articles', 'nonexistent');
+			const result = await adapter.softDelete?.('articles', 'nonexistent');
 			expect(result).toBe(false);
 		});
 	});

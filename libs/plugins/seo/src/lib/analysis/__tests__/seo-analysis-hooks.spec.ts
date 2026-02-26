@@ -58,7 +58,7 @@ describe('injectSeoAnalysisHooks', () => {
 		const hook = collections[0].hooks?.afterChange?.[0];
 		expect(hook).toBeDefined();
 		// Should not throw
-		expect(() => hook!({ doc: { id: '1', seo: {} } })).not.toThrow();
+		expect(() => hook?.({ doc: { id: '1', seo: {} } })).not.toThrow();
 	});
 
 	it('hook should not throw when API is available', () => {
@@ -74,7 +74,7 @@ describe('injectSeoAnalysisHooks', () => {
 		injectSeoAnalysisHooks(collections, {}, () => mockApi);
 
 		const hook = collections[0].hooks?.afterChange?.[0];
-		expect(() => hook!({ doc: { id: '1', seo: {} } })).not.toThrow();
+		expect(() => hook?.({ doc: { id: '1', seo: {} } })).not.toThrow();
 	});
 
 	it('hook should trigger analysis creation via API', async () => {
@@ -92,7 +92,7 @@ describe('injectSeoAnalysisHooks', () => {
 		injectSeoAnalysisHooks(collections, {}, () => mockApi);
 
 		const hook = collections[0].hooks?.afterChange?.[0];
-		hook!({ doc: { id: 'doc-1', seo: { metaTitle: 'Test' } } });
+		hook?.({ doc: { id: 'doc-1', seo: { metaTitle: 'Test' } } });
 
 		// The hook fires async — wait for microtasks to flush
 		await vi.waitFor(() => {
@@ -125,7 +125,7 @@ describe('injectSeoAnalysisHooks', () => {
 		injectSeoAnalysisHooks(collections, {}, () => mockApi);
 
 		const hook = collections[0].hooks?.afterChange?.[0];
-		hook!({ doc: { id: 'doc-1', seo: { metaTitle: 'Updated Title' } } });
+		hook?.({ doc: { id: 'doc-1', seo: { metaTitle: 'Updated Title' } } });
 
 		await vi.waitFor(() => {
 			expect(updateFn).toHaveBeenCalledTimes(1);

@@ -1,9 +1,7 @@
-import { Component, ViewEncapsulation } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, ViewEncapsulation } from '@angular/core';
 
 @Component({
 	selector: 'app-nx-welcome',
-	imports: [CommonModule],
 	template: `
 		<!--
      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -932,5 +930,6 @@ nx g &#64;nx/angular:component ui/src/lib/button</pre>
 	`,
 	styles: [],
 	encapsulation: ViewEncapsulation.None,
+	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NxWelcome {}

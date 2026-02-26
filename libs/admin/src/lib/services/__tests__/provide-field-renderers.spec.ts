@@ -95,7 +95,7 @@ describe('provideFieldRenderer', () => {
 		const loader = registry.get('text');
 		expect(loader).toBeDefined();
 
-		const component = await loader!();
+		const component = await loader?.();
 		expect(component).toBe(StubCustomComponent);
 	});
 
@@ -110,7 +110,7 @@ describe('provideFieldRenderer', () => {
 		const loader = registry.get('custom');
 		expect(loader).toBeDefined();
 
-		const resolved = await loader!();
+		const resolved = await loader?.();
 		expect(resolved).toBe(StubCustomComponent);
 	});
 });

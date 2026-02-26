@@ -21,6 +21,9 @@ export default [
 			// networkidle is useful for SSR apps where we need hydration to complete
 			// Using domcontentloaded alone isn't sufficient for Angular SSR
 			'playwright/no-networkidle': 'warn',
+
+			// Ban waitForTimeout() — use expect(locator).toBeVisible({ timeout }) or expect.poll()
+			'playwright/no-wait-for-timeout': 'error',
 		},
 	},
 ];

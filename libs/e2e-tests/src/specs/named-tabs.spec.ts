@@ -76,11 +76,7 @@ test.describe('Named tabs (nested data)', { tag: ['@collection', '@crud'] }, () 
 		expect(minimal, 'Minimal settings should exist').toBeTruthy();
 
 		// Minimal doc has no notifications set — should be null or undefined
-		const notifications = minimal?.notifications;
-		expect(
-			notifications === null || notifications === undefined,
-			`Minimal doc should have null/undefined notifications, got: ${JSON.stringify(notifications)}`,
-		).toBe(true);
+		expect([null, undefined]).toContain(minimal?.notifications);
 	});
 
 	test('can create settings with named tab nested data', async ({ request }) => {
@@ -255,7 +251,7 @@ async function getSeededSettingsId(page: Page): Promise<string> {
 	const data = (await response.json()) as { docs: SettingsDoc[] };
 	const main = data.docs.find((d) => d.siteName === 'Test CMS Site');
 	expect(main, 'Seeded "Test CMS Site" doc must exist').toBeTruthy();
-	return main!.id;
+	return main?.id;
 }
 
 /**

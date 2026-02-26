@@ -89,7 +89,7 @@ test.describe('Field-level access control', { tag: ['@field', '@security'] }, ()
 	test.describe('Viewer user access', () => {
 		test('viewer cannot read admin-only fields (stripped from response)', async ({ baseURL }) => {
 			// Create a fresh API context for viewer (separate cookie jar)
-			const viewerCtx = await playwrightRequest.newContext({ baseURL: baseURL! });
+			const viewerCtx = await playwrightRequest.newContext({ baseURL: baseURL });
 
 			const signInResponse = await viewerCtx.post('/api/auth/sign-in/email', {
 				headers: { 'Content-Type': 'application/json' },
@@ -129,7 +129,7 @@ test.describe('Field-level access control', { tag: ['@field', '@security'] }, ()
 			baseURL,
 		}) => {
 			// Create a fresh API context for viewer
-			const viewerCtx = await playwrightRequest.newContext({ baseURL: baseURL! });
+			const viewerCtx = await playwrightRequest.newContext({ baseURL: baseURL });
 
 			const signInResponse = await viewerCtx.post('/api/auth/sign-in/email', {
 				headers: { 'Content-Type': 'application/json' },
@@ -210,7 +210,7 @@ test.describe('Field-level access control', { tag: ['@field', '@security'] }, ()
 	test.describe('Field access in list responses', () => {
 		test('field access filtering works on find (list) responses', async ({ baseURL }) => {
 			// Create a fresh API context for viewer
-			const viewerCtx = await playwrightRequest.newContext({ baseURL: baseURL! });
+			const viewerCtx = await playwrightRequest.newContext({ baseURL: baseURL });
 
 			const signInResponse = await viewerCtx.post('/api/auth/sign-in/email', {
 				headers: { 'Content-Type': 'application/json' },

@@ -449,9 +449,8 @@ describe('createHealthMiddleware', () => {
 
 		it('should handle rejected waitForReady promise gracefully', async () => {
 			const waitPromise = Promise.reject(new Error('Init failed'));
-			// Add catch handler to prevent unhandled rejection warning
-			// eslint-disable-next-line @typescript-eslint/no-empty-function -- Intentional empty handler to prevent unhandled rejection
-			waitPromise.catch((): void => {});
+			// Absorb the rejection to prevent Node unhandled-rejection warning
+			waitPromise.catch((_err: unknown) => undefined);
 
 			app.use(
 				'/health',

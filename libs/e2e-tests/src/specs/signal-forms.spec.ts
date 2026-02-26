@@ -72,8 +72,8 @@ test.describe('Signal Forms - Validation Behavior', { tag: ['@admin', '@field'] 
 		).toBeVisible();
 
 		// Don't interact with any fields — verify no validation errors visible
-		await expect(authenticatedPage.getByText(/is required/)).not.toBeVisible();
-		await expect(authenticatedPage.getByText(/must be at least/)).not.toBeVisible();
+		await expect(authenticatedPage.getByText(/is required/)).toBeHidden();
+		await expect(authenticatedPage.getByText(/must be at least/)).toBeHidden();
 	});
 
 	test('should validate on blur, not on every keystroke', async ({ authenticatedPage }) => {
@@ -89,7 +89,7 @@ test.describe('Signal Forms - Validation Behavior', { tag: ['@admin', '@field'] 
 		await typeIntoField(titleInput, 'a');
 		await expect(
 			authenticatedPage.getByText(/Title must be at least 3 characters/),
-		).not.toBeVisible();
+		).toBeHidden();
 
 		// Blur — now the error should appear
 		await titleInput.blur();

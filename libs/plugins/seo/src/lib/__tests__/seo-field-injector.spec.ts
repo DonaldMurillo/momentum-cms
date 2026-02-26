@@ -124,7 +124,7 @@ describe('injectSeoFields', () => {
 		injectSeoFields(collections, { collections: ['posts'] });
 
 		const tf = getTabsField(collections[0]);
-		const seoTab = tf.tabs.find((t) => t.name === 'seo')!;
+		const seoTab = tf.tabs.find((t) => t.name === 'seo');
 		const fieldNames = seoTab.fields.map((f) => f.name);
 
 		expect(fieldNames).toContain('metaTitle');

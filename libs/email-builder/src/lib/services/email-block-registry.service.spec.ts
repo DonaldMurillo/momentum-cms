@@ -24,7 +24,7 @@ describe('EmailBlockRegistryService', () => {
 		it('should look up blocks by slug', () => {
 			const textBlock = service.get('text');
 			expect(textBlock).toBeDefined();
-			expect(textBlock!.label).toBe('Text');
+			expect(textBlock?.label).toBe('Text');
 		});
 
 		it('should report existence via has()', () => {
@@ -78,7 +78,7 @@ describe('EmailBlockRegistryService', () => {
 		it('should find custom block by slug', () => {
 			const found = service.get('custom-hero');
 			expect(found).toBeDefined();
-			expect(found!.label).toBe('Custom Hero');
+			expect(found?.label).toBe('Custom Hero');
 		});
 
 		it('should still find default blocks', () => {

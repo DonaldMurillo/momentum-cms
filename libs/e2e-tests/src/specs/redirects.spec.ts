@@ -341,7 +341,7 @@ test.describe('Redirects Plugin - API', { tag: ['@redirects', '@api', '@crud'] }
 
 		// Use a fresh context with maxRedirects: 0 to capture the redirect response
 		const noRedirectCtx = await playwright.request.newContext({
-			baseURL: baseURL!,
+			baseURL: baseURL,
 			maxRedirects: 0,
 		});
 
@@ -372,7 +372,7 @@ test.describe('Redirects Plugin - API', { tag: ['@redirects', '@api', '@crud'] }
 		const { doc } = (await create.json()) as { doc: { id: string } };
 
 		const noRedirectCtx = await playwright.request.newContext({
-			baseURL: baseURL!,
+			baseURL: baseURL,
 			maxRedirects: 0,
 		});
 
@@ -397,7 +397,7 @@ test.describe('Redirects Plugin - API', { tag: ['@redirects', '@api', '@crud'] }
 		const { doc } = (await create.json()) as { doc: { id: string } };
 
 		const noRedirectCtx = await playwright.request.newContext({
-			baseURL: baseURL!,
+			baseURL: baseURL,
 			maxRedirects: 0,
 		});
 
@@ -424,7 +424,7 @@ test.describe('Redirects Plugin - API', { tag: ['@redirects', '@api', '@crud'] }
 		const { doc } = (await create.json()) as { doc: { id: string } };
 
 		const noRedirectCtx = await playwright.request.newContext({
-			baseURL: baseURL!,
+			baseURL: baseURL,
 			maxRedirects: 0,
 		});
 
@@ -455,7 +455,7 @@ test.describe('Redirects Plugin - API', { tag: ['@redirects', '@api', '@crud'] }
 		const { doc } = (await create.json()) as { doc: { id: string } };
 
 		const noRedirectCtx = await playwright.request.newContext({
-			baseURL: baseURL!,
+			baseURL: baseURL,
 			maxRedirects: 0,
 		});
 
@@ -496,7 +496,7 @@ test.describe('Redirects Plugin - API', { tag: ['@redirects', '@api', '@crud'] }
 		const { doc } = (await create.json()) as { doc: { id: string } };
 
 		const noRedirectCtx = await playwright.request.newContext({
-			baseURL: baseURL!,
+			baseURL: baseURL,
 			maxRedirects: 0,
 		});
 
@@ -511,7 +511,7 @@ test.describe('Redirects Plugin - API', { tag: ['@redirects', '@api', '@crud'] }
 	});
 
 	test('unauthenticated users cannot create redirects', async ({ baseURL, playwright }) => {
-		const anonCtx = await playwright.request.newContext({ baseURL: baseURL! });
+		const anonCtx = await playwright.request.newContext({ baseURL: baseURL });
 		try {
 			const response = await anonCtx.post('/api/redirects', {
 				headers: { 'Content-Type': 'application/json' },

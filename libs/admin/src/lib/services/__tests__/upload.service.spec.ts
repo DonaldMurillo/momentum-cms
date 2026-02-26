@@ -133,8 +133,8 @@ describe('UploadService', () => {
 
 			const progressEvent = emitted.find((e) => e.status === 'uploading');
 			expect(progressEvent).toBeDefined();
-			expect(progressEvent!.progress).toBe(50);
-			expect(progressEvent!.file).toBe(file);
+			expect(progressEvent?.progress).toBe(50);
+			expect(progressEvent?.file).toBe(file);
 
 			// Complete the request
 			req.flush(mockSuccessBody);
@@ -156,7 +156,7 @@ describe('UploadService', () => {
 
 			const progressEvent = emitted.find((e) => e.status === 'uploading');
 			expect(progressEvent).toBeDefined();
-			expect(progressEvent!.progress).toBe(0);
+			expect(progressEvent?.progress).toBe(0);
 
 			req.flush(mockSuccessBody);
 		});
@@ -172,9 +172,9 @@ describe('UploadService', () => {
 
 			const completeEvent = emitted.find((e) => e.status === 'complete');
 			expect(completeEvent).toBeDefined();
-			expect(completeEvent!.progress).toBe(100);
-			expect(completeEvent!.result).toEqual(mockMediaDocument);
-			expect(completeEvent!.file).toBe(file);
+			expect(completeEvent?.progress).toBe(100);
+			expect(completeEvent?.result).toEqual(mockMediaDocument);
+			expect(completeEvent?.file).toBe(file);
 		});
 
 		it('should emit error when response body has no doc', () => {
@@ -188,8 +188,8 @@ describe('UploadService', () => {
 
 			const errorEvent = emitted.find((e) => e.status === 'error');
 			expect(errorEvent).toBeDefined();
-			expect(errorEvent!.error).toBe('File too large');
-			expect(errorEvent!.progress).toBe(0);
+			expect(errorEvent?.error).toBe('File too large');
+			expect(errorEvent?.progress).toBe(0);
 		});
 
 		it('should emit error with default message when body has no error string', () => {
@@ -203,7 +203,7 @@ describe('UploadService', () => {
 
 			const errorEvent = emitted.find((e) => e.status === 'error');
 			expect(errorEvent).toBeDefined();
-			expect(errorEvent!.error).toBe('Upload failed');
+			expect(errorEvent?.error).toBe('Upload failed');
 		});
 
 		it('should emit error on HTTP failure', () => {
@@ -226,8 +226,8 @@ describe('UploadService', () => {
 
 			const errorEvent = emitted.find((e) => e.status === 'error');
 			expect(errorEvent).toBeDefined();
-			expect(errorEvent!.progress).toBe(0);
-			expect(errorEvent!.file).toBe(file);
+			expect(errorEvent?.progress).toBe(0);
+			expect(errorEvent?.file).toBe(file);
 			expect(errorCaught).toBeDefined();
 		});
 
@@ -315,7 +315,7 @@ describe('UploadService', () => {
 
 			const progressEvent = emitted.find((e) => e.status === 'uploading');
 			expect(progressEvent).toBeDefined();
-			expect(progressEvent!.progress).toBe(75);
+			expect(progressEvent?.progress).toBe(75);
 
 			req.flush(mockSuccessBody);
 		});
@@ -331,8 +331,8 @@ describe('UploadService', () => {
 
 			const completeEvent = emitted.find((e) => e.status === 'complete');
 			expect(completeEvent).toBeDefined();
-			expect(completeEvent!.progress).toBe(100);
-			expect(completeEvent!.result).toEqual(mockMediaDocument);
+			expect(completeEvent?.progress).toBe(100);
+			expect(completeEvent?.result).toEqual(mockMediaDocument);
 		});
 
 		it('should emit error when response has no doc', () => {
@@ -346,7 +346,7 @@ describe('UploadService', () => {
 
 			const errorEvent = emitted.find((e) => e.status === 'error');
 			expect(errorEvent).toBeDefined();
-			expect(errorEvent!.error).toBe('File too large');
+			expect(errorEvent?.error).toBe('File too large');
 		});
 
 		it('should emit error on HTTP failure', () => {
@@ -369,7 +369,7 @@ describe('UploadService', () => {
 
 			const errorEvent = emitted.find((e) => e.status === 'error');
 			expect(errorEvent).toBeDefined();
-			expect(errorEvent!.progress).toBe(0);
+			expect(errorEvent?.progress).toBe(0);
 			expect(errorCaught).toBeDefined();
 		});
 

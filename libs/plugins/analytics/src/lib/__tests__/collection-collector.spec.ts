@@ -46,7 +46,7 @@ describe('injectCollectionCollector', () => {
 
 		injectCollectionCollector(collections, emitter);
 
-		const hook = collections[0].hooks!.afterChange![0];
+		const hook = collections[0].hooks?.afterChange?.[0];
 		hook({ operation: 'create', doc: { id: 'doc-1' }, data: {}, collection: collections[0] });
 
 		expect(emitter).toHaveBeenCalledOnce();
@@ -64,7 +64,7 @@ describe('injectCollectionCollector', () => {
 
 		injectCollectionCollector(collections, emitter);
 
-		const hook = collections[0].hooks!.afterChange![0];
+		const hook = collections[0].hooks?.afterChange?.[0];
 		hook({ operation: 'update', doc: { id: 'doc-2' }, data: {}, collection: collections[0] });
 
 		const event = emitter.mock.calls[0][0];
@@ -79,7 +79,7 @@ describe('injectCollectionCollector', () => {
 
 		injectCollectionCollector(collections, emitter);
 
-		const hook = collections[0].hooks!.afterDelete![0];
+		const hook = collections[0].hooks?.afterDelete?.[0];
 		hook({ operation: 'delete', doc: { id: 'doc-3' }, data: {}, collection: collections[0] });
 
 		const event = emitter.mock.calls[0][0];
@@ -127,7 +127,7 @@ describe('injectCollectionCollector', () => {
 
 		injectCollectionCollector(collections, emitter);
 
-		const hook = collections[0].hooks!.afterChange![0];
+		const hook = collections[0].hooks?.afterChange?.[0];
 		hook({ operation: 'create', doc: { id: '1' }, data: {}, collection: collections[0] });
 		hook({ operation: 'create', doc: { id: '2' }, data: {}, collection: collections[0] });
 

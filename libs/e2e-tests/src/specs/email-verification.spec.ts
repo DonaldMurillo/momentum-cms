@@ -97,7 +97,7 @@ test.describe('Email Verification Flow', { tag: ['@auth', '@api'] }, () => {
 			user?: { emailVerified: boolean };
 		};
 		expect(signupData.user, 'Signup response must include user object').toBeDefined();
-		expect(signupData.user!.emailVerified).toBe(false);
+		expect(signupData.user?.emailVerified).toBe(false);
 
 		// Wait for verification email
 		const email = await waitForEmail(freshEmail, 'verify', 15000);
@@ -126,8 +126,8 @@ test.describe('Email Verification Flow', { tag: ['@auth', '@api'] }, () => {
 			user?: { emailVerified: boolean; email: string };
 		};
 		expect(signInData.user, 'sign-in response must include user object').toBeDefined();
-		expect(signInData.user!.email).toBe(freshEmail);
-		expect(signInData.user!.emailVerified).toBe(true);
+		expect(signInData.user?.email).toBe(freshEmail);
+		expect(signInData.user?.emailVerified).toBe(true);
 	});
 
 	test('verification email has correct sender and template', async ({ request }) => {

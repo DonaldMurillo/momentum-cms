@@ -245,7 +245,7 @@ describe.runIf(process.env['MINIO_AVAILABLE'] === 'true')('S3 Storage Adapter (M
 			const file = makeTestFile('sign me');
 			const { path } = await adapter.upload(file);
 
-			const signedUrl = await adapter.getSignedUrl!(path);
+			const signedUrl = await adapter.getSignedUrl?.(path);
 
 			expect(signedUrl).toContain(path);
 			expect(signedUrl).toContain('X-Amz-Signature');
@@ -257,7 +257,7 @@ describe.runIf(process.env['MINIO_AVAILABLE'] === 'true')('S3 Storage Adapter (M
 			const file = makeTestFile('expiry test');
 			const { path } = await adapter.upload(file);
 
-			const signedUrl = await adapter.getSignedUrl!(path, 300);
+			const signedUrl = await adapter.getSignedUrl?.(path, 300);
 
 			expect(signedUrl).toContain('X-Amz-Expires=300');
 		});
@@ -270,16 +270,16 @@ describe.runIf(process.env['MINIO_AVAILABLE'] === 'true')('S3 Storage Adapter (M
 			const file = makeTestFile(content);
 			const { path } = await adapter.upload(file);
 
-			const buffer = await adapter.read!(path);
+			const buffer = await adapter.read?.(path);
 
 			expect(buffer).not.toBeNull();
-			expect(buffer!.toString()).toBe(content);
+			expect(buffer?.toString()).toBe(content);
 		});
 
 		it('should return null for a non-existent file', async () => {
 			const adapter = createAdapter();
 
-			const buffer = await adapter.read!('does-not-exist.txt');
+			const buffer = await adapter.read?.('does-not-exist.txt');
 
 			expect(buffer).toBeNull();
 		});
@@ -295,10 +295,10 @@ describe.runIf(process.env['MINIO_AVAILABLE'] === 'true')('S3 Storage Adapter (M
 			};
 			const { path } = await adapter.upload(file);
 
-			const buffer = await adapter.read!(path);
+			const buffer = await adapter.read?.(path);
 
 			expect(buffer).not.toBeNull();
-			expect(Buffer.compare(buffer!, binaryData)).toBe(0);
+			expect(Buffer.compare(buffer, binaryData)).toBe(0);
 		});
 	});
 

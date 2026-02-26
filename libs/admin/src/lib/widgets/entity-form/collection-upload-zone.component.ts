@@ -30,7 +30,7 @@ import {
 function getStringProp(obj: unknown, key: string): string | undefined {
 	if (typeof obj !== 'object' || obj === null) return undefined;
 	if (!(key in obj)) return undefined;
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+	 
 	const value = (obj as Record<string, unknown>)[key]; // eslint-disable-line @typescript-eslint/consistent-type-assertions
 	return typeof value === 'string' ? value : undefined;
 }

@@ -171,7 +171,7 @@ export function sqliteTracker(db: Database.Database): TrackerQueryFn {
 		async query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> {
 			const stmt = db.prepare(sql);
 			const raw = params && params.length > 0 ? stmt.all(...params) : stmt.all();
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+			 
 			return raw as T[];
 		},
 		async execute(sql: string, params?: unknown[]): Promise<number> {
@@ -207,7 +207,7 @@ export function sqliteDataDb(db: Database.Database): DataHelperDb {
 		async query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> {
 			const stmt = db.prepare(sql);
 			const raw = params && params.length > 0 ? stmt.all(...params) : stmt.all();
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+			 
 			return raw as T[];
 		},
 	};
@@ -223,7 +223,7 @@ export function sqliteQueryFn(db: Database.Database): SqliteQueryFunction {
 	): Promise<T[]> => {
 		const stmt = db.prepare(sql);
 		const raw = params && params.length > 0 ? stmt.all(...params) : stmt.all();
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+		 
 		return raw as T[];
 	};
 }
@@ -246,7 +246,7 @@ export function buildSqliteContext(db: Database.Database): MigrationContext {
 		async query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> {
 			const stmt = db.prepare(sql);
 			const raw = params && params.length > 0 ? stmt.all(...params) : stmt.all();
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+			 
 			return raw as T[];
 		},
 		data: helpers,

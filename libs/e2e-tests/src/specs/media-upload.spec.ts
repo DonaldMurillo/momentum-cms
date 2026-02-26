@@ -560,7 +560,7 @@ test.describe('Upload Field UI - Articles', { tag: ['@media', '@admin'] }, () =>
 			timeout: 10000,
 		});
 		// The raw UUID should NOT be displayed as the field value
-		await expect(authenticatedPage.getByText(mediaDoc.id)).not.toBeVisible();
+		await expect(authenticatedPage.getByText(mediaDoc.id)).toBeHidden();
 	});
 });
 
@@ -967,7 +967,7 @@ test.describe('Media Collection Upload Zone UI', { tag: ['@media', '@admin'] }, 
 		await expect(uploadZone.getByText('edit-media-preview.jpg')).toBeVisible({ timeout: 10000 });
 
 		// Drop zone ("Drag & drop") should NOT be visible when existing file is shown
-		await expect(uploadZone.getByText('Drag & drop or click to upload')).not.toBeVisible();
+		await expect(uploadZone.getByText('Drag & drop or click to upload')).toBeHidden();
 	});
 });
 

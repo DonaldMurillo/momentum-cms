@@ -285,7 +285,7 @@ test.describe('Authentication Flow', { tag: ['@auth', '@admin'] }, () => {
 
 			// Should be on login or setup page, not the dashboard
 			const url = page.url();
-			expect(url.includes('/login') || url.includes('/setup')).toBeTruthy();
+			expect(url).toMatch(/\/(login|setup)/);
 		});
 
 		test('should redirect authenticated login page to dashboard', async ({ page }) => {
@@ -299,9 +299,7 @@ test.describe('Authentication Flow', { tag: ['@auth', '@admin'] }, () => {
 			// - If not authenticated: stay on /login
 			// - If no users: redirect to /setup
 			const url = page.url();
-			expect(
-				url.includes('/admin') || url.includes('/login') || url.includes('/setup'),
-			).toBeTruthy();
+			expect(url).toMatch(/\/(admin|login|setup)/);
 		});
 	});
 

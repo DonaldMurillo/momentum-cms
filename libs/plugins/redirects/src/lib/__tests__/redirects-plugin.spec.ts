@@ -51,7 +51,7 @@ describe('redirectsPlugin', () => {
 		const plugin = redirectsPlugin();
 		expect(plugin.collections).toBeDefined();
 		expect(plugin.collections).toHaveLength(1);
-		expect(plugin.collections![0].slug).toBe('redirects');
+		expect(plugin.collections?.[0].slug).toBe('redirects');
 	});
 
 	describe('onInit', () => {
@@ -59,7 +59,7 @@ describe('redirectsPlugin', () => {
 			const plugin = redirectsPlugin();
 			const collections: CollectionConfig[] = [];
 			const ctx = makePluginContext(collections);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			expect(collections.some((c) => c.slug === 'redirects')).toBe(true);
 		});
 
@@ -67,8 +67,8 @@ describe('redirectsPlugin', () => {
 			const plugin = redirectsPlugin();
 			const collections: CollectionConfig[] = [];
 			const ctx = makePluginContext(collections);
-			await plugin.onInit!(ctx);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
+			await plugin.onInit?.(ctx);
 			const redirectCollections = collections.filter((c) => c.slug === 'redirects');
 			expect(redirectCollections).toHaveLength(1);
 		});
@@ -76,7 +76,7 @@ describe('redirectsPlugin', () => {
 		it('should register root middleware at path "/"', async () => {
 			const plugin = redirectsPlugin();
 			const ctx = makePluginContext([]);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			expect(ctx.registerMiddleware).toHaveBeenCalledWith(
 				expect.objectContaining({ path: '/', position: 'root' }),
 			);
@@ -86,7 +86,7 @@ describe('redirectsPlugin', () => {
 			const plugin = redirectsPlugin({ enabled: false });
 			const collections: CollectionConfig[] = [];
 			const ctx = makePluginContext(collections);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			expect(ctx.registerMiddleware).not.toHaveBeenCalled();
 			expect(collections).toHaveLength(0);
 		});
@@ -94,7 +94,7 @@ describe('redirectsPlugin', () => {
 		it('should register exactly one middleware regardless of cacheTtl', async () => {
 			const plugin = redirectsPlugin({ cacheTtl: 5000 });
 			const ctx = makePluginContext([]);
-			await plugin.onInit!(ctx);
+			await plugin.onInit?.(ctx);
 			expect(ctx.registerMiddleware).toHaveBeenCalledTimes(1);
 			expect(ctx.registerMiddleware).toHaveBeenCalledWith(
 				expect.objectContaining({ path: '/', position: 'root', handler: expect.anything() }),
@@ -107,14 +107,14 @@ describe('redirectsPlugin', () => {
 			const plugin = redirectsPlugin();
 			const api = makeMomentumApi();
 			const readyCtx = makeReadyContext(api);
-			await plugin.onReady!(readyCtx);
+			await plugin.onReady?.(readyCtx);
 			expect(readyCtx.logger.info).toHaveBeenCalledWith(expect.stringContaining('ready'));
 		});
 
 		it('should skip when enabled is false', async () => {
 			const plugin = redirectsPlugin({ enabled: false });
 			const readyCtx = makeReadyContext();
-			await plugin.onReady!(readyCtx);
+			await plugin.onReady?.(readyCtx);
 			expect(readyCtx.logger.info).not.toHaveBeenCalled();
 		});
 	});
@@ -125,7 +125,7 @@ describe('redirectsPlugin', () => {
 			const shutdownCtx = {
 				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 			};
-			await plugin.onShutdown!(shutdownCtx as unknown as PluginContext);
+			await plugin.onShutdown?.(shutdownCtx as unknown as PluginContext);
 			expect(shutdownCtx.logger.info).toHaveBeenCalled();
 		});
 	});

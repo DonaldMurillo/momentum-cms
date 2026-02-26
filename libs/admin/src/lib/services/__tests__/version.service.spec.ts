@@ -216,8 +216,8 @@ describe('VersionService', () => {
 			const lastSaved = service.lastSaved();
 
 			expect(lastSaved).not.toBeNull();
-			expect(lastSaved!.getTime()).toBeGreaterThanOrEqual(beforeSave.getTime());
-			expect(lastSaved!.getTime()).toBeLessThanOrEqual(afterSave.getTime());
+			expect(lastSaved?.getTime()).toBeGreaterThanOrEqual(beforeSave.getTime());
+			expect(lastSaved?.getTime()).toBeLessThanOrEqual(afterSave.getTime());
 		});
 	});
 

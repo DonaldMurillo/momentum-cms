@@ -19,7 +19,7 @@ describe('Auth Sub-Plugins', () => {
 			const plugin = authTwoFactor();
 			expect(plugin.collections).toHaveLength(1);
 
-			const col = plugin.collections![0];
+			const col = plugin.collections?.[0];
 			expect(col.slug).toBe('auth-two-factor');
 			expect(col.dbName).toBe('twoFactor');
 			expect(col.managed).toBe(true);
@@ -28,8 +28,8 @@ describe('Auth Sub-Plugins', () => {
 		it('should contribute twoFactorEnabled user field', () => {
 			const plugin = authTwoFactor();
 			expect(plugin.userFields).toHaveLength(1);
-			expect(plugin.userFields![0].name).toBe('twoFactorEnabled');
-			expect(plugin.userFields![0].type).toBe('checkbox');
+			expect(plugin.userFields?.[0].name).toBe('twoFactorEnabled');
+			expect(plugin.userFields?.[0].type).toBe('checkbox');
 		});
 
 		it('should have no session fields or admin routes', () => {
@@ -40,13 +40,13 @@ describe('Auth Sub-Plugins', () => {
 
 		it('should have secret, backupCodes, userId fields in its collection', () => {
 			const plugin = authTwoFactor();
-			const fieldNames = plugin.collections![0].fields.map((f) => f.name);
+			const fieldNames = plugin.collections?.[0].fields.map((f) => f.name);
 			expect(fieldNames).toEqual(['secret', 'backupCodes', 'userId']);
 		});
 
 		it('should deny all access on the two-factor collection', () => {
 			const plugin = authTwoFactor();
-			const col = plugin.collections![0];
+			const col = plugin.collections?.[0];
 			const req = { user: { id: '1', role: 'admin' } };
 			expect(col.access?.read?.({ req })).toBe(false);
 			expect(col.access?.create?.({ req })).toBe(false);
@@ -77,7 +77,7 @@ describe('Auth Sub-Plugins', () => {
 		it('should contribute impersonatedBy session field', () => {
 			const plugin = authAdmin();
 			expect(plugin.sessionFields).toHaveLength(1);
-			expect(plugin.sessionFields![0].name).toBe('impersonatedBy');
+			expect(plugin.sessionFields?.[0].name).toBe('impersonatedBy');
 		});
 
 		it('should not contribute any collections', () => {
@@ -101,32 +101,34 @@ describe('Auth Sub-Plugins', () => {
 			const plugin = authOrganization();
 			expect(plugin.collections).toHaveLength(3);
 
-			const slugs = plugin.collections!.map((c) => c.slug);
+			const slugs = plugin.collections?.map((c) => c.slug);
 			expect(slugs).toEqual(['auth-organization', 'auth-member', 'auth-invitation']);
 		});
 
 		it('should map collections to correct dbNames', () => {
 			const plugin = authOrganization();
-			const dbNames = plugin.collections!.map((c) => c.dbName);
+			const dbNames = plugin.collections?.map((c) => c.dbName);
 			expect(dbNames).toEqual(['organization', 'member', 'invitation']);
 		});
 
 		it('should mark all collections as managed', () => {
 			const plugin = authOrganization();
-			for (const col of plugin.collections!) {
+			expect(plugin.collections).toBeDefined();
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		for (const col of plugin.collections!) {
 				expect(col.managed).toBe(true);
 			}
 		});
 
 		it('should have a unique slug index on organization', () => {
 			const plugin = authOrganization();
-			const orgCol = plugin.collections!.find((c) => c.slug === 'auth-organization');
+			const orgCol = plugin.collections?.find((c) => c.slug === 'auth-organization');
 			expect(orgCol?.indexes).toEqual([{ columns: ['slug'], unique: true }]);
 		});
 
 		it('should have a unique compound index on member (userId, organizationId)', () => {
 			const plugin = authOrganization();
-			const memberCol = plugin.collections!.find((c) => c.slug === 'auth-member');
+			const memberCol = plugin.collections?.find((c) => c.slug === 'auth-member');
 			const uniqueIndex = memberCol?.indexes?.find((i) => i.unique);
 			expect(uniqueIndex?.columns).toEqual(['userId', 'organizationId']);
 		});

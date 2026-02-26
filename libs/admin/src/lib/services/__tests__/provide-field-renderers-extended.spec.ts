@@ -51,19 +51,27 @@ describe('provideMomentumFieldRenderers lazy loaders', () => {
 				const loader = registry.get(fieldType);
 				expect(loader).toBeDefined();
 
-				const component = await loader!();
+				const component = await loader?.();
 				expect(component).toBeDefined();
 				expect(typeof component).toBe('function');
 				// Angular compiler may prefix class names with '_'
-				expect(component.name.replace(/^_/, '')).toBe('TextFieldRenderer');
+				expect(component?.name.replace(/^_/, '')).toBe('TextFieldRenderer');
 			}
 		});
 
 		it('should resolve to the exact same class reference for all text-group types', async () => {
-			const textComponent = await registry.get('text')!();
-			const textareaComponent = await registry.get('textarea')!();
-			const emailComponent = await registry.get('email')!();
-			const slugComponent = await registry.get('slug')!();
+			const textLoader = registry.get('text');
+			expect(textLoader).toBeDefined();
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		const textComponent = await textLoader!();
+			expect(textComponent).toBeDefined();
+
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		const textareaComponent = await registry.get('textarea')!();
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		const emailComponent = await registry.get('email')!();
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		const slugComponent = await registry.get('slug')!();
 
 			expect(textareaComponent).toBe(textComponent);
 			expect(emailComponent).toBe(textComponent);
@@ -77,11 +85,11 @@ describe('provideMomentumFieldRenderers lazy loaders', () => {
 				const loader = registry.get(type);
 				expect(loader).toBeDefined();
 
-				const component = await loader!();
+				const component = await loader?.();
 				expect(component).toBeDefined();
 				expect(typeof component).toBe('function');
 				// Angular compiler may prefix class names with '_'
-				expect(component.name.replace(/^_/, '')).toBe(expectedName);
+				expect(component?.name.replace(/^_/, '')).toBe(expectedName);
 			});
 		}
 	});
@@ -93,11 +101,11 @@ describe('provideMomentumFieldRenderers lazy loaders', () => {
 			for (const { type } of DISTINCT_LOADER_TYPES) {
 				const loader = registry.get(type);
 				expect(loader).toBeDefined();
-				resolved.set(type, await loader!());
+				resolved.set(type, await loader?.());
 			}
 
 			// Also add the shared text component
-			resolved.set('text', await registry.get('text')!());
+			resolved.set('text', await registry.get('text')?.());
 
 			// Verify that each distinct loader produces a unique class
 			const components = [...resolved.values()];
@@ -114,11 +122,11 @@ describe('provideMomentumFieldRenderers lazy loaders', () => {
 				const loader = registry.get(fieldType);
 				expect(loader).toBeDefined();
 
-				const component = await loader!();
+				const component = await loader?.();
 				expect(component).toBeDefined();
 				// Angular components are classes, which are functions with a prototype
 				expect(typeof component).toBe('function');
-				expect(component.prototype).toBeDefined();
+				expect(component?.prototype).toBeDefined();
 			}
 		});
 	});

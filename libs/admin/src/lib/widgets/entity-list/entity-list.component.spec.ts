@@ -612,8 +612,8 @@ describe('EntityListWidget', () => {
 			const columns = component.tableColumns();
 			const deletedAtCol = columns.find((c) => c.field === 'deletedAt');
 			expect(deletedAtCol).toBeTruthy();
-			expect(deletedAtCol!.header).toBe('Deleted');
-			expect(deletedAtCol!.type).toBe('datetime');
+			expect(deletedAtCol?.header).toBe('Deleted');
+			expect(deletedAtCol?.type).toBe('datetime');
 
 			// Flush request triggered by toggle
 			const req = httpMock.expectOne((r) => r.url.includes('/api/posts'));

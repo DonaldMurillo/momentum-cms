@@ -49,18 +49,18 @@ describe('migrations types', () => {
 			vi.stubEnv('NODE_ENV', 'development');
 			const result = resolveMigrationConfig({});
 			expect(result).toBeDefined();
-			expect(result!.directory).toBe('./migrations');
-			expect(result!.mode).toBe('push');
-			expect(result!.cloneTest).toBe(false); // push mode default
-			expect(result!.dangerDetection).toBe(true);
-			expect(result!.autoApply).toBe(true); // push mode default
+			expect(result?.directory).toBe('./migrations');
+			expect(result?.mode).toBe('push');
+			expect(result?.cloneTest).toBe(false); // push mode default
+			expect(result?.dangerDetection).toBe(true);
+			expect(result?.autoApply).toBe(true); // push mode default
 		});
 
 		it('should set cloneTest true in migrate mode by default', () => {
 			const config: MigrationConfig = { mode: 'migrate' };
 			const result = resolveMigrationConfig(config);
-			expect(result!.cloneTest).toBe(true);
-			expect(result!.autoApply).toBe(false); // migrate mode = not auto-apply
+			expect(result?.cloneTest).toBe(true);
+			expect(result?.autoApply).toBe(false); // migrate mode = not auto-apply
 		});
 
 		it('should respect explicit overrides', () => {
@@ -72,11 +72,11 @@ describe('migrations types', () => {
 				autoApply: false,
 			};
 			const result = resolveMigrationConfig(config);
-			expect(result!.directory).toBe('./db/migrations');
-			expect(result!.mode).toBe('push');
-			expect(result!.cloneTest).toBe(true);
-			expect(result!.dangerDetection).toBe(false);
-			expect(result!.autoApply).toBe(false);
+			expect(result?.directory).toBe('./db/migrations');
+			expect(result?.mode).toBe('push');
+			expect(result?.cloneTest).toBe(true);
+			expect(result?.dangerDetection).toBe(false);
+			expect(result?.autoApply).toBe(false);
 		});
 	});
 });

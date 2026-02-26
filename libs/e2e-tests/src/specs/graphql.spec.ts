@@ -311,6 +311,6 @@ test.describe('GraphQL API', { tag: ['@graphql', '@api'] }, () => {
 		};
 
 		expect(data.errors).toBeDefined();
-		expect(data.errors!.length).toBeGreaterThan(0);
+		expect(data.errors?.length).toBeGreaterThan(0);
 	});
 });
