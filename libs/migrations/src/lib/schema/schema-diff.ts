@@ -212,12 +212,14 @@ function diffColumns(
 		const extraInActual = [...actualMap.keys()].filter((k) => !desiredMap.has(k));
 
 		for (const newName of missingInActual) {
-			const desiredCol = desiredMap.get(newName)!;
+			const desiredCol = desiredMap.get(newName);
+			if (!desiredCol) continue;
 
 			// Find a matching old column with compatible type
 			for (const oldName of extraInActual) {
 				if (renamedFrom.has(oldName)) continue;
-				const actualCol = actualMap.get(oldName)!;
+				const actualCol = actualMap.get(oldName);
+				if (!actualCol) continue;
 
 				if (areTypesCompatible(desiredCol.type, actualCol.type, dialect)) {
 					operations.push({
@@ -357,7 +359,8 @@ function diffForeignKeys(
 			summary.push(`Add foreign key "${name}" on "${tableName}"`);
 		} else {
 			// FK exists — check if definition changed (drop + re-add)
-			const actualFk = actualMap.get(name)!;
+			const actualFk = actualMap.get(name);
+			if (!actualFk) continue;
 			if (
 				fk.column !== actualFk.column ||
 				fk.referencedTable !== actualFk.referencedTable ||
@@ -428,7 +431,8 @@ function diffIndexes(
 			summary.push(`Create index "${name}" on "${tableName}"`);
 		} else {
 			// Index exists — check if definition changed (drop + re-create)
-			const actualIdx = actualMap.get(name)!;
+			const actualIdx = actualMap.get(name);
+			if (!actualIdx) continue;
 			if (
 				idx.unique !== actualIdx.unique ||
 				JSON.stringify(idx.columns) !== JSON.stringify(actualIdx.columns)

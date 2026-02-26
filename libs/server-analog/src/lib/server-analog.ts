@@ -1479,12 +1479,13 @@ export function createComprehensiveMomentumHandler(
 					fields[field.name] = field.data.toString('utf-8');
 				}
 			}
+			const collectionUpload = postUploadCol.upload ?? {};
 			const uploadRequest: CollectionUploadRequest = {
 				file,
 				user,
 				fields,
 				collectionSlug: seg0,
-				collectionUpload: postUploadCol.upload!,
+				collectionUpload,
 			};
 			const response = await handleCollectionUpload(uploadConfig, uploadRequest);
 			utils.setResponseStatus(event, response.status);

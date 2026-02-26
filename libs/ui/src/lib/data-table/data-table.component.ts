@@ -102,7 +102,7 @@ import { DropdownMenuItem } from '../dropdown-menu/dropdown-menu-item.component'
 								</mcms-table-head>
 							}
 							@if (rowActions().length > 0) {
-								<mcms-table-head class="w-12"></mcms-table-head>
+								<mcms-table-head class="w-12" />
 							}
 						</mcms-table-row>
 					</mcms-table-header>
@@ -187,7 +187,7 @@ import { DropdownMenuItem } from '../dropdown-menu/dropdown-menu-item.component'
 								</mcms-table-head>
 							}
 							@if (rowActions().length > 0) {
-								<mcms-table-head class="w-12"></mcms-table-head>
+								<mcms-table-head class="w-12" />
 							}
 						</mcms-table-row>
 					</mcms-table-header>

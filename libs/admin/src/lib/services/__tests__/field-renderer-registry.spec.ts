@@ -62,7 +62,7 @@ describe('FieldRendererRegistry', () => {
 		const loader = registry.get('text');
 		expect(loader).toBeDefined();
 
-		const component = await loader!();
+		const component = await loader?.();
 		expect(component).toBe(StubTextComponent);
 	});
 

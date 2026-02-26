@@ -115,7 +115,7 @@ export async function waitForEmail(
 			return email;
 		}
 
-		// eslint-disable-next-line local/no-direct-browser-apis -- Node.js E2E test context, not Angular
+		 
 		await new Promise((resolve) => setTimeout(resolve, 500));
 	}
 

@@ -41,16 +41,16 @@ describe('SeoSettings collection', () => {
 
 	it('should allow internal calls (no user) for read access', () => {
 		const req = {} as never;
-		expect(SeoSettings.access!.read!({ req } as never)).toBe(true);
+		expect(SeoSettings.access?.read?.({ req } as never)).toBe(true);
 	});
 
 	it('should allow admin users for read access', () => {
 		const req = { user: { role: 'admin' } } as never;
-		expect(SeoSettings.access!.read!({ req } as never)).toBe(true);
+		expect(SeoSettings.access?.read?.({ req } as never)).toBe(true);
 	});
 
 	it('should deny non-admin users for read access', () => {
 		const req = { user: { role: 'user' } } as never;
-		expect(SeoSettings.access!.read!({ req } as never)).toBe(false);
+		expect(SeoSettings.access?.read?.({ req } as never)).toBe(false);
 	});
 });

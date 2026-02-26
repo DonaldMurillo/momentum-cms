@@ -70,8 +70,8 @@ test.describe('Admin Dashboard - Collection Grouping', { tag: ['@admin', '@smoke
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const authSection = authenticatedPage.getByRole('region', { name: 'Authentication' });
-		await expect(authSection.getByRole('heading', { name: 'Categories' })).not.toBeVisible();
-		await expect(authSection.getByRole('heading', { name: 'Articles' })).not.toBeVisible();
+		await expect(authSection.getByRole('heading', { name: 'Categories' })).toBeHidden();
+		await expect(authSection.getByRole('heading', { name: 'Articles' })).toBeHidden();
 	});
 
 	test('should render the Content group section before the Authentication group section', async ({
@@ -272,9 +272,9 @@ test.describe('Admin Sidebar Navigation', { tag: ['@admin', '@smoke'] }, () => {
 
 		// Hidden collections (auth-session, auth-account, auth-verification)
 		// should NOT appear in the sidebar
-		await expect(sidebar.getByRole('link', { name: 'Auth Session' })).not.toBeVisible();
-		await expect(sidebar.getByRole('link', { name: 'Auth Account' })).not.toBeVisible();
-		await expect(sidebar.getByRole('link', { name: 'Auth Verification' })).not.toBeVisible();
+		await expect(sidebar.getByRole('link', { name: 'Auth Session' })).toBeHidden();
+		await expect(sidebar.getByRole('link', { name: 'Auth Account' })).toBeHidden();
+		await expect(sidebar.getByRole('link', { name: 'Auth Verification' })).toBeHidden();
 	});
 
 	test('should navigate to Users via Authentication sidebar link', async ({

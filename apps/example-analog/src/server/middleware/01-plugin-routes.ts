@@ -195,8 +195,12 @@ function buildHandlers(): void {
 		const byPath = new Map<string, EventHandler[]>();
 		for (const mw of apiMw) {
 			const prefix = `/api${mw.path}`;
-			if (!byPath.has(prefix)) byPath.set(prefix, []);
-			byPath.get(prefix)!.push(wrapExpressHandler(mw.handler));
+			let handlers = byPath.get(prefix);
+			if (!handlers) {
+				handlers = [];
+				byPath.set(prefix, handlers);
+			}
+			handlers.push(wrapExpressHandler(mw.handler));
 		}
 		for (const [prefix, handlers] of byPath) {
 			const combined = defineEventHandler(async (event) => {

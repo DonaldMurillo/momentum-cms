@@ -1,4 +1,6 @@
 import nx from '@nx/eslint-plugin';
+import angularEslint from 'angular-eslint';
+import prettier from 'eslint-config-prettier';
 import localRules from './tools/eslint-local-rules/index.js';
 
 export default [
@@ -123,6 +125,8 @@ export default [
 			// Ban direct browser API usage (window, document, setTimeout, etc.)
 			// Use inject(DOCUMENT) and .defaultView for SSR safety
 			'local/no-direct-browser-apis': 'error',
+
+			// no-catch-silent-failure and no-or-logic-assertions → test-only (see test block below)
 		},
 	},
 	{
@@ -132,8 +136,12 @@ export default [
 			'@typescript-eslint/no-explicit-any': 'off',
 			'@typescript-eslint/consistent-type-assertions': 'off',
 			'@typescript-eslint/explicit-function-return-type': 'off',
+			'@typescript-eslint/no-non-null-assertion': 'error',
 			'no-console': 'off',
 			'local/no-direct-browser-apis': 'off',
+			// Test-only anti-pattern rules
+			'local/no-catch-silent-failure': 'error',
+			'local/no-or-logic-assertions': 'error',
 		},
 	},
 	{
@@ -164,4 +172,36 @@ export default [
 			'local/no-direct-browser-apis': 'off',
 		},
 	},
+	{
+		// Angular component rules — prefer inject() and OnPush
+		files: [
+			'libs/admin/**/*.ts',
+			'libs/ui/**/*.ts',
+			'libs/email-builder/**/*.ts',
+			'apps/example-angular/src/**/*.ts',
+			'apps/example-analog/src/**/*.ts',
+		],
+		ignores: ['**/*.spec.ts', '**/*.test.ts', '**/*.stories.ts'],
+		plugins: {
+			'@angular-eslint': angularEslint.tsPlugin,
+		},
+		rules: {
+			'@angular-eslint/prefer-inject': 'error',
+			'@angular-eslint/prefer-on-push-component-change-detection': 'error',
+			'@angular-eslint/no-empty-lifecycle-method': 'error',
+		},
+	},
+	{
+		// Angular template rules — enforce modern control flow syntax
+		files: ['**/*.html'],
+		plugins: {
+			'@angular-eslint/template': angularEslint.templatePlugin,
+		},
+		rules: {
+			'@angular-eslint/template/prefer-control-flow': 'error',
+			'@angular-eslint/template/prefer-self-closing-tags': 'error',
+		},
+	},
+	// Disable ESLint rules that conflict with Prettier
+	prettier,
 ];

@@ -186,8 +186,8 @@ describe('breaking-generate-run (PostgreSQL)', () => {
 		await setupInitialSchemaWithData();
 
 		// Generate V2 with required 'sku' field (NOT NULL, no default)
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const snapshot = readSnapshot(migrationDir)!;
+		 
+		const snapshot = readSnapshot(migrationDir);
 		const desired = collectionsToSchema([ItemsV2Required], 'postgresql');
 		const diff = diffSchemas(desired, snapshot, 'postgresql');
 
@@ -198,10 +198,10 @@ describe('breaking-generate-run (PostgreSQL)', () => {
 			(w) => w.operation.type === 'addColumn' && w.severity === 'error',
 		);
 		expect(addColDanger).toBeDefined();
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		expect(addColDanger!.message).toContain('NOT NULL');
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		expect(addColDanger!.suggestion).toContain('nullable');
+		 
+		expect(addColDanger?.message).toContain('NOT NULL');
+		 
+		expect(addColDanger?.suggestion).toContain('nullable');
 	});
 
 	it('should block generate when DROP TABLE is detected', async () => {
@@ -210,8 +210,8 @@ describe('breaking-generate-run (PostgreSQL)', () => {
 		await setupInitialSchemaWithData();
 
 		// Diff that removes items table (replaced by other_table)
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const snapshot = readSnapshot(migrationDir)!;
+		 
+		const snapshot = readSnapshot(migrationDir);
 		const desired = collectionsToSchema([NoItems], 'postgresql');
 		const diff = diffSchemas(desired, snapshot, 'postgresql');
 
@@ -221,8 +221,8 @@ describe('breaking-generate-run (PostgreSQL)', () => {
 			(w) => w.operation.type === 'dropTable' && w.severity === 'error',
 		);
 		expect(dropTableDanger).toBeDefined();
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		expect(dropTableDanger!.message).toContain('permanently delete');
+		 
+		expect(dropTableDanger?.message).toContain('permanently delete');
 	});
 
 	it('should catch NOT NULL violation via clone-test-apply', async () => {
@@ -334,8 +334,8 @@ export async function down(ctx) {
 		await setupInitialSchemaWithData();
 
 		// Generate safe V2 migration (nullable sku column)
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const snapshot = readSnapshot(migrationDir)!;
+		 
+		const snapshot = readSnapshot(migrationDir);
 		generateAndWriteMigration(migrationDir, [ItemsV2Safe], snapshot, 'add_nullable_sku');
 
 		const migrations = await loadMigrationsFromDisk(migrationDir);
@@ -354,8 +354,8 @@ export async function down(ctx) {
 		// Clone should succeed and apply to real DB
 		expect(result.phase).toBe('complete');
 		expect(result.applyResult).not.toBeNull();
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		expect(result.applyResult!.successCount).toBe(1);
+		 
+		expect(result.applyResult?.successCount).toBe(1);
 		const cols = await pool.query(
 			`SELECT column_name FROM information_schema.columns WHERE table_name = 'items' ORDER BY ordinal_position`,
 		);
@@ -368,8 +368,8 @@ export async function down(ctx) {
 
 		await setupInitialSchemaWithData();
 
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const snapshot = readSnapshot(migrationDir)!;
+		 
+		const snapshot = readSnapshot(migrationDir);
 		generateAndWriteMigration(migrationDir, [ItemsV2Safe], snapshot, 'add_sku_test');
 
 		const migrations = await loadMigrationsFromDisk(migrationDir);
@@ -446,8 +446,8 @@ export async function down(ctx) {
 		await setupInitialSchemaWithData();
 
 		// 2. Attempt dangerous migration (NOT NULL) → clone catches it
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const snapshot1 = readSnapshot(migrationDir)!;
+		 
+		const snapshot1 = readSnapshot(migrationDir);
 		const desired2 = collectionsToSchema([ItemsV2Required], 'postgresql');
 		const diff2 = diffSchemas(desired2, snapshot1, 'postgresql');
 		const dangers = detectDangers(diff2.operations, 'postgresql');
@@ -472,8 +472,8 @@ export async function down(ctx) {
 		// 4. Safe migration succeeds
 		expect(result.phase).toBe('complete');
 		expect(result.applyResult).not.toBeNull();
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		expect(result.applyResult!.successCount).toBeGreaterThan(0);
+		 
+		expect(result.applyResult?.successCount).toBeGreaterThan(0);
 
 		// 5. Verify real DB has sku column
 		const cols = await pool.query(

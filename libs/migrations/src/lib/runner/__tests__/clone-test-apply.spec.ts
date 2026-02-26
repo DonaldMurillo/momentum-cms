@@ -157,9 +157,9 @@ describe('clone-test-apply', () => {
 
 			expect(result.phase).toBe('complete');
 			expect(result.cloneResult).not.toBeNull();
-			expect(result.cloneResult!.successCount).toBe(2);
+			expect(result.cloneResult?.successCount).toBe(2);
 			expect(result.applyResult).not.toBeNull();
-			expect(result.applyResult!.successCount).toBe(2);
+			expect(result.applyResult?.successCount).toBe(2);
 			expect(result.cloneCleanedUp).toBe(true);
 			expect(result.error).toBeUndefined();
 			expect(result.suggestions).toHaveLength(0);
@@ -216,7 +216,7 @@ describe('clone-test-apply', () => {
 
 			expect(result.phase).toBe('test');
 			expect(result.cloneResult).not.toBeNull();
-			expect(result.cloneResult!.failCount).toBe(1);
+			expect(result.cloneResult?.failCount).toBe(1);
 			expect(result.applyResult).toBeNull();
 			expect(result.error).toContain('Migration failed on clone');
 			expect(result.cloneCleanedUp).toBe(true);
@@ -237,9 +237,9 @@ describe('clone-test-apply', () => {
 				}),
 			);
 
-			const failed = result.cloneResult!.results.find((r) => !r.success);
+			const failed = result.cloneResult?.results.find((r) => !r.success);
 			expect(failed).toBeDefined();
-			expect(failed!.errorCode).toBe('23505');
+			expect(failed?.errorCode).toBe('23505');
 		});
 
 		it('should generate suggestions for NOT NULL violation', async () => {
@@ -492,7 +492,7 @@ describe('clone-test-apply', () => {
 
 			expect(result.phase).toBe('skipped');
 			expect(result.cloneResult).not.toBeNull();
-			expect(result.cloneResult!.successCount).toBe(1);
+			expect(result.cloneResult?.successCount).toBe(1);
 			expect(result.applyResult).toBeNull();
 			expect(result.cloneCleanedUp).toBe(true);
 			// Real tracker should be empty
@@ -537,7 +537,7 @@ describe('clone-test-apply', () => {
 
 			// Clone still gets created, but no migrations run
 			expect(result.cloneResult).not.toBeNull();
-			expect(result.cloneResult!.successCount).toBe(0);
+			expect(result.cloneResult?.successCount).toBe(0);
 			expect(result.cloneCleanedUp).toBe(true);
 		});
 	});

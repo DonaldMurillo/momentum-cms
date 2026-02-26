@@ -60,8 +60,8 @@ test.describe('Page Rendering', { tag: ['@frontend', '@blocks'] }, () => {
 		await expect(textBody).toContainText('Founded in testing, built for reliability');
 
 		// Should NOT have hero or feature blocks
-		await expect(page.locator('[data-testid="hero-heading"]')).not.toBeVisible();
-		await expect(page.locator('[data-testid="feature-title"]')).not.toBeVisible();
+		await expect(page.locator('[data-testid="hero-heading"]')).toBeHidden();
+		await expect(page.locator('[data-testid="feature-title"]')).toBeHidden();
 	});
 
 	test('renders empty state for page with no blocks', async ({ authenticatedPage: page }) => {

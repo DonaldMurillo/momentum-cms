@@ -151,7 +151,7 @@ test.describe('Entity Sheet', { tag: ['@admin', '@crud'] }, () => {
 			const viewButton = relationshipField.getByRole('button', { name: /view/i });
 
 			// Initially no "View" button (nothing selected)
-			await expect(viewButton).not.toBeVisible();
+			await expect(viewButton).toBeHidden();
 
 			// Select a category — retry to handle hydration timing for (change) handler
 			await expect

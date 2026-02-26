@@ -151,7 +151,7 @@ test.describe('Route handler security', { tag: ['@security', '@api'] }, () => {
 			// Find a non-autosave version
 			const version = data.docs.find((v: Record<string, unknown>) => !v['autosave']);
 			expect(version, 'Should have a non-autosave version').toBeDefined();
-			articleAVersionId = version!.id;
+			articleAVersionId = version?.id;
 		});
 
 		test('restoring article A version on article B URL should fail (400)', async ({ request }) => {

@@ -154,8 +154,8 @@ test.describe('Page View Tracking', { tag: ['@analytics'] }, () => {
 			(e) => e.name === 'page_view' && e.properties['path'] === '/articles/welcome-article',
 		);
 		expect(spaEvent).toBeDefined();
-		expect(spaEvent!.properties['collection']).toBe('articles');
-		expect(spaEvent!.properties['slug']).toBe('welcome-article');
+		expect(spaEvent?.properties['collection']).toBe('articles');
+		expect(spaEvent?.properties['slug']).toBe('welcome-article');
 	});
 
 	test('SPA navigation between pages via header nav tracks page_views', async ({
@@ -210,8 +210,8 @@ test.describe('Page View Tracking', { tag: ['@analytics'] }, () => {
 			(e) => e.name === 'page_view' && e.properties['path'] === '/about',
 		);
 		expect(aboutEvent).toBeDefined();
-		expect(aboutEvent!.properties['collection']).toBe('pages');
-		expect(aboutEvent!.properties['slug']).toBe('about');
+		expect(aboutEvent?.properties['collection']).toBe('pages');
+		expect(aboutEvent?.properties['slug']).toBe('about');
 
 		// The /articles event should also exist (articles listing, no slug match)
 		const articlesEvent = body.events.find(
@@ -334,7 +334,7 @@ test.describe('Page View Tracking', { tag: ['@analytics'] }, () => {
 
 		// The content_created event should NOT appear in the table.
 		// Scope the assertion to the table to avoid matching overview cards.
-		await expect(table.getByText('Content Created')).not.toBeVisible();
+		await expect(table.getByText('Content Created')).toBeHidden();
 	});
 
 	test('dashboard filter state persists in URL on refresh', async ({

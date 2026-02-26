@@ -45,9 +45,9 @@ test.describe('OAuth Provider Infrastructure', { tag: ['@auth', '@api'] }, () =>
 		await expect(page.getByLabel(/password/i)).toBeVisible();
 
 		// OAuth buttons should NOT be present (no providers configured)
-		await expect(page.getByText('Or continue with')).not.toBeVisible();
-		await expect(page.locator('[data-provider="google"]')).not.toBeVisible();
-		await expect(page.locator('[data-provider="github"]')).not.toBeVisible();
+		await expect(page.getByText('Or continue with')).toBeHidden();
+		await expect(page.locator('[data-provider="google"]')).toBeHidden();
+		await expect(page.locator('[data-provider="github"]')).toBeHidden();
 	});
 
 	test('provider endpoint is public and does not require authentication', async ({ request }) => {

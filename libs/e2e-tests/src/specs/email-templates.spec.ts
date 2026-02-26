@@ -68,13 +68,13 @@ test.describe('Email Templates — API', { tag: ['@api', '@crud'] }, () => {
 			// Verify system flag
 			const passwordReset = body.docs.find((d) => d.slug === 'password-reset');
 			expect(passwordReset).toBeDefined();
-			expect(passwordReset!.isSystem).toBe(true);
-			expect(passwordReset!.name).toBe('Password Reset');
+			expect(passwordReset?.isSystem).toBe(true);
+			expect(passwordReset?.name).toBe('Password Reset');
 
 			const verification = body.docs.find((d) => d.slug === 'verification');
 			expect(verification).toBeDefined();
-			expect(verification!.isSystem).toBe(true);
-			expect(verification!.name).toBe('Email Verification');
+			expect(verification?.isSystem).toBe(true);
+			expect(verification?.name).toBe('Email Verification');
 		});
 
 		test('should create a new email template', async ({ authenticatedPage }) => {
@@ -129,7 +129,7 @@ test.describe('Email Templates — API', { tag: ['@api', '@crud'] }, () => {
 			expect(template).toBeDefined();
 
 			// Read by ID
-			const response = await authenticatedPage.request.get(`/api/email-templates/${template!.id}`);
+			const response = await authenticatedPage.request.get(`/api/email-templates/${template?.id}`);
 			expect(response.ok()).toBe(true);
 
 			const body = (await response.json()) as {

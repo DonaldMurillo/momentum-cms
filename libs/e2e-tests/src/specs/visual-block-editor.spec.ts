@@ -60,7 +60,7 @@ async function getPageByTitle(request: APIRequestContext, title: string): Promis
 	const data = (await response.json()) as { docs: PageDoc[] };
 	const page = data.docs.find((d) => d.title === title);
 	expect(page, `Page "${title}" should exist`).toBeTruthy();
-	return page!;
+	return page;
 }
 
 test.describe('Visual Block Editor', { tag: ['@admin', '@blocks'] }, () => {

@@ -53,7 +53,7 @@ describe('UploadFieldRenderer - keyboard accessibility', () => {
 
 		const dropZone = getDropZone();
 		expect(dropZone).toBeTruthy();
-		expect(dropZone!.getAttribute('tabindex')).toBe('0');
+		expect(dropZone?.getAttribute('tabindex')).toBe('0');
 	});
 
 	it('should have aria-label containing the field label', () => {
@@ -62,7 +62,7 @@ describe('UploadFieldRenderer - keyboard accessibility', () => {
 
 		const dropZone = getDropZone();
 		expect(dropZone).toBeTruthy();
-		expect(dropZone!.getAttribute('aria-label')).toContain('Cover Image');
+		expect(dropZone?.getAttribute('aria-label')).toContain('Cover Image');
 	});
 
 	it('should trigger file input on Enter key', () => {
@@ -73,7 +73,7 @@ describe('UploadFieldRenderer - keyboard accessibility', () => {
 		expect(dropZone).toBeTruthy();
 
 		const triggerSpy = vi.spyOn(component, 'triggerFileInput');
-		dropZone!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+		dropZone?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 		fixture.detectChanges();
 
 		expect(triggerSpy).toHaveBeenCalled();
@@ -87,7 +87,7 @@ describe('UploadFieldRenderer - keyboard accessibility', () => {
 		expect(dropZone).toBeTruthy();
 
 		const triggerSpy = vi.spyOn(component, 'triggerFileInput');
-		dropZone!.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+		dropZone?.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
 		fixture.detectChanges();
 
 		expect(triggerSpy).toHaveBeenCalled();
@@ -99,7 +99,7 @@ describe('UploadFieldRenderer - keyboard accessibility', () => {
 
 		const dropZone = getDropZone();
 		expect(dropZone).toBeTruthy();
-		expect(dropZone!.getAttribute('aria-disabled')).toBe('true');
+		expect(dropZone?.getAttribute('aria-disabled')).toBe('true');
 	});
 
 	it('should have aria-disabled="false" when field is enabled', () => {
@@ -108,7 +108,7 @@ describe('UploadFieldRenderer - keyboard accessibility', () => {
 
 		const dropZone = getDropZone();
 		expect(dropZone).toBeTruthy();
-		expect(dropZone!.getAttribute('aria-disabled')).toBe('false');
+		expect(dropZone?.getAttribute('aria-disabled')).toBe('false');
 	});
 
 	it('should not open file picker on Enter when disabled', () => {
@@ -119,7 +119,7 @@ describe('UploadFieldRenderer - keyboard accessibility', () => {
 		expect(dropZone).toBeTruthy();
 
 		const triggerSpy = vi.spyOn(component, 'triggerFileInput');
-		dropZone!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+		dropZone?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 		fixture.detectChanges();
 
 		// triggerFileInput is called by the binding but early-returns when disabled
@@ -130,7 +130,7 @@ describe('UploadFieldRenderer - keyboard accessibility', () => {
 		) as HTMLInputElement | null;
 		if (fileInput) {
 			const clickSpy = vi.spyOn(fileInput, 'click');
-			dropZone!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+			dropZone?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 			expect(clickSpy).not.toHaveBeenCalled();
 		}
 	});

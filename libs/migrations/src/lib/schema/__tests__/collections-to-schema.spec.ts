@@ -398,7 +398,7 @@ describe('collectionsToSchema', () => {
 		const versionTable = schema.tables.find((t) => t.name === 'articles_versions');
 
 		expect(versionTable).toBeDefined();
-		const colNames = versionTable!.columns.map((c) => c.name);
+		const colNames = versionTable?.columns.map((c) => c.name);
 		expect(colNames).toEqual([
 			'id',
 			'parent',
@@ -411,8 +411,8 @@ describe('collectionsToSchema', () => {
 		]);
 
 		// FK to parent table
-		expect(versionTable!.foreignKeys).toHaveLength(1);
-		expect(versionTable!.foreignKeys[0]).toEqual({
+		expect(versionTable?.foreignKeys).toHaveLength(1);
+		expect(versionTable?.foreignKeys[0]).toEqual({
 			constraintName: 'fk_articles_versions_parent',
 			column: 'parent',
 			referencedTable: 'articles',
@@ -421,7 +421,7 @@ describe('collectionsToSchema', () => {
 		});
 
 		// Indexes
-		expect(versionTable!.indexes).toHaveLength(3);
+		expect(versionTable?.indexes).toHaveLength(3);
 	});
 
 	it('should NOT include version tables for non-versioned collections', () => {

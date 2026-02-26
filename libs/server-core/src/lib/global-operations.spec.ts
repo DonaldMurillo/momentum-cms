@@ -99,7 +99,7 @@ describe('GlobalOperations', () => {
 				createdAt: '2024-01-01',
 				updatedAt: '2024-01-01',
 			};
-			vi.mocked(mockAdapter.findGlobal!).mockResolvedValue(mockData);
+			vi.mocked(mockAdapter.findGlobal).mockResolvedValue(mockData);
 
 			const api = getMomentumAPI();
 			const result = await api.global<Record<string, unknown>>('site-settings').findOne();
@@ -110,8 +110,8 @@ describe('GlobalOperations', () => {
 		});
 
 		it('should auto-create global when not found', async () => {
-			vi.mocked(mockAdapter.findGlobal!).mockResolvedValue(null);
-			vi.mocked(mockAdapter.updateGlobal!).mockResolvedValue({
+			vi.mocked(mockAdapter.findGlobal).mockResolvedValue(null);
+			vi.mocked(mockAdapter.updateGlobal).mockResolvedValue({
 				slug: 'site-settings',
 				data: {},
 				createdAt: '2024-01-01',
@@ -132,7 +132,7 @@ describe('GlobalOperations', () => {
 		});
 
 		it('should allow read access when access check passes', async () => {
-			vi.mocked(mockAdapter.findGlobal!).mockResolvedValue({
+			vi.mocked(mockAdapter.findGlobal).mockResolvedValue({
 				slug: 'site-settings',
 				'site-name': 'Test',
 			});
@@ -151,8 +151,8 @@ describe('GlobalOperations', () => {
 				'site-name': 'Old Name',
 				description: 'Old desc',
 			};
-			vi.mocked(mockAdapter.findGlobal!).mockResolvedValue(existingData);
-			vi.mocked(mockAdapter.updateGlobal!).mockResolvedValue({
+			vi.mocked(mockAdapter.findGlobal).mockResolvedValue(existingData);
+			vi.mocked(mockAdapter.updateGlobal).mockResolvedValue({
 				slug: 'site-settings',
 				'site-name': 'New Name',
 				description: 'Old desc',
@@ -186,7 +186,7 @@ describe('GlobalOperations', () => {
 
 	describe('hooks', () => {
 		it('should run afterRead hooks', async () => {
-			vi.mocked(mockAdapter.findGlobal!).mockResolvedValue({
+			vi.mocked(mockAdapter.findGlobal).mockResolvedValue({
 				slug: 'hooked-settings',
 				value: 'test',
 			});
@@ -198,11 +198,11 @@ describe('GlobalOperations', () => {
 		});
 
 		it('should run beforeChange hooks on update', async () => {
-			vi.mocked(mockAdapter.findGlobal!).mockResolvedValue({
+			vi.mocked(mockAdapter.findGlobal).mockResolvedValue({
 				slug: 'hooked-settings',
 				value: 'old',
 			});
-			vi.mocked(mockAdapter.updateGlobal!).mockImplementation((_slug, data) =>
+			vi.mocked(mockAdapter.updateGlobal).mockImplementation((_slug, data) =>
 				Promise.resolve({ slug: 'hooked-settings', ...data }),
 			);
 
@@ -216,11 +216,11 @@ describe('GlobalOperations', () => {
 		});
 
 		it('should run afterChange hooks on update', async () => {
-			vi.mocked(mockAdapter.findGlobal!).mockResolvedValue({
+			vi.mocked(mockAdapter.findGlobal).mockResolvedValue({
 				slug: 'hooked-settings',
 				value: 'old',
 			});
-			vi.mocked(mockAdapter.updateGlobal!).mockResolvedValue({
+			vi.mocked(mockAdapter.updateGlobal).mockResolvedValue({
 				slug: 'hooked-settings',
 				value: 'new',
 			});
@@ -228,7 +228,7 @@ describe('GlobalOperations', () => {
 			const api = getMomentumAPI();
 			await api.global('hooked-settings').update({ value: 'new' });
 
-			const afterChangeHook = mockGlobalWithHooks.hooks!.afterChange![0];
+			const afterChangeHook = mockGlobalWithHooks.hooks?.afterChange?.[0];
 			expect(afterChangeHook).toHaveBeenCalled();
 		});
 	});

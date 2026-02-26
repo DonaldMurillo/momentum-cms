@@ -164,7 +164,7 @@ export const WithSelection: Story = {
 			columns: basicColumns,
 			selectedItems: [],
 			onSelectionChange: (items: User[]) => {
-				// eslint-disable-next-line no-console
+				 
 				console.log('Selected:', items);
 			},
 		},
@@ -196,7 +196,7 @@ export const WithRowActions: Story = {
 			columns: basicColumns,
 			rowActions: rowActionsData,
 			onRowAction: (event: { action: DataTableRowAction<User>; item: User }) => {
-				// eslint-disable-next-line no-console
+				 
 				console.log('Action:', event.action.id, 'on', event.item.name);
 			},
 		},
@@ -298,7 +298,7 @@ export const ClickableRows: Story = {
 			data: sampleUsers,
 			columns: basicColumns,
 			onRowClick: (user: User) => {
-				// eslint-disable-next-line no-console
+				 
 				console.log('Clicked:', user.name);
 			},
 		},

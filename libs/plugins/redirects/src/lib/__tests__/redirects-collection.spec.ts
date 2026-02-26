@@ -81,7 +81,7 @@ describe('RedirectsCollection', () => {
 		): string | true | Promise<string | true> {
 			const from = RedirectsCollection.fields.find((f) => f.name === 'from');
 			expect(from?.validate).toBeDefined();
-			return from!.validate!(value, { data, req: {} });
+			return from?.validate?.(value, { data, req: {} });
 		}
 
 		it('should accept paths starting with /', () => {
@@ -122,7 +122,7 @@ describe('RedirectsCollection', () => {
 		): string | true | Promise<string | true> {
 			const to = RedirectsCollection.fields.find((f) => f.name === 'to');
 			expect(to?.validate).toBeDefined();
-			return to!.validate!(value, { data, req: {} });
+			return to?.validate?.(value, { data, req: {} });
 		}
 
 		it('should accept relative paths', () => {

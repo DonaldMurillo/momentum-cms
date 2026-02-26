@@ -151,14 +151,14 @@ describe('localStorageAdapter', () => {
 			const file = createTestFile();
 			const result = await adapter.upload(file);
 
-			const readBuffer = await adapter.read!(result.path);
+			const readBuffer = await adapter.read?.(result.path);
 			expect(readBuffer).not.toBeNull();
-			expect(Buffer.compare(readBuffer!, file.buffer)).toBe(0);
+			expect(Buffer.compare(readBuffer, file.buffer)).toBe(0);
 		});
 
 		it('should return null for non-existent file', async () => {
 			const adapter = localStorageAdapter({ directory: tmpDir });
-			const readBuffer = await adapter.read!('missing.jpg');
+			const readBuffer = await adapter.read?.('missing.jpg');
 			expect(readBuffer).toBeNull();
 		});
 	});
@@ -206,7 +206,7 @@ describe('localStorageAdapter', () => {
 		it('should block path traversal in read', async () => {
 			const adapter = localStorageAdapter({ directory: tmpDir });
 
-			await expect(adapter.read!('../../../etc/passwd')).rejects.toThrow(
+			await expect(adapter.read?.('../../../etc/passwd')).rejects.toThrow(
 				'directory traversal',
 			);
 		});
@@ -240,7 +240,7 @@ describe('localStorageAdapter', () => {
 			symlinkSync(outsideFile, symlinkPath);
 
 			try {
-				await expect(adapter.read!('read-symlink.txt')).rejects.toThrow(
+				await expect(adapter.read?.('read-symlink.txt')).rejects.toThrow(
 					'symbolic links not allowed',
 				);
 			} finally {

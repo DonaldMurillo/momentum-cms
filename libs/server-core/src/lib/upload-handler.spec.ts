@@ -92,9 +92,9 @@ describe('getUploadConfig', () => {
 
 		const result = getUploadConfig(config);
 		expect(result).not.toBeNull();
-		expect(result!.adapter).toBe(mockAdapter);
-		expect(result!.maxFileSize).toBe(10 * 1024 * 1024);
-		expect(result!.allowedMimeTypes).toContain('image/*');
+		expect(result?.adapter).toBe(mockAdapter);
+		expect(result?.maxFileSize).toBe(10 * 1024 * 1024);
+		expect(result?.allowedMimeTypes).toContain('image/*');
 	});
 
 	it('should use custom maxFileSize when provided', () => {
@@ -105,7 +105,7 @@ describe('getUploadConfig', () => {
 		} as unknown as MomentumConfig;
 
 		const result = getUploadConfig(config);
-		expect(result!.maxFileSize).toBe(5000);
+		expect(result?.maxFileSize).toBe(5000);
 	});
 
 	it('should use custom allowedMimeTypes when provided', () => {
@@ -119,7 +119,7 @@ describe('getUploadConfig', () => {
 		} as unknown as MomentumConfig;
 
 		const result = getUploadConfig(config);
-		expect(result!.allowedMimeTypes).toEqual(['image/png']);
+		expect(result?.allowedMimeTypes).toEqual(['image/png']);
 	});
 });
 
@@ -274,7 +274,7 @@ describe('handleUpload', () => {
 
 		expect(response.status).toBe(201);
 		expect(response.doc).toBeDefined();
-		expect(response.doc!.id).toBe('media-1');
+		expect(response.doc?.id).toBe('media-1');
 	});
 
 	it('should include alt text in media document when provided', async () => {
@@ -372,8 +372,8 @@ describe('handleFileGet', () => {
 		const result = await handleFileGet(mockAdapter, 'test.jpg');
 
 		expect(result).not.toBeNull();
-		expect(result!.buffer).toBeInstanceOf(Buffer);
-		expect(result!.mimeType).toBe('image/jpeg');
+		expect(result?.buffer).toBeInstanceOf(Buffer);
+		expect(result?.mimeType).toBe('image/jpeg');
 	});
 
 	it('should return null when file not found', async () => {
@@ -397,14 +397,14 @@ describe('handleFileGet', () => {
 		const mockAdapter = createMockAdapter();
 		const result = await handleFileGet(mockAdapter, 'document.png');
 
-		expect(result!.mimeType).toBe('image/png');
+		expect(result?.mimeType).toBe('image/png');
 	});
 
 	it('should return undefined mimeType for unknown extension', async () => {
 		const mockAdapter = createMockAdapter();
 		const result = await handleFileGet(mockAdapter, 'file.xyz');
 
-		expect(result!.mimeType).toBeUndefined();
+		expect(result?.mimeType).toBeUndefined();
 	});
 });
 
@@ -604,7 +604,7 @@ describe('handleCollectionUpload', () => {
 
 		expect(response.status).toBe(201);
 		expect(response.doc).toBeDefined();
-		expect(response.doc!.id).toBe('media-1');
+		expect(response.doc?.id).toBe('media-1');
 	});
 
 	it('should return 403 on access denied error', async () => {

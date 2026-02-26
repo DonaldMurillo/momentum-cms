@@ -66,9 +66,11 @@ async function pgDbExists(dbName: string): Promise<boolean> {
 	} catch {
 		return false;
 	} finally {
-		await client.end().catch(() => {
-			/* noop */
-		});
+		try {
+			await client.end();
+		} catch {
+			// Client may already be closed
+		}
 	}
 }
 
@@ -165,15 +167,19 @@ describe.skipIf(!pgAvailable)('clone-test-apply-real (PostgreSQL)', () => {
 	afterEach(async () => {
 		// End all clone pools
 		for (const p of clonePools) {
-			await p.end().catch(() => {
-				/* noop */
-			});
+			try {
+				await p.end();
+			} catch {
+				// Pool may already be closed
+			}
 		}
 		clonePools.length = 0;
 
-		await pool.end().catch(() => {
-			/* noop */
-		});
+		try {
+			await pool.end();
+		} catch {
+			// Pool may already be closed
+		}
 		await dropTestPgDb(dbName);
 	});
 
@@ -218,9 +224,9 @@ describe.skipIf(!pgAvailable)('clone-test-apply-real (PostgreSQL)', () => {
 
 		expect(result.phase).toBe('complete');
 		expect(result.cloneResult).not.toBeNull();
-		expect(result.cloneResult!.successCount).toBe(1);
+		expect(result.cloneResult?.successCount).toBe(1);
 		expect(result.applyResult).not.toBeNull();
-		expect(result.applyResult!.successCount).toBe(1);
+		expect(result.applyResult?.successCount).toBe(1);
 		expect(result.error).toBeUndefined();
 
 		// Verify table exists in real DB (use fresh connection)
@@ -318,7 +324,7 @@ describe.skipIf(!pgAvailable)('clone-test-apply-real (PostgreSQL)', () => {
 
 		expect(result.phase).toBe('skipped');
 		expect(result.cloneResult).not.toBeNull();
-		expect(result.cloneResult!.successCount).toBe(1);
+		expect(result.cloneResult?.successCount).toBe(1);
 		expect(result.applyResult).toBeNull();
 		expect(result.cloneCleanedUp).toBe(true);
 

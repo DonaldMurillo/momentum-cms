@@ -132,7 +132,7 @@ test.describe('Rich text field', { tag: ['@field', '@admin'] }, () => {
 		const created = (await createResponse.json()) as {
 			doc: { id: string; content: string };
 		};
-		expect(created.doc.content === '' || created.doc.content === null).toBe(true);
+		expect(['', null]).toContain(created.doc.content);
 	});
 
 	test('HTML content round-trips correctly through create and retrieve', async ({ request }) => {

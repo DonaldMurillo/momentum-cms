@@ -67,29 +67,29 @@ describe('matchContentRoute', () => {
 	it('should match a specific route and extract params', () => {
 		const match = matchContentRoute('/articles/my-post', routes);
 		expect(match).toBeDefined();
-		expect(match!.collection).toBe('articles');
-		expect(match!.params).toEqual({ slug: 'my-post' });
+		expect(match?.collection).toBe('articles');
+		expect(match?.params).toEqual({ slug: 'my-post' });
 	});
 
 	it('should match a different specific route', () => {
 		const match = matchContentRoute('/categories/tech', routes);
 		expect(match).toBeDefined();
-		expect(match!.collection).toBe('categories');
-		expect(match!.params).toEqual({ slug: 'tech' });
+		expect(match?.collection).toBe('categories');
+		expect(match?.params).toEqual({ slug: 'tech' });
 	});
 
 	it('should fall back to catch-all for unmatched prefixes', () => {
 		const match = matchContentRoute('/about', routes);
 		expect(match).toBeDefined();
-		expect(match!.collection).toBe('pages');
-		expect(match!.params).toEqual({ slug: 'about' });
+		expect(match?.collection).toBe('pages');
+		expect(match?.params).toEqual({ slug: 'about' });
 	});
 
 	it('should prefer specific routes over catch-all', () => {
 		// /articles/hello could match both /articles/:slug and /:slug
 		const match = matchContentRoute('/articles/hello', routes);
 		expect(match).toBeDefined();
-		expect(match!.collection).toBe('articles');
+		expect(match?.collection).toBe('articles');
 	});
 
 	it('should NOT match paths with extra trailing segments', () => {
@@ -102,8 +102,8 @@ describe('matchContentRoute', () => {
 	it('should handle trailing slash', () => {
 		const match = matchContentRoute('/articles/my-post/', routes);
 		expect(match).toBeDefined();
-		expect(match!.collection).toBe('articles');
-		expect(match!.params).toEqual({ slug: 'my-post' });
+		expect(match?.collection).toBe('articles');
+		expect(match?.params).toEqual({ slug: 'my-post' });
 	});
 
 	it('should return undefined when no routes match', () => {
@@ -124,8 +124,8 @@ describe('matchContentRoute', () => {
 		});
 		const match = matchContentRoute('/blog/2024/my-post', multiRoutes);
 		expect(match).toBeDefined();
-		expect(match!.collection).toBe('blog');
-		expect(match!.params).toEqual({ year: '2024', slug: 'my-post' });
+		expect(match?.collection).toBe('blog');
+		expect(match?.params).toEqual({ year: '2024', slug: 'my-post' });
 	});
 
 	it('should not match the root path against catch-all', () => {

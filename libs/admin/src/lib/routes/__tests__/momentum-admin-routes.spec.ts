@@ -91,8 +91,8 @@ describe('momentumAdminRoutes', () => {
 
 			const adminRoute = routes.find((r) => r.path === 'admin');
 			expect(adminRoute).toBeDefined();
-			expect(adminRoute!.children).toBeDefined();
-			expect(adminRoute!.children!.length).toBeGreaterThan(0);
+			expect(adminRoute?.children).toBeDefined();
+			expect(adminRoute?.children?.length).toBeGreaterThan(0);
 		});
 
 		it('should include dashboard as default child route', () => {
@@ -102,7 +102,7 @@ describe('momentumAdminRoutes', () => {
 			});
 
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			const dashboardRoute = adminRoute!.children!.find((r) => r.path === '');
+			const dashboardRoute = adminRoute?.children?.find((r) => r.path === '');
 			expect(dashboardRoute).toBeDefined();
 		});
 
@@ -113,7 +113,7 @@ describe('momentumAdminRoutes', () => {
 			});
 
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			const mediaRoute = adminRoute!.children!.find((r) => r.path === 'media');
+			const mediaRoute = adminRoute?.children?.find((r) => r.path === 'media');
 			expect(mediaRoute).toBeDefined();
 		});
 
@@ -124,7 +124,7 @@ describe('momentumAdminRoutes', () => {
 			});
 
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			const children = adminRoute!.children!;
+			const children = adminRoute?.children ?? [];
 			expect(children.find((r) => r.path === 'collections/:slug')).toBeDefined();
 			expect(children.find((r) => r.path === 'collections/:slug/new')).toBeDefined();
 			expect(children.find((r) => r.path === 'collections/:slug/:id')).toBeDefined();
@@ -139,7 +139,7 @@ describe('momentumAdminRoutes', () => {
 			});
 
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			const globalRoute = adminRoute!.children!.find((r) => r.path === 'globals/:slug');
+			const globalRoute = adminRoute?.children?.find((r) => r.path === 'globals/:slug');
 			expect(globalRoute).toBeDefined();
 		});
 
@@ -152,8 +152,8 @@ describe('momentumAdminRoutes', () => {
 			});
 
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			expect(adminRoute!.data).toBeDefined();
-			expect((adminRoute!.data as Record<string, unknown>)['branding']).toEqual(branding);
+			expect(adminRoute?.data).toBeDefined();
+			expect((adminRoute?.data as Record<string, unknown>)['branding']).toEqual(branding);
 		});
 
 		it('should include plugin routes as children', () => {
@@ -173,7 +173,7 @@ describe('momentumAdminRoutes', () => {
 			});
 
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			const analyticsRoute = adminRoute!.children!.find((r) => r.path === 'analytics');
+			const analyticsRoute = adminRoute?.children?.find((r) => r.path === 'analytics');
 			expect(analyticsRoute).toBeDefined();
 		});
 
@@ -184,7 +184,7 @@ describe('momentumAdminRoutes', () => {
 			});
 
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			const data = adminRoute!.data as Record<string, unknown>;
+			const data = adminRoute?.data as Record<string, unknown>;
 			const collections = data['collections'] as CollectionConfig[];
 			expect(collections).toHaveLength(2);
 			expect(collections[0].slug).toBe('posts');
@@ -204,7 +204,7 @@ describe('momentumAdminRoutes', () => {
 			});
 
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			const data = adminRoute!.data as Record<string, unknown>;
+			const data = adminRoute?.data as Record<string, unknown>;
 			const collections = data['collections'] as CollectionConfig[];
 			// Should not duplicate 'pages'
 			const pageSlugs = collections.filter((c) => c.slug === 'pages');
@@ -232,7 +232,7 @@ describe('momentumAdminRoutes', () => {
 
 			expect(modifySpy).toHaveBeenCalled();
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			const data = adminRoute!.data as Record<string, unknown>;
+			const data = adminRoute?.data as Record<string, unknown>;
 			const collections = data['collections'] as CollectionConfig[];
 			expect(collections.find((c) => c.slug === 'injected')).toBeDefined();
 		});
@@ -250,7 +250,7 @@ describe('momentumAdminRoutes', () => {
 			});
 
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			const analyticsRoute = adminRoute!.children!.find((r) => r.path === 'analytics');
+			const analyticsRoute = adminRoute?.children?.find((r) => r.path === 'analytics');
 			expect(analyticsRoute).toBeDefined();
 		});
 	});
@@ -276,7 +276,7 @@ describe('momentumAdminRoutes', () => {
 			});
 
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			const data = adminRoute!.data as Record<string, unknown>;
+			const data = adminRoute?.data as Record<string, unknown>;
 			expect(data['branding']).toEqual({ title: 'CMS' });
 		});
 	});
@@ -303,8 +303,8 @@ describe('momentumAdminRoutes', () => {
 
 			const loginRoute = routes.find((r) => r.path === 'admin/login');
 			expect(loginRoute).toBeDefined();
-			expect(loginRoute!.canActivate).toBeDefined();
-			expect(loginRoute!.canActivate!.length).toBe(1);
+			expect(loginRoute?.canActivate).toBeDefined();
+			expect(loginRoute?.canActivate?.length).toBe(1);
 		});
 
 		it('should include setup route', () => {
@@ -346,8 +346,8 @@ describe('momentumAdminRoutes', () => {
 			});
 
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			expect(adminRoute!.canActivate).toBeDefined();
-			expect(adminRoute!.canActivate!.length).toBe(1);
+			expect(adminRoute?.canActivate).toBeDefined();
+			expect(adminRoute?.canActivate?.length).toBe(1);
 		});
 
 		it('should protect collection routes with collectionAccessGuard', () => {
@@ -357,8 +357,8 @@ describe('momentumAdminRoutes', () => {
 			});
 
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			const listRoute = adminRoute!.children!.find((r) => r.path === 'collections/:slug');
-			expect(listRoute!.canActivate).toBeDefined();
+			const listRoute = adminRoute?.children?.find((r) => r.path === 'collections/:slug');
+			expect(listRoute?.canActivate).toBeDefined();
 		});
 
 		it('should protect edit routes with unsavedChangesGuard', () => {
@@ -368,8 +368,8 @@ describe('momentumAdminRoutes', () => {
 			});
 
 			const adminRoute = routes.find((r) => r.path === 'admin');
-			const newRoute = adminRoute!.children!.find((r) => r.path === 'collections/:slug/new');
-			expect(newRoute!.canDeactivate).toBeDefined();
+			const newRoute = adminRoute?.children?.find((r) => r.path === 'collections/:slug/new');
+			expect(newRoute?.canDeactivate).toBeDefined();
 		});
 	});
 });
