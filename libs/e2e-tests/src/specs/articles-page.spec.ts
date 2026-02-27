@@ -237,12 +237,14 @@ test.describe('Articles Page', { tag: ['@frontend', '@articles'] }, () => {
 		const cards = page.locator('[data-testid="article-card"]');
 		await expect.poll(() => cards.count(), { timeout: 10000 }).toBeGreaterThanOrEqual(6);
 
-		// Read every card's href attribute
+		// Verify every card has an href and collect them for further assertions
 		const hrefs: string[] = [];
 		const count = await cards.count();
 		for (let i = 0; i < count; i++) {
-			const href = await cards.nth(i).getAttribute('href');
-			expect(href, `Card ${i} must have an href attribute`).toBeTruthy();
+			const card = cards.nth(i);
+			await expect(card).toHaveAttribute('href', /.+/);
+
+			const href = await card.getAttribute('href');
 			hrefs.push(href ?? '');
 		}
 

@@ -12,6 +12,9 @@ import {
 	createFindEmailTemplate,
 	emailTemplateSeedData,
 } from '@momentumcms/plugins/email';
+import { postgresQueueAdapter } from '@momentumcms/queue';
+import { queuePlugin } from '@momentumcms/plugins/queue';
+import { cronPlugin } from '@momentumcms/plugins/cron';
 import { join } from 'node:path';
 import { collections } from '@momentumcms/example-config/collections';
 import { globals } from '@momentumcms/example-config/globals';
@@ -71,6 +74,23 @@ export const redirects = redirectsPlugin({
 	cacheTtl: 0, // No cache for E2E testing
 });
 
+/**
+ * Queue plugin — persistent job queue with PostgreSQL SKIP LOCKED.
+ */
+export const queue = queuePlugin({
+	adapter: postgresQueueAdapter({ pool }),
+	workers: { default: { concurrency: 2 } },
+});
+
+/**
+ * Cron plugin — recurring job scheduler.
+ */
+export const cron = cronPlugin({
+	queue,
+	schedules: [],
+	checkInterval: 60000,
+});
+
 export const seo = seoPlugin({
 	collections: ['categories', 'articles', 'pages'],
 	siteUrl: `http://localhost:${process.env['PORT'] || 4200}`,
@@ -115,7 +135,7 @@ const config = defineMomentumConfig({
 		level: 'debug',
 		format: 'pretty',
 	},
-	plugins: [events, analytics, seo, redirects, email, authPlugin],
+	plugins: [events, analytics, seo, redirects, email, authPlugin, queue, cron],
 	seeding: {
 		...exampleSeedingConfig,
 		defaults: (helpers) => [

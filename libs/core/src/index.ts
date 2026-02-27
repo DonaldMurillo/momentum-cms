@@ -31,3 +31,9 @@ export * from './lib/versions';
 
 // Migrations
 export * from './lib/migrations';
+
+// Queue
+export * from './lib/queue';
+
+// Cron
+export * from './lib/cron';

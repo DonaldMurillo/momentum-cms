@@ -1,0 +1,44 @@
+{
+	"name": "@momentumcms/plugins-cron",
+	"version": "0.5.0",
+	"description": "Cron scheduler plugin for Momentum CMS with recurring job support",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/DonaldMurillo/momentum-cms.git",
+		"directory": "libs/plugins/cron"
+	},
+	"homepage": "https://github.com/DonaldMurillo/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/DonaldMurillo/momentum-cms/issues"
+	},
+	"keywords": [
+		"cms",
+		"momentum-cms",
+		"cron",
+		"scheduler",
+		"recurring-jobs",
+		"plugin"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"main": "./index.cjs",
+	"types": "./src/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.d.ts",
+			"default": "./index.cjs"
+		},
+		"./admin-routes": {
+			"types": "./src/lib/cron-admin-routes.d.ts",
+			"default": "./lib/cron-admin-routes.cjs"
+		}
+	},
+	"dependencies": {
+		"@momentumcms/core": "0.5.0",
+		"@momentumcms/queue": "0.5.0",
+		"@momentumcms/plugins-queue": "0.5.0"
+	}
+}

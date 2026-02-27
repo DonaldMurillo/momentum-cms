@@ -378,6 +378,44 @@ export interface AuthApiKeys {
 	updatedAt: string;
 }
 
+export interface QueueJobs {
+	id: string;
+	type: string;
+	payload?: Record<string, unknown>;
+	status: 'pending' | 'active' | 'completed' | 'failed' | 'dead';
+	queue: string;
+	priority: number;
+	attempts: number;
+	maxRetries: number;
+	backoff?: Record<string, unknown>;
+	timeout: number;
+	uniqueKey?: string;
+	runAt?: string;
+	startedAt?: string;
+	finishedAt?: string;
+	lastError?: string;
+	metadata?: Record<string, unknown>;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface CronSchedules {
+	id: string;
+	name: string;
+	type: string;
+	cron: string;
+	payload?: Record<string, unknown>;
+	queue?: string;
+	priority?: number;
+	maxRetries?: number;
+	timeout?: number;
+	enabled?: boolean;
+	lastRunAt?: string;
+	nextRunAt?: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
 // ── Global Types ───────────────────────────────
 
 export interface SiteSettingsGlobal {
@@ -725,6 +763,130 @@ export interface AuthApiKeysWhereClause {
 	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
+export interface QueueJobsWhereClause {
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	type?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	status?:
+		| 'pending'
+		| 'active'
+		| 'completed'
+		| 'failed'
+		| 'dead'
+		| {
+				equals?: 'pending' | 'active' | 'completed' | 'failed' | 'dead';
+				not?: 'pending' | 'active' | 'completed' | 'failed' | 'dead';
+				in?: ('pending' | 'active' | 'completed' | 'failed' | 'dead')[];
+		  };
+	queue?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	priority?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	attempts?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	maxRetries?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	timeout?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	uniqueKey?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	runAt?:
+		| string
+		| { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	startedAt?:
+		| string
+		| { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	finishedAt?:
+		| string
+		| { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	lastError?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+}
+
+export interface CronSchedulesWhereClause {
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	type?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	cron?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	queue?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	priority?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	maxRetries?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	timeout?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	enabled?: boolean | { equals?: boolean };
+	lastRunAt?:
+		| string
+		| { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	nextRunAt?:
+		| string
+		| { equals?: string; not?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+}
+
 export type CollectionSlug =
 	| 'categories'
 	| 'articles'
@@ -743,7 +905,9 @@ export type CollectionSlug =
 	| 'auth-session'
 	| 'auth-account'
 	| 'auth-verification'
-	| 'auth-api-keys';
+	| 'auth-api-keys'
+	| 'queue-jobs'
+	| 'cron-schedules';
 
 export type GlobalSlug = 'site-settings';
 
@@ -766,6 +930,8 @@ export interface MomentumCollections {
 	'auth-account': AuthAccount;
 	'auth-verification': AuthVerification;
 	'auth-api-keys': AuthApiKeys;
+	'queue-jobs': QueueJobs;
+	'cron-schedules': CronSchedules;
 }
 
 export interface MomentumGlobals {
@@ -791,6 +957,8 @@ export type TypedMomentumCollections = {
 	'auth-account': { doc: AuthAccount; where: AuthAccountWhereClause };
 	'auth-verification': { doc: AuthVerification; where: AuthVerificationWhereClause };
 	'auth-api-keys': { doc: AuthApiKeys; where: AuthApiKeysWhereClause };
+	'queue-jobs': { doc: QueueJobs; where: QueueJobsWhereClause };
+	'cron-schedules': { doc: CronSchedules; where: CronSchedulesWhereClause };
 };
 
 export type DocumentType<S extends CollectionSlug> = MomentumCollections[S];
