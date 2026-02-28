@@ -238,29 +238,6 @@ export const exampleSeedingConfig: SeedingConfig = {
 				},
 			],
 		}),
-		collection<PageDoc>('pages').create('page-contact', {
-			title: 'Contact Page',
-			slug: 'contact',
-			content: [
-				{
-					blockType: 'hero',
-					heading: 'Get in Touch',
-					subheading: 'We would love to hear from you.',
-				},
-				{
-					blockType: 'textBlock',
-					heading: 'Contact Information',
-					body: 'Reach out to us via email at hello@momentum-cms.dev or visit our offices during business hours. We typically respond within 24 hours.',
-				},
-				{
-					blockType: 'callToAction',
-					heading: 'Send Us a Message',
-					description: 'Fill out the form in the admin panel to get started.',
-					primaryButtonText: 'Open Admin',
-					primaryButtonLink: '/admin',
-				},
-			],
-		}),
 		collection<ProductDoc>('products').create('product-phone', {
 			name: 'Test Phone',
 			description: 'A phone for E2E testing.',

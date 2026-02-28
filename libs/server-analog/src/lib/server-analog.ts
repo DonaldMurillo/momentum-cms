@@ -135,7 +135,7 @@ export type ReadMultipartFormDataFn = (event: H3Event) => Promise<
 /**
  * Type for send function from h3.
  */
-export type SendFn = (event: H3Event, data: Buffer | string, type?: string) => unknown;
+export type SendFn = (event: H3Event, data: Buffer | Uint8Array | string, type?: string) => unknown;
 
 /**
  * Extended h3 utilities for comprehensive API handling.
@@ -157,7 +157,7 @@ export interface MomentumH3Utils {
 		  }>
 		| undefined
 	>;
-	send(event: H3Event, data: Buffer | string, type?: string): unknown;
+	send(event: H3Event, data: Buffer | Uint8Array | string, type?: string): unknown;
 }
 
 // ============================================

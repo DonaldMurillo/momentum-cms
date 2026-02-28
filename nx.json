@@ -41,7 +41,14 @@
 			"dependsOn": ["^build"],
 			"inputs": ["production", "^production"],
 			"options": {
-				"assets": ["{projectRoot}/*.md", { "input": ".", "glob": "LICENSE", "output": "." }],
+				"assets": [
+					"{projectRoot}/*.md",
+					{
+						"input": ".",
+						"glob": "LICENSE",
+						"output": "."
+					}
+				],
 				"format": ["cjs", "esm"],
 				"generatePackageJson": true
 			}
@@ -76,7 +83,14 @@
 			"dependsOn": ["^build"],
 			"inputs": ["production", "^production"],
 			"options": {
-				"assets": ["{projectRoot}/*.md", { "input": ".", "glob": "LICENSE", "output": "." }]
+				"assets": [
+					"{projectRoot}/*.md",
+					{
+						"input": ".",
+						"glob": "LICENSE",
+						"output": "."
+					}
+				]
 			}
 		}
 	},
@@ -149,7 +163,8 @@
 			"plugins-redirects",
 			"plugins-email",
 			"migrations",
-			"create-momentum-app"
+			"create-momentum-app",
+			"form-builder"
 		],
 		"version": {
 			"preVersionCommand": "npx nx run-many -t build",

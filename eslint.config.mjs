@@ -39,6 +39,10 @@ export default [
 						// Email lib exports browser-safe types used by email-builder
 						'@momentumcms/email',
 						'@momentumcms/email/templates',
+						// Form builder browser-safe sub-paths (validation is pure, no Angular)
+						'@momentumcms/form-builder/validation',
+						'@momentumcms/plugins-form-builder/admin-routes',
+						'@momentumcms/plugins-form-builder/collections',
 						// Example config sub-paths (mixed lazy/static usage in apps)
 						'@momentumcms/example-config',
 						'@momentumcms/example-config/collections',
@@ -181,6 +185,7 @@ export default [
 			'libs/admin/**/*.ts',
 			'libs/ui/**/*.ts',
 			'libs/email-builder/**/*.ts',
+			'libs/form-builder/**/*.ts',
 			'apps/example-angular/src/**/*.ts',
 			'apps/example-analog/src/**/*.ts',
 		],

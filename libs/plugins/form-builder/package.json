@@ -1,0 +1,48 @@
+{
+	"name": "@momentumcms/plugins-form-builder",
+	"version": "0.5.0",
+	"description": "Form builder plugin for Momentum CMS with dynamic form creation, submissions, and webhooks",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/DonaldMurillo/momentum-cms.git",
+		"directory": "libs/plugins/form-builder"
+	},
+	"homepage": "https://github.com/DonaldMurillo/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/DonaldMurillo/momentum-cms/issues"
+	},
+	"keywords": [
+		"cms",
+		"momentum-cms",
+		"form-builder",
+		"forms",
+		"plugin"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"main": "./index.cjs",
+	"types": "./src/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.d.ts",
+			"default": "./index.cjs"
+		},
+		"./admin-routes": {
+			"types": "./src/lib/form-builder-admin-routes.d.ts",
+			"default": "./lib/form-builder-admin-routes.cjs"
+		},
+		"./collections": {
+			"types": "./src/lib/collections/index.d.ts",
+			"default": "./lib/collections/index.cjs"
+		}
+	},
+	"dependencies": {
+		"@momentumcms/core": "0.5.0",
+		"@momentumcms/form-builder": "0.5.0",
+		"@momentumcms/server-core": "0.5.0",
+		"express": "^4.21.2"
+	}
+}

@@ -955,6 +955,55 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 												plural: 'Feature Grids',
 											},
 										},
+										{
+											slug: 'form',
+											fields: [
+												{
+													name: 'form',
+													type: 'relationship',
+													required: true,
+													label: 'Form',
+													collection: () => ({
+														slug: 'forms',
+														labels: { singular: 'Form', plural: 'Forms' },
+														admin: { useAsTitle: 'title' },
+													}),
+												},
+												{
+													name: 'showHoneypot',
+													type: 'checkbox',
+													label: 'Enable Honeypot Anti-Spam',
+													defaultValue: false,
+												},
+												{
+													name: '_analytics',
+													type: 'group',
+													label: 'Analytics',
+													admin: {
+														collapsible: true,
+														defaultOpen: false,
+													},
+													fields: [
+														{
+															name: 'trackImpressions',
+															type: 'checkbox',
+															label: 'Track Impressions',
+															defaultValue: false,
+														},
+														{
+															name: 'trackHover',
+															type: 'checkbox',
+															label: 'Track Hover',
+															defaultValue: false,
+														},
+													],
+												},
+											],
+											labels: {
+												singular: 'Form',
+												plural: 'Forms',
+											},
+										},
 									],
 								},
 							],
@@ -2061,6 +2110,175 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 				group: 'System',
 				useAsTitle: 'name',
 				defaultColumns: ['name', 'type', 'cron', 'enabled', 'lastRunAt', 'nextRunAt'],
+			},
+			timestamps: true,
+		},
+		{
+			slug: 'forms',
+			labels: {
+				singular: 'Form',
+				plural: 'Forms',
+			},
+			fields: [
+				{
+					name: 'formTabs',
+					type: 'tabs',
+					tabs: [
+						{
+							label: 'Form',
+							fields: [
+								{
+									name: 'title',
+									type: 'text',
+									required: true,
+									label: 'Title',
+								},
+								{
+									name: 'slug',
+									type: 'text',
+									required: true,
+									unique: true,
+									label: 'Slug',
+									description: 'URL-friendly identifier used in the API (e.g. contact-us)',
+									admin: {
+										placeholder: 'contact-us',
+									},
+								},
+								{
+									name: 'status',
+									type: 'select',
+									required: true,
+									defaultValue: 'draft',
+									label: 'Status',
+									options: [
+										{
+											label: 'Draft',
+											value: 'draft',
+										},
+										{
+											label: 'Published',
+											value: 'published',
+										},
+										{
+											label: 'Archived',
+											value: 'archived',
+										},
+									],
+								},
+								{
+									name: 'schema',
+									type: 'json',
+									required: true,
+									label: 'Form Schema',
+									description: 'JSON schema that defines form fields, steps, and settings',
+									admin: {
+										editor: 'form-builder',
+									},
+								},
+							],
+						},
+						{
+							label: 'Settings',
+							fields: [
+								{
+									name: 'description',
+									type: 'text',
+									label: 'Description',
+								},
+								{
+									name: 'successMessage',
+									type: 'text',
+									label: 'Success Message',
+									defaultValue: 'Thank you for your submission!',
+								},
+								{
+									name: 'redirectUrl',
+									type: 'text',
+									label: 'Redirect URL',
+									description: 'Optional URL to redirect to after submission',
+								},
+								{
+									name: 'honeypot',
+									type: 'checkbox',
+									defaultValue: true,
+									label: 'Enable Honeypot',
+									description: 'Adds an invisible anti-spam field to the form',
+								},
+								{
+									name: 'webhooks',
+									type: 'json',
+									label: 'Webhooks',
+									description: 'Array of webhook URLs to notify on form submission',
+								},
+								{
+									name: 'submissionCount',
+									type: 'number',
+									defaultValue: 0,
+									label: 'Submission Count',
+									admin: {
+										readOnly: true,
+									},
+								},
+							],
+						},
+					],
+				},
+			],
+			admin: {
+				group: 'Content',
+				useAsTitle: 'title',
+				defaultColumns: ['title', 'slug', 'status', 'submissionCount', 'updatedAt'],
+				pagination: {
+					defaultLimit: 25,
+				},
+			},
+			timestamps: true,
+		},
+		{
+			slug: 'form-submissions',
+			labels: {
+				singular: 'Submission',
+				plural: 'Submissions',
+			},
+			fields: [
+				{
+					name: 'formId',
+					type: 'text',
+					required: true,
+					label: 'Form ID',
+				},
+				{
+					name: 'formSlug',
+					type: 'text',
+					required: true,
+					label: 'Form Slug',
+				},
+				{
+					name: 'formTitle',
+					type: 'text',
+					label: 'Form Title',
+				},
+				{
+					name: 'data',
+					type: 'json',
+					required: true,
+					label: 'Submission Data',
+					description: 'The submitted form field values',
+				},
+				{
+					name: 'metadata',
+					type: 'json',
+					label: 'Metadata',
+					description: 'Request metadata (IP, user-agent, etc.)',
+				},
+			],
+			admin: {
+				group: 'Content',
+				useAsTitle: 'formSlug',
+				defaultColumns: ['formSlug', 'formTitle', 'createdAt'],
+				pagination: {
+					defaultLimit: 50,
+				},
 			},
 			timestamps: true,
 		},

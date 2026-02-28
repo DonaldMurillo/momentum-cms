@@ -89,6 +89,23 @@ export default defineConfig(({ mode: _mode }) => {
 							'../../libs/plugins/queue/src/index.ts',
 						),
 						'@momentumcms/plugins/cron': resolve(__dirname, '../../libs/plugins/cron/src/index.ts'),
+						'@momentumcms/plugins-form-builder/collections': resolve(
+							__dirname,
+							'../../libs/plugins/form-builder/src/lib/collections/index.ts',
+						),
+						'@momentumcms/plugins-form-builder/admin-routes': resolve(
+							__dirname,
+							'../../libs/plugins/form-builder/src/lib/form-builder-admin-routes.ts',
+						),
+						'@momentumcms/plugins-form-builder': resolve(
+							__dirname,
+							'../../libs/plugins/form-builder/src/index.ts',
+						),
+						'@momentumcms/form-builder/validation': resolve(
+							__dirname,
+							'../../libs/form-builder/src/lib/validation/index.ts',
+						),
+						'@momentumcms/form-builder': resolve(__dirname, '../../libs/form-builder/src/index.ts'),
 						'@momentumcms/queue': resolve(__dirname, '../../libs/queue/src/index.ts'),
 						'@momentumcms/storage': resolve(__dirname, '../../libs/storage/src/index.ts'),
 						'@momentumcms/logger': resolve(__dirname, '../../libs/logger/src/index.ts'),

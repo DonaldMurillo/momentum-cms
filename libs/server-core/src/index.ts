@@ -78,7 +78,7 @@ export {
 } from './lib/seeding';
 
 // Webhooks
-export { registerWebhookHooks } from './lib/webhooks';
+export { registerWebhookHooks, isAllowedWebhookUrl } from './lib/webhooks';
 
 // Publish Scheduler
 export {

@@ -13,8 +13,8 @@ export interface UploadedFile {
 	mimeType: string;
 	/** File size in bytes */
 	size: number;
-	/** File content as Buffer */
-	buffer: Buffer;
+	/** File content (Uint8Array for universal compat; Node Buffer extends Uint8Array) */
+	buffer: Uint8Array;
 }
 
 /**
@@ -91,5 +91,5 @@ export interface StorageAdapter {
 	 * @param path - The storage path/key
 	 * @returns The file as a Buffer, or null if not found
 	 */
-	read?(path: string): Promise<Buffer | null>;
+	read?(path: string): Promise<Uint8Array | null>;
 }

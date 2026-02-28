@@ -15,6 +15,7 @@ import {
 import { postgresQueueAdapter } from '@momentumcms/queue';
 import { queuePlugin } from '@momentumcms/plugins/queue';
 import { cronPlugin } from '@momentumcms/plugins/cron';
+import { formBuilderPlugin } from '@momentumcms/plugins-form-builder';
 import { join } from 'node:path';
 import { collections } from '@momentumcms/example-config/collections';
 import { globals } from '@momentumcms/example-config/globals';
@@ -97,6 +98,14 @@ export const cron = cronPlugin({
 	checkInterval: 60000,
 });
 
+/**
+ * Form builder plugin — dynamic forms, submissions, and webhooks.
+ */
+export const forms = formBuilderPlugin({
+	honeypot: true,
+	rateLimitPerMinute: 10,
+});
+
 export const seo = seoPlugin({
 	collections: ['categories', 'articles', 'pages'],
 	siteUrl: `http://localhost:${process.env['PORT'] || 4000}`,
@@ -141,7 +150,7 @@ const config = defineMomentumConfig({
 		level: 'debug',
 		format: 'pretty',
 	},
-	plugins: [events, analytics, seo, redirects, email, authPlugin, queue, cron],
+	plugins: [events, analytics, seo, redirects, email, authPlugin, queue, cron, forms],
 	seeding: {
 		...exampleSeedingConfig,
 		defaults: (helpers) => [
@@ -151,7 +160,107 @@ const config = defineMomentumConfig({
 					.collection<Record<string, unknown>>('email-templates')
 					.create(`email-tpl-${data['slug']}`, data, { onConflict: 'skip' }),
 			),
+			// Seed a contact form for E2E testing
+			helpers.collection<Record<string, unknown>>('forms').create(
+				'form-contact',
+				{
+					title: 'Contact Us',
+					slug: 'contact-us',
+					description: 'Get in touch with our team.',
+					status: 'published',
+					schema: {
+						id: 'contact-us',
+						title: 'Contact Us',
+						description: 'Get in touch with our team.',
+						fields: [
+							{
+								name: 'name',
+								type: 'text',
+								label: 'Full Name',
+								required: true,
+								placeholder: 'Your name',
+							},
+							{
+								name: 'email',
+								type: 'email',
+								label: 'Email Address',
+								required: true,
+								placeholder: 'your@email.com',
+							},
+							{
+								name: 'subject',
+								type: 'select',
+								label: 'Subject',
+								required: true,
+								options: [
+									{ label: 'General Inquiry', value: 'general' },
+									{ label: 'Support', value: 'support' },
+									{ label: 'Feedback', value: 'feedback' },
+								],
+							},
+							{
+								name: 'message',
+								type: 'textarea',
+								label: 'Message',
+								required: true,
+								placeholder: 'Tell us more...',
+								rows: 5,
+							},
+						],
+						settings: {
+							submitLabel: 'Send Message',
+							successMessage: 'Thank you for contacting us! We will get back to you soon.',
+						},
+					},
+					webhooks: [],
+					honeypot: true,
+					successMessage: 'Thank you for contacting us!',
+					submissionCount: 0,
+				},
+				{ onConflict: 'skip' },
+			),
 		],
+		seed: async (ctx) => {
+			// Run existing example seed function first (creates articles with category relationships)
+			await exampleSeedingConfig.seed?.(ctx);
+
+			// Seed the /contact page with all blocks (hero + textBlock + form + callToAction)
+			const contactForm = await ctx.getSeeded('form-contact');
+			if (contactForm) {
+				await ctx.seed({
+					seedId: 'page-contact',
+					collection: 'pages',
+					data: {
+						title: 'Contact Page',
+						slug: 'contact',
+						content: [
+							{
+								blockType: 'hero',
+								heading: 'Get in Touch',
+								subheading: 'We would love to hear from you.',
+							},
+							{
+								blockType: 'textBlock',
+								heading: 'Contact Information',
+								body: 'Reach out to us via email at hello@momentum-cms.dev or visit our offices during business hours. We typically respond within 24 hours.',
+							},
+							{
+								blockType: 'form',
+								form: contactForm.id,
+								showHoneypot: true,
+							},
+							{
+								blockType: 'callToAction',
+								heading: 'Send Us a Message',
+								description: 'Have a specific project in mind? Let us know the details.',
+								primaryButtonText: 'View Services',
+								primaryButtonLink: '/services',
+							},
+						],
+					},
+				});
+			}
+		},
 	},
 });
 

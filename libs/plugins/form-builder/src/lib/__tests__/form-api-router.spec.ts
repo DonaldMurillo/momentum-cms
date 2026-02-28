@@ -1,0 +1,459 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import express from 'express';
+import request from 'supertest';
+import type { MomentumAPI } from '@momentumcms/core';
+import { createFormApiRouter } from '../middleware/form-api-router';
+
+const PUBLISHED_FORM = {
+	id: 'form-1',
+	slug: 'contact-us',
+	title: 'Contact Us',
+	status: 'published',
+	schema: {
+		fields: [
+			{ name: 'name', type: 'text', required: true },
+			{ name: 'email', type: 'email', required: true },
+			{ name: 'message', type: 'textarea' },
+		],
+	},
+	webhooks: [],
+	honeypot: true,
+	submissionCount: 5,
+	successMessage: 'Thank you!',
+	redirectUrl: null,
+};
+
+const DRAFT_FORM = {
+	...PUBLISHED_FORM,
+	id: 'form-2',
+	slug: 'draft-form',
+	status: 'draft',
+};
+
+function createMockApi(forms: Record<string, unknown>[] = [PUBLISHED_FORM]): MomentumAPI & {
+	_submissionsCreated: unknown[];
+	_formsUpdate: ReturnType<typeof vi.fn>;
+} {
+	const submissionsCreated: unknown[] = [];
+	const formsUpdate = vi.fn(async () => PUBLISHED_FORM);
+
+	const formsOps = {
+		findById: vi.fn(async (id: string) => {
+			return forms.find((f) => (f as { id: string }).id === id) ?? null;
+		}),
+		find: vi.fn(async (opts: { where?: Record<string, unknown> }) => {
+			const slugFilter = (opts.where?.['slug'] as { equals?: string })?.equals ?? null;
+			const docs = slugFilter
+				? forms.filter((f) => (f as { slug: string }).slug === slugFilter)
+				: forms;
+			return { docs, totalDocs: docs.length };
+		}),
+		update: formsUpdate,
+	};
+
+	const submissionsOps = {
+		create: vi.fn(async (data: unknown) => {
+			submissionsCreated.push(data);
+			return { id: 'sub-1', ...data };
+		}),
+	};
+
+	return {
+		collection: vi.fn((slug: string) => {
+			if (slug === 'forms') return formsOps;
+			if (slug === 'form-submissions') return submissionsOps;
+			return {};
+		}),
+		_submissionsCreated: submissionsCreated,
+		_formsUpdate: formsUpdate,
+	} as unknown as MomentumAPI & {
+		_submissionsCreated: unknown[];
+		_formsUpdate: ReturnType<typeof vi.fn>;
+	};
+}
+
+function createApp(
+	apiOverride?: MomentumAPI | null,
+	options?: { honeypot?: boolean; rateLimitPerMinute?: number },
+): express.Express {
+	const mockApi = apiOverride === undefined ? createMockApi() : apiOverride;
+	const app = express();
+	app.use(express.json());
+	app.use(
+		createFormApiRouter({
+			getApi: () => mockApi,
+			honeypot: options?.honeypot ?? true,
+			rateLimitPerMinute: options?.rateLimitPerMinute ?? 100,
+		}),
+	);
+	return app;
+}
+
+describe('Form API Router', () => {
+	beforeEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	describe('GET /forms/:idOrSlug/schema', () => {
+		it('should return schema for a published form by slug', async () => {
+			const app = createApp();
+			const res = await request(app).get('/forms/contact-us/schema');
+
+			expect(res.status).toBe(200);
+			expect(res.body.slug).toBe('contact-us');
+			expect(res.body.schema).toBeDefined();
+			expect(res.body.schema.fields).toHaveLength(3);
+		});
+
+		it('should return schema for a published form by id', async () => {
+			const app = createApp();
+			const res = await request(app).get('/forms/form-1/schema');
+
+			expect(res.status).toBe(200);
+			expect(res.body.id).toBe('form-1');
+		});
+
+		it('should return 404 for non-existent form', async () => {
+			const app = createApp();
+			const res = await request(app).get('/forms/nonexistent/schema');
+
+			expect(res.status).toBe(404);
+			expect(res.body.error).toBe('Form not found');
+		});
+
+		it('should return 404 for draft forms', async () => {
+			const mockApi = createMockApi([DRAFT_FORM]);
+			const app = createApp(mockApi);
+			const res = await request(app).get('/forms/draft-form/schema');
+
+			expect(res.status).toBe(404);
+		});
+
+		it('should return 503 when API is not ready', async () => {
+			const app = createApp(null);
+			const res = await request(app).get('/forms/contact-us/schema');
+
+			expect(res.status).toBe(503);
+		});
+
+		it('should include honeypot flag in response', async () => {
+			const app = createApp();
+			const res = await request(app).get('/forms/contact-us/schema');
+
+			expect(res.body.honeypot).toBe(true);
+		});
+	});
+
+	describe('POST /forms/:idOrSlug/validate', () => {
+		it('should return valid=true for valid data', async () => {
+			const app = createApp();
+			const res = await request(app)
+				.post('/forms/contact-us/validate')
+				.send({ name: 'John', email: 'john@example.com' });
+
+			expect(res.status).toBe(200);
+			expect(res.body.valid).toBe(true);
+			expect(res.body.errors).toHaveLength(0);
+		});
+
+		it('should return 422 for invalid data', async () => {
+			const app = createApp();
+			const res = await request(app)
+				.post('/forms/contact-us/validate')
+				.send({ name: '', email: 'not-an-email' });
+
+			expect(res.status).toBe(422);
+			expect(res.body.valid).toBe(false);
+			expect(res.body.errors.length).toBeGreaterThan(0);
+		});
+
+		it('should return 404 for non-existent form', async () => {
+			const app = createApp();
+			const res = await request(app).post('/forms/nonexistent/validate').send({ name: 'John' });
+
+			expect(res.status).toBe(404);
+		});
+	});
+
+	describe('POST /forms/:idOrSlug/submit', () => {
+		it('should accept valid submission and return success', async () => {
+			const mockApi = createMockApi();
+			const app = createApp(mockApi);
+
+			const res = await request(app)
+				.post('/forms/contact-us/submit')
+				.send({ name: 'John', email: 'john@example.com', message: 'Hello' });
+
+			expect(res.status).toBe(200);
+			expect(res.body.success).toBe(true);
+			expect(res.body.message).toBe('Thank you!');
+		});
+
+		it('should save the submission', async () => {
+			const mockApi = createMockApi();
+			const app = createApp(mockApi);
+
+			await request(app)
+				.post('/forms/contact-us/submit')
+				.send({ name: 'John', email: 'john@example.com' });
+
+			expect(mockApi._submissionsCreated).toHaveLength(1);
+			const submission = mockApi._submissionsCreated[0] as Record<string, unknown>;
+			expect(submission['formSlug']).toBe('contact-us');
+			expect(submission['data']).toEqual({ name: 'John', email: 'john@example.com' });
+		});
+
+		it('should return 422 for invalid submission', async () => {
+			const app = createApp();
+			const res = await request(app)
+				.post('/forms/contact-us/submit')
+				.send({ name: '', email: 'bad' });
+
+			expect(res.status).toBe(422);
+			expect(res.body.success).toBe(false);
+			expect(res.body.errors.length).toBeGreaterThan(0);
+		});
+
+		it('should silently reject honeypot submissions with 200', async () => {
+			const mockApi = createMockApi();
+			const app = createApp(mockApi);
+
+			const res = await request(app)
+				.post('/forms/contact-us/submit')
+				.send({ name: 'Bot', email: 'bot@spam.com', _hp_field: 'gotcha' });
+
+			expect(res.status).toBe(200);
+			expect(res.body.success).toBe(true);
+			// No submission should be created
+			expect(mockApi._submissionsCreated).toHaveLength(0);
+		});
+
+		it('should increment submission count', async () => {
+			const mockApi = createMockApi();
+			const app = createApp(mockApi);
+
+			await request(app)
+				.post('/forms/contact-us/submit')
+				.send({ name: 'John', email: 'john@example.com' });
+
+			expect(mockApi._formsUpdate).toHaveBeenCalledWith('form-1', { submissionCount: 6 });
+		});
+
+		it('should include metadata in submission', async () => {
+			const mockApi = createMockApi();
+			const app = createApp(mockApi);
+
+			await request(app)
+				.post('/forms/contact-us/submit')
+				.set('User-Agent', 'TestAgent/1.0')
+				.send({ name: 'John', email: 'john@example.com' });
+
+			const submission = mockApi._submissionsCreated[0] as Record<string, unknown>;
+			const metadata = submission['metadata'] as Record<string, unknown>;
+			expect(metadata['userAgent']).toBe('TestAgent/1.0');
+			expect(metadata['submittedAt']).toBeDefined();
+		});
+
+		it('should return 404 for non-existent form', async () => {
+			const app = createApp();
+			const res = await request(app).post('/forms/nonexistent/submit').send({ name: 'John' });
+
+			expect(res.status).toBe(404);
+		});
+
+		it('should enforce rate limiting', async () => {
+			const app = createApp(undefined, { rateLimitPerMinute: 2 });
+
+			// First two should succeed
+			await request(app).post('/forms/contact-us/submit').send({ name: 'A', email: 'a@test.com' });
+			await request(app).post('/forms/contact-us/submit').send({ name: 'B', email: 'b@test.com' });
+
+			// Third should be rate limited
+			const res = await request(app)
+				.post('/forms/contact-us/submit')
+				.send({ name: 'C', email: 'c@test.com' });
+
+			expect(res.status).toBe(429);
+		});
+
+		it('should not be bypassable via X-Forwarded-For header spoofing', async () => {
+			const app = createApp(undefined, { rateLimitPerMinute: 2 });
+
+			// Exhaust rate limit
+			await request(app).post('/forms/contact-us/submit').send({ name: 'A', email: 'a@test.com' });
+			await request(app).post('/forms/contact-us/submit').send({ name: 'B', email: 'b@test.com' });
+
+			// Spoofed X-Forwarded-For should NOT bypass rate limiting
+			const res = await request(app)
+				.post('/forms/contact-us/submit')
+				.set('X-Forwarded-For', '8.8.8.8')
+				.send({ name: 'C', email: 'c@test.com' });
+
+			expect(res.status).toBe(429);
+		});
+
+		it('should only store schema-defined fields in submission data', async () => {
+			const mockApi = createMockApi();
+			const app = createApp(mockApi);
+
+			await request(app).post('/forms/contact-us/submit').send({
+				name: 'John',
+				email: 'john@example.com',
+				extraField: 'should-be-stripped',
+				__proto__: 'attack',
+				constructor: 'attack',
+			});
+
+			expect(mockApi._submissionsCreated).toHaveLength(1);
+			const submission = mockApi._submissionsCreated[0] as Record<string, unknown>;
+			const data = submission['data'] as Record<string, unknown>;
+			// Only schema-defined fields should be stored
+			expect(data['name']).toBe('John');
+			expect(data['email']).toBe('john@example.com');
+			expect(data['message']).toBeUndefined(); // optional schema field not sent
+			expect(data['extraField']).toBeUndefined();
+			expect(Object.prototype.hasOwnProperty.call(data, '__proto__')).toBe(false);
+			expect(Object.prototype.hasOwnProperty.call(data, 'constructor')).toBe(false);
+		});
+
+		it('should strip honeypot field from stored data', async () => {
+			const mockApi = createMockApi();
+			// Honeypot enabled but field is empty (legitimate user)
+			const app = createApp(mockApi, { honeypot: true });
+
+			await request(app)
+				.post('/forms/contact-us/submit')
+				.send({ name: 'John', email: 'john@example.com', _hp_field: '' });
+
+			expect(mockApi._submissionsCreated).toHaveLength(1);
+			const submission = mockApi._submissionsCreated[0] as Record<string, unknown>;
+			const data = submission['data'] as Record<string, unknown>;
+			expect(data['_hp_field']).toBeUndefined();
+		});
+	});
+
+	describe('conditional field validation', () => {
+		const CONDITIONAL_FORM = {
+			...PUBLISHED_FORM,
+			id: 'form-cond',
+			slug: 'conditional-form',
+			schema: {
+				fields: [
+					{
+						name: 'contactMethod',
+						type: 'select',
+						required: true,
+						options: [
+							{ label: 'Email', value: 'email' },
+							{ label: 'Phone', value: 'phone' },
+						],
+					},
+					{
+						name: 'phone',
+						type: 'text',
+						required: true,
+						conditions: [{ field: 'contactMethod', operator: 'equals', value: 'phone' }],
+					},
+				],
+			},
+		};
+
+		it('should skip validation of hidden required fields on /submit', async () => {
+			const mockApi = createMockApi([CONDITIONAL_FORM]);
+			const app = createApp(mockApi);
+
+			const res = await request(app)
+				.post('/forms/conditional-form/submit')
+				.send({ contactMethod: 'email' }); // phone is hidden, should not be required
+
+			expect(res.status).toBe(200);
+			expect(res.body.success).toBe(true);
+		});
+
+		it('should skip validation of hidden required fields on /validate', async () => {
+			const mockApi = createMockApi([CONDITIONAL_FORM]);
+			const app = createApp(mockApi);
+
+			const res = await request(app)
+				.post('/forms/conditional-form/validate')
+				.send({ contactMethod: 'email' });
+
+			expect(res.status).toBe(200);
+			expect(res.body.valid).toBe(true);
+		});
+
+		it('should still validate visible required fields on /submit', async () => {
+			const mockApi = createMockApi([CONDITIONAL_FORM]);
+			const app = createApp(mockApi);
+
+			// contactMethod = phone makes phone visible and required, but phone is missing
+			const res = await request(app)
+				.post('/forms/conditional-form/submit')
+				.send({ contactMethod: 'phone' });
+
+			expect(res.status).toBe(422);
+			expect(res.body.errors.some((e: { field: string }) => e.field === 'phone')).toBe(true);
+		});
+
+		it('should still validate visible required fields on /validate', async () => {
+			const mockApi = createMockApi([CONDITIONAL_FORM]);
+			const app = createApp(mockApi);
+
+			const res = await request(app)
+				.post('/forms/conditional-form/validate')
+				.send({ contactMethod: 'phone' });
+
+			expect(res.status).toBe(422);
+			expect(res.body.errors.some((e: { field: string }) => e.field === 'phone')).toBe(true);
+		});
+	});
+
+	describe('rate limiting on /validate', () => {
+		it('should enforce rate limit on /validate endpoint', async () => {
+			const app = createApp(undefined, { rateLimitPerMinute: 2 });
+
+			await request(app)
+				.post('/forms/contact-us/validate')
+				.send({ name: 'A', email: 'a@test.com' });
+			await request(app)
+				.post('/forms/contact-us/validate')
+				.send({ name: 'B', email: 'b@test.com' });
+
+			const res = await request(app)
+				.post('/forms/contact-us/validate')
+				.send({ name: 'C', email: 'c@test.com' });
+
+			expect(res.status).toBe(429);
+		});
+	});
+
+	describe('submission counter freshness', () => {
+		it('should re-fetch form before incrementing counter to reduce race conditions', async () => {
+			const mockApi = createMockApi();
+			// Simulate concurrent update: after submission creation, the DB has count 10
+			const freshForm = { ...PUBLISHED_FORM, submissionCount: 10 };
+			mockApi._formsUpdate.mockResolvedValue(freshForm);
+
+			// Override findById to return updated count on second call
+			const formsOps = mockApi.collection('forms');
+			let callCount = 0;
+			vi.spyOn(formsOps, 'findById').mockImplementation(async (_id: string) => {
+				callCount++;
+				// First call: resolveForm (returns original count 5)
+				// Second call: fresh read before increment (returns updated count 10)
+				if (callCount <= 1) return PUBLISHED_FORM;
+				return freshForm;
+			});
+
+			const app = createApp(mockApi);
+			await request(app)
+				.post('/forms/contact-us/submit')
+				.send({ name: 'John', email: 'john@example.com' });
+
+			// Should have called findById twice (resolveForm + fresh read)
+			expect(callCount).toBe(2);
+			// Should use fresh count (10) not stale (5)
+			expect(mockApi._formsUpdate).toHaveBeenCalledWith('form-1', { submissionCount: 11 });
+		});
+	});
+});

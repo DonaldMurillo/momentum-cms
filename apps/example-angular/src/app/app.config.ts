@@ -13,6 +13,7 @@ import {
 	provideFieldRenderer,
 } from '@momentumcms/admin';
 import { providePageViewTracking } from '@momentumcms/plugins-analytics/page-tracker';
+import { provideMomentumFormBuilder } from '@momentumcms/form-builder';
 
 import { providePageBlocks } from '@momentumcms/example-config/pages';
 
@@ -26,7 +27,11 @@ export const appConfig: ApplicationConfig = {
 		provideFieldRenderer('json-email-builder', () =>
 			import('@momentumcms/email-builder').then((m) => m.EmailBuilderFieldRendererComponent),
 		),
+		provideFieldRenderer('json-form-builder', () =>
+			import('@momentumcms/form-builder').then((m) => m.FormSchemaFieldRendererComponent),
+		),
 		...providePageBlocks(),
+		provideMomentumFormBuilder(),
 		providePageViewTracking({
 			contentRoutes: {
 				articles: '/articles/:slug',

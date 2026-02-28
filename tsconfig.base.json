@@ -83,7 +83,17 @@
 			"@momentumcms/example-config": ["libs/example-config/src/index.ts"],
 			"@momentumcms/example-config/collections": ["libs/example-config/src/collections/index.ts"],
 			"@momentumcms/example-config/globals": ["libs/example-config/src/globals/index.ts"],
-			"@momentumcms/example-config/pages": ["libs/example-config/src/pages/index.ts"]
+			"@momentumcms/example-config/pages": ["libs/example-config/src/pages/index.ts"],
+			"@momentumcms/form-builder": ["libs/form-builder/src/index.ts"],
+			"@momentumcms/form-builder/validation": ["libs/form-builder/src/lib/validation/index.ts"],
+			"@momentumcms/plugins-form-builder": ["libs/plugins/form-builder/src/index.ts"],
+			"@momentumcms/plugins/form-builder": ["libs/plugins/form-builder/src/index.ts"],
+			"@momentumcms/plugins-form-builder/admin-routes": [
+				"libs/plugins/form-builder/src/lib/form-builder-admin-routes.ts"
+			],
+			"@momentumcms/plugins-form-builder/collections": [
+				"libs/plugins/form-builder/src/lib/collections/index.ts"
+			]
 		}
 	},
 	"exclude": ["node_modules", "tmp"]

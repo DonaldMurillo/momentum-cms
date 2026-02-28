@@ -8,6 +8,7 @@ import { ImageTextBlockComponent } from './blocks/image-text-block.component';
 import { StatsBlockComponent } from './blocks/stats-block.component';
 import { TestimonialBlockComponent } from './blocks/testimonial-block.component';
 import { FeatureGridBlockComponent } from './blocks/feature-grid-block.component';
+import { FormBlockComponent } from './blocks/form-block.component';
 
 /**
  * Provide all page block components for the block renderer.
@@ -23,5 +24,6 @@ export function providePageBlocks(): Provider[] {
 		stats: StatsBlockComponent,
 		testimonial: TestimonialBlockComponent,
 		featureGrid: FeatureGridBlockComponent,
+		form: FormBlockComponent,
 	});
 }

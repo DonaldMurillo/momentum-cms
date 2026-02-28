@@ -48,7 +48,7 @@ const FILE_SIGNATURES: FileSignature[] = [
 /**
  * Detect MIME type from file buffer using magic bytes.
  */
-export function detectMimeType(buffer: Buffer): string | null {
+export function detectMimeType(buffer: Uint8Array): string | null {
 	for (const sig of FILE_SIGNATURES) {
 		const offset = sig.offset ?? 0;
 		if (buffer.length < offset + sig.bytes.length) {
@@ -68,7 +68,7 @@ export function detectMimeType(buffer: Buffer): string | null {
 			if (sig.bytes[0] === 0x52 && sig.bytes[1] === 0x49) {
 				// Check for WEBP
 				if (buffer.length >= 12) {
-					const formatId = buffer.slice(8, 12).toString('ascii');
+					const formatId = String.fromCharCode(...buffer.subarray(8, 12));
 					if (formatId === 'WEBP') {
 						return 'image/webp';
 					}
@@ -83,7 +83,7 @@ export function detectMimeType(buffer: Buffer): string | null {
 
 			// Special handling for MP4 (check for ftyp box)
 			if (sig.mimeType === 'video/mp4' && buffer.length >= 8) {
-				const boxType = buffer.slice(4, 8).toString('ascii');
+				const boxType = String.fromCharCode(...buffer.subarray(4, 8));
 				if (boxType === 'ftyp') {
 					return 'video/mp4';
 				}
@@ -95,7 +95,7 @@ export function detectMimeType(buffer: Buffer): string | null {
 
 	// Check for text/plain or JSON
 	if (isTextContent(buffer)) {
-		const text = buffer.toString('utf8', 0, Math.min(buffer.length, 1000));
+		const text = new TextDecoder().decode(buffer.subarray(0, Math.min(buffer.length, 1000)));
 		if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
 			return 'application/json';
 		}
@@ -117,7 +117,7 @@ export function detectMimeType(buffer: Buffer): string | null {
 /**
  * Check if buffer appears to be text content.
  */
-function isTextContent(buffer: Buffer): boolean {
+function isTextContent(buffer: Uint8Array): boolean {
 	// Check first 512 bytes for non-text characters
 	const checkLength = Math.min(buffer.length, 512);
 	for (let i = 0; i < checkLength; i++) {
@@ -176,7 +176,7 @@ export function isMimeTypeAllowed(mimeType: string, allowedTypes: string[]): boo
  * Validate a file's MIME type by checking magic bytes.
  */
 export function validateMimeType(
-	buffer: Buffer,
+	buffer: Uint8Array,
 	claimedType: string,
 	allowedTypes?: string[],
 ): MimeValidationResult {
