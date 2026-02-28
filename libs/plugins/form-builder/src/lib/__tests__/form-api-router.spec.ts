@@ -237,7 +237,7 @@ describe('Form API Router', () => {
 			expect(mockApi._submissionsCreated).toHaveLength(0);
 		});
 
-		it('should update submission count from actual database count', async () => {
+		it('should increment submission count by 1', async () => {
 			const mockApi = createMockApi();
 			const app = createApp(mockApi);
 
@@ -245,8 +245,8 @@ describe('Form API Router', () => {
 				.post('/forms/contact-us/submit')
 				.send({ name: 'John', email: 'john@example.com' });
 
-			// Count-based approach: counts actual submissions instead of read-modify-write
-			expect(mockApi._formsUpdate).toHaveBeenCalledWith('form-1', { submissionCount: 1 });
+			// PUBLISHED_FORM has submissionCount: 5, so after submission it's 6
+			expect(mockApi._formsUpdate).toHaveBeenCalledWith('form-1', { submissionCount: 6 });
 		});
 
 		it('should include metadata in submission', async () => {
@@ -437,8 +437,8 @@ describe('Form API Router', () => {
 		});
 	});
 
-	describe('submission counter freshness', () => {
-		it('should count submissions from database instead of read-modify-write', async () => {
+	describe('submission counter', () => {
+		it('should increment submission count by 1 from current value', async () => {
 			const mockApi = createMockApi();
 			const app = createApp(mockApi);
 
@@ -446,13 +446,25 @@ describe('Form API Router', () => {
 				.post('/forms/contact-us/submit')
 				.send({ name: 'John', email: 'john@example.com' });
 
-			// Counter should be updated based on actual submission count, not read-modify-write
-			expect(mockApi._formsUpdate).toHaveBeenCalledWith(
-				'form-1',
-				expect.objectContaining({
-					submissionCount: expect.any(Number),
-				}),
-			);
+			// PUBLISHED_FORM.submissionCount is 5, so after one submission it should be 6
+			expect(mockApi._formsUpdate).toHaveBeenCalledWith('form-1', { submissionCount: 6 });
+		});
+
+		it('should not make an extra find query to count submissions', async () => {
+			const mockApi = createMockApi();
+			const app = createApp(mockApi);
+
+			await request(app)
+				.post('/forms/contact-us/submit')
+				.send({ name: 'John', email: 'john@example.com' });
+
+			// form-submissions should only have create called, not find
+			const submissionsOps = mockApi.collection('form-submissions') as Record<
+				string,
+				ReturnType<typeof vi.fn>
+			>;
+			expect(submissionsOps['create']).toHaveBeenCalledOnce();
+			expect(submissionsOps['find']).not.toHaveBeenCalled();
 		});
 	});
 
@@ -534,6 +546,59 @@ describe('Form API Router', () => {
 			expect(fieldNames).toContain('accountType');
 			// companyName should also be validated since controller is invalid
 			expect(fieldNames).toContain('companyName');
+		});
+
+		it('should propagate errors through multi-level conditional chains (A -> B -> C)', async () => {
+			// Two-level chain: A is unconditional, B depends on A, C depends on B
+			const CHAIN_FORM = {
+				...PUBLISHED_FORM,
+				id: 'form-chain',
+				slug: 'chain-form',
+				schema: {
+					fields: [
+						{
+							name: 'level',
+							type: 'select',
+							required: true,
+							options: [
+								{ label: 'Basic', value: 'basic' },
+								{ label: 'Advanced', value: 'advanced' },
+							],
+						},
+						{
+							name: 'category',
+							type: 'select',
+							required: true,
+							options: [
+								{ label: 'Tech', value: 'tech' },
+								{ label: 'Science', value: 'science' },
+							],
+							conditions: [{ field: 'level', operator: 'equals', value: 'advanced' }],
+						},
+						{
+							name: 'subcategory',
+							type: 'text',
+							required: true,
+							conditions: [{ field: 'category', operator: 'equals', value: 'tech' }],
+						},
+					],
+				},
+			};
+			const mockApi = createMockApi([CHAIN_FORM]);
+			const app = createApp(mockApi);
+
+			// Attacker sends invalid 'category' to hide 'subcategory'
+			// level=advanced shows category, but category='hacker' is invalid
+			// subcategory should still be validated because its controller (category) has errors
+			const res = await request(app)
+				.post('/forms/chain-form/submit')
+				.send({ level: 'advanced', category: 'hacker' });
+
+			expect(res.status).toBe(422);
+			const fieldNames = res.body.errors.map((e: { field: string }) => e.field);
+			expect(fieldNames).toContain('category');
+			// C's controller (B=category) has errors, so C should be treated as visible
+			expect(fieldNames).toContain('subcategory');
 		});
 
 		it('should still hide conditional fields when controller value is valid', async () => {

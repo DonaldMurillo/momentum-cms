@@ -234,15 +234,17 @@ describe('validateField', () => {
 			expect(elapsed).toBeLessThan(1000);
 		});
 
-		it('should reject invalid regex patterns gracefully', () => {
+		it('should skip validation for invalid regex patterns to match client-side behavior', () => {
+			// Invalid regex should skip validation (no error), matching client-side where
+			// no validator is registered for patterns that fail new RegExp(pattern).
+			// Previously this returned false (always errored), breaking all submissions.
 			const field: FormFieldConfig = {
 				name: 'test',
 				type: 'text',
 				validation: { pattern: '[invalid(' },
 			};
 			const errors = validateField(field, 'test');
-			expect(errors).toHaveLength(1);
-			expect(errors[0].code).toBe('pattern');
+			expect(errors).toHaveLength(0);
 		});
 	});
 

@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CdkDropList, CdkDrag, CdkDragHandle, type CdkDragDrop } from '@angular/cdk/drag-drop';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { heroPlus, heroTrash, heroBars2, heroPencilSquare } from '@ng-icons/heroicons/outline';
@@ -230,6 +231,7 @@ const FIELD_TYPES: { value: FormFieldType; label: string }[] = [
 export class FormSchemaEditorComponent {
 	readonly editorState = inject(FormSchemaEditorStateService);
 	private readonly dialogService = inject(DialogService);
+	private readonly destroyRef = inject(DestroyRef);
 
 	readonly fieldTypes = FIELD_TYPES;
 
@@ -271,7 +273,7 @@ export class FormSchemaEditorComponent {
 			width: '32rem',
 		});
 
-		dialogRef.afterClosed.subscribe((result) => {
+		dialogRef.afterClosed.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((result) => {
 			if (result) {
 				this.editorState.updateField(index, result);
 			} else if (isNew) {

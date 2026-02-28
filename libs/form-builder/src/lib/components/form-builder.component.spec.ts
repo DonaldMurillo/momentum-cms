@@ -294,6 +294,32 @@ describe('FormBuilderComponent', () => {
 		expect(!emitted[0].values['_hp_field']).toBe(true);
 	});
 
+	it('should disable submit button after successful submission', async () => {
+		fixture = TestBed.createComponent(FormBuilderComponent);
+		fixture.componentRef.setInput(
+			'schema',
+			createSchema({
+				fields: [{ name: 'name', type: 'text', label: 'Name', defaultValue: 'John' }],
+			}),
+		);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+		component = fixture.componentInstance;
+
+		// Submit successfully
+		await component.onSubmit(new Event('submit', { cancelable: true }));
+		fixture.detectChanges();
+
+		expect(component.submitted()).toBe(true);
+		expect(component.submitSuccess()).toBe(true);
+
+		// Submit button should be disabled after success
+		const el = fixture.nativeElement as HTMLElement;
+		const button = el.querySelector('button[type="submit"]') as HTMLButtonElement;
+		expect(button.disabled).toBe(true);
+	});
+
 	it('should rebuild form tree when schema input changes', async () => {
 		const schema1 = createSchema({
 			id: 'form-1',

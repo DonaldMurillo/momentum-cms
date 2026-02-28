@@ -260,7 +260,7 @@ function safeRegexTest(pattern: string, value: string): boolean {
 		const regex = new RegExp(pattern);
 		return regex.test(value);
 	} catch {
-		// Invalid regex pattern — treat as non-matching
-		return false;
+		// Invalid regex pattern — skip validation to match client-side behavior
+		return true;
 	}
 }

@@ -145,18 +145,62 @@ function validateWithConditions(
 	const unconditionalErrors = validateForm(unconditional, body);
 	const fieldsWithErrors = new Set(unconditionalErrors.map((e) => e.field));
 
-	// Pass 2: evaluate conditions — if a controlling field has errors, treat
-	// dependent fields as visible (fail-open for security)
-	const visibleConditional = conditional.filter((f) => {
-		const conditions = f.conditions ?? [];
-		const controllerHasErrors = conditions.some((c) => fieldsWithErrors.has(c.field));
-		if (controllerHasErrors) return true; // Controller invalid → show dependent field
-		return evaluateConditions(conditions, body);
-	});
+	// Multi-pass: iteratively resolve conditional fields, propagating errors
+	// from each pass to inform the next. Handles chains like A → B → C
+	// where B depends on A and C depends on B.
+	let remaining = [...conditional];
+	const allVisibleConditional: FormFieldConfig[] = [];
+	const allConditionalErrors: ReturnType<typeof validateForm> = [];
+	let changed = true;
 
-	const conditionalErrors = validateForm(visibleConditional, body);
-	const visibleFields = [...unconditional, ...visibleConditional];
-	const errors = [...unconditionalErrors, ...conditionalErrors];
+	while (changed && remaining.length > 0) {
+		changed = false;
+		const nextRemaining: FormFieldConfig[] = [];
+
+		for (const f of remaining) {
+			const conditions = f.conditions ?? [];
+			const controllerHasErrors = conditions.some((c) => fieldsWithErrors.has(c.field));
+
+			if (controllerHasErrors) {
+				// Controller invalid → treat as visible (fail-open for security)
+				allVisibleConditional.push(f);
+				const fieldErrors = validateForm([f], body);
+				for (const err of fieldErrors) fieldsWithErrors.add(err.field);
+				allConditionalErrors.push(...fieldErrors);
+				changed = true;
+			} else {
+				// Check if all controllers have been resolved
+				const resolved = new Set([
+					...unconditional.map((uf) => uf.name),
+					...allVisibleConditional.map((vf) => vf.name),
+				]);
+				const allResolved = conditions.every((c) => resolved.has(c.field));
+
+				if (allResolved) {
+					if (evaluateConditions(conditions, body)) {
+						allVisibleConditional.push(f);
+						const fieldErrors = validateForm([f], body);
+						for (const err of fieldErrors) fieldsWithErrors.add(err.field);
+						allConditionalErrors.push(...fieldErrors);
+					}
+					changed = true;
+				} else {
+					nextRemaining.push(f);
+				}
+			}
+		}
+
+		remaining = nextRemaining;
+	}
+
+	// Unresolved fields (circular/orphaned controllers) → treat as visible (fail-open)
+	if (remaining.length > 0) {
+		allVisibleConditional.push(...remaining);
+		allConditionalErrors.push(...validateForm(remaining, body));
+	}
+
+	const visibleFields = [...unconditional, ...allVisibleConditional];
+	const errors = [...unconditionalErrors, ...allConditionalErrors];
 
 	return { errors, visibleFields };
 }
@@ -327,14 +371,11 @@ export function createFormApiRouter(options: FormApiRouterOptions): Router {
 				metadata,
 			});
 
-			// Update submission count — count actual submissions to avoid TOCTOU races
-			const { totalDocs } = await getCollection(api, 'form-submissions').find({
-				where: { formId: { equals: formDoc.id } },
-				limit: 0,
-			});
+			// Increment submission count directly — avoids extra find query and
+			// eliminates the race condition where count-from-DB could return
+			// undefined totalDocs falling back to a stale value
 			await getCollection(api, 'forms').update(formDoc.id, {
-				submissionCount:
-					typeof totalDocs === 'number' ? totalDocs : (formDoc.submissionCount ?? 0) + 1,
+				submissionCount: (formDoc.submissionCount ?? 0) + 1,
 			});
 
 			// Fire webhooks (non-blocking)
