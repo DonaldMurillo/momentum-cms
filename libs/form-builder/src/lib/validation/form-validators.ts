@@ -222,33 +222,40 @@ function validateOptionValue(
 /**
  * Detect regex patterns vulnerable to catastrophic backtracking (ReDoS).
  * Catches nested quantifiers: (a+)+, (a*)+, (a{1,10}){1,10}, (a+){2,}, etc.
+ * Also catches non-capturing groups (?:...) and character class patterns.
+ * Rejects overly long patterns as a size-based guard.
  * A quantifier is +, *, or {n}, {n,}, {n,m}.
  */
+const MAX_PATTERN_LENGTH = 200;
 const QUANTIFIER = String.raw`(?:[+*]|\{\d+(?:,\d*)?\})`;
 const DANGEROUS_PATTERN = new RegExp(
-	// Group with inner quantifier followed by outer quantifier
-	String.raw`\(.+(?:[+*]|\{\d+(?:,\d*)?\})\)${QUANTIFIER}` +
+	// Capturing or non-capturing group with inner quantifier followed by outer quantifier
+	// The .* before \) allows trailing content (e.g., \s?) between the inner quantifier and group close
+	String.raw`\((?:\?:)?.+(?:[+*]|\{\d+(?:,\d*)?\}).*\)${QUANTIFIER}` +
 		'|' +
 		// Alternation group followed by quantifier
 		String.raw`\([^)]*\|[^)]*\)${QUANTIFIER}`,
 );
 
 export function isUnsafePattern(pattern: string): boolean {
+	if (pattern.length > MAX_PATTERN_LENGTH) return true;
 	return DANGEROUS_PATTERN.test(pattern);
 }
 
 /**
  * Safely test a regex pattern against a value.
- * Rejects patterns with nested quantifiers (ReDoS risk) and
+ * Skips patterns with nested quantifiers (ReDoS risk) and
  * handles invalid regex gracefully.
  *
- * Returns `true` if the pattern matches, `false` if it doesn't match,
- * the pattern is invalid, or the pattern is unsafe.
+ * Returns `true` if the pattern matches OR the pattern is unsafe (skip validation).
+ * Returns `false` if the pattern doesn't match.
+ * This matches client-side behavior where unsafe patterns skip validation entirely.
  */
 function safeRegexTest(pattern: string, value: string): boolean {
 	try {
 		if (isUnsafePattern(pattern)) {
-			return false;
+			// Skip validation for unsafe patterns — matches client-side behavior
+			return true;
 		}
 		const regex = new RegExp(pattern);
 		return regex.test(value);

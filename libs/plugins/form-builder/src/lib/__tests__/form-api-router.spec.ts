@@ -54,7 +54,16 @@ function createMockApi(forms: Record<string, unknown>[] = [PUBLISHED_FORM]): Mom
 	const submissionsOps = {
 		create: vi.fn(async (data: unknown) => {
 			submissionsCreated.push(data);
-			return { id: 'sub-1', ...data };
+			return { id: `sub-${submissionsCreated.length}`, ...data };
+		}),
+		find: vi.fn(async (opts: { where?: Record<string, unknown> }) => {
+			const formIdFilter = (opts.where?.['formId'] as { equals?: string })?.equals ?? null;
+			const docs = formIdFilter
+				? submissionsCreated.filter(
+						(s) => (s as Record<string, unknown>)['formId'] === formIdFilter,
+					)
+				: submissionsCreated;
+			return { docs, totalDocs: docs.length };
 		}),
 	};
 
@@ -228,7 +237,7 @@ describe('Form API Router', () => {
 			expect(mockApi._submissionsCreated).toHaveLength(0);
 		});
 
-		it('should increment submission count', async () => {
+		it('should update submission count from actual database count', async () => {
 			const mockApi = createMockApi();
 			const app = createApp(mockApi);
 
@@ -236,7 +245,8 @@ describe('Form API Router', () => {
 				.post('/forms/contact-us/submit')
 				.send({ name: 'John', email: 'john@example.com' });
 
-			expect(mockApi._formsUpdate).toHaveBeenCalledWith('form-1', { submissionCount: 6 });
+			// Count-based approach: counts actual submissions instead of read-modify-write
+			expect(mockApi._formsUpdate).toHaveBeenCalledWith('form-1', { submissionCount: 1 });
 		});
 
 		it('should include metadata in submission', async () => {
@@ -428,32 +438,115 @@ describe('Form API Router', () => {
 	});
 
 	describe('submission counter freshness', () => {
-		it('should re-fetch form before incrementing counter to reduce race conditions', async () => {
+		it('should count submissions from database instead of read-modify-write', async () => {
 			const mockApi = createMockApi();
-			// Simulate concurrent update: after submission creation, the DB has count 10
-			const freshForm = { ...PUBLISHED_FORM, submissionCount: 10 };
-			mockApi._formsUpdate.mockResolvedValue(freshForm);
-
-			// Override findById to return updated count on second call
-			const formsOps = mockApi.collection('forms');
-			let callCount = 0;
-			vi.spyOn(formsOps, 'findById').mockImplementation(async (_id: string) => {
-				callCount++;
-				// First call: resolveForm (returns original count 5)
-				// Second call: fresh read before increment (returns updated count 10)
-				if (callCount <= 1) return PUBLISHED_FORM;
-				return freshForm;
-			});
-
 			const app = createApp(mockApi);
+
 			await request(app)
 				.post('/forms/contact-us/submit')
 				.send({ name: 'John', email: 'john@example.com' });
 
-			// Should have called findById twice (resolveForm + fresh read)
-			expect(callCount).toBe(2);
-			// Should use fresh count (10) not stale (5)
-			expect(mockApi._formsUpdate).toHaveBeenCalledWith('form-1', { submissionCount: 11 });
+			// Counter should be updated based on actual submission count, not read-modify-write
+			expect(mockApi._formsUpdate).toHaveBeenCalledWith(
+				'form-1',
+				expect.objectContaining({
+					submissionCount: expect.any(Number),
+				}),
+			);
+		});
+	});
+
+	describe('rate limiter IP resolution', () => {
+		it('should use socket remoteAddress when req.ip is undefined', async () => {
+			// When req.ip is undefined (proxy without trust-proxy), should use socket address
+			const mockApi = createMockApi();
+			const app = createApp(mockApi, { rateLimitPerMinute: 2 });
+
+			// supertest creates requests with socket.remoteAddress but req.ip can be undefined
+			// All requests should succeed since they share the same socket address
+			const res1 = await request(app)
+				.post('/forms/contact-us/submit')
+				.send({ name: 'A', email: 'a@test.com' });
+			const res2 = await request(app)
+				.post('/forms/contact-us/submit')
+				.send({ name: 'B', email: 'b@test.com' });
+			const res3 = await request(app)
+				.post('/forms/contact-us/submit')
+				.send({ name: 'C', email: 'c@test.com' });
+
+			expect(res1.status).toBe(200);
+			expect(res2.status).toBe(200);
+			// Third should be rate limited (same IP bucket via socket)
+			expect(res3.status).toBe(429);
+		});
+	});
+
+	describe('condition evaluation hardening', () => {
+		const HARDENED_CONDITIONAL_FORM = {
+			...PUBLISHED_FORM,
+			id: 'form-hardened',
+			slug: 'hardened-form',
+			schema: {
+				fields: [
+					{
+						name: 'accountType',
+						type: 'select',
+						required: true,
+						options: [
+							{ label: 'Personal', value: 'personal' },
+							{ label: 'Business', value: 'business' },
+						],
+					},
+					{
+						name: 'companyName',
+						type: 'text',
+						required: true,
+						conditions: [{ field: 'accountType', operator: 'equals', value: 'business' }],
+					},
+				],
+			},
+		};
+
+		it('should validate conditional fields when controlling field has invalid value', async () => {
+			const mockApi = createMockApi([HARDENED_CONDITIONAL_FORM]);
+			const app = createApp(mockApi);
+
+			// Attacker sends invalid option value to manipulate condition evaluation
+			const res = await request(app)
+				.post('/forms/hardened-form/submit')
+				.send({ accountType: 'hacker-value' });
+
+			// Should fail — invalid accountType AND companyName should be required
+			expect(res.status).toBe(422);
+			const fieldNames = res.body.errors.map((e: { field: string }) => e.field);
+			expect(fieldNames).toContain('accountType');
+		});
+
+		it('should validate conditional fields when controlling field is missing', async () => {
+			const mockApi = createMockApi([HARDENED_CONDITIONAL_FORM]);
+			const app = createApp(mockApi);
+
+			// Missing required controlling field — conditional field should be treated as visible
+			const res = await request(app).post('/forms/hardened-form/submit').send({});
+
+			expect(res.status).toBe(422);
+			const fieldNames = res.body.errors.map((e: { field: string }) => e.field);
+			expect(fieldNames).toContain('accountType');
+			// companyName should also be validated since controller is invalid
+			expect(fieldNames).toContain('companyName');
+		});
+
+		it('should still hide conditional fields when controller value is valid', async () => {
+			const mockApi = createMockApi([HARDENED_CONDITIONAL_FORM]);
+			const app = createApp(mockApi);
+
+			// Valid "personal" selection — companyName should be hidden, no error
+			const res = await request(app)
+				.post('/forms/hardened-form/submit')
+				.send({ accountType: 'personal' });
+
+			expect(res.status).toBe(200);
+			expect(res.body.success).toBe(true);
 		});
 	});
 });

@@ -30,5 +30,15 @@
 	"dependencies": {
 		"tslib": "^2.8.0"
 	},
-	"sideEffects": false
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./src/index.d.ts",
+			"default": "./"
+		},
+		"./validation": {
+			"types": "./validation/src/public-api.d.ts",
+			"default": "./validation"
+		}
+	}
 }

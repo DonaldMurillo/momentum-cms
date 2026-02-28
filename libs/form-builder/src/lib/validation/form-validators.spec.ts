@@ -200,20 +200,38 @@ describe('validateField', () => {
 			expect(validateField(field, '12345')).toHaveLength(0);
 		});
 
-		it('should reject catastrophic backtracking regex patterns (ReDoS)', () => {
-			// (a+)+$ causes exponential backtracking on "aaa...!"
+		it('should skip validation for unsafe patterns instead of always rejecting', () => {
+			// An unsafe pattern should be SKIPPED (no error), not always fail.
+			// This matches client-side behavior where no validator is registered.
+			const field: FormFieldConfig = {
+				name: 'test',
+				type: 'text',
+				validation: { pattern: '(a+)+$' },
+			};
+			const errors = validateField(field, 'perfectly-valid-input');
+			expect(errors).toHaveLength(0);
+		});
+
+		it('should skip validation for unsafe patterns even with non-matching input', () => {
+			const field: FormFieldConfig = {
+				name: 'test',
+				type: 'text',
+				validation: { pattern: '(a+)+$' },
+			};
+			const errors = validateField(field, 'anything at all!');
+			expect(errors).toHaveLength(0);
+		});
+
+		it('should complete in <1s even with dangerous patterns (ReDoS protection)', () => {
 			const field: FormFieldConfig = {
 				name: 'test',
 				type: 'text',
 				validation: { pattern: '(a+)+$' },
 			};
 			const start = Date.now();
-			const errors = validateField(field, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!');
+			validateField(field, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!');
 			const elapsed = Date.now() - start;
-			// Must complete in <1s, not hang the event loop
 			expect(elapsed).toBeLessThan(1000);
-			expect(errors).toHaveLength(1);
-			expect(errors[0].code).toBe('pattern');
 		});
 
 		it('should reject invalid regex patterns gracefully', () => {
@@ -309,11 +327,25 @@ describe('isUnsafePattern — ReDoS detection', () => {
 			validation: { pattern: '(a{1,10}){1,10}' },
 		};
 		const start = Date.now();
-		const errors = validateField(field, 'a'.repeat(100) + '!');
+		validateField(field, 'a'.repeat(100) + '!');
 		const elapsed = Date.now() - start;
 		expect(elapsed).toBeLessThan(100);
-		expect(errors).toHaveLength(1);
-		expect(errors[0].code).toBe('pattern');
+	});
+
+	it('should detect non-capturing groups with nested quantifiers', () => {
+		expect(isUnsafePattern('(?:a+)+')).toBe(true);
+		expect(isUnsafePattern('(?:a*)+')).toBe(true);
+		expect(isUnsafePattern('(?:a{1,10})+')).toBe(true);
+	});
+
+	it('should detect character class groups with quantifiers', () => {
+		expect(isUnsafePattern('([a-z]+\\s?)+')).toBe(true);
+		expect(isUnsafePattern('(\\d+\\.?)+')).toBe(true);
+	});
+
+	it('should reject patterns exceeding max length as unsafe', () => {
+		const longPattern = '^[a-z]'.repeat(50); // 300 chars
+		expect(isUnsafePattern(longPattern)).toBe(true);
 	});
 });
 

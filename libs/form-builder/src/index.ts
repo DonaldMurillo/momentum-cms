@@ -12,7 +12,7 @@ export type {
 export type { FormSubmitEvent, FormStepChangeEvent } from './lib/types/form-events.types';
 
 // Validation (also available via @momentumcms/form-builder/validation)
-export { validateField, validateForm } from './lib/validation/form-validators';
+export { validateField, validateForm, isUnsafePattern } from './lib/validation/form-validators';
 export type { FormValidationError } from './lib/validation/form-validators';
 
 // Schema utilities

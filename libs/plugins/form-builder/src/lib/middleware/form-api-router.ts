@@ -44,7 +44,9 @@ interface FormDoc {
 /** Minimal collection operations shape for type-safe API usage. */
 interface CollectionOps {
 	findById(id: string): Promise<Record<string, unknown> | null>;
-	find(query: Record<string, unknown>): Promise<{ docs: Record<string, unknown>[] }>;
+	find(
+		query: Record<string, unknown>,
+	): Promise<{ docs: Record<string, unknown>[]; totalDocs?: number }>;
 	create(data: Record<string, unknown>): Promise<Record<string, unknown>>;
 	update(id: string, data: Record<string, unknown>): Promise<Record<string, unknown>>;
 }
@@ -113,17 +115,50 @@ function isRecord(val: unknown): val is Record<string, unknown> {
 }
 
 /**
- * Filter fields to only those currently visible based on their conditions and submitted values.
- * Fields without conditions are always visible.
+ * Hardened validation with two-pass condition evaluation.
+ *
+ * 1. Validate unconditional fields first.
+ * 2. Only evaluate conditions when controlling fields passed validation.
+ *    If a controlling field has errors, treat dependent conditional fields as VISIBLE
+ *    (so their required checks still apply).
+ * 3. Validate visible conditional fields.
+ *
+ * This prevents bypassing required field validation by submitting invalid
+ * values for controlling fields.
  */
-function filterVisibleFields(
-	fields: FormFieldConfig[],
-	values: Record<string, unknown>,
-): FormFieldConfig[] {
-	return fields.filter((f) => {
-		if (!f.conditions || f.conditions.length === 0) return true;
-		return evaluateConditions(f.conditions, values);
+function validateWithConditions(
+	allFields: FormFieldConfig[],
+	body: Record<string, unknown>,
+): { errors: ReturnType<typeof validateForm>; visibleFields: FormFieldConfig[] } {
+	const unconditional: FormFieldConfig[] = [];
+	const conditional: FormFieldConfig[] = [];
+
+	for (const field of allFields) {
+		if (field.conditions && field.conditions.length > 0) {
+			conditional.push(field);
+		} else {
+			unconditional.push(field);
+		}
+	}
+
+	// Pass 1: validate all unconditional fields
+	const unconditionalErrors = validateForm(unconditional, body);
+	const fieldsWithErrors = new Set(unconditionalErrors.map((e) => e.field));
+
+	// Pass 2: evaluate conditions — if a controlling field has errors, treat
+	// dependent fields as visible (fail-open for security)
+	const visibleConditional = conditional.filter((f) => {
+		const conditions = f.conditions ?? [];
+		const controllerHasErrors = conditions.some((c) => fieldsWithErrors.has(c.field));
+		if (controllerHasErrors) return true; // Controller invalid → show dependent field
+		return evaluateConditions(conditions, body);
 	});
+
+	const conditionalErrors = validateForm(visibleConditional, body);
+	const visibleFields = [...unconditional, ...visibleConditional];
+	const errors = [...unconditionalErrors, ...conditionalErrors];
+
+	return { errors, visibleFields };
 }
 
 /**
@@ -206,7 +241,7 @@ export function createFormApiRouter(options: FormApiRouterOptions): Router {
 			}
 
 			// Rate limiting — same as /submit to prevent abuse
-			const ip = req.ip ?? 'unknown';
+			const ip = req.ip || req.socket?.remoteAddress || 'unknown';
 			if (!checkRateLimit(ip)) {
 				res.status(429).json({ valid: false, error: 'Too many requests' });
 				return;
@@ -220,9 +255,8 @@ export function createFormApiRouter(options: FormApiRouterOptions): Router {
 
 			const body = isRecord(req.body) ? req.body : {};
 			const allFields = formDoc.schema?.fields ?? [];
-			// Only validate visible fields — skip conditionally hidden ones
-			const fields = filterVisibleFields(allFields, body);
-			const errors = validateForm(fields, body);
+			// Hardened validation — prevents bypass via invalid controller values
+			const { errors } = validateWithConditions(allFields, body);
 
 			if (errors.length > 0) {
 				res.status(422).json({ valid: false, errors });
@@ -246,7 +280,7 @@ export function createFormApiRouter(options: FormApiRouterOptions): Router {
 			}
 
 			// Rate limiting — use req.ip which respects Express trust proxy config
-			const ip = req.ip ?? 'unknown';
+			const ip = req.ip || req.socket?.remoteAddress || 'unknown';
 			if (!checkRateLimit(ip)) {
 				res.status(429).json({ error: 'Too many requests' });
 				return;
@@ -267,17 +301,16 @@ export function createFormApiRouter(options: FormApiRouterOptions): Router {
 				return;
 			}
 
-			// Validate — only visible fields (skip conditionally hidden ones)
+			// Hardened validation — prevents bypass via invalid controller values
 			const allFields = formDoc.schema?.fields ?? [];
-			const fields = filterVisibleFields(allFields, body);
-			const errors = validateForm(fields, body);
+			const { errors, visibleFields } = validateWithConditions(allFields, body);
 			if (errors.length > 0) {
 				res.status(422).json({ success: false, errors });
 				return;
 			}
 
 			// Sanitize: only store schema-defined fields
-			const sanitizedData = sanitizeSubmissionData(body, fields);
+			const sanitizedData = sanitizeSubmissionData(body, visibleFields);
 
 			// Save submission
 			const metadata = {
@@ -294,11 +327,15 @@ export function createFormApiRouter(options: FormApiRouterOptions): Router {
 				metadata,
 			});
 
-			// Increment submission count — re-fetch to reduce race window
-			const freshForm = await getCollection(api, 'forms').findById(formDoc.id);
-			const currentCount =
-				typeof freshForm?.['submissionCount'] === 'number' ? freshForm['submissionCount'] : 0;
-			await getCollection(api, 'forms').update(formDoc.id, { submissionCount: currentCount + 1 });
+			// Update submission count — count actual submissions to avoid TOCTOU races
+			const { totalDocs } = await getCollection(api, 'form-submissions').find({
+				where: { formId: { equals: formDoc.id } },
+				limit: 0,
+			});
+			await getCollection(api, 'forms').update(formDoc.id, {
+				submissionCount:
+					typeof totalDocs === 'number' ? totalDocs : (formDoc.submissionCount ?? 0) + 1,
+			});
 
 			// Fire webhooks (non-blocking)
 			const webhooks = Array.isArray(formDoc.webhooks) ? formDoc.webhooks : [];
