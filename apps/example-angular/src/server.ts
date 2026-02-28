@@ -21,7 +21,9 @@ import momentumConfig, { authPlugin, analytics, analyticsAdapter, events } from 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
 
-const angularApp = new AngularNodeAppEngine();
+const angularApp = new AngularNodeAppEngine({
+	allowedHosts: ['localhost'],
+});
 
 /**
  * Create Express app and mount test endpoints BEFORE the CMS API middleware.
