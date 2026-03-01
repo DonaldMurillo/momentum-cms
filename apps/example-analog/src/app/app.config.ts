@@ -23,6 +23,7 @@ import { injectBlockAnalyticsFields } from '@momentumcms/plugins-analytics/block
 import { injectSeoFields } from '@momentumcms/plugins-seo/fields';
 import { EmailTemplatesCollection } from '@momentumcms/plugins/email';
 
+import { provideMomentumFormBuilder } from '@momentumcms/form-builder';
 import { providePageBlocks, pageResolver } from '@momentumcms/example-config/pages';
 
 // Merge all collections for admin routes, then inject plugin fields
@@ -80,6 +81,10 @@ export const appConfig: ApplicationConfig = {
 		provideFieldRenderer('json-email-builder', () =>
 			import('@momentumcms/email-builder').then((m) => m.EmailBuilderFieldRendererComponent),
 		),
+		provideFieldRenderer('json-form-builder', () =>
+			import('@momentumcms/form-builder').then((m) => m.FormSchemaFieldRendererComponent),
+		),
 		...providePageBlocks(),
+		provideMomentumFormBuilder(),
 	],
 };

@@ -33,10 +33,27 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			.first()
 			.click();
 
+		// Clicking a row lands on the view page — click Edit to enter edit mode
+		const editButton = page.getByRole('button', { name: 'Edit' });
+		await expect(editButton).toBeVisible({ timeout: 10000 });
+		await editButton.click();
+
 		// Wait for form schema editor to load (instead of raw JSON input)
 		await expect(page.locator('[data-testid="form-schema-editor"]')).toBeVisible({
 			timeout: 15000,
 		});
+	}
+
+	/** Helper: dismiss any lingering CDK overlay backdrops left by dropdown menus.
+	 *  Clicks each backdrop to trigger proper CDK overlay disposal (updating trigger state). */
+	async function dismissCdkOverlays(page: import('@playwright/test').Page): Promise<void> {
+		await page.evaluate(() => {
+			document.querySelectorAll('.cdk-overlay-backdrop').forEach((b) => (b as HTMLElement).click());
+		});
+		await page.waitForFunction(
+			() => document.querySelectorAll('.cdk-overlay-backdrop').length === 0,
+			{ timeout: 2000 },
+		);
 	}
 
 	// ─── Admin UI Tests ────────────────────────────────────────────────
@@ -116,11 +133,12 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			const tabsList = authenticatedPage.locator('mcms-tabs-list');
 			await tabsList.getByText('Settings', { exact: true }).click();
 
-			// Settings fields should be visible
-			await expect(authenticatedPage.locator('#description')).toBeVisible({ timeout: 5000 });
-			await expect(authenticatedPage.locator('#successMessage')).toBeVisible();
-			await expect(authenticatedPage.locator('#redirectUrl')).toBeVisible();
-			await expect(authenticatedPage.locator('#honeypot')).toBeVisible();
+			// Settings fields should be visible (use ID selectors — getByLabel can conflict
+			// with same-named fields in the schema editor on the hidden Form tab)
+			await expect(authenticatedPage.locator('#field-description')).toBeVisible({ timeout: 5000 });
+			await expect(authenticatedPage.locator('#field-successMessage')).toBeVisible();
+			await expect(authenticatedPage.locator('#field-redirectUrl')).toBeVisible();
+			await expect(authenticatedPage.locator('#field-honeypot')).toBeVisible();
 
 			// Schema editor should NOT be visible on the Settings tab
 			await expect(
@@ -480,7 +498,7 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 
 	test.describe('Conditional field validation', { tag: ['@api'] }, () => {
 		let conditionalFormId: string;
-		const conditionalSlug = `cond-${Date.now()}`;
+		const conditionalSlug = uniqueSlug('cond');
 
 		test.beforeAll(async ({ request }) => {
 			const signInResponse = await request.post('/api/auth/sign-in/email', {
@@ -1269,9 +1287,10 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			const addButton = editor.locator('[data-testid="add-field-button"]').first();
 			await addButton.click();
 
-			const textOption = authenticatedPage.locator('button[mcms-dropdown-item]', {
-				hasText: 'Text',
-			});
+			// Use exact text match to avoid strict mode violation ("Text" matches "Text Area" too)
+			const textOption = authenticatedPage
+				.locator('[role="menu"]')
+				.getByText('Text', { exact: true });
 			await expect(textOption).toBeVisible({ timeout: 5000 });
 			await textOption.click();
 
@@ -1280,10 +1299,10 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			await expect(dialog).toBeVisible({ timeout: 5000 });
 
 			// Set name and label
-			const nameInput = dialog.locator('#fieldName input, #fieldName');
+			const nameInput = dialog.locator('input[placeholder="e.g. firstName"]');
 			await nameInput.fill('phone');
 
-			const labelInput = dialog.locator('#fieldLabel input, #fieldLabel');
+			const labelInput = dialog.locator('input[placeholder="Display label"]');
 			await labelInput.fill('Phone Number');
 
 			// Save the field
@@ -1321,7 +1340,7 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			await expect(dialog).toBeVisible({ timeout: 5000 });
 
 			// Verify current label value matches seeded data
-			const labelInput = dialog.locator('#fieldLabel input, #fieldLabel');
+			const labelInput = dialog.locator('input[placeholder="Display label"]');
 			await expect(labelInput).toHaveValue('Full Name');
 
 			// Change label
@@ -1401,16 +1420,19 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			await expect(dialog).toBeVisible({ timeout: 5000 });
 
 			// Set name and label
-			const nameInput = dialog.locator('#fieldName input, #fieldName');
+			const nameInput = dialog.locator('input[placeholder="e.g. firstName"]');
 			await nameInput.fill('newsletter');
 
-			const labelInput = dialog.locator('#fieldLabel input, #fieldLabel');
+			const labelInput = dialog.locator('input[placeholder="Display label"]');
 			await labelInput.fill('Subscribe to newsletter');
 
 			// Save dialog
 			const addFieldBtn = dialog.getByRole('button', { name: /add field/i });
 			await addFieldBtn.click();
 			await expect(dialog).not.toBeVisible({ timeout: 5000 });
+
+			// Dismiss lingering CDK dropdown overlay
+			await dismissCdkOverlays(authenticatedPage);
 
 			// Should have 5 field cards now
 			await expect(editor.locator('[data-testid="field-card"]')).toHaveCount(5);
@@ -1438,11 +1460,8 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			expect(newsletterField, 'Newsletter field should be persisted in schema').toBeTruthy();
 			expect(newsletterField?.type).toBe('checkbox');
 
-			// Reload and verify field list still shows 5 fields
-			await authenticatedPage.reload();
-			await expect(authenticatedPage.locator('[data-testid="form-schema-editor"]')).toBeVisible({
-				timeout: 15000,
-			});
+			// Navigate back to form edit page and verify field list still shows 5 fields
+			await navigateToContactFormEdit(authenticatedPage);
 			await expect(
 				authenticatedPage.locator('[data-testid="form-schema-editor"] [data-testid="field-card"]'),
 			).toHaveCount(5);
@@ -1514,8 +1533,8 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 
 			const slug = uniqueSlug('builder');
 
-			// Navigate to create form page
-			await authenticatedPage.goto('/admin/collections/forms/create');
+			// Navigate to create form page (route is /new, not /create)
+			await authenticatedPage.goto('/admin/collections/forms/new');
 			await authenticatedPage.waitForLoadState('domcontentloaded');
 
 			// Fill in basic form fields (title, slug, status)
@@ -1525,19 +1544,17 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			).toBeVisible({ timeout: 10000 });
 
 			// Title
-			const titleInput = authenticatedPage.locator('#title input, input[name="title"]').first();
+			const titleInput = authenticatedPage.getByLabel('Title');
 			await expect(titleInput).toBeVisible({ timeout: 5000 });
 			await titleInput.fill('E2E Builder Test');
 
 			// Slug
-			const slugInput = authenticatedPage.locator('#slug input, input[name="slug"]').first();
+			const slugInput = authenticatedPage.getByLabel('Slug');
 			await expect(slugInput).toBeVisible({ timeout: 5000 });
 			await slugInput.fill(slug);
 
 			// Status - set to published
-			const statusSelect = authenticatedPage
-				.locator('#status select, select[name="status"]')
-				.first();
+			const statusSelect = authenticatedPage.getByLabel('Status');
 			await expect(statusSelect).toBeVisible({ timeout: 5000 });
 			await statusSelect.selectOption('published');
 
@@ -1549,52 +1566,63 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			// Field 1: Text - Full Name
 			const addButton = editor.locator('[data-testid="add-field-button"]').first();
 			await addButton.click();
-			const textOption = authenticatedPage.locator('button[mcms-dropdown-item]', {
-				hasText: 'Text',
-			});
-			await expect(textOption).toBeVisible({ timeout: 5000 });
-			await textOption.click();
+			// Use exact text match to avoid strict mode violation ("Text" matches "Text Area" too)
+			const textOption2 = authenticatedPage
+				.locator('[role="menu"]')
+				.getByText('Text', { exact: true });
+			await expect(textOption2).toBeVisible({ timeout: 5000 });
+			await textOption2.click();
 
 			let dialog = authenticatedPage.locator('mcms-form-field-editor-dialog');
 			await expect(dialog).toBeVisible({ timeout: 5000 });
-			await dialog.locator('#fieldName input, #fieldName').fill('fullName');
-			await dialog.locator('#fieldLabel input, #fieldLabel').fill('Full Name');
-			// Check required
-			const requiredCheckbox = dialog.locator('#fieldRequired');
-			await requiredCheckbox.click();
+			await dialog.locator('input[placeholder="e.g. firstName"]').fill('fullName');
+			await dialog.locator('input[placeholder="Display label"]').fill('Full Name');
+			// Check required (use role selector — mcms-checkbox has duplicate IDs on host + inner button)
+			await dialog
+				.locator('mcms-checkbox')
+				.filter({ hasText: 'Required' })
+				.locator('button[role="checkbox"]')
+				.click();
 			await dialog.getByRole('button', { name: /add field/i }).click();
 			await expect(dialog).not.toBeVisible({ timeout: 5000 });
+			await dismissCdkOverlays(authenticatedPage);
 
 			// Field 2: Email
 			await addButton.click();
-			const emailOption = authenticatedPage.locator('button[mcms-dropdown-item]', {
-				hasText: 'Email',
-			});
+			const emailOption = authenticatedPage
+				.locator('[role="menu"]')
+				.getByText('Email', { exact: true });
 			await expect(emailOption).toBeVisible({ timeout: 5000 });
 			await emailOption.click();
 
 			dialog = authenticatedPage.locator('mcms-form-field-editor-dialog');
 			await expect(dialog).toBeVisible({ timeout: 5000 });
-			await dialog.locator('#fieldName input, #fieldName').fill('email');
-			await dialog.locator('#fieldLabel input, #fieldLabel').fill('Email');
-			await dialog.locator('#fieldRequired').click();
+			await dialog.locator('input[placeholder="e.g. firstName"]').fill('email');
+			await dialog.locator('input[placeholder="Display label"]').fill('Email');
+			await dialog
+				.locator('mcms-checkbox')
+				.filter({ hasText: 'Required' })
+				.locator('button[role="checkbox"]')
+				.click();
 			await dialog.getByRole('button', { name: /add field/i }).click();
 			await expect(dialog).not.toBeVisible({ timeout: 5000 });
+			await dismissCdkOverlays(authenticatedPage);
 
 			// Field 3: Textarea - Message
 			await addButton.click();
-			const textareaOption = authenticatedPage.locator('button[mcms-dropdown-item]', {
-				hasText: 'Text Area',
-			});
+			const textareaOption = authenticatedPage
+				.locator('[role="menu"]')
+				.getByText('Text Area', { exact: true });
 			await expect(textareaOption).toBeVisible({ timeout: 5000 });
 			await textareaOption.click();
 
 			dialog = authenticatedPage.locator('mcms-form-field-editor-dialog');
 			await expect(dialog).toBeVisible({ timeout: 5000 });
-			await dialog.locator('#fieldName input, #fieldName').fill('message');
-			await dialog.locator('#fieldLabel input, #fieldLabel').fill('Message');
+			await dialog.locator('input[placeholder="e.g. firstName"]').fill('message');
+			await dialog.locator('input[placeholder="Display label"]').fill('Message');
 			await dialog.getByRole('button', { name: /add field/i }).click();
 			await expect(dialog).not.toBeVisible({ timeout: 5000 });
+			await dismissCdkOverlays(authenticatedPage);
 
 			// Verify 3 field cards
 			await expect(editor.locator('[data-testid="field-card"]')).toHaveCount(3);
