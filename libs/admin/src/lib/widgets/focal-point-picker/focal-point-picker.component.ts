@@ -185,6 +185,8 @@ export class FocalPointPickerComponent {
 		if (!el) return;
 
 		const rect = el.nativeElement.getBoundingClientRect();
+		if (rect.width <= 0 || rect.height <= 0) return;
+
 		const x = event.clientX - rect.left;
 		const y = event.clientY - rect.top;
 

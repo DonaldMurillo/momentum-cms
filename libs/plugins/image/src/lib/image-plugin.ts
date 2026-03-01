@@ -45,27 +45,19 @@ export function imagePlugin(config: ImagePluginConfig = {}): MomentumPlugin {
 					adapter,
 					imageSizes: upload.imageSizes,
 					formatPreference: upload.formatPreference ?? config.formatPreference,
+					logger,
 				});
 				collection.hooks.beforeChange = [
 					...(collection.hooks.beforeChange ?? []),
 					beforeChangeHook,
 				];
 
-				// Inject afterChange: re-process on focal point change
-				if (config.reprocessOnFocalPointChange !== false) {
+				// Inject afterChange: log focal point changes (opt-in, re-processing not yet implemented)
+				if (config.reprocessOnFocalPointChange === true) {
 					const afterChangeHook = createFocalPointHook(async (doc) => {
-						if (!adapter.read) return;
-						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- hook data is Record<string, unknown>, safe narrowing
-						const filePath = doc['path'] as string | undefined;
-						if (!filePath) return;
-
-						const buf = await adapter.read(filePath);
-						if (!buf) return;
-
-						logger.info(
-							`Re-processing image variants for doc ${String(doc['id'])} due to focal point change`,
+						logger.warn(
+							`imagePlugin: focal point changed for doc ${String(doc['id'])}, but variant re-processing is not yet implemented (Phase 4). Variants still reflect the original crop.`,
 						);
-						// TODO: Full re-processing implementation in Phase 4
 					});
 					collection.hooks.afterChange = [...(collection.hooks.afterChange ?? []), afterChangeHook];
 				}

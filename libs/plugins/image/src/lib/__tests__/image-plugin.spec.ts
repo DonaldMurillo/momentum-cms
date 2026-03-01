@@ -91,9 +91,17 @@ describe('imagePlugin', () => {
 			expect(collections[0].hooks?.beforeChange).toHaveLength(1);
 		});
 
-		it('should inject afterChange hook for focal point re-processing by default', () => {
+		it('should NOT inject afterChange hook by default (reprocessOnFocalPointChange defaults to false)', () => {
 			const collections = [makeUploadCollection()];
 			const plugin = imagePlugin({ processor });
+			plugin.onInit?.(createMockContext(collections));
+
+			expect(collections[0].hooks?.afterChange ?? []).toHaveLength(0);
+		});
+
+		it('should inject afterChange when reprocessOnFocalPointChange is explicitly true', () => {
+			const collections = [makeUploadCollection()];
+			const plugin = imagePlugin({ processor, reprocessOnFocalPointChange: true });
 			plugin.onInit?.(createMockContext(collections));
 
 			expect(collections[0].hooks?.afterChange).toHaveLength(1);
@@ -105,6 +113,29 @@ describe('imagePlugin', () => {
 			plugin.onInit?.(createMockContext(collections));
 
 			expect(collections[0].hooks?.afterChange ?? []).toHaveLength(0);
+		});
+
+		it('reprocess stub should log a warning and not throw', async () => {
+			const collections = [makeUploadCollection()];
+			const context = createMockContext(collections);
+			const plugin = imagePlugin({ processor, reprocessOnFocalPointChange: true });
+			plugin.onInit?.(context);
+
+			const afterHook = collections[0].hooks?.afterChange?.[0];
+			expect(afterHook).toBeDefined();
+
+			await expect(
+				afterHook?.({
+					req: { user: { id: '1' } },
+					doc: { id: 'media-1', path: 'photo.jpg', focalPoint: { x: 0.6, y: 0.4 } },
+					originalDoc: { id: 'media-1', path: 'photo.jpg', focalPoint: { x: 0.5, y: 0.5 } },
+					operation: 'update',
+				}),
+			).resolves.toBeUndefined();
+
+			expect(context.logger.warn).toHaveBeenCalledWith(
+				expect.stringContaining('not yet implemented'),
+			);
 		});
 
 		it('should NOT inject hooks into non-upload collections', () => {

@@ -33,6 +33,23 @@ describe('normalizeFocalPoint', () => {
 	});
 });
 
+describe('normalizeFocalPoint — zero-dimension guard', () => {
+	it('should return center point when container width is 0', () => {
+		const result = normalizeFocalPoint({ x: 50, y: 50 }, { width: 0, height: 100 });
+		expect(result).toEqual({ x: 0.5, y: 0.5 });
+	});
+
+	it('should return center point when container height is 0', () => {
+		const result = normalizeFocalPoint({ x: 50, y: 50 }, { width: 200, height: 0 });
+		expect(result).toEqual({ x: 0.5, y: 0.5 });
+	});
+
+	it('should return center point when both dimensions are 0', () => {
+		const result = normalizeFocalPoint({ x: 0, y: 0 }, { width: 0, height: 0 });
+		expect(result).toEqual({ x: 0.5, y: 0.5 });
+	});
+});
+
 describe('clampFocalPoint', () => {
 	it('should return same point when within range', () => {
 		expect(clampFocalPoint({ x: 0.5, y: 0.5 })).toEqual({ x: 0.5, y: 0.5 });

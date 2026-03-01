@@ -4,6 +4,7 @@ import type {
 	ImageProcessor,
 	ImageSizeConfig,
 	UploadedFile,
+	PluginLogger,
 } from '@momentumcms/core';
 import { isProcessableImage } from '../format-detector';
 import { buildVariantFilename } from '../variant-filename';
@@ -13,6 +14,7 @@ interface HookOptions {
 	adapter: StorageAdapter;
 	imageSizes: ImageSizeConfig[];
 	formatPreference?: 'jpeg' | 'webp' | 'avif' | 'original';
+	logger?: PluginLogger;
 }
 
 /**
@@ -84,7 +86,11 @@ export function createImageProcessingHook(options: HookOptions): HookFunction {
 				};
 			} catch (err) {
 				// Log and continue — partial failure does not abort the upload
-				console.error(`Image variant "${sizeConfig.name}" failed:`, err);
+				if (options.logger) {
+					options.logger.error(`Image variant "${sizeConfig.name}" failed:`, err);
+				} else {
+					console.error(`Image variant "${sizeConfig.name}" failed:`, err);
+				}
 			}
 		}
 

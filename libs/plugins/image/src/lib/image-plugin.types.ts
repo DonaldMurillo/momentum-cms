@@ -17,6 +17,11 @@ export interface ImagePluginConfig {
 	 */
 	formatPreference?: 'jpeg' | 'webp' | 'avif' | 'original';
 
-	/** Re-process variants when focalPoint changes on update. @default true */
+	/**
+	 * Opt-in: register a hook that detects focal point changes on update.
+	 * Full variant re-processing is planned for Phase 4 and is not yet implemented.
+	 * When enabled, a warning is logged on focal point change.
+	 * @default false
+	 */
 	reprocessOnFocalPointChange?: boolean;
 }

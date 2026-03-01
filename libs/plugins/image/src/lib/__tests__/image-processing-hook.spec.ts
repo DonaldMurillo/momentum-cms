@@ -200,4 +200,69 @@ describe('createImageProcessingHook (beforeChange)', () => {
 		expect(sizes['thumbnail']).toBeDefined();
 		expect(sizes['medium']).toBeUndefined();
 	});
+
+	it('should call logger.error when a variant fails and logger is provided', async () => {
+		const mockLogger = {
+			debug: vi.fn(),
+			info: vi.fn(),
+			warn: vi.fn(),
+			error: vi.fn(),
+		};
+
+		(processor.processVariant as ReturnType<typeof vi.fn>)
+			.mockResolvedValueOnce({ buffer: TINY_PNG, width: 5, height: 5, mimeType: 'image/png' })
+			.mockRejectedValueOnce(new Error('Encoding failed'));
+
+		const adapter = localStorageAdapter({ directory: tmpDir });
+		const hook = createImageProcessingHook({
+			processor,
+			adapter,
+			imageSizes,
+			logger: mockLogger,
+		});
+
+		const data: Record<string, unknown> = {
+			_file: {
+				buffer: TINY_PNG,
+				mimeType: 'image/png',
+				originalName: 'test.png',
+				size: TINY_PNG.length,
+			},
+			path: 'test.png',
+		};
+
+		await hook(makeHookArgs(data));
+
+		expect(mockLogger.error).toHaveBeenCalledOnce();
+		expect(mockLogger.error).toHaveBeenCalledWith(
+			expect.stringContaining('medium'),
+			expect.any(Error),
+		);
+	});
+
+	it('should fall back to console.error when no logger is provided', async () => {
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+		(processor.processVariant as ReturnType<typeof vi.fn>)
+			.mockResolvedValueOnce({ buffer: TINY_PNG, width: 5, height: 5, mimeType: 'image/png' })
+			.mockRejectedValueOnce(new Error('Encoding failed'));
+
+		const adapter = localStorageAdapter({ directory: tmpDir });
+		const hook = createImageProcessingHook({ processor, adapter, imageSizes });
+
+		const data: Record<string, unknown> = {
+			_file: {
+				buffer: TINY_PNG,
+				mimeType: 'image/png',
+				originalName: 'test.png',
+				size: TINY_PNG.length,
+			},
+			path: 'test.png',
+		};
+
+		await hook(makeHookArgs(data));
+
+		expect(consoleSpy).toHaveBeenCalledOnce();
+		consoleSpy.mockRestore();
+	});
 });

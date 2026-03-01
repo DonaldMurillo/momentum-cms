@@ -95,11 +95,13 @@ The focal point picker appears automatically in the admin UI for any upload coll
 
 ### Re-processing on Focal Point Change
 
-When a user changes the focal point on an existing image, the plugin can automatically re-process all size variants with the new crop center. This is enabled by default:
+> **Note:** Full automatic re-processing of size variants on focal point change is planned for a future release (Phase 4) and is not yet implemented. When opted-in, a warning is logged on focal point changes but existing variants are not regenerated.
+
+You can opt-in to focal point change detection (logging only for now):
 
 ```typescript
 imagePlugin({
-	reprocessOnFocalPointChange: true, // default
+	reprocessOnFocalPointChange: true, // default: false
 });
 ```
 
@@ -142,7 +144,7 @@ interface ImagePluginConfig {
 	/** Global format preference: 'original' | 'webp' | 'avif' | 'jpeg'. Default: 'original' */
 	formatPreference?: 'jpeg' | 'webp' | 'avif' | 'original';
 
-	/** Re-process variants when focalPoint changes. Default: true */
+	/** Opt-in focal point change detection (re-processing planned for Phase 4). Default: false */
 	reprocessOnFocalPointChange?: boolean;
 }
 ```

@@ -5,6 +5,9 @@ export function normalizeFocalPoint(
 	click: { x: number; y: number },
 	container: { width: number; height: number },
 ): { x: number; y: number } {
+	if (container.width <= 0 || container.height <= 0) {
+		return { x: 0.5, y: 0.5 };
+	}
 	return clampFocalPoint({
 		x: click.x / container.width,
 		y: click.y / container.height,
