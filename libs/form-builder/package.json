@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/form-builder",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"description": "Standalone form builder for Angular 21+ with Signal Forms, JSON schema-driven rendering, validation, and multi-step wizards",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
@@ -25,7 +25,7 @@
 		"@angular/common": "^21.0.0",
 		"@angular/core": "^21.0.0",
 		"@angular/forms": "^21.0.0",
-		"@momentumcms/ui": "^0.5.0"
+		"@momentumcms/ui": "^0.5.1"
 	},
 	"dependencies": {
 		"tslib": "^2.8.0"

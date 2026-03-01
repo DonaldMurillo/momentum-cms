@@ -164,7 +164,11 @@
 			"plugins-email",
 			"migrations",
 			"create-momentum-app",
-			"form-builder"
+			"form-builder",
+			"plugins-form-builder",
+			"queue",
+			"plugins-queue",
+			"plugins-cron"
 		],
 		"version": {
 			"preVersionCommand": "npx nx run-many -t build",

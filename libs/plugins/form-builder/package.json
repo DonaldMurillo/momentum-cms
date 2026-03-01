@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/plugins-form-builder",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"description": "Form builder plugin for Momentum CMS with dynamic form creation, submissions, and webhooks",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
@@ -40,9 +40,9 @@
 		}
 	},
 	"dependencies": {
-		"@momentumcms/core": "0.5.0",
-		"@momentumcms/form-builder": "0.5.0",
-		"@momentumcms/server-core": "0.5.0",
+		"@momentumcms/core": "0.5.1",
+		"@momentumcms/form-builder": "0.5.1",
+		"@momentumcms/server-core": "0.5.1",
 		"express": "^4.21.2"
 	}
 }

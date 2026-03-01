@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/plugins-cron",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"description": "Cron scheduler plugin for Momentum CMS with recurring job support",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
@@ -37,8 +37,8 @@
 		}
 	},
 	"dependencies": {
-		"@momentumcms/core": "0.5.0",
-		"@momentumcms/queue": "0.5.0",
-		"@momentumcms/plugins-queue": "0.5.0"
+		"@momentumcms/core": "0.5.1",
+		"@momentumcms/queue": "0.5.1",
+		"@momentumcms/plugins-queue": "0.5.1"
 	}
 }

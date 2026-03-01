@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/queue",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"description": "Job queue adapters (PostgreSQL) for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",

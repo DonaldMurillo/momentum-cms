@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/db-drizzle",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"description": "Drizzle ORM database adapter for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
