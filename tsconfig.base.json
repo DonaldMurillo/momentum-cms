@@ -19,6 +19,7 @@
 			"@momentumcms/server-core": ["libs/server-core/src/index.ts"],
 			"@momentumcms/server-express": ["libs/server-express/src/index.ts"],
 			"@momentumcms/server-analog": ["libs/server-analog/src/index.ts"],
+			"@momentumcms/server-nestjs": ["libs/server-nestjs/src/index.ts"],
 			"@momentumcms/admin": ["libs/admin/src/index.ts"],
 			"@momentumcms/db-drizzle": ["libs/db-drizzle/src/index.ts"],
 			"@momentumcms/migrations": ["libs/migrations/src/index.ts"],

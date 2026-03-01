@@ -58,6 +58,12 @@ const SUITES: SuiteConfig[] = [
 		logFile: 'analog-e2e.log',
 	},
 	{
+		name: 'nestjs-e2e',
+		label: 'NestJS E2E',
+		command: ['npx', 'nx', 'e2e', 'example-nestjs-e2e'],
+		logFile: 'nestjs-e2e.log',
+	},
+	{
 		name: 'migration-tests',
 		label: 'Migration Tests',
 		command: ['npx', 'nx', 'test', 'migrations'],
@@ -66,16 +72,7 @@ const SUITES: SuiteConfig[] = [
 	{
 		name: 'cli-scaffold',
 		label: 'CLI Scaffold Test',
-		command: [
-			'npx',
-			'tsx',
-			'scripts/test-create-app.ts',
-			'--flavors',
-			'angular,analog',
-			'--databases',
-			'sqlite',
-			'--install-deps',
-		],
+		command: ['npx', 'tsx', 'scripts/test-create-app.ts', '--database', 'sqlite'],
 		logFile: 'cli-scaffold.log',
 	},
 ];

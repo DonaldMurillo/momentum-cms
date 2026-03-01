@@ -4,7 +4,7 @@ import { createProject } from './create-project';
 
 export interface CLIOptions {
 	projectName: string;
-	flavor: 'angular' | 'analog';
+	flavor: 'angular' | 'analog' | 'nestjs';
 	database: 'postgres' | 'sqlite';
 	install: boolean;
 	docker?: boolean;
@@ -19,7 +19,7 @@ function parseArgs(argv: string[]): Partial<CLIOptions> {
 		const arg = args[i];
 		if (arg === '--flavor' && args[i + 1]) {
 			const val = args[++i];
-			if (val === 'angular' || val === 'analog') {
+			if (val === 'angular' || val === 'analog' || val === 'nestjs') {
 				opts.flavor = val;
 			}
 		} else if (arg === '--database' && args[i + 1]) {
@@ -72,6 +72,7 @@ export async function runCLI(): Promise<void> {
 				choices: [
 					{ title: 'Angular (Express SSR)', value: 'angular' },
 					{ title: 'Analog (Nitro)', value: 'analog' },
+					{ title: 'NestJS (Express)', value: 'nestjs' },
 				],
 			},
 			{

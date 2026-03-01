@@ -189,7 +189,17 @@ const pool = (dbAdapter as PostgresAdapterWithRaw).getPool();`
 				? 'DATABASE_URL=postgresql://postgres:postgres@localhost:5432/momentum'
 				: 'DATABASE_PATH=./data/momentum.db',
 		defaultPort: '4200',
-		externalDependencies: database === 'postgres' ? '"pg", "pg-native"' : '"better-sqlite3"',
+		externalDependencies: [
+			database === 'postgres' ? '"pg", "pg-native"' : '"better-sqlite3"',
+			...(flavor === 'nestjs'
+				? [
+						'"@nestjs/microservices"',
+						'"@nestjs/websockets"',
+						'"class-validator"',
+						'"class-transformer"',
+					]
+				: []),
+		].join(', '),
 		prerequisitesDocker:
 			database === 'postgres'
 				? `- **Docker** (for PostgreSQL database)
