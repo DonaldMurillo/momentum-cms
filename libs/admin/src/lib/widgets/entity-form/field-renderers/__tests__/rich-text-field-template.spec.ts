@@ -1,75 +1,17 @@
 /**
  * Template coverage tests for RichTextFieldRenderer.
  *
- * Renders the REAL component template (not a dummy `<div></div>`) so that
- * all template expression statements (bindings, `@if`, `@for`, event
- * handlers, attribute bindings, etc.) are evaluated by the coverage tool.
+ * Tests DOM rendering, toolbar buttons, aria attributes, CSS class bindings,
+ * read-only view, and mcms-form-field attribute bindings.
  *
- * Strategy:
- *   - Use NO_ERRORS_SCHEMA so unknown child selectors are tolerated.
- *   - Override only the component's `imports` (to []) — keep the template.
- *   - Mock TipTap at module level to prevent real DOM manipulation.
- *   - Use `detectChanges()` after signal changes to re-evaluate the template.
+ * Strategy: Use the REAL component template but spy on `mountEditor` to prevent
+ * TipTap initialization. This lets us test all template bindings without
+ * needing vi.mock/vi.doMock for TipTap modules (blocked by @nx/angular:unit-test).
  */
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { RichTextFieldRenderer } from '../rich-text-field.component';
 import { createMockFieldNodeState, createMockField } from './test-helpers';
-
-// ---------------------------------------------------------------------------
-// TipTap mocks
-// ---------------------------------------------------------------------------
-
-vi.mock('@tiptap/core', () => {
-	class MockEditor {
-		[key: string]: unknown;
-		isDestroyed = false;
-		getHTML = vi.fn().mockReturnValue('<p></p>');
-		isActive = vi.fn().mockReturnValue(false);
-		chain = vi.fn().mockReturnValue({
-			focus: vi.fn().mockReturnThis(),
-			toggleBold: vi.fn().mockReturnThis(),
-			toggleItalic: vi.fn().mockReturnThis(),
-			toggleUnderline: vi.fn().mockReturnThis(),
-			toggleStrike: vi.fn().mockReturnThis(),
-			toggleHeading: vi.fn().mockReturnThis(),
-			toggleBulletList: vi.fn().mockReturnThis(),
-			toggleOrderedList: vi.fn().mockReturnThis(),
-			toggleBlockquote: vi.fn().mockReturnThis(),
-			toggleCodeBlock: vi.fn().mockReturnThis(),
-			setHorizontalRule: vi.fn().mockReturnThis(),
-			run: vi.fn(),
-		});
-		commands = { setContent: vi.fn() };
-		destroy = vi.fn();
-
-		constructor() {
-			// no-op – avoid DOM side effects
-		}
-	}
-
-	return { Editor: MockEditor };
-});
-
-vi.mock('@tiptap/starter-kit', () => ({
-	default: { configure: vi.fn().mockReturnValue({}) },
-}));
-
-vi.mock('@tiptap/extension-underline', () => ({
-	default: {},
-}));
-
-vi.mock('@tiptap/extension-link', () => ({
-	default: { configure: vi.fn().mockReturnValue({}) },
-}));
-
-vi.mock('@tiptap/extension-placeholder', () => ({
-	default: { configure: vi.fn().mockReturnValue({}) },
-}));
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe('RichTextFieldRenderer (template coverage)', () => {
 	let fixture: ComponentFixture<RichTextFieldRenderer>;
@@ -99,9 +41,12 @@ describe('RichTextFieldRenderer (template coverage)', () => {
 			touched?: boolean;
 		};
 		skipFormNode?: boolean;
-	}): void {
+	}): ReturnType<typeof createMockFieldNodeState> {
 		fixture = TestBed.createComponent(RichTextFieldRenderer);
 		component = fixture.componentInstance;
+
+		// Prevent TipTap editor initialization while keeping the real template
+		vi.spyOn(component as any, 'mountEditor').mockImplementation(() => undefined);
 
 		const field = createMockField('richText', options?.fieldOverrides);
 		fixture.componentRef.setInput('field', field);
@@ -111,12 +56,13 @@ describe('RichTextFieldRenderer (template coverage)', () => {
 			fixture.componentRef.setInput('mode', options.mode);
 		}
 
+		const mock = createMockFieldNodeState(options?.initialValue ?? '', options?.formNodeOptions);
 		if (!options?.skipFormNode) {
-			const mock = createMockFieldNodeState(options?.initialValue ?? '', options?.formNodeOptions);
 			fixture.componentRef.setInput('formNode', mock.node);
 		}
 
 		fixture.detectChanges();
+		return mock;
 	}
 
 	// -------------------------------------------------------------------
@@ -327,15 +273,7 @@ describe('RichTextFieldRenderer (template coverage)', () => {
 		});
 
 		it('should bind innerHTML to stringValue in read-only view', () => {
-			const mock = createMockFieldNodeState('<p>Initial</p>');
-			fixture = TestBed.createComponent(RichTextFieldRenderer);
-			component = fixture.componentInstance;
-
-			fixture.componentRef.setInput('field', createMockField('richText'));
-			fixture.componentRef.setInput('path', 'content');
-			fixture.componentRef.setInput('mode', 'view');
-			fixture.componentRef.setInput('formNode', mock.node);
-			fixture.detectChanges();
+			const mock = createComponent({ mode: 'view', initialValue: '<p>Initial</p>' });
 
 			const readOnly = fixture.nativeElement.querySelector('.prose');
 			expect(readOnly.innerHTML).toContain('Initial');

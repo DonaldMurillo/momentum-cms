@@ -16,7 +16,9 @@ import momentumConfig, { authPlugin } from './momentum.config';
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
 
-const angularApp = new AngularNodeAppEngine();
+const angularApp = new AngularNodeAppEngine({
+	allowedHosts: ['localhost'],
+});
 
 /**
  * Create the Momentum CMS server.

@@ -51,6 +51,15 @@ const PUBLISHABLE_LIBS = [
 	'server-analog',
 	'ui',
 	'admin',
+	'queue',
+	'email',
+	'form-builder',
+	'email-builder',
+	'plugins-redirects',
+	'plugins-queue',
+	'plugins-cron',
+	'plugins-email',
+	'plugins-form-builder',
 ];
 
 type Flavor = 'angular' | 'analog';
@@ -213,7 +222,16 @@ function resolveDistPath(lib: string): string {
 		'plugins-analytics': 'dist/libs/plugins/analytics',
 		'plugins-otel': 'dist/libs/plugins/otel',
 		'plugins-seo': 'dist/libs/plugins/seo',
+		'plugins-redirects': 'dist/libs/plugins/redirects',
+		'plugins-queue': 'dist/libs/plugins/queue',
+		'plugins-cron': 'dist/libs/plugins/cron',
+		'plugins-email': 'dist/libs/plugins/email',
+		'plugins-form-builder': 'dist/libs/plugins/form-builder',
 		migrations: 'dist/libs/migrations',
+		queue: 'dist/libs/queue',
+		email: 'dist/libs/email',
+		'form-builder': 'dist/libs/form-builder',
+		'email-builder': 'dist/libs/email-builder',
 	};
 	const rel = pathMap[lib];
 	if (!rel) throw new Error(`Unknown lib: ${lib}`);
@@ -467,6 +485,83 @@ function installDeps(projectDir: string, port: number): void {
 }
 
 /**
+ * Install and verify the new plugin packages can be consumed from a fresh project.
+ * This catches broken package.json exports, missing dependencies, and import resolution issues.
+ */
+function verifyPluginConsumption(projectDir: string, _port: number): void {
+	const plugins = [
+		'@momentumcms/plugins-form-builder',
+		'@momentumcms/plugins-redirects',
+		'@momentumcms/plugins-queue',
+		'@momentumcms/plugins-cron',
+		'@momentumcms/plugins-email',
+	];
+
+	console.log(`${LOG_PREFIX} Installing additional plugins for consumption test...`);
+	execFileSync('npm', ['install', '--save', ...plugins], {
+		cwd: projectDir,
+		stdio: 'pipe',
+		timeout: 120000,
+	});
+
+	// Create a smoke-test file that imports each plugin's main export
+	const testFile = path.join(projectDir, 'src', 'plugin-smoke-test.ts');
+	fs.writeFileSync(
+		testFile,
+		[
+			'// Smoke test: verify all plugin packages resolve and export correctly',
+			"import { formBuilderPlugin } from '@momentumcms/plugins-form-builder';",
+			"import { redirectsPlugin } from '@momentumcms/plugins-redirects';",
+			"import { queuePlugin } from '@momentumcms/plugins-queue';",
+			"import { cronPlugin } from '@momentumcms/plugins-cron';",
+			"import { emailPlugin } from '@momentumcms/plugins-email';",
+			'',
+			'// Type-check: all plugins should be functions',
+			'const plugins = [formBuilderPlugin, redirectsPlugin, queuePlugin, cronPlugin, emailPlugin];',
+			'console.log(plugins.length);',
+			'',
+		].join('\n'),
+	);
+
+	console.log(`${LOG_PREFIX} Verifying plugin imports compile...`);
+	try {
+		execFileSync(
+			'npx',
+			[
+				'tsc',
+				'--noEmit',
+				'--esModuleInterop',
+				'--moduleResolution',
+				'bundler',
+				'--module',
+				'preserve',
+				'--target',
+				'es2022',
+				'--skipLibCheck',
+				testFile,
+			],
+			{
+				cwd: projectDir,
+				stdio: 'pipe',
+				timeout: 30000,
+			},
+		);
+	} catch (e: unknown) {
+		const err = e instanceof Object ? e : {};
+		const stderr = 'stderr' in err && Buffer.isBuffer(err.stderr) ? err.stderr.toString() : '';
+		const stdout = 'stdout' in err && Buffer.isBuffer(err.stdout) ? err.stdout.toString() : '';
+		throw new Error(`Plugin smoke test compilation failed:\n${stdout}\n${stderr}`);
+	}
+
+	// Clean up test file
+	fs.unlinkSync(testFile);
+
+	console.log(
+		`${LOG_PREFIX} Plugin consumption test passed — all ${plugins.length} plugins resolve correctly.`,
+	);
+}
+
+/**
  * Run tsc --noEmit to verify TypeScript compiles
  */
 function verifyTypeScript(projectDir: string): void {
@@ -658,6 +753,7 @@ async function startAndVerifyServer(
 			DATABASE_PATH: path.join(projectDir, 'data', 'test.db'),
 			BETTER_AUTH_URL: `http://localhost:${port}`,
 			NODE_ENV: 'production',
+			NG_ALLOWED_HOSTS: 'localhost',
 		},
 		stdio: ['ignore', 'pipe', 'pipe'],
 		detached: true,
@@ -1051,6 +1147,11 @@ async function main(): Promise<void> {
 					// Install dependencies (routes @momentumcms to Verdaccio, rest to npm)
 					if (!config.skipInstall) {
 						installDeps(projectDir, port);
+
+						// Verify plugin packages can be installed and imported
+						if (flavor === 'angular') {
+							verifyPluginConsumption(projectDir, port);
+						}
 
 						// Verify type generator works
 						verifyGenerateTypes(projectDir);

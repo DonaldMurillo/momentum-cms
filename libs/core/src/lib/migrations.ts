@@ -99,7 +99,13 @@ export interface ResolvedMigrationConfig extends MigrationConfig {
 export function resolveMigrationMode(mode: MigrationConfig['mode']): 'push' | 'migrate' {
 	if (mode === 'push' || mode === 'migrate') return mode;
 	// 'auto' or undefined: infer from NODE_ENV
-	const env = process.env['NODE_ENV'];
+	/* eslint-disable local/no-direct-browser-apis, @typescript-eslint/consistent-type-assertions -- universal code, process may not exist in browser */
+	const env = (
+		(globalThis as Record<string, unknown>)['process'] as
+			| { env: Record<string, string | undefined> }
+			| undefined
+	)?.env?.['NODE_ENV'];
+	/* eslint-enable local/no-direct-browser-apis, @typescript-eslint/consistent-type-assertions */
 	if (env === 'production') return 'migrate';
 	return 'push';
 }

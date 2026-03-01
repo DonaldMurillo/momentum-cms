@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/email",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"description": "Angular email templating library — render Angular components to email-safe HTML",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",

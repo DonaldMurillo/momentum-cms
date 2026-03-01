@@ -3,11 +3,14 @@ import {
 	text,
 	textarea,
 	select,
+	checkbox,
+	relationship,
 	array,
 	blocks,
 	allowAll,
 	hasRole,
 } from '@momentumcms/core';
+import { FormsCollection } from '@momentumcms/plugins-form-builder/collections';
 
 /**
  * Pages collection for testing blocks field renderer.
@@ -130,6 +133,19 @@ export const Pages = defineCollection({
 							minRows: 1,
 							maxRows: 12,
 						}),
+					],
+				},
+				{
+					slug: 'form',
+					labels: { singular: 'Form', plural: 'Forms' },
+					fields: [
+						relationship('form', {
+							required: true,
+							label: 'Form',
+							collection: () => FormsCollection,
+							filterOptions: () => ({ 'status[equals]': 'published' }),
+						}),
+						checkbox('showHoneypot', { label: 'Enable Honeypot Anti-Spam' }),
 					],
 				},
 			],

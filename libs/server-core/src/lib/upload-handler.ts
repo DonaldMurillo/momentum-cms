@@ -353,7 +353,7 @@ export async function handleFileDelete(adapter: StorageAdapter, path: string): P
 export async function handleFileGet(
 	adapter: StorageAdapter,
 	path: string,
-): Promise<{ buffer: Buffer; mimeType?: string } | null> {
+): Promise<{ buffer: Uint8Array; mimeType?: string } | null> {
 	// Check if the adapter supports reading
 	if (!adapter.read) {
 		return null;

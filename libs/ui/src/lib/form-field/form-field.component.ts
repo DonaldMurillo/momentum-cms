@@ -31,6 +31,7 @@ import type { ValidationError } from '../input/input.types';
 
 		<p
 			[id]="errorId()"
+			[attr.data-testid]="showError() ? 'field-error-' + id() : null"
 			class="text-sm min-h-5"
 			[class.text-destructive]="showError()"
 			[class.text-muted-foreground]="!showError() && !!hint()"

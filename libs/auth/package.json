@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/auth",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"description": "Better Auth integration for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
@@ -28,7 +28,7 @@
 	"peerDependencies": {
 		"@angular/core": ">=19.0.0",
 		"@momentumcms/core": ">=0.0.1",
-		"@momentumcms/email": ">=0.5.0",
+		"@momentumcms/email": ">=0.5.1",
 		"@momentumcms/logger": ">=0.0.1",
 		"better-auth": "^1.4.0",
 		"better-sqlite3": "^12.0.0",

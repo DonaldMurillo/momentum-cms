@@ -226,5 +226,5 @@ export function registerWebhookHooks(collections: CollectionConfig[]): void {
 	}
 }
 
-// Re-export for testing
-export { sendWebhook, dispatchWebhooks, signPayload };
+// Re-export for testing and reuse
+export { sendWebhook, dispatchWebhooks, signPayload, isAllowedWebhookUrl };

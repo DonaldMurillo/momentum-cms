@@ -55,7 +55,7 @@ export interface BlockEditDialogData {
 			</mcms-dialog-header>
 
 			<mcms-dialog-content>
-				<div class="space-y-4 max-h-[60vh] overflow-y-auto py-1">
+				<div class="space-y-4 max-h-[60vh] overflow-y-auto p-1">
 					@for (field of visibleFields; track field.name) {
 						<mcms-field-renderer
 							[field]="field"

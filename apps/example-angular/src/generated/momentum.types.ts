@@ -174,6 +174,16 @@ export interface PagesContentFeatureGridBlock {
 	};
 }
 
+export interface PagesContentFormBlock {
+	blockType: 'form';
+	form: string;
+	showHoneypot?: boolean;
+	_analytics?: {
+		trackImpressions?: boolean;
+		trackHover?: boolean;
+	};
+}
+
 export type PagesContentBlock =
 	| PagesContentHeroBlock
 	| PagesContentTextBlockBlock
@@ -182,7 +192,8 @@ export type PagesContentBlock =
 	| PagesContentImageTextBlock
 	| PagesContentStatsBlock
 	| PagesContentTestimonialBlock
-	| PagesContentFeatureGridBlock;
+	| PagesContentFeatureGridBlock
+	| PagesContentFormBlock;
 
 export interface Pages {
 	id: string;
@@ -412,6 +423,33 @@ export interface CronSchedules {
 	enabled?: boolean;
 	lastRunAt?: string;
 	nextRunAt?: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface Forms {
+	id: string;
+	title: string;
+	slug: string;
+	status: 'draft' | 'published' | 'archived';
+	schema: Record<string, unknown>;
+	description?: string;
+	successMessage?: string;
+	redirectUrl?: string;
+	honeypot?: boolean;
+	webhooks?: Record<string, unknown>;
+	submissionCount?: number;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface FormSubmissions {
+	id: string;
+	formId: string;
+	formSlug: string;
+	formTitle?: string;
+	data: Record<string, unknown>;
+	metadata?: Record<string, unknown>;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -887,6 +925,47 @@ export interface CronSchedulesWhereClause {
 	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
+export interface FormsWhereClause {
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	slug?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	status?:
+		| 'draft'
+		| 'published'
+		| 'archived'
+		| {
+				equals?: 'draft' | 'published' | 'archived';
+				not?: 'draft' | 'published' | 'archived';
+				in?: ('draft' | 'published' | 'archived')[];
+		  };
+	description?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	successMessage?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	redirectUrl?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	honeypot?: boolean | { equals?: boolean };
+	submissionCount?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+}
+
+export interface FormSubmissionsWhereClause {
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	formId?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	formSlug?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	formTitle?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+}
+
 export type CollectionSlug =
 	| 'categories'
 	| 'articles'
@@ -907,7 +986,9 @@ export type CollectionSlug =
 	| 'auth-verification'
 	| 'auth-api-keys'
 	| 'queue-jobs'
-	| 'cron-schedules';
+	| 'cron-schedules'
+	| 'forms'
+	| 'form-submissions';
 
 export type GlobalSlug = 'site-settings';
 
@@ -932,6 +1013,8 @@ export interface MomentumCollections {
 	'auth-api-keys': AuthApiKeys;
 	'queue-jobs': QueueJobs;
 	'cron-schedules': CronSchedules;
+	forms: Forms;
+	'form-submissions': FormSubmissions;
 }
 
 export interface MomentumGlobals {
@@ -959,6 +1042,8 @@ export type TypedMomentumCollections = {
 	'auth-api-keys': { doc: AuthApiKeys; where: AuthApiKeysWhereClause };
 	'queue-jobs': { doc: QueueJobs; where: QueueJobsWhereClause };
 	'cron-schedules': { doc: CronSchedules; where: CronSchedulesWhereClause };
+	forms: { doc: Forms; where: FormsWhereClause };
+	'form-submissions': { doc: FormSubmissions; where: FormSubmissionsWhereClause };
 };
 
 export type DocumentType<S extends CollectionSlug> = MomentumCollections[S];

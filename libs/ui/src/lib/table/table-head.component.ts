@@ -16,12 +16,11 @@ import { GridCell } from '@angular/aria/grid';
 	hostDirectives: [
 		{
 			directive: GridCell,
-			inputs: ['disabled', 'colSpan', 'rowSpan'],
+			inputs: ['disabled', 'colSpan', 'rowSpan', 'role'],
 		},
 	],
 	host: {
 		'[class]': 'hostClasses()',
-		'[attr.role]': '"columnheader"',
 	},
 	template: `<ng-content />`,
 	styles: `
@@ -32,6 +31,9 @@ import { GridCell } from '@angular/aria/grid';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TableHead {
+	/** ARIA role for the header cell (forwarded to GridCell). */
+	readonly role = input<'gridcell' | 'columnheader' | 'rowheader'>('columnheader');
+
 	/** Whether this column is disabled. */
 	readonly disabled = input(false);
 

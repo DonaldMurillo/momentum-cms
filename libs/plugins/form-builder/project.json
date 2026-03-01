@@ -1,0 +1,38 @@
+{
+	"name": "plugins-form-builder",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/plugins/form-builder/src",
+	"projectType": "library",
+	"tags": ["scope:plugin", "env:server"],
+	"targets": {
+		"test": {
+			"executor": "@nx/vitest:test",
+			"outputs": ["{workspaceRoot}/coverage/libs/plugins/form-builder"],
+			"options": {
+				"config": "libs/plugins/form-builder/vitest.config.mts"
+			}
+		},
+		"build": {
+			"executor": "@nx/esbuild:esbuild",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/libs/plugins/form-builder",
+				"main": "libs/plugins/form-builder/src/index.ts",
+				"additionalEntryPoints": [
+					"libs/plugins/form-builder/src/lib/form-builder-admin-routes.ts",
+					"libs/plugins/form-builder/src/lib/collections/index.ts"
+				],
+				"tsConfig": "libs/plugins/form-builder/tsconfig.lib.json",
+				"generatePackageJson": false,
+				"assets": ["libs/plugins/form-builder/package.json"],
+				"external": ["@angular/*", "@ng-icons/*", "@momentumcms/ui"]
+			}
+		},
+		"nx-release-publish": {
+			"options": {
+				"packageRoot": "dist/{projectRoot}",
+				"access": "public"
+			}
+		}
+	}
+}

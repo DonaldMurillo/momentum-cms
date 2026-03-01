@@ -1,0 +1,44 @@
+{
+	"name": "@momentumcms/form-builder",
+	"version": "0.5.1",
+	"description": "Standalone form builder for Angular 21+ with Signal Forms, JSON schema-driven rendering, validation, and multi-step wizards",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/DonaldMurillo/momentum-cms.git",
+		"directory": "libs/form-builder"
+	},
+	"homepage": "https://github.com/DonaldMurillo/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/DonaldMurillo/momentum-cms/issues"
+	},
+	"keywords": [
+		"cms",
+		"momentum-cms",
+		"angular",
+		"form-builder",
+		"signal-forms",
+		"dynamic-forms"
+	],
+	"peerDependencies": {
+		"@angular/common": "^21.0.0",
+		"@angular/core": "^21.0.0",
+		"@angular/forms": "^21.0.0",
+		"@momentumcms/ui": "^0.5.1"
+	},
+	"dependencies": {
+		"tslib": "^2.8.0"
+	},
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./src/index.d.ts",
+			"default": "./"
+		},
+		"./validation": {
+			"types": "./validation/src/public-api.d.ts",
+			"default": "./validation"
+		}
+	}
+}

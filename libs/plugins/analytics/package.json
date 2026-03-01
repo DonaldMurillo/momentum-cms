@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/plugins-analytics",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"description": "Analytics and content tracking plugin for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
@@ -51,10 +51,10 @@
 		"@angular/common": "^21.0.0",
 		"@angular/core": "^21.0.0",
 		"@angular/router": "^21.0.0",
-		"@momentumcms/core": "0.5.0",
-		"@momentumcms/logger": "0.5.0",
-		"@momentumcms/plugins-core": "0.5.0",
-		"@momentumcms/server-core": "0.5.0",
+		"@momentumcms/core": "0.5.1",
+		"@momentumcms/logger": "0.5.1",
+		"@momentumcms/plugins-core": "0.5.1",
+		"@momentumcms/server-core": "0.5.1",
 		"express": "^4.21.0",
 		"rxjs": "^7.0.0"
 	},

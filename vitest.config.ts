@@ -13,6 +13,9 @@ export default defineConfig({
 			'libs/admin/**/*.spec.ts', // Angular component tests handled separately (jsdom)
 			'libs/ui/**/*.spec.ts', // Angular component tests handled separately (jsdom)
 			'libs/email-builder/**/*.spec.ts', // Angular component tests handled separately
+			'libs/form-builder/src/lib/components/**/*.spec.ts', // Angular component tests (jsdom)
+			'libs/form-builder/src/lib/schema/schema-to-signal-form.spec.ts', // Angular TestBed (jsdom)
+			'libs/form-builder/src/lib/services/**/*.spec.ts', // Angular services (jsdom)
 			'libs/email/src/lib/components/**/*.spec.ts', // Angular SSR tests need AOT (own vitest config)
 			'libs/e2e-tests/**/*.spec.ts', // Playwright E2E specs
 			'libs/e2e-fixtures/**/*.spec.ts', // E2E fixture tests
@@ -44,6 +47,11 @@ export default defineConfig({
 			'@momentumcms/example-config/collections': resolve(
 				__dirname,
 				'libs/example-config/src/collections/index.ts',
+			),
+			'@momentumcms/form-builder': resolve(__dirname, 'libs/form-builder/src/index.ts'),
+			'@momentumcms/form-builder/validation': resolve(
+				__dirname,
+				'libs/form-builder/src/lib/validation/index.ts',
 			),
 		},
 	},

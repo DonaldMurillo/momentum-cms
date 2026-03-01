@@ -1,35 +1,18 @@
 /**
- * Extended tests for applyCollectionSchema.
+ * Extended tests for applyCollectionSchema using real Angular Signal Forms.
  *
- * These tests mock @angular/forms/signals validators so we can capture
- * and invoke the callbacks passed to validate(), apply(), applyEach(), etc.
- * This lets us exercise the uncovered branches inside those callbacks.
- *
- * Uses vi.doMock + vi.resetModules to avoid contaminating other test files
- * in the same Vitest worker.
+ * Instead of mocking @angular/forms/signals (blocked by @nx/angular:unit-test),
+ * these tests create real Signal Forms via form(), apply validators with
+ * applyCollectionSchema inside a schema callback, and verify behavior via submit().
  */
 
-import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TestBed } from '@angular/core/testing';
+import { Injector, signal } from '@angular/core';
+import { form, submit } from '@angular/forms/signals';
+import type { FieldTree } from '@angular/forms/signals';
 import type { Field } from '@momentumcms/core';
-
-// ---- Captured callbacks ---------------------------------------------------
-// Each mock captures the last callback passed to it so we can invoke it later.
-let capturedRequired: Array<{ path: unknown; opts: unknown }> = [];
-let capturedEmail: Array<{ path: unknown; opts: unknown }> = [];
-let capturedMin: Array<{ path: unknown; val: unknown; opts: unknown }> = [];
-let capturedMax: Array<{ path: unknown; val: unknown; opts: unknown }> = [];
-let capturedMinLength: Array<{ path: unknown; val: unknown; opts: unknown }> = [];
-let capturedMaxLength: Array<{ path: unknown; val: unknown; opts: unknown }> = [];
-let capturedValidate: Array<{ path: unknown; fn: (ctx: { value: () => unknown }) => unknown }> = [];
-let capturedApply: Array<{ path: unknown; fn: (tree: Record<string, unknown>) => void }> = [];
-let capturedApplyEach: Array<{ path: unknown; fn: (tree: Record<string, unknown>) => void }> = [];
-
-// Will be assigned dynamically after the mock is installed
-let applyCollectionSchema: (
-	fields: Field[],
-	schemaPathTree: Record<string, unknown>,
-	getFormData?: () => Record<string, unknown>,
-) => void;
+import { applyCollectionSchema } from '../form-schema-builder';
 
 function mockField(type: string, overrides: Record<string, unknown> = {}): Field {
 	const base: Record<string, unknown> = {
@@ -42,850 +25,794 @@ function mockField(type: string, overrides: Record<string, unknown> = {}): Field
 	return base as unknown as Field;
 }
 
+/**
+ * Create a Signal Form with validators applied via applyCollectionSchema.
+ * Uses the schema callback pattern: form(model, schemaFn, { injector }).
+ */
+function createTestForm(
+	model: Record<string, unknown>,
+	fields: Field[],
+	injector: Injector,
+	getFormData?: () => Record<string, unknown>,
+): FieldTree<Record<string, unknown>> {
+	const modelSignal = signal(model);
+	return form(
+		modelSignal,
+		(tree: Record<string, unknown>) => {
+			applyCollectionSchema(fields, tree, getFormData);
+		},
+		{ injector },
+	);
+}
+
+/**
+ * Use submit() to test form validity.
+ * Returns true if the form is valid (action was invoked), false if invalid.
+ */
+async function isFormValid(formTree: FieldTree<Record<string, unknown>>): Promise<boolean> {
+	let actionCalled = false;
+	await submit(formTree, {
+		action: async () => {
+			actionCalled = true;
+		},
+	});
+	return actionCalled;
+}
+
 describe('applyCollectionSchema - extended coverage', () => {
-	let schemaPathTree: Record<string, unknown>;
-
-	beforeAll(async () => {
-		vi.resetModules();
-		vi.doMock('@angular/forms/signals', () => ({
-			required: (path: unknown, opts: unknown) => {
-				capturedRequired.push({ path, opts });
-			},
-			email: (path: unknown, opts: unknown) => {
-				capturedEmail.push({ path, opts });
-			},
-			min: (path: unknown, val: unknown, opts: unknown) => {
-				capturedMin.push({ path, val, opts });
-			},
-			max: (path: unknown, val: unknown, opts: unknown) => {
-				capturedMax.push({ path, val, opts });
-			},
-			minLength: (path: unknown, val: unknown, opts: unknown) => {
-				capturedMinLength.push({ path, val, opts });
-			},
-			maxLength: (path: unknown, val: unknown, opts: unknown) => {
-				capturedMaxLength.push({ path, val, opts });
-			},
-			validate: (path: unknown, fn: (ctx: { value: () => unknown }) => unknown) => {
-				capturedValidate.push({ path, fn });
-			},
-			apply: (path: unknown, fn: (tree: Record<string, unknown>) => void) => {
-				capturedApply.push({ path, fn });
-			},
-			applyEach: (path: unknown, fn: (tree: Record<string, unknown>) => void) => {
-				capturedApplyEach.push({ path, fn });
-			},
-		}));
-
-		// Import AFTER the mock is installed
-		const mod = await import('../form-schema-builder');
-		applyCollectionSchema = mod.applyCollectionSchema;
-	});
-
-	afterAll(() => {
-		vi.doUnmock('@angular/forms/signals');
-		vi.resetModules();
-	});
+	let injector: Injector;
 
 	beforeEach(() => {
-		capturedRequired = [];
-		capturedEmail = [];
-		capturedMin = [];
-		capturedMax = [];
-		capturedMinLength = [];
-		capturedMaxLength = [];
-		capturedValidate = [];
-		capturedApply = [];
-		capturedApplyEach = [];
-
-		schemaPathTree = {
-			title: { __brand: 'schemaPath_title' },
-			email: { __brand: 'schemaPath_email' },
-			count: { __brand: 'schemaPath_count' },
-			bio: { __brand: 'schemaPath_bio' },
-			status: { __brand: 'schemaPath_status' },
-			items: { __brand: 'schemaPath_items' },
-			content: { __brand: 'schemaPath_content' },
-			blocks: { __brand: 'schemaPath_blocks' },
-			address: { __brand: 'schemaPath_address' },
-			password: { __brand: 'schemaPath_password' },
-			cover: { __brand: 'schemaPath_cover' },
-			author: { __brand: 'schemaPath_author' },
-			slug: { __brand: 'schemaPath_slug' },
-			isPublished: { __brand: 'schemaPath_isPublished' },
-			data: { __brand: 'schemaPath_data' },
-		};
+		TestBed.configureTestingModule({});
+		injector = TestBed.inject(Injector);
 	});
 
 	// -----------------------------------------------------------------------
 	// required validator
 	// -----------------------------------------------------------------------
-	it('should add required validator when field.required is true', () => {
-		const fields = [mockField('text', { name: 'title', label: 'Title', required: true })];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedRequired).toHaveLength(1);
-		expect(capturedRequired[0].path).toBe(schemaPathTree['title']);
-		expect(capturedRequired[0].opts).toEqual({ message: 'Title is required' });
+	it('should add required validator when field.required is true', async () => {
+		const formTree = createTestForm(
+			{ title: '' },
+			[mockField('text', { name: 'title', label: 'Title', required: true })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
-	it('should auto-generate label from field name when label is missing', () => {
-		const fields = [mockField('text', { name: 'title', required: true })];
-		applyCollectionSchema(fields, schemaPathTree);
+	it('should pass required when field has a value', async () => {
+		const formTree = createTestForm(
+			{ title: 'Hello' },
+			[mockField('text', { name: 'title', label: 'Title', required: true })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
 
-		expect(capturedRequired).toHaveLength(1);
-		// humanizeFieldName('title') => 'Title'
-		expect(capturedRequired[0].opts).toEqual({ message: 'Title is required' });
+	it('should auto-generate label from field name when label is missing', async () => {
+		const formTree = createTestForm(
+			{ title: '' },
+			[mockField('text', { name: 'title', required: true })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
 	// -----------------------------------------------------------------------
 	// text / textarea
 	// -----------------------------------------------------------------------
-	it('should add minLength validator for text field', () => {
-		const fields = [mockField('text', { name: 'title', label: 'Title', minLength: 3 })];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedMinLength).toHaveLength(1);
-		expect(capturedMinLength[0].val).toBe(3);
+	it('should add minLength validator for text field', async () => {
+		const formTree = createTestForm(
+			{ title: 'ab' },
+			[mockField('text', { name: 'title', label: 'Title', minLength: 3 })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
-	it('should add maxLength validator for text field', () => {
-		const fields = [mockField('text', { name: 'title', label: 'Title', maxLength: 100 })];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedMaxLength).toHaveLength(1);
-		expect(capturedMaxLength[0].val).toBe(100);
+	it('should accept text at exact minLength', async () => {
+		const formTree = createTestForm(
+			{ title: 'abc' },
+			[mockField('text', { name: 'title', label: 'Title', minLength: 3 })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
 	});
 
-	it('should add minLength and maxLength for textarea field', () => {
-		const fields = [
-			mockField('textarea', { name: 'bio', label: 'Bio', minLength: 10, maxLength: 500 }),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
+	it('should add maxLength validator for text field', async () => {
+		const formTree = createTestForm(
+			{ title: 'too long text value' },
+			[mockField('text', { name: 'title', label: 'Title', maxLength: 5 })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
+	});
 
-		expect(capturedMinLength).toHaveLength(1);
-		expect(capturedMaxLength).toHaveLength(1);
+	it('should accept text at exact maxLength', async () => {
+		const formTree = createTestForm(
+			{ title: 'abcde' },
+			[mockField('text', { name: 'title', label: 'Title', maxLength: 5 })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
+
+	it('should add minLength and maxLength for textarea field', async () => {
+		const formTree = createTestForm(
+			{ bio: 'hi' },
+			[mockField('textarea', { name: 'bio', label: 'Bio', minLength: 10, maxLength: 500 })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
 	// -----------------------------------------------------------------------
 	// password
 	// -----------------------------------------------------------------------
-	it('should add minLength validator for password field', () => {
-		const fields = [mockField('password', { name: 'password', label: 'Password', minLength: 8 })];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedMinLength).toHaveLength(1);
-		expect(capturedMinLength[0].val).toBe(8);
+	it('should add minLength validator for password field', async () => {
+		const formTree = createTestForm(
+			{ pw: 'short' },
+			[mockField('password', { name: 'pw', label: 'Password', minLength: 8 })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
-	it('should skip minLength for password without it', () => {
-		const fields = [mockField('password', { name: 'password', label: 'Password' })];
-		applyCollectionSchema(fields, schemaPathTree);
+	it('should accept password meeting minLength', async () => {
+		const formTree = createTestForm(
+			{ pw: 'longpassword' },
+			[mockField('password', { name: 'pw', label: 'Password', minLength: 8 })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
 
-		expect(capturedMinLength).toHaveLength(0);
+	it('should skip minLength for password without it', async () => {
+		const formTree = createTestForm(
+			{ pw: 'x' },
+			[mockField('password', { name: 'pw', label: 'Password' })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
 	});
 
 	// -----------------------------------------------------------------------
 	// number
 	// -----------------------------------------------------------------------
-	it('should add min validator for number field', () => {
-		const fields = [mockField('number', { name: 'count', label: 'Count', min: 0 })];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedMin).toHaveLength(1);
-		expect(capturedMin[0].val).toBe(0);
+	it('should add min validator for number field', async () => {
+		const formTree = createTestForm(
+			{ count: -1 },
+			[mockField('number', { name: 'count', label: 'Count', min: 0 })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
-	it('should add max validator for number field', () => {
-		const fields = [mockField('number', { name: 'count', label: 'Count', max: 100 })];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedMax).toHaveLength(1);
-		expect(capturedMax[0].val).toBe(100);
+	it('should accept number at min boundary', async () => {
+		const formTree = createTestForm(
+			{ count: 0 },
+			[mockField('number', { name: 'count', label: 'Count', min: 0 })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
 	});
 
-	it('should add both min and max for number field', () => {
-		const fields = [mockField('number', { name: 'count', label: 'Count', min: 1, max: 50 })];
-		applyCollectionSchema(fields, schemaPathTree);
+	it('should add max validator for number field', async () => {
+		const formTree = createTestForm(
+			{ count: 200 },
+			[mockField('number', { name: 'count', label: 'Count', max: 100 })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
+	});
 
-		expect(capturedMin).toHaveLength(1);
-		expect(capturedMax).toHaveLength(1);
+	it('should accept number at max boundary', async () => {
+		const formTree = createTestForm(
+			{ count: 100 },
+			[mockField('number', { name: 'count', label: 'Count', max: 100 })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
+
+	it('should add both min and max for number field', async () => {
+		const formTree = createTestForm(
+			{ count: 25 },
+			[mockField('number', { name: 'count', label: 'Count', min: 1, max: 50 })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
+
+	it('should reject number above max with both bounds', async () => {
+		const formTree = createTestForm(
+			{ count: 51 },
+			[mockField('number', { name: 'count', label: 'Count', min: 1, max: 50 })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
 	// -----------------------------------------------------------------------
 	// email
 	// -----------------------------------------------------------------------
-	it('should add email validator for email field', () => {
-		const fields = [mockField('email', { name: 'email', label: 'Email' })];
-		applyCollectionSchema(fields, schemaPathTree);
+	it('should add email validator for email field', async () => {
+		const formTree = createTestForm(
+			{ mail: 'not-an-email' },
+			[mockField('email', { name: 'mail', label: 'Email' })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
+	});
 
-		expect(capturedEmail).toHaveLength(1);
-		expect(capturedEmail[0].opts).toEqual({ message: 'Email must be a valid email address' });
+	it('should accept valid email address', async () => {
+		const formTree = createTestForm(
+			{ mail: 'user@example.com' },
+			[mockField('email', { name: 'mail', label: 'Email' })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
 	});
 
 	// -----------------------------------------------------------------------
 	// select - validate callback
 	// -----------------------------------------------------------------------
-	it('should add select option validator', () => {
-		const fields = [
-			mockField('select', {
-				name: 'status',
-				label: 'Status',
-				options: [
-					{ label: 'Active', value: 'active' },
-					{ label: 'Inactive', value: 'inactive' },
-				],
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedValidate.length).toBeGreaterThanOrEqual(1);
+	it('should add select option validator', async () => {
+		const formTree = createTestForm(
+			{ status: 'invalid' },
+			[
+				mockField('select', {
+					name: 'status',
+					label: 'Status',
+					options: [
+						{ label: 'Active', value: 'active' },
+						{ label: 'Inactive', value: 'inactive' },
+					],
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
-	it('select validator should return null for empty/null/undefined values', () => {
-		const fields = [
-			mockField('select', {
-				name: 'status',
-				label: 'Status',
-				options: [{ label: 'Active', value: 'active' }],
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const selectValidator = capturedValidate[0].fn;
-		expect(selectValidator({ value: () => '' })).toBeNull();
-		expect(selectValidator({ value: () => null })).toBeNull();
-		expect(selectValidator({ value: () => undefined })).toBeNull();
+	it('select validator should accept empty values', async () => {
+		const formTree = createTestForm(
+			{ status: '' },
+			[
+				mockField('select', {
+					name: 'status',
+					label: 'Status',
+					options: [{ label: 'Active', value: 'active' }],
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
 	});
 
-	it('select validator should return null for valid option', () => {
-		const fields = [
-			mockField('select', {
-				name: 'status',
-				label: 'Status',
-				options: [
-					{ label: 'Active', value: 'active' },
-					{ label: 'Inactive', value: 'inactive' },
-				],
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const selectValidator = capturedValidate[0].fn;
-		expect(selectValidator({ value: () => 'active' })).toBeNull();
+	it('select validator should accept valid option', async () => {
+		const formTree = createTestForm(
+			{ status: 'active' },
+			[
+				mockField('select', {
+					name: 'status',
+					label: 'Status',
+					options: [
+						{ label: 'Active', value: 'active' },
+						{ label: 'Inactive', value: 'inactive' },
+					],
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
 	});
 
-	it('select validator should return error for invalid option', () => {
-		const fields = [
-			mockField('select', {
-				name: 'status',
-				label: 'Status',
-				options: [
-					{ label: 'Active', value: 'active' },
-					{ label: 'Inactive', value: 'inactive' },
-				],
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const selectValidator = capturedValidate[0].fn;
-		const result = selectValidator({ value: () => 'invalid' });
-		expect(result).toEqual({
-			kind: 'invalidOption',
-			message: 'Status must be one of the available options',
-		});
-	});
-
-	// -----------------------------------------------------------------------
-	// group - apply callback (L116-124)
-	// -----------------------------------------------------------------------
-	it('should call apply for group fields', () => {
-		const fields = [
-			mockField('group', {
-				name: 'address',
-				label: 'Address',
-				fields: [mockField('text', { name: 'street', label: 'Street' })],
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedApply).toHaveLength(1);
-		expect(capturedApply[0].path).toBe(schemaPathTree['address']);
-	});
-
-	it('group apply callback should recursively apply schema to sub-fields', () => {
-		const fields = [
-			mockField('group', {
-				name: 'address',
-				label: 'Address',
-				fields: [mockField('text', { name: 'street', label: 'Street', required: true })],
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		// Invoke the captured apply callback with a sub-tree
-		const applyCallback = capturedApply[0].fn;
-		const subTree = { street: { __brand: 'schemaPath_street' } };
-
-		// Clear captured arrays to isolate recursive call results
-		capturedRequired = [];
-		applyCallback(subTree);
-
-		// The recursive call should have added a required validator for 'street'
-		expect(capturedRequired).toHaveLength(1);
-		expect(capturedRequired[0].path).toBe(subTree['street']);
+	it('select validator should reject invalid option', async () => {
+		const formTree = createTestForm(
+			{ status: 'invalid-val' },
+			[
+				mockField('select', {
+					name: 'status',
+					label: 'Status',
+					options: [
+						{ label: 'Active', value: 'active' },
+						{ label: 'Inactive', value: 'inactive' },
+					],
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
 	// -----------------------------------------------------------------------
-	// array - minRows/maxRows/applyEach (L126-167)
+	// group - apply callback
 	// -----------------------------------------------------------------------
-	it('should add minRows validator for array field', () => {
-		const fields = [
-			mockField('array', {
-				name: 'items',
-				label: 'Items',
-				fields: [],
-				minRows: 1,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		// minRows uses validate()
-		expect(capturedValidate.length).toBeGreaterThanOrEqual(1);
+	it('should apply validators recursively for group fields', async () => {
+		const formTree = createTestForm(
+			{ address: { street: '' } },
+			[
+				mockField('group', {
+					name: 'address',
+					label: 'Address',
+					fields: [mockField('text', { name: 'street', label: 'Street', required: true })],
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
-	it('array minRows validator should return null when not an array', () => {
-		const fields = [
-			mockField('array', {
-				name: 'items',
-				label: 'Items',
-				fields: [],
-				minRows: 2,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const minRowsValidator = capturedValidate[0].fn;
-		expect(minRowsValidator({ value: () => 'not-an-array' })).toBeNull();
-	});
-
-	it('array minRows validator should return error when too few rows', () => {
-		const fields = [
-			mockField('array', {
-				name: 'items',
-				label: 'Items',
-				fields: [],
-				minRows: 2,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const minRowsValidator = capturedValidate[0].fn;
-		const result = minRowsValidator({ value: () => [1] });
-		expect(result).toEqual({
-			kind: 'minRows',
-			message: 'Items must have at least 2 rows',
-		});
-	});
-
-	it('array minRows validator should return null when enough rows', () => {
-		const fields = [
-			mockField('array', {
-				name: 'items',
-				label: 'Items',
-				fields: [],
-				minRows: 2,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const minRowsValidator = capturedValidate[0].fn;
-		expect(minRowsValidator({ value: () => [1, 2, 3] })).toBeNull();
-	});
-
-	it('array minRows=1 should use singular "row"', () => {
-		const fields = [
-			mockField('array', {
-				name: 'items',
-				label: 'Items',
-				fields: [],
-				minRows: 1,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const minRowsValidator = capturedValidate[0].fn;
-		const result = minRowsValidator({ value: () => [] });
-		expect(result).toEqual({
-			kind: 'minRows',
-			message: 'Items must have at least 1 row',
-		});
-	});
-
-	it('should add maxRows validator for array field', () => {
-		const fields = [
-			mockField('array', {
-				name: 'items',
-				label: 'Items',
-				fields: [],
-				maxRows: 5,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedValidate.length).toBeGreaterThanOrEqual(1);
-	});
-
-	it('array maxRows validator should return null when not an array', () => {
-		const fields = [
-			mockField('array', {
-				name: 'items',
-				label: 'Items',
-				fields: [],
-				maxRows: 3,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const maxRowsValidator = capturedValidate[0].fn;
-		expect(maxRowsValidator({ value: () => 'not-an-array' })).toBeNull();
-	});
-
-	it('array maxRows validator should return error when too many rows', () => {
-		const fields = [
-			mockField('array', {
-				name: 'items',
-				label: 'Items',
-				fields: [],
-				maxRows: 2,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const maxRowsValidator = capturedValidate[0].fn;
-		const result = maxRowsValidator({ value: () => [1, 2, 3] });
-		expect(result).toEqual({
-			kind: 'maxRows',
-			message: 'Items must have no more than 2 rows',
-		});
-	});
-
-	it('array maxRows validator should return null when within limit', () => {
-		const fields = [
-			mockField('array', {
-				name: 'items',
-				label: 'Items',
-				fields: [],
-				maxRows: 5,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const maxRowsValidator = capturedValidate[0].fn;
-		expect(maxRowsValidator({ value: () => [1, 2] })).toBeNull();
-	});
-
-	it('array maxRows=1 should use singular "row"', () => {
-		const fields = [
-			mockField('array', {
-				name: 'items',
-				label: 'Items',
-				fields: [],
-				maxRows: 1,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const maxRowsValidator = capturedValidate[0].fn;
-		const result = maxRowsValidator({ value: () => [1, 2] });
-		expect(result).toEqual({
-			kind: 'maxRows',
-			message: 'Items must have no more than 1 row',
-		});
-	});
-
-	it('should call applyEach for array field with sub-fields', () => {
-		const fields = [
-			mockField('array', {
-				name: 'items',
-				label: 'Items',
-				fields: [mockField('text', { name: 'title', label: 'Title' })],
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedApplyEach).toHaveLength(1);
-		expect(capturedApplyEach[0].path).toBe(schemaPathTree['items']);
-	});
-
-	it('array applyEach callback should recursively apply schema to item fields', () => {
-		const fields = [
-			mockField('array', {
-				name: 'items',
-				label: 'Items',
-				fields: [mockField('text', { name: 'title', label: 'Title', required: true })],
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const applyEachCallback = capturedApplyEach[0].fn;
-		const itemTree = { title: { __brand: 'schemaPath_item_title' } };
-
-		capturedRequired = [];
-		applyEachCallback(itemTree);
-
-		expect(capturedRequired).toHaveLength(1);
-		expect(capturedRequired[0].path).toBe(itemTree['title']);
-	});
-
-	it('should not call applyEach when array fields list is empty', () => {
-		const fields = [
-			mockField('array', {
-				name: 'items',
-				label: 'Items',
-				fields: [],
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedApplyEach).toHaveLength(0);
+	it('group should be valid when all sub-fields pass', async () => {
+		const formTree = createTestForm(
+			{ address: { street: '123 Main St' } },
+			[
+				mockField('group', {
+					name: 'address',
+					label: 'Address',
+					fields: [mockField('text', { name: 'street', label: 'Street', required: true })],
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
 	});
 
 	// -----------------------------------------------------------------------
-	// blocks - minRows/maxRows (L171-201)
+	// array - minRows/maxRows/applyEach
 	// -----------------------------------------------------------------------
-	it('should add minRows validator for blocks field', () => {
-		const fields = [
-			mockField('blocks', {
-				name: 'blocks',
-				label: 'Blocks',
-				blocks: [{ slug: 'text', fields: [] }],
-				minRows: 1,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedValidate.length).toBeGreaterThanOrEqual(1);
+	it('should add minRows validator for array field', async () => {
+		const formTree = createTestForm(
+			{ items: [] as Record<string, unknown>[] },
+			[
+				mockField('array', {
+					name: 'items',
+					label: 'Items',
+					fields: [],
+					minRows: 1,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
-	it('blocks minRows validator should return null when not an array', () => {
-		const fields = [
-			mockField('blocks', {
-				name: 'blocks',
-				label: 'Blocks',
-				blocks: [{ slug: 'text', fields: [] }],
-				minRows: 2,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const minRowsValidator = capturedValidate[0].fn;
-		expect(minRowsValidator({ value: () => null })).toBeNull();
+	it('array minRows validator should pass when not an array', async () => {
+		const formTree = createTestForm(
+			{ items: 'not-array' as unknown },
+			[
+				mockField('array', {
+					name: 'items',
+					label: 'Items',
+					fields: [],
+					minRows: 2,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
 	});
 
-	it('blocks minRows validator should return error when too few blocks', () => {
-		const fields = [
-			mockField('blocks', {
-				name: 'blocks',
-				label: 'Blocks',
-				blocks: [{ slug: 'text', fields: [] }],
-				minRows: 2,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const minRowsValidator = capturedValidate[0].fn;
-		const result = minRowsValidator({ value: () => [1] });
-		expect(result).toEqual({
-			kind: 'minRows',
-			message: 'Blocks must have at least 2 blocks',
-		});
+	it('array minRows validator should fail when too few rows', async () => {
+		const formTree = createTestForm(
+			{ items: [{ title: 'one' }] },
+			[
+				mockField('array', {
+					name: 'items',
+					label: 'Items',
+					fields: [mockField('text', { name: 'title' })],
+					minRows: 2,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
-	it('blocks minRows validator should return null when enough blocks', () => {
-		const fields = [
-			mockField('blocks', {
-				name: 'blocks',
-				label: 'Blocks',
-				blocks: [{ slug: 'text', fields: [] }],
-				minRows: 1,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const minRowsValidator = capturedValidate[0].fn;
-		expect(minRowsValidator({ value: () => [1, 2] })).toBeNull();
+	it('array minRows validator should pass when enough rows', async () => {
+		const formTree = createTestForm(
+			{ items: [{ title: 'a' }, { title: 'b' }, { title: 'c' }] },
+			[
+				mockField('array', {
+					name: 'items',
+					label: 'Items',
+					fields: [mockField('text', { name: 'title' })],
+					minRows: 2,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
 	});
 
-	it('blocks minRows=1 should use singular "block"', () => {
-		const fields = [
-			mockField('blocks', {
-				name: 'blocks',
-				label: 'Blocks',
-				blocks: [{ slug: 'text', fields: [] }],
-				minRows: 1,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const minRowsValidator = capturedValidate[0].fn;
-		const result = minRowsValidator({ value: () => [] });
-		expect(result).toEqual({
-			kind: 'minRows',
-			message: 'Blocks must have at least 1 block',
-		});
+	it('should add maxRows validator for array field', async () => {
+		const formTree = createTestForm(
+			{ items: [{ title: 'a' }, { title: 'b' }, { title: 'c' }] },
+			[
+				mockField('array', {
+					name: 'items',
+					label: 'Items',
+					fields: [mockField('text', { name: 'title' })],
+					maxRows: 2,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
-	it('should add maxRows validator for blocks field', () => {
-		const fields = [
-			mockField('blocks', {
-				name: 'blocks',
-				label: 'Blocks',
-				blocks: [{ slug: 'text', fields: [] }],
-				maxRows: 10,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedValidate.length).toBeGreaterThanOrEqual(1);
+	it('array maxRows validator should pass when not an array', async () => {
+		const formTree = createTestForm(
+			{ items: 'not-array' as unknown },
+			[
+				mockField('array', {
+					name: 'items',
+					label: 'Items',
+					fields: [],
+					maxRows: 3,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
 	});
 
-	it('blocks maxRows validator should return null when not an array', () => {
-		const fields = [
-			mockField('blocks', {
-				name: 'blocks',
-				label: 'Blocks',
-				blocks: [{ slug: 'text', fields: [] }],
-				maxRows: 3,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const maxRowsValidator = capturedValidate[0].fn;
-		expect(maxRowsValidator({ value: () => undefined })).toBeNull();
+	it('array maxRows validator should fail when too many rows', async () => {
+		const formTree = createTestForm(
+			{ items: [{ title: 'a' }, { title: 'b' }, { title: 'c' }] },
+			[
+				mockField('array', {
+					name: 'items',
+					label: 'Items',
+					fields: [mockField('text', { name: 'title' })],
+					maxRows: 2,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
-	it('blocks maxRows validator should return error when too many blocks', () => {
-		const fields = [
-			mockField('blocks', {
-				name: 'blocks',
-				label: 'Blocks',
-				blocks: [{ slug: 'text', fields: [] }],
-				maxRows: 2,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const maxRowsValidator = capturedValidate[0].fn;
-		const result = maxRowsValidator({ value: () => [1, 2, 3] });
-		expect(result).toEqual({
-			kind: 'maxRows',
-			message: 'Blocks must have no more than 2 blocks',
-		});
+	it('array maxRows validator should pass when within limit', async () => {
+		const formTree = createTestForm(
+			{ items: [{ title: 'a' }, { title: 'b' }] },
+			[
+				mockField('array', {
+					name: 'items',
+					label: 'Items',
+					fields: [mockField('text', { name: 'title' })],
+					maxRows: 5,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
 	});
 
-	it('blocks maxRows validator should return null when within limit', () => {
-		const fields = [
-			mockField('blocks', {
-				name: 'blocks',
-				label: 'Blocks',
-				blocks: [{ slug: 'text', fields: [] }],
-				maxRows: 5,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const maxRowsValidator = capturedValidate[0].fn;
-		expect(maxRowsValidator({ value: () => [1] })).toBeNull();
+	it('should apply validators via applyEach for array sub-fields', async () => {
+		const formTree = createTestForm(
+			{ items: [{ title: '' }] },
+			[
+				mockField('array', {
+					name: 'items',
+					label: 'Items',
+					fields: [mockField('text', { name: 'title', label: 'Title', required: true })],
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
-	it('blocks maxRows=1 should use singular "block"', () => {
-		const fields = [
-			mockField('blocks', {
-				name: 'blocks',
-				label: 'Blocks',
-				blocks: [{ slug: 'text', fields: [] }],
-				maxRows: 1,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const maxRowsValidator = capturedValidate[0].fn;
-		const result = maxRowsValidator({ value: () => [1, 2] });
-		expect(result).toEqual({
-			kind: 'maxRows',
-			message: 'Blocks must have no more than 1 block',
-		});
+	it('array applyEach should pass when sub-fields are valid', async () => {
+		const formTree = createTestForm(
+			{ items: [{ title: 'Hello' }] },
+			[
+				mockField('array', {
+					name: 'items',
+					label: 'Items',
+					fields: [mockField('text', { name: 'title', label: 'Title', required: true })],
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
 	});
 
-	// -----------------------------------------------------------------------
-	// default case — other field types (L203-207)
-	// -----------------------------------------------------------------------
-	it('should handle checkbox field type (default case, no extra validators)', () => {
-		const fields = [mockField('checkbox', { name: 'isPublished', label: 'Published' })];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		// No type-specific validators should be added
-		expect(capturedMinLength).toHaveLength(0);
-		expect(capturedMaxLength).toHaveLength(0);
-		expect(capturedMin).toHaveLength(0);
-		expect(capturedMax).toHaveLength(0);
-		expect(capturedEmail).toHaveLength(0);
-		expect(capturedApply).toHaveLength(0);
-		expect(capturedApplyEach).toHaveLength(0);
-		// No validate for the type itself (only if custom validate is present)
-		expect(capturedValidate).toHaveLength(0);
-	});
-
-	it('should handle date field type (default case)', () => {
-		const fields = [mockField('date', { name: 'data', label: 'Date' })];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedValidate).toHaveLength(0);
-	});
-
-	it('should handle upload field type (default case)', () => {
-		const fields = [mockField('upload', { name: 'cover', label: 'Cover', relationTo: 'media' })];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedValidate).toHaveLength(0);
-	});
-
-	it('should handle relationship field type (default case)', () => {
-		const fields = [
-			mockField('relationship', {
-				name: 'author',
-				label: 'Author',
-				collection: () => ({}),
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedValidate).toHaveLength(0);
-	});
-
-	it('should handle slug field type (default case)', () => {
-		const fields = [mockField('slug', { name: 'slug', label: 'Slug', from: 'title' })];
-		schemaPathTree['slug'] = { __brand: 'schemaPath_slug' };
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedValidate).toHaveLength(0);
-	});
-
-	it('should handle richText field type (default case)', () => {
-		const fields = [mockField('richText', { name: 'content', label: 'Content' })];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedValidate).toHaveLength(0);
-	});
-
-	it('should handle json field type (default case)', () => {
-		const fields = [mockField('json', { name: 'data', label: 'Data' })];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		expect(capturedValidate).toHaveLength(0);
+	it('should not crash when array fields list is empty', () => {
+		expect(() =>
+			createTestForm(
+				{ items: [{}] },
+				[mockField('array', { name: 'items', label: 'Items', fields: [] })],
+				injector,
+			),
+		).not.toThrow();
 	});
 
 	// -----------------------------------------------------------------------
-	// custom validate function (L210-230)
+	// blocks - minRows/maxRows
 	// -----------------------------------------------------------------------
-	it('should register custom validate function when field.validate exists', () => {
-		const customValidator = vi.fn().mockReturnValue(true);
-		const fields = [
-			mockField('text', {
-				name: 'title',
-				label: 'Title',
-				validate: customValidator,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		// One validate call for custom validator
-		expect(capturedValidate.length).toBeGreaterThanOrEqual(1);
+	it('should add minRows validator for blocks field', async () => {
+		const formTree = createTestForm(
+			{ blocks: [] as unknown[] },
+			[
+				mockField('blocks', {
+					name: 'blocks',
+					label: 'Blocks',
+					blocks: [{ slug: 'text', fields: [] }],
+					minRows: 1,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
-	it('custom validator should call field.validate with value and data', () => {
+	it('blocks minRows validator should pass when not an array', async () => {
+		const formTree = createTestForm(
+			{ blocks: null as unknown },
+			[
+				mockField('blocks', {
+					name: 'blocks',
+					label: 'Blocks',
+					blocks: [{ slug: 'text', fields: [] }],
+					minRows: 2,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
+
+	it('blocks minRows validator should fail when too few', async () => {
+		const formTree = createTestForm(
+			{ blocks: [{ blockType: 'text' }] },
+			[
+				mockField('blocks', {
+					name: 'blocks',
+					label: 'Blocks',
+					blocks: [{ slug: 'text', fields: [] }],
+					minRows: 2,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
+	});
+
+	it('blocks minRows validator should pass when enough', async () => {
+		const formTree = createTestForm(
+			{ blocks: [{ blockType: 'text' }, { blockType: 'text' }] },
+			[
+				mockField('blocks', {
+					name: 'blocks',
+					label: 'Blocks',
+					blocks: [{ slug: 'text', fields: [] }],
+					minRows: 1,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
+
+	it('should add maxRows validator for blocks field', async () => {
+		const formTree = createTestForm(
+			{ blocks: [{ t: 1 }, { t: 2 }, { t: 3 }] },
+			[
+				mockField('blocks', {
+					name: 'blocks',
+					label: 'Blocks',
+					blocks: [{ slug: 'text', fields: [] }],
+					maxRows: 2,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
+	});
+
+	it('blocks maxRows validator should pass when not an array', async () => {
+		const formTree = createTestForm(
+			{ blocks: undefined as unknown },
+			[
+				mockField('blocks', {
+					name: 'blocks',
+					label: 'Blocks',
+					blocks: [{ slug: 'text', fields: [] }],
+					maxRows: 3,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
+
+	it('blocks maxRows validator should fail when too many', async () => {
+		const formTree = createTestForm(
+			{ blocks: [{ t: 1 }, { t: 2 }, { t: 3 }] },
+			[
+				mockField('blocks', {
+					name: 'blocks',
+					label: 'Blocks',
+					blocks: [{ slug: 'text', fields: [] }],
+					maxRows: 2,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
+	});
+
+	it('blocks maxRows validator should pass when within limit', async () => {
+		const formTree = createTestForm(
+			{ blocks: [{ blockType: 'text' }] },
+			[
+				mockField('blocks', {
+					name: 'blocks',
+					label: 'Blocks',
+					blocks: [{ slug: 'text', fields: [] }],
+					maxRows: 5,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
+
+	// -----------------------------------------------------------------------
+	// default case — other field types
+	// -----------------------------------------------------------------------
+	it('should handle checkbox field type (no extra validators)', async () => {
+		const formTree = createTestForm(
+			{ isPublished: false },
+			[mockField('checkbox', { name: 'isPublished', label: 'Published' })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
+
+	it('should handle date field type', async () => {
+		const formTree = createTestForm(
+			{ dateVal: '2024-01-01' },
+			[mockField('date', { name: 'dateVal', label: 'Date' })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
+
+	it('should handle upload field type', async () => {
+		const formTree = createTestForm(
+			{ cover: '' },
+			[mockField('upload', { name: 'cover', label: 'Cover', relationTo: 'media' })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
+
+	it('should handle relationship field type', async () => {
+		const formTree = createTestForm(
+			{ author: '' },
+			[mockField('relationship', { name: 'author', label: 'Author', collection: () => ({}) })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
+
+	it('should handle slug field type', async () => {
+		const formTree = createTestForm(
+			{ slugVal: 'my-slug' },
+			[mockField('slug', { name: 'slugVal', label: 'Slug', from: 'title' })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
+
+	it('should handle richText field type', async () => {
+		const formTree = createTestForm(
+			{ content: '<p>Hello</p>' },
+			[mockField('richText', { name: 'content', label: 'Content' })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
+
+	it('should handle json field type', async () => {
+		const formTree = createTestForm(
+			{ jsonData: '{}' },
+			[mockField('json', { name: 'jsonData', label: 'Data' })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
+
+	// -----------------------------------------------------------------------
+	// custom validate function
+	// -----------------------------------------------------------------------
+	it('should register custom validate function', async () => {
+		const customValidator = vi.fn().mockReturnValue('Too short');
+		const formTree = createTestForm(
+			{ title: 'x' },
+			[mockField('text', { name: 'title', label: 'Title', validate: customValidator })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
+	});
+
+	it('custom validator should call field.validate with value and data', async () => {
 		const customValidator = vi.fn().mockReturnValue(true);
 		const getFormData = vi.fn().mockReturnValue({ title: 'Hello' });
-		const fields = [
-			mockField('text', {
-				name: 'title',
-				label: 'Title',
-				validate: customValidator,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree, getFormData);
+		const formTree = createTestForm(
+			{ title: 'test value' },
+			[mockField('text', { name: 'title', label: 'Title', validate: customValidator })],
+			injector,
+			getFormData,
+		);
 
-		// The last captured validate fn is the custom one
-		const customValidateFn = capturedValidate[capturedValidate.length - 1].fn;
-		const result = customValidateFn({ value: () => 'test value' });
+		await isFormValid(formTree);
 
 		expect(customValidator).toHaveBeenCalledWith('test value', {
 			data: { title: 'Hello' },
 			req: {},
 		});
-		// true return => null (no error)
-		expect(result).toBeNull();
 	});
 
-	it('custom validator should return error object when validate returns a string', () => {
-		const customValidator = vi.fn().mockReturnValue('Title is too short');
-		const fields = [
-			mockField('text', {
-				name: 'title',
-				label: 'Title',
-				validate: customValidator,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		const customValidateFn = capturedValidate[capturedValidate.length - 1].fn;
-		const result = customValidateFn({ value: () => 'x' });
-
-		expect(result).toEqual({
-			kind: 'custom',
-			message: 'Title is too short',
-		});
+	it('custom validator should fail when validate returns a string', async () => {
+		const formTree = createTestForm(
+			{ title: 'x' },
+			[
+				mockField('text', {
+					name: 'title',
+					label: 'Title',
+					validate: () => 'Title is too short',
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
-	it('custom validator should warn and return null for async validators (Promise)', () => {
-		const asyncValidator = vi.fn().mockReturnValue(Promise.resolve(true));
+	it('custom validator should pass when validate returns true', async () => {
+		const formTree = createTestForm(
+			{ title: 'valid' },
+			[mockField('text', { name: 'title', label: 'Title', validate: () => true })],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
+
+	it('custom validator should warn and pass for async validators (Promise)', async () => {
 		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
 			/* noop */
 		});
-		const fields = [
-			mockField('text', {
-				name: 'title',
-				label: 'Title',
-				validate: asyncValidator,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
+		const formTree = createTestForm(
+			{ title: 'val' },
+			[
+				mockField('text', {
+					name: 'title',
+					label: 'Title',
+					validate: () => Promise.resolve(true),
+				}),
+			],
+			injector,
+		);
 
-		const customValidateFn = capturedValidate[capturedValidate.length - 1].fn;
-		const result = customValidateFn({ value: () => 'val' });
-
+		expect(await isFormValid(formTree)).toBe(true);
 		expect(warnSpy).toHaveBeenCalledWith(
 			expect.stringContaining('Custom validator on field "title" returned a Promise'),
 		);
-		expect(result).toBeNull();
 		warnSpy.mockRestore();
 	});
 
-	it('custom validator should use empty object for data when getFormData is not provided', () => {
+	it('custom validator should use empty object for data when getFormData is not provided', async () => {
 		const customValidator = vi.fn().mockReturnValue(true);
-		const fields = [
-			mockField('text', {
-				name: 'title',
-				label: 'Title',
-				validate: customValidator,
-			}),
-		];
-		// No getFormData argument
-		applyCollectionSchema(fields, schemaPathTree);
+		const formTree = createTestForm(
+			{ title: 'val' },
+			[mockField('text', { name: 'title', label: 'Title', validate: customValidator })],
+			injector,
+		);
 
-		const customValidateFn = capturedValidate[capturedValidate.length - 1].fn;
-		customValidateFn({ value: () => 'val' });
+		await isFormValid(formTree);
 
 		expect(customValidator).toHaveBeenCalledWith('val', {
 			data: {},
@@ -894,78 +821,86 @@ describe('applyCollectionSchema - extended coverage', () => {
 	});
 
 	// -----------------------------------------------------------------------
-	// combined tests: array with both minRows, maxRows and sub-fields
+	// combined tests
 	// -----------------------------------------------------------------------
-	it('should register minRows, maxRows, and applyEach for a fully configured array', () => {
-		const fields = [
-			mockField('array', {
-				name: 'items',
-				label: 'Items',
-				fields: [mockField('text', { name: 'title', label: 'Title' })],
-				minRows: 1,
-				maxRows: 10,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
-
-		// 2 validate calls for minRows + maxRows
-		expect(capturedValidate).toHaveLength(2);
-		// 1 applyEach for sub-fields
-		expect(capturedApplyEach).toHaveLength(1);
+	it('should validate both minRows and sub-field required for array', async () => {
+		const formTree = createTestForm(
+			{ items: [] as Record<string, unknown>[] },
+			[
+				mockField('array', {
+					name: 'items',
+					label: 'Items',
+					fields: [mockField('text', { name: 'title', label: 'Title' })],
+					minRows: 1,
+					maxRows: 10,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(false);
 	});
 
-	// -----------------------------------------------------------------------
-	// blocks with both minRows and maxRows
-	// -----------------------------------------------------------------------
-	it('should register both minRows and maxRows validators for blocks', () => {
-		const fields = [
-			mockField('blocks', {
-				name: 'blocks',
-				label: 'Content Blocks',
-				blocks: [{ slug: 'text', fields: [] }],
-				minRows: 1,
-				maxRows: 20,
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree);
+	it('should validate array within bounds with valid sub-fields', async () => {
+		const formTree = createTestForm(
+			{ items: [{ title: 'Hello' }] },
+			[
+				mockField('array', {
+					name: 'items',
+					label: 'Items',
+					fields: [mockField('text', { name: 'title', label: 'Title' })],
+					minRows: 1,
+					maxRows: 10,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
+	});
 
-		// 2 validate calls: one for minRows, one for maxRows
-		expect(capturedValidate).toHaveLength(2);
+	it('should validate blocks within both min and max bounds', async () => {
+		const formTree = createTestForm(
+			{ blocks: [{ blockType: 'text' }, { blockType: 'text' }] },
+			[
+				mockField('blocks', {
+					name: 'blocks',
+					label: 'Content Blocks',
+					blocks: [{ slug: 'text', fields: [] }],
+					minRows: 1,
+					maxRows: 20,
+				}),
+			],
+			injector,
+		);
+		expect(await isFormValid(formTree)).toBe(true);
 	});
 
 	// -----------------------------------------------------------------------
 	// group with getFormData passthrough
 	// -----------------------------------------------------------------------
-	it('group apply callback should pass getFormData to recursive call', () => {
+	it('group apply callback should pass getFormData to recursive call', async () => {
 		const getFormData = vi.fn().mockReturnValue({ address: { street: '123 Main' } });
 		const customValidator = vi.fn().mockReturnValue(true);
-		const fields = [
-			mockField('group', {
-				name: 'address',
-				label: 'Address',
-				fields: [
-					mockField('text', {
-						name: 'street',
-						label: 'Street',
-						validate: customValidator,
-					}),
-				],
-			}),
-		];
-		applyCollectionSchema(fields, schemaPathTree, getFormData);
+		const formTree = createTestForm(
+			{ address: { street: 'test' } },
+			[
+				mockField('group', {
+					name: 'address',
+					label: 'Address',
+					fields: [
+						mockField('text', {
+							name: 'street',
+							label: 'Street',
+							validate: customValidator,
+						}),
+					],
+				}),
+			],
+			injector,
+			getFormData,
+		);
 
-		// Invoke the group apply callback
-		const applyCallback = capturedApply[0].fn;
-		const subTree = { street: { __brand: 'schemaPath_street' } };
+		await isFormValid(formTree);
 
-		capturedValidate = [];
-		applyCallback(subTree);
-
-		// Now invoke the custom validator inside the group
-		expect(capturedValidate).toHaveLength(1);
-		capturedValidate[0].fn({ value: () => 'test' });
-
-		// getFormData should be passed through to the recursive call
 		expect(getFormData).toHaveBeenCalled();
 		expect(customValidator).toHaveBeenCalledWith('test', {
 			data: { address: { street: '123 Main' } },

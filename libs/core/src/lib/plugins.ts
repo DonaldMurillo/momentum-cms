@@ -6,7 +6,7 @@
  * Runtime implementations (PluginRunner, etc.) live in @momentumcms/plugins/core.
  */
 
-import type { CollectionConfig } from './collections';
+import type { CollectionConfig, UserContext } from './collections';
 import type { MomentumConfig } from './config';
 
 /**
@@ -143,6 +143,8 @@ export interface MomentumAPI {
 	collection(slug: string): unknown;
 	/** Get the current config */
 	getConfig(): MomentumConfig;
+	/** Return a new API instance with merged context (immutable). */
+	setContext(ctx: { user?: UserContext; depth?: number; showHiddenFields?: boolean }): MomentumAPI;
 }
 
 /**

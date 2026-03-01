@@ -80,6 +80,9 @@ export class FieldRenderer {
 		if (f.type === 'json' && f.admin?.editor === 'email-builder') {
 			return 'json-email-builder';
 		}
+		if (f.type === 'json' && f.admin?.editor === 'form-builder') {
+			return 'json-form-builder';
+		}
 		return f.type;
 	});
 
