@@ -72,8 +72,10 @@ export function createImageProcessingHook(options: HookOptions): HookFunction {
 					size: variant.buffer.length,
 				};
 
+				const basename = variantFilename.split('/').pop() ?? '';
+				const lastDot = basename.lastIndexOf('.');
 				const stored = await adapter.upload(variantFile, {
-					filename: variantFilename.split('/').pop()?.split('.')[0],
+					filename: lastDot > 0 ? basename.slice(0, lastDot) : basename,
 				});
 
 				sizes[sizeConfig.name] = {

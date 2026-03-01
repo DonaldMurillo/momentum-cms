@@ -18,7 +18,9 @@
 			"options": {
 				"outputPath": "dist/libs/plugins/image",
 				"main": "libs/plugins/image/src/index.ts",
-				"tsConfig": "libs/plugins/image/tsconfig.lib.json"
+				"tsConfig": "libs/plugins/image/tsconfig.lib.json",
+				"generatePackageJson": false,
+				"assets": ["libs/plugins/image/package.json"]
 			}
 		},
 		"nx-release-publish": {

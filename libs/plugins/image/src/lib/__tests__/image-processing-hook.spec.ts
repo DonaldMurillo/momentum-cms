@@ -240,6 +240,33 @@ describe('createImageProcessingHook (beforeChange)', () => {
 		);
 	});
 
+	it('should preserve multi-dot filenames in variant storage', async () => {
+		const adapter = localStorageAdapter({ directory: tmpDir });
+		const hook = createImageProcessingHook({ processor, adapter, imageSizes });
+
+		const data: Record<string, unknown> = {
+			_file: {
+				buffer: TINY_PNG,
+				mimeType: 'image/png',
+				originalName: 'my.photo.file.png',
+				size: TINY_PNG.length,
+			},
+			path: 'my.photo.file.png',
+		};
+
+		const result = await hook(makeHookArgs(data));
+		const sizes = result?.['sizes'] as Record<string, Record<string, unknown>>;
+
+		// Variant paths should contain the full base name + size suffix
+		const thumbPath = sizes['thumbnail']['path'] as string;
+		const mediumPath = sizes['medium']['path'] as string;
+
+		expect(thumbPath).toContain('my.photo.file-thumbnail');
+		expect(mediumPath).toContain('my.photo.file-medium');
+		// Variants must have distinct paths (no overwrite)
+		expect(thumbPath).not.toBe(mediumPath);
+	});
+
 	it('should fall back to console.error when no logger is provided', async () => {
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 

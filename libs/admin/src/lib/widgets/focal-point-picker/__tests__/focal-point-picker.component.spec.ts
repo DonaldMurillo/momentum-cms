@@ -103,6 +103,96 @@ describe('FocalPointPickerComponent', () => {
 		});
 	});
 
+	describe('onClick', () => {
+		it('should emit normalized focal point from click coordinates', () => {
+			fixture.detectChanges();
+
+			const emitted: { x: number; y: number }[] = [];
+			component.focalPointChange.subscribe((fp) => emitted.push(fp));
+
+			// Mock the image element's bounding rect (200x100 at origin)
+			const imageEl = component['imageElRef']();
+			if (imageEl) {
+				vi.spyOn(imageEl.nativeElement, 'getBoundingClientRect').mockReturnValue({
+					left: 0,
+					top: 0,
+					width: 200,
+					height: 100,
+					right: 200,
+					bottom: 100,
+					x: 0,
+					y: 0,
+					toJSON: () => ({}),
+				});
+			}
+
+			// Click at (100, 50) → center of a 200x100 image → focal point (0.5, 0.5)
+			const event = new MouseEvent('click', { clientX: 100, clientY: 50 });
+			component.onClick(event);
+
+			expect(emitted).toHaveLength(1);
+			expect(emitted[0].x).toBeCloseTo(0.5);
+			expect(emitted[0].y).toBeCloseTo(0.5);
+		});
+
+		it('should emit correct focal point for off-center click', () => {
+			fixture.detectChanges();
+
+			const emitted: { x: number; y: number }[] = [];
+			component.focalPointChange.subscribe((fp) => emitted.push(fp));
+
+			const imageEl = component['imageElRef']();
+			if (imageEl) {
+				vi.spyOn(imageEl.nativeElement, 'getBoundingClientRect').mockReturnValue({
+					left: 10,
+					top: 20,
+					width: 200,
+					height: 100,
+					right: 210,
+					bottom: 120,
+					x: 10,
+					y: 20,
+					toJSON: () => ({}),
+				});
+			}
+
+			// Click at (60, 45) with rect offset (10, 20) → relative (50, 25) → (0.25, 0.25)
+			const event = new MouseEvent('click', { clientX: 60, clientY: 45 });
+			component.onClick(event);
+
+			expect(emitted).toHaveLength(1);
+			expect(emitted[0].x).toBeCloseTo(0.25);
+			expect(emitted[0].y).toBeCloseTo(0.25);
+		});
+
+		it('should not emit when image element has zero dimensions', () => {
+			fixture.detectChanges();
+
+			const emitted: { x: number; y: number }[] = [];
+			component.focalPointChange.subscribe((fp) => emitted.push(fp));
+
+			const imageEl = component['imageElRef']();
+			if (imageEl) {
+				vi.spyOn(imageEl.nativeElement, 'getBoundingClientRect').mockReturnValue({
+					left: 0,
+					top: 0,
+					width: 0,
+					height: 0,
+					right: 0,
+					bottom: 0,
+					x: 0,
+					y: 0,
+					toJSON: () => ({}),
+				});
+			}
+
+			const event = new MouseEvent('click', { clientX: 50, clientY: 50 });
+			component.onClick(event);
+
+			expect(emitted).toHaveLength(0);
+		});
+	});
+
 	describe('onResetCenter', () => {
 		it('should emit center focal point', () => {
 			const emitted: { x: number; y: number }[] = [];
