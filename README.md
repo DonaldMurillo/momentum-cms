@@ -216,27 +216,16 @@ This starts a local Verdaccio registry, publishes all packages, runs `create-mom
 
 These are planned features and improvements, in no particular priority order.
 
-#### UI & Components
-
 - **Headless UI component library** — Fully customizable, unstyled components built on Angular CDK + Angular Aria, usable anywhere (not just the admin)
 - **Swappable admin components** — Replace built-in admin components with your own custom implementations
 - **Customizable admin layouts** — Angular slots and dynamic rendering for extending admin pages without forking
 - **UX polish pass** — Improve interactions, transitions, and overall usability across the admin dashboard
-
-#### CMS Features
-
 - **Image processing without Sharp** — Lightweight image optimization and resizing that doesn't depend on native binaries
 - **Multi-step form wizard** — Multi-page forms with step navigation, progress tracking, and per-step validation
 - **Versioning & drafts** — Document versioning with draft/publish workflow and revision history
 - **Localization (i18n)** — Multi-language content management with locale-aware fields and admin UI
-
-#### Auth & Integrations
-
 - **Better Auth plugin adapters** — Pre-built adapters for remaining Better Auth plugins (OAuth providers, magic links, passkeys); admin and organization plugins are shipped
 - **Resend adapter** — Email delivery via Resend for transactional emails and auth flows
-
-#### Deployment & Infrastructure
-
 - **Docker deployment guide** — Fully tested Docker setup for deploying to a standard VPS with PostgreSQL, reverse proxy, and persistent storage
 - **Momentum website** — Build the official Momentum CMS website using Momentum itself
 
