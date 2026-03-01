@@ -18,10 +18,10 @@ export interface ImagePluginConfig {
 	formatPreference?: 'jpeg' | 'webp' | 'avif' | 'original';
 
 	/**
-	 * Opt-in: register a hook that detects focal point changes on update.
-	 * Full variant re-processing is planned for Phase 4 and is not yet implemented.
-	 * When enabled, a warning is logged on focal point change.
-	 * @default false
+	 * Maximum pixel count (width * height) allowed before rejecting an image.
+	 * Prevents decompression bomb attacks where a small compressed file
+	 * expands to consume excessive memory during processing.
+	 * @default 100_000_000 (100 megapixels)
 	 */
-	reprocessOnFocalPointChange?: boolean;
+	maxPixels?: number;
 }

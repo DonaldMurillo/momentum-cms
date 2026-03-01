@@ -93,18 +93,6 @@ The focal point picker appears automatically in the admin UI for any upload coll
 - **View page** — Read-only focal point indicator
 - **Media edit dialog** — Focal point picker with crop preview outlines showing how each configured size variant will crop
 
-### Re-processing on Focal Point Change
-
-> **Note:** Full automatic re-processing of size variants on focal point change is planned for a future release (Phase 4) and is not yet implemented. When opted-in, a warning is logged on focal point changes but existing variants are not regenerated.
-
-You can opt-in to focal point change detection (logging only for now):
-
-```typescript
-imagePlugin({
-	reprocessOnFocalPointChange: true, // default: false
-});
-```
-
 ## Generated Variants
 
 After upload, generated variants are stored in the document's `sizes` field:
@@ -144,8 +132,8 @@ interface ImagePluginConfig {
 	/** Global format preference: 'original' | 'webp' | 'avif' | 'jpeg'. Default: 'original' */
 	formatPreference?: 'jpeg' | 'webp' | 'avif' | 'original';
 
-	/** Opt-in focal point change detection (re-processing planned for Phase 4). Default: false */
-	reprocessOnFocalPointChange?: boolean;
+	/** Max pixel count (width * height) before rejecting. Prevents decompression bombs. Default: 100_000_000 */
+	maxPixels?: number;
 }
 ```
 

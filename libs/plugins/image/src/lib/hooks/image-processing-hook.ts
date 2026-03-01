@@ -9,12 +9,17 @@ import type {
 import { isProcessableImage } from '../format-detector';
 import { buildVariantFilename } from '../variant-filename';
 
+/** 100 megapixels — safe ceiling for most server environments */
+const DEFAULT_MAX_PIXELS = 100_000_000;
+
 interface HookOptions {
 	processor: ImageProcessor;
 	adapter: StorageAdapter;
 	imageSizes: ImageSizeConfig[];
 	formatPreference?: 'jpeg' | 'webp' | 'avif' | 'original';
 	logger?: PluginLogger;
+	/** Maximum pixel count (width * height) before rejecting the image. @default 100_000_000 */
+	maxPixels?: number;
 }
 
 /**
@@ -47,7 +52,16 @@ export function createImageProcessingHook(options: HookOptions): HookFunction {
 		// 1. Get dimensions
 		const dims = await processor.getDimensions(file.buffer, file.mimeType);
 
-		// 2. Process each size variant
+		// 2. Guard against decompression bombs
+		const maxPixels = options.maxPixels ?? DEFAULT_MAX_PIXELS;
+		const pixelCount = dims.width * dims.height;
+		if (pixelCount > maxPixels) {
+			throw new Error(
+				`Image dimensions ${dims.width}x${dims.height} (${pixelCount} pixels) exceed safe processing limit of ${maxPixels} pixels`,
+			);
+		}
+
+		// 3. Process each size variant
 		const sizes: Record<string, Record<string, unknown>> = {};
 
 		for (const sizeConfig of imageSizes) {

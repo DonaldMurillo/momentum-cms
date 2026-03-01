@@ -292,4 +292,104 @@ describe('createImageProcessingHook (beforeChange)', () => {
 		expect(consoleSpy).toHaveBeenCalledOnce();
 		consoleSpy.mockRestore();
 	});
+
+	describe('decompression bomb guard', () => {
+		it('should reject images exceeding maxPixels limit', async () => {
+			(processor.getDimensions as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+				width: 10000,
+				height: 10000,
+			});
+
+			const adapter = localStorageAdapter({ directory: tmpDir });
+			const hook = createImageProcessingHook({
+				processor,
+				adapter,
+				imageSizes,
+				maxPixels: 50_000_000,
+			});
+
+			const data: Record<string, unknown> = {
+				_file: {
+					buffer: TINY_PNG,
+					mimeType: 'image/png',
+					originalName: 'bomb.png',
+					size: TINY_PNG.length,
+				},
+				path: 'bomb.png',
+			};
+
+			await expect(hook(makeHookArgs(data))).rejects.toThrow(/exceed.*safe processing limit/i);
+			expect(processor.processVariant).not.toHaveBeenCalled();
+		});
+
+		it('should allow images at exactly the maxPixels limit', async () => {
+			(processor.getDimensions as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+				width: 1000,
+				height: 50,
+			});
+
+			const adapter = localStorageAdapter({ directory: tmpDir });
+			const hook = createImageProcessingHook({
+				processor,
+				adapter,
+				imageSizes,
+				maxPixels: 50_000,
+			});
+
+			const data: Record<string, unknown> = {
+				_file: {
+					buffer: TINY_PNG,
+					mimeType: 'image/png',
+					originalName: 'ok.png',
+					size: TINY_PNG.length,
+				},
+				path: 'ok.png',
+			};
+
+			const result = await hook(makeHookArgs(data));
+			expect(result?.['width']).toBe(1000);
+			expect(processor.processVariant).toHaveBeenCalled();
+		});
+
+		it('should use default maxPixels (100M) when not configured', async () => {
+			(processor.getDimensions as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+				width: 20000,
+				height: 20000,
+			});
+
+			const adapter = localStorageAdapter({ directory: tmpDir });
+			const hook = createImageProcessingHook({ processor, adapter, imageSizes });
+
+			const data: Record<string, unknown> = {
+				_file: {
+					buffer: TINY_PNG,
+					mimeType: 'image/png',
+					originalName: 'huge.png',
+					size: TINY_PNG.length,
+				},
+				path: 'huge.png',
+			};
+
+			await expect(hook(makeHookArgs(data))).rejects.toThrow(/exceed.*safe processing limit/i);
+		});
+
+		it('should process normally-sized images without maxPixels configured', async () => {
+			const adapter = localStorageAdapter({ directory: tmpDir });
+			const hook = createImageProcessingHook({ processor, adapter, imageSizes });
+
+			const data: Record<string, unknown> = {
+				_file: {
+					buffer: TINY_PNG,
+					mimeType: 'image/png',
+					originalName: 'ok.png',
+					size: TINY_PNG.length,
+				},
+				path: 'ok.png',
+			};
+
+			const result = await hook(makeHookArgs(data));
+			expect(result?.['width']).toBe(10);
+			expect(processor.processVariant).toHaveBeenCalled();
+		});
+	});
 });
