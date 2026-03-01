@@ -6,6 +6,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PLATFORM_ID } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { MediaLibraryPage } from '../media-library.page';
 import { UploadService, type UploadProgress } from '../../../services/upload.service';
@@ -69,6 +70,12 @@ describe('MediaLibraryPage - extended', () => {
 				{ provide: FeedbackService, useValue: mockFeedback },
 				{ provide: ToastService, useValue: mockToast },
 				{ provide: DialogService, useValue: mockDialog },
+				{
+					provide: ActivatedRoute,
+					useValue: {
+						parent: { snapshot: { data: { collections: [] } } },
+					},
+				},
 			],
 		})
 			.overrideComponent(MediaLibraryPage, {
@@ -125,7 +132,7 @@ describe('MediaLibraryPage - extended', () => {
 			expect(mockDialog.open).toHaveBeenCalledWith(
 				expect.anything(),
 				expect.objectContaining({
-					data: { media },
+					data: expect.objectContaining({ media }),
 					width: '36rem',
 				}),
 			);

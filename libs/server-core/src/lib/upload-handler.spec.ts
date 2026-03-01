@@ -37,9 +37,9 @@ function createMockAdapter(overrides: Partial<StorageAdapter> = {}): StorageAdap
 		delete: vi.fn<(path: string) => Promise<boolean>>().mockResolvedValue(true),
 		getUrl: vi.fn<(path: string) => string>().mockReturnValue('/api/media/file/abc123.jpg'),
 		exists: vi.fn<(path: string) => Promise<boolean>>().mockResolvedValue(true),
-		read: vi.fn<(path: string) => Promise<Buffer | null>>().mockResolvedValue(
-			Buffer.from([0xff, 0xd8, 0xff]),
-		),
+		read: vi
+			.fn<(path: string) => Promise<Buffer | null>>()
+			.mockResolvedValue(Buffer.from([0xff, 0xd8, 0xff])),
 		...overrides,
 	};
 }
@@ -268,6 +268,16 @@ describe('handleUpload', () => {
 		});
 	});
 
+	it('should include _file in media data for hook processing', async () => {
+		const file = createTestFile();
+		const request: UploadRequest = { file, user: mockUser };
+		const response = await handleUpload(uploadConfig, request);
+
+		expect(response.status).toBe(201);
+		const createArg = mockCreate.mock.calls[0][0] as Record<string, unknown>;
+		expect(createArg['_file']).toBe(file);
+	});
+
 	it('should return 201 with doc on successful upload', async () => {
 		const request: UploadRequest = { file: createTestFile(), user: mockUser };
 		const response = await handleUpload(uploadConfig, request);
@@ -398,6 +408,13 @@ describe('handleFileGet', () => {
 		const result = await handleFileGet(mockAdapter, 'document.png');
 
 		expect(result?.mimeType).toBe('image/png');
+	});
+
+	it('should detect AVIF MIME type from file extension', async () => {
+		const mockAdapter = createMockAdapter();
+		const result = await handleFileGet(mockAdapter, 'photo.avif');
+
+		expect(result?.mimeType).toBe('image/avif');
 	});
 
 	it('should return undefined mimeType for unknown extension', async () => {
@@ -568,6 +585,16 @@ describe('handleCollectionUpload', () => {
 		// User-provided fields preserved
 		expect(createArg.alt).toBe('sunset photo');
 		expect(createArg.customField).toBe('extra data');
+	});
+
+	it('should include _file in doc data for hook processing', async () => {
+		const file = createTestFile();
+		const request = createCollectionUploadRequest({ file });
+		const response = await handleCollectionUpload(globalConfig, request);
+
+		expect(response.status).toBe(201);
+		const createArg = mockCreate.mock.calls[0][0] as Record<string, unknown>;
+		expect(createArg['_file']).toBe(file);
 	});
 
 	it('should auto-populated metadata override user-provided duplicates', async () => {

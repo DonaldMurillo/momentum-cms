@@ -4,6 +4,7 @@
  */
 
 import type { Field } from '../fields/field.types';
+import type { ImageSizeConfig } from '../storage';
 
 // ============================================
 // Access Control
@@ -208,6 +209,12 @@ export interface UploadCollectionConfig {
 
 	/** Field name for the public URL. @default 'url' */
 	urlField?: string;
+
+	/** Image sizes to generate on upload (images only) */
+	imageSizes?: ImageSizeConfig[];
+
+	/** Default output format for generated sizes. @default 'original' */
+	formatPreference?: 'jpeg' | 'webp' | 'avif' | 'original';
 }
 
 // ============================================

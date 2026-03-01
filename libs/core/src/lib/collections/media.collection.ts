@@ -68,6 +68,13 @@ export const MediaCollection = defineCollection({
 				hidden: true,
 			},
 		}),
+		json('sizes', {
+			label: 'Image Sizes',
+			description: 'Generated image size variants',
+			admin: {
+				hidden: true,
+			},
+		}),
 	],
 	access: {
 		// Media is readable by anyone by default
@@ -93,6 +100,17 @@ export interface MediaDocument {
 	width?: number;
 	height?: number;
 	focalPoint?: { x: number; y: number };
+	sizes?: Record<
+		string,
+		{
+			url: string;
+			path: string;
+			width: number;
+			height: number;
+			mimeType: string;
+			filesize: number;
+		}
+	>;
 	createdAt: string;
 	updatedAt: string;
 }

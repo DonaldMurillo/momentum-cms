@@ -9,8 +9,13 @@ import {
 	signal,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import type { CollectionConfig, Field, DocumentStatus } from '@momentumcms/core';
-import { humanizeFieldName, getSoftDeleteField, flattenDataFields } from '@momentumcms/core';
+import type { CollectionConfig, Field, DocumentStatus, ImageSizeConfig } from '@momentumcms/core';
+import {
+	humanizeFieldName,
+	getSoftDeleteField,
+	flattenDataFields,
+	isUploadCollection,
+} from '@momentumcms/core';
 import {
 	Card,
 	CardContent,
@@ -37,6 +42,12 @@ import type { Entity, EntityAction } from '../widget.types';
 import type { EntityViewFieldConfig } from './entity-view.types';
 import { VersionHistoryWidget } from '../version-history/version-history.component';
 import { PublishControlsWidget } from '../publish-controls/publish-controls.component';
+import {
+	MediaPreviewComponent,
+	type MediaPreviewData,
+} from '../media-preview/media-preview.component';
+import { FocalPointPickerComponent } from '../focal-point-picker/focal-point-picker.component';
+import { ImageVariantsDisplay } from '../image-variants/image-variants-display.component';
 
 /**
  * Entity View Widget
@@ -68,6 +79,9 @@ import { PublishControlsWidget } from '../publish-controls/publish-controls.comp
 		BreadcrumbSeparator,
 		VersionHistoryWidget,
 		PublishControlsWidget,
+		MediaPreviewComponent,
+		FocalPointPickerComponent,
+		ImageVariantsDisplay,
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
@@ -171,6 +185,28 @@ import { PublishControlsWidget } from '../publish-controls/publish-controls.comp
 							{{ loadError() }}
 						</mcms-alert>
 					} @else if (entity()) {
+						@if (isUploadCol() && entityMediaUrl()) {
+							<div class="mb-6">
+								@if (isEntityImage()) {
+									<div class="pointer-events-none">
+										<mcms-focal-point-picker
+											[imageUrl]="entityMediaUrl()"
+											[focalPoint]="entityFocalPoint()"
+											[naturalWidth]="entityDimensions().width"
+											[naturalHeight]="entityDimensions().height"
+											[imageSizes]="viewImageSizes()"
+										/>
+									</div>
+								} @else {
+									<mcms-media-preview [media]="entityMediaPreview()" size="xl" />
+								}
+							</div>
+						}
+						@if (isUploadCol() && entitySizes()) {
+							<div class="mb-6">
+								<mcms-image-variants-display [sizes]="entitySizes()" />
+							</div>
+						}
 						<div class="grid gap-6 md:grid-cols-2">
 							@for (field of visibleFields(); track field.name) {
 								<mcms-field-display
@@ -338,6 +374,83 @@ export class EntityViewWidget<T extends Entity = Entity> {
 	/** Whether user can delete */
 	readonly canDelete = computed(() => {
 		return this.collectionAccess.canDelete(this.collection().slug);
+	});
+
+	/** Whether this collection is an upload collection */
+	readonly isUploadCol = computed(() => isUploadCollection(this.collection()));
+
+	/** Whether the entity is an image */
+	readonly isEntityImage = computed(() => {
+		const e = this.entity();
+		if (!e) return false;
+		const mimeType = e['mimeType'];
+		return typeof mimeType === 'string' && mimeType.startsWith('image/');
+	});
+
+	/** Media URL for preview */
+	readonly entityMediaUrl = computed((): string => {
+		const e = this.entity();
+		if (!e) return '';
+		if (typeof e['url'] === 'string' && e['url']) return e['url'];
+		if (typeof e['path'] === 'string' && e['path']) return `/api/media/file/${e['path']}`;
+		return '';
+	});
+
+	/** Focal point from entity data */
+	readonly entityFocalPoint = computed((): { x: number; y: number } => {
+		const e = this.entity();
+		if (!e) return { x: 0.5, y: 0.5 };
+		const fp = e['focalPoint'];
+		if (fp != null && typeof fp === 'object' && !Array.isArray(fp)) {
+			const obj = fp as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions
+			const x = obj['x'];
+			const y = obj['y'];
+			if (typeof x === 'number' && typeof y === 'number') return { x, y };
+		}
+		return { x: 0.5, y: 0.5 };
+	});
+
+	/** Image dimensions from entity data */
+	readonly entityDimensions = computed(() => {
+		const e = this.entity();
+		return {
+			width: typeof e?.['width'] === 'number' ? e['width'] : 0,
+			height: typeof e?.['height'] === 'number' ? e['height'] : 0,
+		};
+	});
+
+	/** Image sizes from collection upload config */
+	readonly viewImageSizes = computed((): ImageSizeConfig[] => {
+		return this.collection().upload?.imageSizes ?? [];
+	});
+
+	/** Generated image sizes from entity data */
+	readonly entitySizes = computed(() => {
+		const e = this.entity();
+		if (!e) return null;
+		const sizes = e['sizes'];
+		if (
+			sizes != null &&
+			typeof sizes === 'object' &&
+			!Array.isArray(sizes) &&
+			Object.keys(sizes).length > 0
+		) {
+			return sizes as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions
+		}
+		return null;
+	});
+
+	/** Media preview data for non-image files */
+	readonly entityMediaPreview = computed((): MediaPreviewData | null => {
+		const e = this.entity();
+		if (!e) return null;
+		return {
+			url: typeof e['url'] === 'string' ? e['url'] : undefined,
+			path: typeof e['path'] === 'string' ? e['path'] : undefined,
+			mimeType: typeof e['mimeType'] === 'string' ? e['mimeType'] : undefined,
+			filename: typeof e['filename'] === 'string' ? e['filename'] : undefined,
+			alt: typeof e['alt'] === 'string' ? e['alt'] : undefined,
+		};
 	});
 
 	/** Whether collection has soft delete enabled */

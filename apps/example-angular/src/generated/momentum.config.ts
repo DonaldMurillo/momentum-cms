@@ -1349,6 +1349,15 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 						hidden: true,
 					},
 				},
+				{
+					name: 'sizes',
+					type: 'json',
+					label: 'Image Sizes',
+					description: 'Generated image size variants',
+					admin: {
+						hidden: true,
+					},
+				},
 			],
 			admin: {
 				useAsTitle: 'filename',
@@ -1357,6 +1366,18 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			timestamps: true,
 			upload: {
 				mimeTypes: ['image/*', 'application/pdf', 'video/*', 'audio/*'],
+				imageSizes: [
+					{
+						name: 'thumbnail',
+						width: 150,
+						height: 150,
+						fit: 'cover',
+					},
+					{
+						name: 'medium',
+						width: 800,
+					},
+				],
 			},
 		},
 		{

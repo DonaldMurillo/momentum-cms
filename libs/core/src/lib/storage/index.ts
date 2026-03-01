@@ -1,7 +1,66 @@
 /**
  * Storage module for Momentum CMS
- * Defines interfaces for file storage adapters
+ * Defines interfaces for file storage adapters and image processing
  */
+
+// ============================================
+// Image Processing
+// ============================================
+
+/**
+ * Describes one output size for image processing.
+ */
+export interface ImageSizeConfig {
+	/** Named key for this size (e.g. 'thumbnail', 'medium') */
+	name: string;
+	/** Target width in pixels. Undefined = proportional from height. */
+	width?: number;
+	/** Target height in pixels. Undefined = proportional from width. */
+	height?: number;
+	/**
+	 * Resizing strategy.
+	 * - 'contain': shrink to fit, no cropping
+	 * - 'cover': resize + crop to fill exact dimensions (uses focalPoint)
+	 * - 'fill': stretch to exact dimensions
+	 * - 'width': resize to width, height proportional
+	 * - 'height': resize to height, width proportional
+	 * @default 'cover'
+	 */
+	fit?: 'contain' | 'cover' | 'fill' | 'width' | 'height';
+	/** Output format. When undefined, uses source format or global formatPreference. */
+	format?: 'jpeg' | 'webp' | 'avif' | 'png';
+	/** JPEG/WebP/AVIF quality (1-100). @default 80 */
+	quality?: number;
+}
+
+/**
+ * Image dimensions in pixels.
+ */
+export interface ImageDimensions {
+	width: number;
+	height: number;
+}
+
+/**
+ * Pluggable image processor interface.
+ * Implement this to provide custom image processing backends.
+ */
+export interface ImageProcessor {
+	/** Detect image dimensions without full decode when possible. */
+	getDimensions(buffer: Uint8Array, mimeType: string): Promise<ImageDimensions>;
+
+	/** Process one size variant. Returns the processed buffer and its dimensions. */
+	processVariant(
+		buffer: Uint8Array,
+		mimeType: string,
+		size: ImageSizeConfig,
+		focalPoint?: { x: number; y: number },
+	): Promise<{ buffer: Uint8Array; width: number; height: number; mimeType: string }>;
+}
+
+// ============================================
+// File Storage
+// ============================================
 
 /**
  * Represents an uploaded file before storage.

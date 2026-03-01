@@ -7,6 +7,7 @@ import {
 	DestroyRef,
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { type Subscription } from 'rxjs';
 import {
 	Button,
@@ -25,8 +26,10 @@ import {
 	heroEye,
 	heroPencilSquare,
 } from '@ng-icons/heroicons/outline';
+import type { ImageSizeConfig } from '@momentumcms/core';
 import { injectMomentumAPI } from '../../services/momentum-api.service';
 import { UploadService, type UploadProgress } from '../../services/upload.service';
+import { getCollectionsFromRouteData } from '../../utils/route-data';
 import { FeedbackService } from '../../widgets/feedback/feedback.service';
 import { MediaPreviewComponent } from '../../widgets/media-preview/media-preview.component';
 import {
@@ -45,6 +48,7 @@ interface MediaItem {
 	alt?: string;
 	width?: number;
 	height?: number;
+	focalPoint?: { x: number; y: number };
 }
 
 /**
@@ -310,6 +314,7 @@ function getInputElement(event: Event): HTMLInputElement | null {
 })
 export class MediaLibraryPage {
 	private readonly document = inject(DOCUMENT);
+	private readonly route = inject(ActivatedRoute);
 	private readonly api = injectMomentumAPI();
 	private readonly uploadService = inject(UploadService);
 	private readonly feedback = inject(FeedbackService);
@@ -317,6 +322,13 @@ export class MediaLibraryPage {
 	private readonly dialog = inject(DialogService);
 	private readonly destroyRef = inject(DestroyRef);
 	private readonly uploadSubscriptions: Subscription[] = [];
+
+	/** Image sizes config from the media collection (for crop previews in edit dialog) */
+	readonly mediaImageSizes: ImageSizeConfig[] = (() => {
+		const collections = getCollectionsFromRouteData(this.route.parent?.snapshot.data);
+		const mediaColl = collections.find((c) => c.slug === 'media');
+		return mediaColl?.upload?.imageSizes ?? [];
+	})();
 
 	/** Internal state */
 	readonly isLoading = signal(true);
@@ -483,13 +495,14 @@ export class MediaLibraryPage {
 	 * Open the edit dialog for a media item.
 	 */
 	editMedia(media: MediaItem): void {
-		const dialogRef = this.dialog.open<MediaEditDialog, { media: MediaItem }, MediaEditResult>(
+		const dialogRef = this.dialog.open<
 			MediaEditDialog,
-			{
-				data: { media },
-				width: '36rem',
-			},
-		);
+			{ media: MediaItem; imageSizes?: ImageSizeConfig[] },
+			MediaEditResult
+		>(MediaEditDialog, {
+			data: { media, imageSizes: this.mediaImageSizes },
+			width: '36rem',
+		});
 
 		dialogRef.afterClosed.subscribe((result) => {
 			if (result?.updated) {
