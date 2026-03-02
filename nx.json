@@ -155,6 +155,7 @@
 			"db-drizzle",
 			"server-core",
 			"server-express",
+			"server-nestjs",
 			"server-analog",
 			"plugins-core",
 			"plugins-analytics",

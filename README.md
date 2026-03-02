@@ -34,7 +34,7 @@ npm run dev
 
 The CLI will prompt you for:
 
-- **Framework** - Angular (Express SSR) or Analog (Nitro)
+- **Framework** - Angular (Express SSR), Angular (NestJS SSR), or Analog (Nitro)
 - **Database** - PostgreSQL or SQLite
 
 Then open `http://localhost:4200/admin` to access the admin dashboard.
@@ -86,6 +86,7 @@ export const Posts = defineCollection({
 | `@momentumcms/auth`                 | `libs/auth`                 | Better Auth integration                              |
 | `@momentumcms/server-core`          | `libs/server-core`          | Framework-agnostic server handlers                   |
 | `@momentumcms/server-express`       | `libs/server-express`       | Express adapter for Angular SSR                      |
+| `@momentumcms/server-nestjs`        | `libs/server-nestjs`        | NestJS adapter for Angular SSR                       |
 | `@momentumcms/server-analog`        | `libs/server-analog`        | Nitro/h3 adapter for Analog.js                       |
 | `@momentumcms/admin`                | `libs/admin`                | Angular admin dashboard UI                           |
 | `@momentumcms/ui`                   | `libs/ui`                   | Base UI component library                            |
@@ -114,8 +115,8 @@ export const Posts = defineCollection({
 │              Admin Dashboard            │
 │          (@momentumcms/admin)          │
 ├─────────────────────────────────────────┤
-│          Server Adapters                │
-│   server-express  │  server-analog      │
+│            Server Adapters              │
+│ server-express │ server-nestjs │ analog │
 ├───────────────────┴─────────────────────┤
 │           server-core                   │
 │      (REST API, file handling)          │
@@ -143,6 +144,12 @@ For Angular + Express:
 
 ```bash
 npm install @momentumcms/server-express
+```
+
+For Angular + NestJS:
+
+```bash
+npm install @momentumcms/server-nestjs @nestjs/common @nestjs/core rxjs
 ```
 
 For Analog + Nitro:
@@ -207,6 +214,7 @@ This starts a local Verdaccio registry, publishes all packages, runs `create-mom
 
 ### Recently Shipped
 
+- **NestJS Adapter** — Full-featured NestJS server adapter with complete API parity, DI container, and Angular SSR integration
 - **Form Builder** — Schema-driven form builder plugin with conditional fields, server-side validation, submission storage, rate limiting, and webhook forwarding
 - **Email Builder** — Visual email template editor with live preview, Handlebars templating, and pluggable transport
 - **Queue & Cron** — Background job processing with configurable concurrency, retry policies, and scheduled task execution
