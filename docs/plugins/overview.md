@@ -164,6 +164,7 @@ throw new PluginFatalError('my-plugin', 'Required service unavailable');
 | Plugin                            | Description                                              |
 | --------------------------------- | -------------------------------------------------------- |
 | [Analytics](analytics.md)         | Tracking, content performance, block analytics           |
+| [Image](image.md)                 | Image resizing, variant generation, focal point cropping |
 | [OpenTelemetry](opentelemetry.md) | Distributed tracing                                      |
 | [SEO](seo.md)                     | Sitemap, robots.txt, meta tags, content analysis scoring |
 
@@ -171,5 +172,6 @@ throw new PluginFatalError('my-plugin', 'Required service unavailable');
 
 - [Writing a Plugin](writing-a-plugin.md) — Step-by-step guide
 - [Analytics Plugin](analytics.md) — Built-in analytics
+- [Image Plugin](image.md) — Image processing and variants
 - [OpenTelemetry Plugin](opentelemetry.md) — Tracing integration
 - [SEO Plugin](seo.md) — Search engine optimization

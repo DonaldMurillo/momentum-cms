@@ -177,6 +177,7 @@ export async function handleUpload(
 			path: storedFile.path,
 			url: storedFile.url,
 			alt: alt ?? '',
+			_file: file,
 		};
 
 		// Create media document in the database
@@ -311,6 +312,7 @@ export async function handleCollectionUpload(
 			filesize: file.size,
 			path: storedFile.path,
 			url: storedFile.url,
+			_file: file,
 		};
 
 		// 7. Create document in the target collection
@@ -381,6 +383,7 @@ function getMimeTypeFromPath(path: string): string | undefined {
 		png: 'image/png',
 		gif: 'image/gif',
 		webp: 'image/webp',
+		avif: 'image/avif',
 		svg: 'image/svg+xml',
 		pdf: 'application/pdf',
 		json: 'application/json',

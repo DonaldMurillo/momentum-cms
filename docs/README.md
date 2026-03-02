@@ -63,6 +63,7 @@
 
 - [Overview](plugins/overview.md) — Plugin interface, event bus, PluginRunner
 - [Analytics](plugins/analytics.md) — Tracking rules, content performance, block analytics
+- [Image Processing](plugins/image.md) — Image resizing, variant generation, focal point cropping
 - [OpenTelemetry](plugins/opentelemetry.md) — Distributed tracing
 - [Writing a Plugin](plugins/writing-a-plugin.md) — Build your own plugin
 

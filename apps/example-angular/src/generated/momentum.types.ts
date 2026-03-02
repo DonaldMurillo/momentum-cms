@@ -257,6 +257,7 @@ export interface Media {
 	width?: number;
 	height?: number;
 	focalPoint?: Record<string, unknown>;
+	sizes?: Record<string, unknown>;
 	createdAt: string;
 	updatedAt: string;
 }

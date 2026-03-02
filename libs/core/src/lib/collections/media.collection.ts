@@ -5,6 +5,45 @@
 
 import { defineCollection } from './define-collection';
 import { text, number, json } from '../fields';
+import type { ValidateFunction } from '../fields/field.types';
+
+/**
+ * Validates a focalPoint value: null/undefined is allowed (optional field).
+ * When present, must be a plain object with exactly `x` and `y` properties,
+ * both finite numbers in the [0, 1] range.
+ */
+export const validateFocalPoint: ValidateFunction = (value) => {
+	if (value === null || value === undefined) return true;
+
+	if (typeof value !== 'object' || Array.isArray(value)) {
+		return 'Focal point must be an object with x and y coordinates';
+	}
+
+	// After the typeof/Array checks, value is a non-null object
+	const fp = Object.fromEntries(Object.entries(value));
+
+	if (!('x' in fp) || !('y' in fp)) {
+		return 'Focal point must have both x and y properties';
+	}
+
+	const { x, y } = fp;
+
+	if (typeof x !== 'number' || !Number.isFinite(x)) {
+		return 'Focal point x must be a finite number';
+	}
+	if (typeof y !== 'number' || !Number.isFinite(y)) {
+		return 'Focal point y must be a finite number';
+	}
+
+	if (x < 0 || x > 1) {
+		return `Focal point x must be between 0 and 1 (received ${x})`;
+	}
+	if (y < 0 || y > 1) {
+		return `Focal point y must be between 0 and 1 (received ${y})`;
+	}
+
+	return true;
+};
 
 /**
  * Built-in Media collection for storing file upload metadata.
@@ -64,6 +103,14 @@ export const MediaCollection = defineCollection({
 		json('focalPoint', {
 			label: 'Focal Point',
 			description: 'Focal point coordinates for image cropping',
+			validate: validateFocalPoint,
+			admin: {
+				hidden: true,
+			},
+		}),
+		json('sizes', {
+			label: 'Image Sizes',
+			description: 'Generated image size variants',
 			admin: {
 				hidden: true,
 			},
@@ -93,6 +140,17 @@ export interface MediaDocument {
 	width?: number;
 	height?: number;
 	focalPoint?: { x: number; y: number };
+	sizes?: Record<
+		string,
+		{
+			url: string;
+			path: string;
+			width: number;
+			height: number;
+			mimeType: string;
+			filesize: number;
+		}
+	>;
 	createdAt: string;
 	updatedAt: string;
 }

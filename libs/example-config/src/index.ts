@@ -7,7 +7,7 @@ export {
 	Pages,
 	Settings,
 	Events,
-	MediaCollection,
+	MediaWithImageSizes,
 	HookTestItems,
 	FieldTestItems,
 	Tags,
