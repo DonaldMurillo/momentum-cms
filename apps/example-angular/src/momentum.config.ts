@@ -16,6 +16,7 @@ import { postgresQueueAdapter } from '@momentumcms/queue';
 import { queuePlugin } from '@momentumcms/plugins/queue';
 import { cronPlugin } from '@momentumcms/plugins/cron';
 import { formBuilderPlugin } from '@momentumcms/plugins-form-builder';
+import { imagePlugin } from '@momentumcms/plugins/image';
 import { join } from 'node:path';
 import { collections } from '@momentumcms/example-config/collections';
 import { globals } from '@momentumcms/example-config/globals';
@@ -106,6 +107,13 @@ export const forms = formBuilderPlugin({
 	rateLimitPerMinute: 10,
 });
 
+/**
+ * Image processing plugin — generates size variants and detects dimensions.
+ */
+export const images = imagePlugin({
+	formatPreference: 'original',
+});
+
 export const seo = seoPlugin({
 	collections: ['categories', 'articles', 'pages'],
 	siteUrl: `http://localhost:${process.env['PORT'] || 4000}`,
@@ -150,7 +158,7 @@ const config = defineMomentumConfig({
 		level: 'debug',
 		format: 'pretty',
 	},
-	plugins: [events, analytics, seo, redirects, email, authPlugin, queue, cron, forms],
+	plugins: [events, analytics, seo, redirects, email, authPlugin, queue, cron, forms, images],
 	seeding: {
 		...exampleSeedingConfig,
 		defaults: (helpers) => [

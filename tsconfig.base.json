@@ -58,6 +58,8 @@
 			"@momentumcms/plugins-analytics/page-tracker": [
 				"libs/plugins/analytics/src/lib/page-view-tracker.ts"
 			],
+			"@momentumcms/plugins/image": ["libs/plugins/image/src/index.ts"],
+			"@momentumcms/plugins-image": ["libs/plugins/image/src/index.ts"],
 			"@momentumcms/plugins-redirects": ["libs/plugins/redirects/src/index.ts"],
 			"@momentumcms/plugins/redirects": ["libs/plugins/redirects/src/index.ts"],
 			"@momentumcms/email": ["libs/email/src/index.ts"],

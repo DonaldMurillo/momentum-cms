@@ -15,8 +15,10 @@ import {
 	Spinner,
 	Alert,
 } from '@momentumcms/ui';
+import type { ImageSizeConfig } from '@momentumcms/core';
 import { injectMomentumAPI } from '../../services/momentum-api.service';
 import { MediaPreviewComponent } from '../media-preview/media-preview.component';
+import { FocalPointPickerComponent } from '../focal-point-picker/focal-point-picker.component';
 
 /** Media item shape passed to the dialog. */
 export interface MediaEditItem {
@@ -29,11 +31,13 @@ export interface MediaEditItem {
 	alt?: string;
 	width?: number;
 	height?: number;
+	focalPoint?: { x: number; y: number };
 }
 
 /** Data passed to the MediaEditDialog. */
 export interface MediaEditDialogData {
 	media: MediaEditItem;
+	imageSizes?: ImageSizeConfig[];
 }
 
 /** Result returned when the dialog closes. */
@@ -92,6 +96,7 @@ function formatFileSize(bytes?: number): string {
 		Spinner,
 		Alert,
 		MediaPreviewComponent,
+		FocalPointPickerComponent,
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { style: 'display: block; width: 100%' },
@@ -136,6 +141,21 @@ function formatFileSize(bytes?: number): string {
 					</div>
 				</div>
 
+				@if (isImage()) {
+					<div class="mt-4">
+						<p class="mb-2 text-sm font-medium">Focal Point</p>
+						<mcms-focal-point-picker
+							[imageUrl]="imageUrl()"
+							[focalPoint]="focalPointValue()"
+							[naturalWidth]="media.width ?? 0"
+							[naturalHeight]="media.height ?? 0"
+							[alt]="media.alt ?? media.filename"
+							[imageSizes]="imageSizes"
+							(focalPointChange)="onFocalPointChange($event)"
+						/>
+					</div>
+				}
+
 				@if (saveError()) {
 					<mcms-alert variant="destructive" class="mt-4">
 						{{ saveError() }}
@@ -161,15 +181,34 @@ export class MediaEditDialog {
 	private readonly api = injectMomentumAPI();
 
 	readonly media = this.data.media;
+	readonly imageSizes = this.data.imageSizes ?? [];
 	readonly filename = signal(this.data.media.filename);
 	readonly altText = signal(this.data.media.alt ?? '');
+	readonly focalPointValue = signal(this.data.media.focalPoint ?? { x: 0.5, y: 0.5 });
 	readonly isSaving = signal(false);
 	readonly saveError = signal<string | null>(null);
 	readonly formattedSize = formatFileSize(this.data.media.filesize);
 
-	readonly hasChanges = computed(() => {
-		return this.filename() !== this.media.filename || this.altText() !== (this.media.alt ?? '');
+	readonly isImage = computed(() => this.media.mimeType.startsWith('image/'));
+
+	readonly imageUrl = computed(() => {
+		return this.media.url ?? `/api/media/file/${this.media.path}`;
 	});
+
+	readonly hasChanges = computed(() => {
+		const fpChanged =
+			this.focalPointValue().x !== (this.media.focalPoint?.x ?? 0.5) ||
+			this.focalPointValue().y !== (this.media.focalPoint?.y ?? 0.5);
+		return (
+			this.filename() !== this.media.filename ||
+			this.altText() !== (this.media.alt ?? '') ||
+			fpChanged
+		);
+	});
+
+	onFocalPointChange(fp: { x: number; y: number }): void {
+		this.focalPointValue.set(fp);
+	}
 
 	/**
 	 * Save media metadata changes via API.
@@ -179,10 +218,14 @@ export class MediaEditDialog {
 		this.saveError.set(null);
 
 		try {
-			const result = await this.api.collection('media').update(this.media.id, {
+			const updateData: Record<string, unknown> = {
 				filename: this.filename(),
 				alt: this.altText(),
-			});
+			};
+			if (this.isImage()) {
+				updateData['focalPoint'] = this.focalPointValue();
+			}
+			const result = await this.api.collection('media').update(this.media.id, updateData);
 
 			if (isMediaEditItem(result)) {
 				this.dialogRef.close({ updated: true, media: result });

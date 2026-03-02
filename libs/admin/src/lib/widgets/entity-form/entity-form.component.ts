@@ -14,7 +14,7 @@ import {
 import { Router } from '@angular/router';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { form, submit } from '@angular/forms/signals';
-import type { CollectionConfig, Field } from '@momentumcms/core';
+import type { CollectionConfig, Field, ImageSizeConfig } from '@momentumcms/core';
 import { flattenDataFields, humanizeFieldName, isUploadCollection } from '@momentumcms/core';
 import {
 	Card,
@@ -38,6 +38,8 @@ import { applyCollectionSchema } from './form-schema-builder';
 import { FieldRenderer } from './field-renderers/field-renderer.component';
 import { VersionHistoryWidget } from '../version-history/version-history.component';
 import { CollectionUploadZoneComponent } from './collection-upload-zone.component';
+import { FocalPointPickerComponent } from '../focal-point-picker/focal-point-picker.component';
+import { ImageVariantsDisplay } from '../image-variants/image-variants-display.component';
 
 /**
  * Entity Form Widget
@@ -70,6 +72,8 @@ import { CollectionUploadZoneComponent } from './collection-upload-zone.componen
 		BreadcrumbSeparator,
 		VersionHistoryWidget,
 		CollectionUploadZoneComponent,
+		FocalPointPickerComponent,
+		ImageVariantsDisplay,
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
@@ -135,7 +139,7 @@ import { CollectionUploadZoneComponent } from './collection-upload-zone.componen
 							<mcms-collection-upload-zone
 								[uploadConfig]="collection().upload"
 								[pendingFile]="pendingFile()"
-								[existingMedia]="mode() === 'edit' && !pendingFile() ? formModel() : null"
+								[existingMedia]="mode() !== 'create' && !pendingFile() ? formModel() : null"
 								[disabled]="mode() === 'view'"
 								[isUploading]="isUploadingFile()"
 								[uploadProgress]="uploadFileProgress()"
@@ -143,6 +147,27 @@ import { CollectionUploadZoneComponent } from './collection-upload-zone.componen
 								(fileSelected)="onFileSelected($event)"
 								(fileRemoved)="onFileRemoved()"
 							/>
+						}
+
+						@if (isUploadCol() && isImageFile() && focalPointImageUrl()) {
+							<div class="mb-6" [class.pointer-events-none]="mode() === 'view'">
+								<p class="mb-2 text-sm font-medium">Focal Point</p>
+								<mcms-focal-point-picker
+									[imageUrl]="focalPointImageUrl()"
+									[focalPoint]="currentFocalPoint()"
+									[naturalWidth]="imageNaturalDimensions().width"
+									[naturalHeight]="imageNaturalDimensions().height"
+									[alt]="focalPointAlt()"
+									[imageSizes]="uploadImageSizes()"
+									(focalPointChange)="onFocalPointChange($event)"
+								/>
+							</div>
+						}
+
+						@if (isUploadCol() && formModelSizes()) {
+							<div class="mb-6">
+								<mcms-image-variants-display [sizes]="formModelSizes()" />
+							</div>
 						}
 
 						<div class="space-y-6">
@@ -280,8 +305,92 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	readonly uploadFileProgress = signal(0);
 	readonly uploadFileError = signal<string | null>(null);
 
+	/** Preview URL for the pending image file (focal point picker) */
+	readonly pendingFileUrl = signal<string | null>(null);
+
+	/** Detected dimensions of the pending image */
+	readonly pendingImageDimensions = signal<{ width: number; height: number }>({
+		width: 0,
+		height: 0,
+	});
+
 	/** Whether the collection is an upload collection */
 	readonly isUploadCol = computed(() => isUploadCollection(this.collection()));
+
+	/** Whether the current file (pending or existing) is an image */
+	readonly isImageFile = computed(() => {
+		const file = this.pendingFile();
+		if (file) return file.type.startsWith('image/');
+		if (this.isUploadCol() && this.mode() !== 'create') {
+			const mimeType = this.formModel()['mimeType'];
+			return typeof mimeType === 'string' && mimeType.startsWith('image/');
+		}
+		return false;
+	});
+
+	/** Image sizes from collection upload config */
+	readonly uploadImageSizes = computed((): ImageSizeConfig[] => {
+		return this.collection().upload?.imageSizes ?? [];
+	});
+
+	/** Image URL for the focal point picker */
+	readonly focalPointImageUrl = computed((): string => {
+		const fileUrl = this.pendingFileUrl();
+		if (fileUrl) return fileUrl;
+		const model = this.formModel();
+		if (typeof model['url'] === 'string' && model['url']) return model['url'];
+		if (typeof model['path'] === 'string' && model['path'])
+			return `/api/media/file/${model['path']}`;
+		return '';
+	});
+
+	/** Current focal point value */
+	readonly currentFocalPoint = computed((): { x: number; y: number } => {
+		const fp = this.formModel()['focalPoint'];
+		if (fp != null && typeof fp === 'object' && !Array.isArray(fp)) {
+			const obj = fp as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions
+			const x = obj['x'];
+			const y = obj['y'];
+			if (typeof x === 'number' && typeof y === 'number') {
+				return { x, y };
+			}
+		}
+		return { x: 0.5, y: 0.5 };
+	});
+
+	/** Natural image dimensions (pending file detection or existing media) */
+	readonly imageNaturalDimensions = computed(() => {
+		if (this.pendingFile()) return this.pendingImageDimensions();
+		const model = this.formModel();
+		return {
+			width: typeof model['width'] === 'number' ? model['width'] : 0,
+			height: typeof model['height'] === 'number' ? model['height'] : 0,
+		};
+	});
+
+	/** Alt text for the focal point picker */
+	readonly focalPointAlt = computed(() => {
+		const model = this.formModel();
+		const alt = model['alt'];
+		if (typeof alt === 'string' && alt) return alt;
+		const fn = model['filename'];
+		if (typeof fn === 'string') return fn;
+		return '';
+	});
+
+	/** Generated image sizes from the form model */
+	readonly formModelSizes = computed(() => {
+		const sizes = this.formModel()['sizes'];
+		if (
+			sizes != null &&
+			typeof sizes === 'object' &&
+			!Array.isArray(sizes) &&
+			Object.keys(sizes).length > 0
+		) {
+			return sizes as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions
+		}
+		return null;
+	});
 
 	/** Whether the form has been set up */
 	private formCreated = false;
@@ -409,6 +518,31 @@ export class EntityFormWidget<T extends Entity = Entity> {
 				}
 			}
 		});
+
+		// Manage preview URL for focal point picker and detect image dimensions
+		effect((onCleanup) => {
+			const file = this.pendingFile();
+			if (file && file.type.startsWith('image/')) {
+				const url = URL.createObjectURL(file);
+				this.pendingFileUrl.set(url);
+				let cancelled = false;
+				onCleanup(() => {
+					cancelled = true;
+					URL.revokeObjectURL(url);
+				});
+
+				const img = new Image();
+				img.onload = () => {
+					if (!cancelled) {
+						this.pendingImageDimensions.set({ width: img.naturalWidth, height: img.naturalHeight });
+					}
+				};
+				img.src = url;
+			} else {
+				this.pendingFileUrl.set(null);
+				this.pendingImageDimensions.set({ width: 0, height: 0 });
+			}
+		});
 	}
 
 	/**
@@ -516,6 +650,15 @@ export class EntityFormWidget<T extends Entity = Entity> {
 		data['filename'] = file.name;
 		data['mimeType'] = file.type;
 		data['filesize'] = file.size;
+		this.formModel.set(data);
+	}
+
+	/**
+	 * Handle focal point change from the picker.
+	 */
+	onFocalPointChange(fp: { x: number; y: number }): void {
+		const data = { ...this.formModel() };
+		data['focalPoint'] = fp;
 		this.formModel.set(data);
 	}
 

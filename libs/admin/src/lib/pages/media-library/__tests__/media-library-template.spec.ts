@@ -22,6 +22,7 @@
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PLATFORM_ID } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { MediaLibraryPage } from '../media-library.page';
 import { MOMENTUM_API } from '../../../services/momentum-api.service';
@@ -120,6 +121,12 @@ describe('MediaLibraryPage - template expression coverage', () => {
 				{ provide: FeedbackService, useValue: mockFeedback },
 				{ provide: ToastService, useValue: mockToast },
 				{ provide: DialogService, useValue: mockDialog },
+				{
+					provide: ActivatedRoute,
+					useValue: {
+						parent: { snapshot: { data: { collections: [] } } },
+					},
+				},
 			],
 		})
 			.overrideComponent(MediaLibraryPage, {

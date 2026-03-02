@@ -218,6 +218,20 @@ function deepEqual(a: unknown, b: unknown): boolean {
  * Converts { field: { equals: value } } to { field: value }.
  * Direct values like { field: value } are passed through unchanged.
  */
+/**
+ * Strip transient keys (prefixed with _) from data before DB persistence.
+ * Hooks use _-prefixed keys for inter-hook communication (e.g., _file for upload buffers).
+ */
+function stripTransientKeys(data: Record<string, unknown>): Record<string, unknown> {
+	const result: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(data)) {
+		if (!key.startsWith('_')) {
+			result[key] = value;
+		}
+	}
+	return result;
+}
+
 function flattenWhereClause(where: WhereClause | undefined): Record<string, unknown> {
 	if (!where) return {};
 	const result: Record<string, unknown> = {};
@@ -462,6 +476,10 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Run collection-level beforeChange hooks
 		processedData = await this.runHooks('beforeChange', processedData, 'create');
 
+		// Strip transient properties (prefixed with _) before DB insert —
+		// hooks use them for inter-hook communication (e.g., _file for upload buffers)
+		processedData = stripTransientKeys(processedData);
+
 		// Execute create
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>, safe cast to T
 		const doc = (await this.adapter.create(this.slug, processedData)) as T;
@@ -553,6 +571,9 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 
 		// Run collection-level beforeChange hooks
 		processedData = await this.runHooks('beforeChange', processedData, 'update', originalDoc);
+
+		// Strip transient properties (prefixed with _) before DB update
+		processedData = stripTransientKeys(processedData);
 
 		// Execute update
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>, safe cast to T

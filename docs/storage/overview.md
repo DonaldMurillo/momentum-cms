@@ -115,6 +115,8 @@ interface MediaDocument {
 
 Default access: read is public, create/update/delete require authentication.
 
+When the [Image Processing Plugin](../plugins/image.md) is enabled with `upload.imageSizes`, the media document also includes a `sizes` field containing generated variant metadata.
+
 ## Available Adapters
 
 | Adapter           | Use Case                                  |
