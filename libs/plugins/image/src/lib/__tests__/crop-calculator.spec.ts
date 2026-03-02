@@ -88,4 +88,45 @@ describe('calculateCoverCrop', () => {
 		expect(Number.isInteger(crop.width)).toBe(true);
 		expect(Number.isInteger(crop.height)).toBe(true);
 	});
+
+	describe('focal point validation', () => {
+		const source = { width: 1000, height: 500 };
+		const target = { width: 200, height: 200 };
+
+		it('should clamp negative focal point values to 0 — equivalent to {0, 0}', () => {
+			const cropNegative = calculateCoverCrop(source, target, { x: -5, y: -10 });
+			const cropZero = calculateCoverCrop(source, target, { x: 0, y: 0 });
+			expect(cropNegative).toEqual(cropZero);
+		});
+
+		it('should clamp focal point values greater than 1 to 1 — equivalent to {1, 1}', () => {
+			const cropOver = calculateCoverCrop(source, target, { x: 5, y: 10 });
+			const cropOne = calculateCoverCrop(source, target, { x: 1, y: 1 });
+			expect(cropOver).toEqual(cropOne);
+		});
+
+		it('should fall back Infinity to center — non-finite values default to 0.5', () => {
+			const cropInf = calculateCoverCrop(source, target, { x: Infinity, y: Infinity });
+			const cropCenter = calculateCoverCrop(source, target, { x: 0.5, y: 0.5 });
+			expect(cropInf).toEqual(cropCenter);
+		});
+
+		it('should fall back NaN to center — equivalent to {0.5, 0.5}', () => {
+			const cropNaN = calculateCoverCrop(source, target, { x: NaN, y: NaN });
+			const cropCenter = calculateCoverCrop(source, target, { x: 0.5, y: 0.5 });
+			expect(cropNaN).toEqual(cropCenter);
+		});
+
+		it('should fall back -Infinity to center — non-finite values default to 0.5', () => {
+			const cropNegInf = calculateCoverCrop(source, target, { x: -Infinity, y: -Infinity });
+			const cropCenter = calculateCoverCrop(source, target, { x: 0.5, y: 0.5 });
+			expect(cropNegInf).toEqual(cropCenter);
+		});
+
+		it('should clamp extreme finite float values to 1 — equivalent to {1, 1}', () => {
+			const cropExtreme = calculateCoverCrop(source, target, { x: 1e308, y: 1e308 });
+			const cropOne = calculateCoverCrop(source, target, { x: 1, y: 1 });
+			expect(cropExtreme).toEqual(cropOne);
+		});
+	});
 });

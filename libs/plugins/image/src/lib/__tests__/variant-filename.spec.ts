@@ -10,9 +10,9 @@ describe('buildVariantFilename', () => {
 		expect(buildVariantFilename('photo.jpg', 'thumb', 'webp')).toBe('photo-thumb.webp');
 	});
 
-	it('should handle path with directories', () => {
+	it('should strip directory components and use only basename', () => {
 		expect(buildVariantFilename('uploads/2026/photo.png', 'medium', 'webp')).toBe(
-			'uploads/2026/photo-medium.webp',
+			'photo-medium.webp',
 		);
 	});
 
@@ -30,5 +30,43 @@ describe('buildVariantFilename', () => {
 		expect(buildVariantFilename('a1b2c3d4-e5f6.jpg', 'thumbnail', 'png')).toBe(
 			'a1b2c3d4-e5f6-thumbnail.png',
 		);
+	});
+
+	describe('path traversal sanitization', () => {
+		it('should strip directory traversal sequences from originalPath', () => {
+			const result = buildVariantFilename('../../../../etc/passwd.jpg', 'thumbnail', 'webp');
+			expect(result).not.toContain('..');
+			expect(result).toBe('passwd-thumbnail.webp');
+		});
+
+		it('should strip leading directory components from originalPath', () => {
+			const result = buildVariantFilename('uploads/2026/photo.png', 'medium', 'webp');
+			expect(result).toBe('photo-medium.webp');
+		});
+
+		it('should handle backslash traversal on Windows-style paths', () => {
+			const result = buildVariantFilename('..\\..\\etc\\passwd.jpg', 'thumbnail', 'webp');
+			expect(result).not.toContain('..');
+			expect(result).toBe('passwd-thumbnail.webp');
+		});
+
+		it('should strip directory separators from sizeName', () => {
+			const result = buildVariantFilename('photo.jpg', '../../../evil', 'webp');
+			expect(result).not.toContain('..');
+			expect(result).toBe('photo-evil.webp');
+		});
+
+		it('should handle encoded path traversal attempts', () => {
+			const result = buildVariantFilename('..%2F..%2Fetc%2Fpasswd.jpg', 'thumbnail', 'webp');
+			expect(result).not.toContain('..');
+			expect(result).not.toContain('%2F');
+			expect(result).toBe('passwd-thumbnail.webp');
+		});
+
+		it('should sanitize directory traversal in format parameter', () => {
+			const result = buildVariantFilename('photo.jpg', 'thumb', '../../../evil');
+			expect(result).not.toContain('..');
+			expect(result).toBe('photo-thumb.evil');
+		});
 	});
 });

@@ -20,7 +20,12 @@ export function calculateCoverCrop(
 	target: { width: number; height: number },
 	focalPoint?: { x: number; y: number },
 ): CropRect {
-	const fp = focalPoint ?? { x: 0.5, y: 0.5 };
+	const raw = focalPoint ?? { x: 0.5, y: 0.5 };
+	// Clamp focal point to [0, 1] — guards against NaN, Infinity, and out-of-range values
+	const fp = {
+		x: Math.max(0, Math.min(1, Number.isFinite(raw.x) ? raw.x : 0.5)),
+		y: Math.max(0, Math.min(1, Number.isFinite(raw.y) ? raw.y : 0.5)),
+	};
 
 	// Scale factor to cover the target in both dimensions
 	const scale = Math.max(target.width / source.width, target.height / source.height);

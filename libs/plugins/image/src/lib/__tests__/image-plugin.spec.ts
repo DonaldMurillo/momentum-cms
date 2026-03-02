@@ -153,4 +153,29 @@ describe('imagePlugin', () => {
 			expect(collections[0].hooks?.beforeChange ?? []).toHaveLength(0);
 		});
 	});
+
+	describe('onInit idempotency', () => {
+		it('should be idempotent — calling onInit twice should not duplicate hooks', () => {
+			const collections = [makeUploadCollection()];
+			const context = createMockContext(collections);
+			const plugin = imagePlugin({ processor });
+
+			plugin.onInit?.(context);
+			plugin.onInit?.(context);
+
+			expect(collections[0].hooks?.beforeChange).toHaveLength(1);
+		});
+
+		it('should not duplicate hooks across multiple collections when called twice', () => {
+			const collections = [makeUploadCollection('media'), makeUploadCollection('avatars')];
+			const context = createMockContext(collections);
+			const plugin = imagePlugin({ processor });
+
+			plugin.onInit?.(context);
+			plugin.onInit?.(context);
+
+			expect(collections[0].hooks?.beforeChange).toHaveLength(1);
+			expect(collections[1].hooks?.beforeChange).toHaveLength(1);
+		});
+	});
 });

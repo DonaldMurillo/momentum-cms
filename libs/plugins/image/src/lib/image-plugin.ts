@@ -21,6 +21,8 @@ import { createImageProcessingHook } from './hooks/image-processing-hook';
  */
 export function imagePlugin(config: ImagePluginConfig = {}): MomentumPlugin {
 	const processor = config.processor ?? new NapiImageProcessor();
+	/** Track which collections have been hooked for idempotency. */
+	const hookedCollections = new WeakSet<object>();
 
 	return {
 		name: '@momentumcms/plugins-image',
@@ -35,6 +37,9 @@ export function imagePlugin(config: ImagePluginConfig = {}): MomentumPlugin {
 			for (const collection of collections) {
 				const upload = collection.upload;
 				if (!upload?.imageSizes?.length) continue;
+
+				// Idempotency guard — skip if already hooked
+				if (hookedCollections.has(collection)) continue;
 
 				collection.hooks = collection.hooks ?? {};
 
@@ -51,6 +56,8 @@ export function imagePlugin(config: ImagePluginConfig = {}): MomentumPlugin {
 					...(collection.hooks.beforeChange ?? []),
 					beforeChangeHook,
 				];
+
+				hookedCollections.add(collection);
 
 				logger.info(
 					`imagePlugin: hooked collection "${collection.slug}" with ${upload.imageSizes.length} sizes`,
