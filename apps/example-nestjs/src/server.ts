@@ -14,9 +14,9 @@ import express from 'express';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createMomentumNestServer } from '@momentumcms/server-nestjs';
-import { SessionMiddleware } from '@momentumcms/server-nestjs';
+import { provideMomentumAPI } from '@momentumcms/admin';
 import { mountTestEndpoints } from '@momentumcms/example-config';
-import momentumConfig, { authPlugin, analytics, analyticsAdapter, events } from './momentum.config';
+import momentumConfig, { analytics, analyticsAdapter, events } from './momentum.config';
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
@@ -27,34 +27,16 @@ const angularApp = new AngularNodeAppEngine({
 
 /**
  * Create the Momentum CMS NestJS server.
- * Handles: DB initialization, API singleton, webhook hooks,
- * health endpoint, CRUD controllers, exception filter, guards.
+ * Handles: plugin lifecycle, DB initialization, API singleton, auth/setup middleware,
+ * health endpoint, all CMS API routes, session resolution, and publish scheduler.
  */
 const server = await createMomentumNestServer({
 	config: momentumConfig,
+	publishScheduler: { intervalMs: 2000 },
+	providerFactory: (api, ctx) =>
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- server-nestjs uses unknown to avoid admin dependency
+		provideMomentumAPI(api as Parameters<typeof provideMomentumAPI>[0], ctx),
 });
-
-/**
- * Wire the session resolver from the auth plugin into the NestJS middleware.
- */
-const sessionMiddleware = server.app.get(SessionMiddleware);
-if (authPlugin?.getAuth) {
-	const auth = authPlugin.getAuth();
-	sessionMiddleware.setSessionResolver(async (req: express.Request) => {
-		// Convert Express IncomingHttpHeaders to Record<string, string> for Better Auth
-		const headers: Record<string, string> = {};
-		for (const [key, value] of Object.entries(req.headers)) {
-			if (typeof value === 'string') headers[key] = value;
-			else if (Array.isArray(value)) headers[key] = value.join(', ');
-		}
-		const session = await auth.api.getSession({ headers });
-		if (!session?.user) return undefined;
-		const user = session.user;
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Better Auth user type includes role via plugin
-		const role = (user as Record<string, unknown>)['role'] as string;
-		return { id: user.id, email: user.email, role };
-	});
-}
 
 /**
  * Get the underlying Express instance for static files and Angular SSR.
@@ -100,10 +82,15 @@ expressApp.get('/storybook/{*path}', (req, res) => {
 
 /**
  * Handle all other requests by rendering the Angular application.
+ * Session resolver is already mounted by createMomentumNestServer,
+ * so req.user is available for access-controlled SSR rendering.
  */
-expressApp.use((req, res, next) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Express request augmentation for req.user
+expressApp.use((req: any, res, next) => {
+	const user = req.user ?? undefined;
+
 	angularApp
-		.handle(req, { providers: [] })
+		.handle(req, { providers: server.getSsrProviders(user) })
 		.then((response) => (response ? writeResponseToNodeResponse(response, res) : next()))
 		.catch(next);
 });

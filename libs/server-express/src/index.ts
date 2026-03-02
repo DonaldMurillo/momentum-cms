@@ -26,7 +26,7 @@ export {
 	type HealthMiddlewareOptions,
 	type HealthResponse,
 } from './lib/init-helpers';
-export { getPluginProviders } from './lib/plugin-middleware-registry';
+export { getPluginMiddleware, getPluginProviders } from './lib/plugin-middleware-registry';
 export {
 	createMomentumServer,
 	type CreateMomentumServerOptions,

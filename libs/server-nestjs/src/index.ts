@@ -12,7 +12,10 @@ export {
 
 // Service & DI
 export { MomentumApiService } from './lib/momentum-api.service';
-export { MOMENTUM_CONFIG, API_KEY_STORE } from './lib/momentum-config.token';
+export { MOMENTUM_CONFIG } from './lib/momentum-config.token';
+
+// Re-exports from server-express (for convenience)
+export type { MomentumInitResult, SeedingStatus } from '@momentumcms/server-express';
 
 // Controllers
 export { HealthController } from './lib/controllers/health.controller';
