@@ -22,6 +22,21 @@ export default defineConfig({
 				replacement: resolve(__dirname, '../../libs/example-config/src/index.ts'),
 			},
 			{
+				find: '@momentumcms/plugins-form-builder/collections',
+				replacement: resolve(
+					__dirname,
+					'../../libs/plugins/form-builder/src/lib/collections/index.ts',
+				),
+			},
+			{
+				find: '@momentumcms/plugins-form-builder',
+				replacement: resolve(__dirname, '../../libs/plugins/form-builder/src/index.ts'),
+			},
+			{
+				find: '@momentumcms/form-builder/validation',
+				replacement: resolve(__dirname, '../../libs/form-builder/src/lib/validation/index.ts'),
+			},
+			{
 				find: '@momentumcms/plugins/core',
 				replacement: resolve(__dirname, '../../libs/plugins/core/src/index.ts'),
 			},
