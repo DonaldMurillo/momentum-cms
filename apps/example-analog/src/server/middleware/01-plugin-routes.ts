@@ -26,6 +26,7 @@ function patchResponse(res: ServerResponse): void {
 		status?: (code: number) => ServerResponse;
 		send?: (body: unknown) => void;
 		set?: (field: string, value: string) => void;
+		redirect?: (statusOrUrl: number | string, url?: string) => void;
 	};
 
 	if (typeof r.json === 'function') return; // already patched
@@ -56,6 +57,17 @@ function patchResponse(res: ServerResponse): void {
 	r.set = function (field: string, value: string): void {
 		res.setHeader(field, value);
 	};
+
+	r.redirect = function (statusOrUrl: number | string, url?: string): void {
+		if (typeof statusOrUrl === 'string') {
+			res.statusCode = 302;
+			res.setHeader('Location', statusOrUrl);
+		} else {
+			res.statusCode = statusOrUrl;
+			res.setHeader('Location', url ?? '/');
+		}
+		res.end();
+	};
 }
 
 /**
@@ -78,7 +90,19 @@ function wrapExpressHandler(handler: unknown): EventHandler {
 			originalUrl?: string;
 			user?: { id: string; email?: string; role?: string };
 			body?: unknown;
+			get?: (name: string) => string | undefined;
+			header?: (name: string) => string | undefined;
 		};
+
+		// Patch req.get() / req.header() — Express convenience for reading headers
+		if (typeof patched.get !== 'function') {
+			const getter = (name: string): string | undefined => {
+				const val = req.headers[name.toLowerCase()];
+				return Array.isArray(val) ? val[0] : val;
+			};
+			patched.get = getter;
+			patched.header = getter;
+		}
 
 		// Parse query string into req.query (Express populates this via express.query())
 		const urlStr = req.url ?? '/';
@@ -207,7 +231,8 @@ function buildHandlers(): void {
 				const origUrl = event.node.req.url ?? '';
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- setting originalUrl for Express Router compat
 				(event.node.req as IncomingMessage & { originalUrl?: string }).originalUrl = origUrl;
-				event.node.req.url = origUrl.slice(prefix.length) || '/';
+				const rewritten = origUrl.slice(prefix.length);
+				event.node.req.url = rewritten.startsWith('/') ? rewritten : `/${rewritten}`;
 				try {
 					for (const h of handlers) {
 						await h(event);
@@ -230,9 +255,11 @@ export default defineEventHandler(async (event) => {
 		buildHandlers();
 	}
 
-	// Root-level plugin routes (e.g. /robots.txt, /sitemap.xml)
-	if (rootHandler && (url === '/robots.txt' || url === '/sitemap.xml')) {
-		return rootHandler(event);
+	// Root-level plugin routes (e.g. /robots.txt, /sitemap.xml, redirects)
+	// Run for all non-API, non-asset paths so redirect middleware can match any public route.
+	if (rootHandler && !url.startsWith('/api/') && !url.startsWith('/_')) {
+		await rootHandler(event);
+		if (event.node.res.writableEnded) return;
 	}
 
 	// API-level plugin routes (e.g. /api/seo/*)

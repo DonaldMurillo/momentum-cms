@@ -89,6 +89,26 @@ export default defineConfig(({ mode: _mode }) => {
 							'../../libs/plugins/queue/src/index.ts',
 						),
 						'@momentumcms/plugins/cron': resolve(__dirname, '../../libs/plugins/cron/src/index.ts'),
+						'@momentumcms/plugins/image': resolve(
+							__dirname,
+							'../../libs/plugins/image/src/index.ts',
+						),
+						'@momentumcms/plugins-image': resolve(
+							__dirname,
+							'../../libs/plugins/image/src/index.ts',
+						),
+						'@momentumcms/plugins-queue/collections': resolve(
+							__dirname,
+							'../../libs/plugins/queue/src/lib/queue-jobs.collection.ts',
+						),
+						'@momentumcms/plugins-cron/collections': resolve(
+							__dirname,
+							'../../libs/plugins/cron/src/lib/cron-schedules.collection.ts',
+						),
+						'@momentumcms/plugins-redirects/collections': resolve(
+							__dirname,
+							'../../libs/plugins/redirects/src/lib/redirects-collection.ts',
+						),
 						'@momentumcms/plugins-form-builder/collections': resolve(
 							__dirname,
 							'../../libs/plugins/form-builder/src/lib/collections/index.ts',

@@ -238,6 +238,31 @@ export const exampleSeedingConfig: SeedingConfig = {
 				},
 			],
 		}),
+		collection<PageDoc>('pages').create('page-contact', {
+			title: 'Contact Page',
+			slug: 'contact',
+			content: [
+				{
+					blockType: 'hero',
+					heading: 'Get in Touch',
+					subheading: 'We would love to hear from you.',
+					ctaText: 'Email Us',
+					ctaLink: 'mailto:hello@example.com',
+				},
+				{
+					blockType: 'textBlock',
+					heading: 'Contact Information',
+					body: 'Reach out to us for any inquiries or support requests.',
+				},
+				{
+					blockType: 'callToAction',
+					heading: 'Send Us a Message',
+					description: 'Use our admin panel to manage your content.',
+					primaryButtonText: 'Open Admin',
+					primaryButtonLink: '/admin',
+				},
+			],
+		}),
 		collection<ProductDoc>('products').create('product-phone', {
 			name: 'Test Phone',
 			description: 'A phone for E2E testing.',

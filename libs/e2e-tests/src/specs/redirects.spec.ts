@@ -1,4 +1,4 @@
-import { test, expect, TEST_CREDENTIALS } from '../fixtures';
+import { test, expect, TEST_CREDENTIALS, clickAndWaitForNav } from '../fixtures';
 
 /**
  * Redirects Plugin E2E tests.
@@ -228,12 +228,17 @@ test.describe('Redirects Admin UI - Edit Flow', { tag: ['@redirects', '@admin'] 
 				await sidebar.getByRole('link', { name: 'Redirects' }).click();
 				await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/redirects$/);
 
-				// Click into the item from the list table
+				// Click into the item from the list table.
+				// Retry the click to handle Angular SSR hydration timing.
 				const row = authenticatedPage.locator('mcms-table-body mcms-table-row', {
 					hasText: from,
 				});
 				await expect(row).toBeVisible({ timeout: 10000 });
-				await row.click();
+				await clickAndWaitForNav(
+					row,
+					authenticatedPage,
+					/\/admin\/collections\/redirects\/[a-f0-9-]+/,
+				);
 
 				// View page: shows read-only values and Edit/Delete buttons
 				await expect(authenticatedPage.getByRole('button', { name: 'Edit' })).toBeVisible({

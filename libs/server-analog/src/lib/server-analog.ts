@@ -65,13 +65,13 @@ async function renderEmailPreviewHTML(
 	doc: Record<string, unknown>,
 	blocksFieldName: string,
 ): Promise<string> {
-	// Variable-based import prevents TypeScript/esbuild from resolving transitive deps
-	// (the email lib depends on `juice` which needs esModuleInterop)
+	// Dynamic import with variable to prevent Nitro/Rollup from bundling the email module
+	// (bundling it causes OOM and CJS/ESM interop issues with the juice dependency).
+	// At runtime, Nitro resolves the module via its alias config in vite.config.ts.
 	const emailPkg = '@momentumcms/email';
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- dynamic import with variable path
-	const { renderEmailFromBlocks } = (await import(emailPkg)) as {
-		renderEmailFromBlocks: (template: { blocks: unknown[] }) => string;
-	};
+	const emailModule: { renderEmailFromBlocks: (opts: { blocks: unknown[] }) => string } =
+		await import(emailPkg);
+	const { renderEmailFromBlocks } = emailModule;
 	const blocks = doc[blocksFieldName];
 	if (!Array.isArray(blocks) || blocks.length === 0) {
 		return '<html><body style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:#666;font-family:sans-serif"><p>No email blocks yet.</p></body></html>';
@@ -987,6 +987,78 @@ export function createComprehensiveMomentumHandler(
 		}
 
 		// ============================================
+		// Preview: GET/POST /:collection/:id/preview
+		// GET loads from DB, POST renders from request body (live preview)
+		// Must be checked BEFORE the publishing guard, which catches all 3-segment POSTs.
+		// ============================================
+		if (seg2 === 'preview' && seg1 && (method === 'GET' || method === 'POST')) {
+			if (!user) {
+				utils.setResponseStatus(event, 401);
+				return { error: 'Authentication required to access preview' };
+			}
+			try {
+				const collectionSlug = seg0;
+				const docId = seg1;
+
+				const collectionConfig = config.collections.find((c) => c.slug === collectionSlug);
+				if (!collectionConfig) {
+					utils.setResponseStatus(event, 404);
+					return { error: 'Collection not found' };
+				}
+
+				// Enforce collection-level access.read before rendering
+				const accessFn = collectionConfig.access?.read;
+				if (accessFn) {
+					const allowed = await Promise.resolve(accessFn({ req: { user } }));
+					if (!allowed) {
+						utils.setResponseStatus(event, 403);
+						return { error: 'Access denied' };
+					}
+				}
+
+				let docRecord: Record<string, unknown>;
+				if (method === 'POST') {
+					const body = await safeReadBody(event, utils, method);
+					if (body['data'] && typeof body['data'] === 'object') {
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- POST body contains form data
+						docRecord = body['data'] as Record<string, unknown>;
+					} else {
+						utils.setResponseStatus(event, 400);
+						return { error: 'POST preview requires { data: ... } body' };
+					}
+				} else {
+					const contextApi = getContextualAPI(user);
+					const doc = await contextApi.collection(collectionSlug).findById(docId);
+					if (!doc) {
+						utils.setResponseStatus(event, 404);
+						return { error: 'Document not found' };
+					}
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- doc type from API
+					docRecord = doc as Record<string, unknown>;
+				}
+
+				const emailField = getEmailBuilderFieldName(collectionConfig);
+				const html = emailField
+					? await renderEmailPreviewHTML(docRecord, emailField)
+					: renderPreviewHTML({ doc: docRecord, collection: collectionConfig });
+				utils.setResponseHeader(event, 'Content-Type', 'text/html; charset=utf-8');
+				return utils.send(event, html);
+			} catch (error) {
+				const message = sanitizeErrorMessage(error, 'Unknown error');
+				if (message.includes('Access denied')) {
+					utils.setResponseStatus(event, 403);
+					return { error: message };
+				}
+				if (message.includes('not found')) {
+					utils.setResponseStatus(event, 404);
+					return { error: message };
+				}
+				utils.setResponseStatus(event, 500);
+				return { error: 'Preview failed', message };
+			}
+		}
+
+		// ============================================
 		// Publishing routes: /:collection/:id/publish|unpublish|draft|schedule-publish|cancel-scheduled-publish
 		// ============================================
 		if (seg1 && seg2 && method === 'POST') {
@@ -1105,77 +1177,6 @@ export function createComprehensiveMomentumHandler(
 					error: 'Failed to get status',
 					message: sanitizeErrorMessage(error, 'Unknown error'),
 				};
-			}
-		}
-
-		// ============================================
-		// Preview: GET/POST /:collection/:id/preview
-		// GET loads from DB, POST renders from request body (live preview)
-		// ============================================
-		if (seg2 === 'preview' && seg1 && (method === 'GET' || method === 'POST')) {
-			if (!user) {
-				utils.setResponseStatus(event, 401);
-				return { error: 'Authentication required to access preview' };
-			}
-			try {
-				const collectionSlug = seg0;
-				const docId = seg1;
-
-				const collectionConfig = config.collections.find((c) => c.slug === collectionSlug);
-				if (!collectionConfig) {
-					utils.setResponseStatus(event, 404);
-					return { error: 'Collection not found' };
-				}
-
-				// Enforce collection-level access.read before rendering
-				const accessFn = collectionConfig.access?.read;
-				if (accessFn) {
-					const allowed = await Promise.resolve(accessFn({ req: { user } }));
-					if (!allowed) {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-				}
-
-				let docRecord: Record<string, unknown>;
-				if (method === 'POST') {
-					const body = await safeReadBody(event, utils, method);
-					if (body['data'] && typeof body['data'] === 'object') {
-						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- POST body contains form data
-						docRecord = body['data'] as Record<string, unknown>;
-					} else {
-						utils.setResponseStatus(event, 400);
-						return { error: 'POST preview requires { data: ... } body' };
-					}
-				} else {
-					const contextApi = getContextualAPI(user);
-					const doc = await contextApi.collection(collectionSlug).findById(docId);
-					if (!doc) {
-						utils.setResponseStatus(event, 404);
-						return { error: 'Document not found' };
-					}
-					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- doc type from API
-					docRecord = doc as Record<string, unknown>;
-				}
-
-				const emailField = getEmailBuilderFieldName(collectionConfig);
-				const html = emailField
-					? await renderEmailPreviewHTML(docRecord, emailField)
-					: renderPreviewHTML({ doc: docRecord, collection: collectionConfig });
-				utils.setResponseHeader(event, 'Content-Type', 'text/html; charset=utf-8');
-				return utils.send(event, html);
-			} catch (error) {
-				const message = sanitizeErrorMessage(error, 'Unknown error');
-				if (message.includes('Access denied')) {
-					utils.setResponseStatus(event, 403);
-					return { error: message };
-				}
-				if (message.includes('not found')) {
-					utils.setResponseStatus(event, 404);
-					return { error: message };
-				}
-				utils.setResponseStatus(event, 500);
-				return { error: 'Preview failed', message };
 			}
 		}
 

@@ -55,10 +55,10 @@ export const Default: Story = {
 			<mcms-table>
 				<mcms-table-header>
 					<mcms-table-row>
-						<mcms-table-head>Invoice</mcms-table-head>
-						<mcms-table-head>Status</mcms-table-head>
-						<mcms-table-head>Method</mcms-table-head>
-						<mcms-table-head style="text-align: right;">Amount</mcms-table-head>
+						<mcms-table-head role="columnheader">Invoice</mcms-table-head>
+						<mcms-table-head role="columnheader">Status</mcms-table-head>
+						<mcms-table-head role="columnheader">Method</mcms-table-head>
+						<mcms-table-head role="columnheader" style="text-align: right;">Amount</mcms-table-head>
 					</mcms-table-row>
 				</mcms-table-header>
 				<mcms-table-body>
@@ -93,10 +93,10 @@ export const WithCaption: Story = {
 				<mcms-table-caption>A list of your recent invoices.</mcms-table-caption>
 				<mcms-table-header>
 					<mcms-table-row>
-						<mcms-table-head>Invoice</mcms-table-head>
-						<mcms-table-head>Status</mcms-table-head>
-						<mcms-table-head>Method</mcms-table-head>
-						<mcms-table-head style="text-align: right;">Amount</mcms-table-head>
+						<mcms-table-head role="columnheader">Invoice</mcms-table-head>
+						<mcms-table-head role="columnheader">Status</mcms-table-head>
+						<mcms-table-head role="columnheader">Method</mcms-table-head>
+						<mcms-table-head role="columnheader" style="text-align: right;">Amount</mcms-table-head>
 					</mcms-table-row>
 				</mcms-table-header>
 				<mcms-table-body>
@@ -124,10 +124,10 @@ export const WithFooter: Story = {
 			<mcms-table>
 				<mcms-table-header>
 					<mcms-table-row>
-						<mcms-table-head>Invoice</mcms-table-head>
-						<mcms-table-head>Status</mcms-table-head>
-						<mcms-table-head>Method</mcms-table-head>
-						<mcms-table-head style="text-align: right;">Amount</mcms-table-head>
+						<mcms-table-head role="columnheader">Invoice</mcms-table-head>
+						<mcms-table-head role="columnheader">Status</mcms-table-head>
+						<mcms-table-head role="columnheader">Method</mcms-table-head>
+						<mcms-table-head role="columnheader" style="text-align: right;">Amount</mcms-table-head>
 					</mcms-table-row>
 				</mcms-table-header>
 				<mcms-table-body>
@@ -167,10 +167,10 @@ export const WithStatusBadges: Story = {
 			<mcms-table>
 				<mcms-table-header>
 					<mcms-table-row>
-						<mcms-table-head>Order</mcms-table-head>
-						<mcms-table-head>Customer</mcms-table-head>
-						<mcms-table-head>Status</mcms-table-head>
-						<mcms-table-head style="text-align: right;">Total</mcms-table-head>
+						<mcms-table-head role="columnheader">Order</mcms-table-head>
+						<mcms-table-head role="columnheader">Customer</mcms-table-head>
+						<mcms-table-head role="columnheader">Status</mcms-table-head>
+						<mcms-table-head role="columnheader" style="text-align: right;">Total</mcms-table-head>
 					</mcms-table-row>
 				</mcms-table-header>
 				<mcms-table-body>
@@ -210,10 +210,10 @@ export const WithAvatars: Story = {
 			<mcms-table>
 				<mcms-table-header>
 					<mcms-table-row>
-						<mcms-table-head>Member</mcms-table-head>
-						<mcms-table-head>Role</mcms-table-head>
-						<mcms-table-head>Status</mcms-table-head>
-						<mcms-table-head style="text-align: right;">Actions</mcms-table-head>
+						<mcms-table-head role="columnheader">Member</mcms-table-head>
+						<mcms-table-head role="columnheader">Role</mcms-table-head>
+						<mcms-table-head role="columnheader">Status</mcms-table-head>
+						<mcms-table-head role="columnheader" style="text-align: right;">Actions</mcms-table-head>
 					</mcms-table-row>
 				</mcms-table-header>
 				<mcms-table-body>
@@ -283,8 +283,8 @@ export const Simple: Story = {
 			<mcms-table>
 				<mcms-table-header>
 					<mcms-table-row>
-						<mcms-table-head>Name</mcms-table-head>
-						<mcms-table-head>Email</mcms-table-head>
+						<mcms-table-head role="columnheader">Name</mcms-table-head>
+						<mcms-table-head role="columnheader">Email</mcms-table-head>
 					</mcms-table-row>
 				</mcms-table-header>
 				<mcms-table-body>
@@ -308,9 +308,9 @@ export const Empty: Story = {
 			<mcms-table>
 				<mcms-table-header>
 					<mcms-table-row>
-						<mcms-table-head>Name</mcms-table-head>
-						<mcms-table-head>Email</mcms-table-head>
-						<mcms-table-head>Role</mcms-table-head>
+						<mcms-table-head role="columnheader">Name</mcms-table-head>
+						<mcms-table-head role="columnheader">Email</mcms-table-head>
+						<mcms-table-head role="columnheader">Role</mcms-table-head>
 					</mcms-table-row>
 				</mcms-table-header>
 				<mcms-table-body>

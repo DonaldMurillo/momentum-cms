@@ -510,9 +510,15 @@ export class EntityFormWidget<T extends Entity = Entity> {
 					// Global mode: always load the singleton
 					this.loadGlobal(gSlug);
 				} else if (currentMode === 'create' || !id) {
-					this.formModel.set(createInitialFormData(col));
-					const ef = this.entityForm();
-					if (ef) ef().reset();
+					// Guard: don't reset formModel if the user has already selected a file.
+					// On Analog (SSR), reactive route signals may re-emit after hydration,
+					// causing this effect to re-run and wipe user input.
+					const hasPendingFile = untracked(() => this.pendingFile());
+					if (!hasPendingFile) {
+						this.formModel.set(createInitialFormData(col));
+						const ef = this.entityForm();
+						if (ef) ef().reset();
+					}
 				} else {
 					this.loadEntity(col.slug, id);
 				}

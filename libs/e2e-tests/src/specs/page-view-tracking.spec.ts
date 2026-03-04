@@ -162,6 +162,11 @@ test.describe('Page View Tracking', { tag: ['@analytics'] }, () => {
 		page,
 		request,
 	}) => {
+		test.skip(
+			process.env['E2E_SERVER_FLAVOR'] === 'analog',
+			'Analog app does not include AppLayoutComponent with nav test IDs',
+		);
+
 		// 1. Navigate to home page (SSR load)
 		await page.goto('/');
 		await page.waitForLoadState('domcontentloaded');

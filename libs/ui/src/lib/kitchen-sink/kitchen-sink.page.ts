@@ -707,10 +707,12 @@ interface KitchenSinkUser {
 					<mcms-table-caption>A list of recent invoices.</mcms-table-caption>
 					<mcms-table-header>
 						<mcms-table-row>
-							<mcms-table-head>Invoice</mcms-table-head>
-							<mcms-table-head>Status</mcms-table-head>
-							<mcms-table-head>Method</mcms-table-head>
-							<mcms-table-head style="text-align: right;">Amount</mcms-table-head>
+							<mcms-table-head role="columnheader">Invoice</mcms-table-head>
+							<mcms-table-head role="columnheader">Status</mcms-table-head>
+							<mcms-table-head role="columnheader">Method</mcms-table-head>
+							<mcms-table-head role="columnheader" style="text-align: right;"
+								>Amount</mcms-table-head
+							>
 						</mcms-table-row>
 					</mcms-table-header>
 					<mcms-table-body>

@@ -100,3 +100,6 @@ export type { TestUserCredentials } from '@momentumcms/e2e-fixtures';
 
 // Accessibility helpers
 export { checkA11y } from './axe-helpers';
+
+// Test utilities
+export { clickAndWaitForNav } from './test-utils';

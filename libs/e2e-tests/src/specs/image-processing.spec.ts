@@ -78,8 +78,9 @@ test.describe('Image Dimensions API', { tag: ['@media', '@image-processing', '@a
 		const getResp = await authenticatedPage.request.get(`/api/media/${uploadDoc.id}`);
 		expect(getResp.ok()).toBe(true);
 		const { doc } = await getResp.json();
-		expect(doc.width).toBe(10);
-		expect(doc.height).toBe(10);
+		// GET response may return numbers as strings due to DB serialization
+		expect(Number(doc.width)).toBe(10);
+		expect(Number(doc.height)).toBe(10);
 	});
 
 	test('should not populate dimensions for non-image uploads', async ({ authenticatedPage }) => {
@@ -392,7 +393,9 @@ test.describe(
 
 			// Dialog opens — verify focal point picker is visible for images
 			// The picker shows "Focal Point" heading and a "Reset to center" button
-			await expect(authenticatedPage.getByText('Focal Point')).toBeVisible({ timeout: 10000 });
+			await expect(authenticatedPage.getByText('Focal Point', { exact: true })).toBeVisible({
+				timeout: 10000,
+			});
 			await expect(authenticatedPage.getByText(/Reset to center/)).toBeVisible();
 		});
 	},

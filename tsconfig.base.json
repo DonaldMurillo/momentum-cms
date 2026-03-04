@@ -62,6 +62,9 @@
 			"@momentumcms/plugins-image": ["libs/plugins/image/src/index.ts"],
 			"@momentumcms/plugins-redirects": ["libs/plugins/redirects/src/index.ts"],
 			"@momentumcms/plugins/redirects": ["libs/plugins/redirects/src/index.ts"],
+			"@momentumcms/plugins-redirects/collections": [
+				"libs/plugins/redirects/src/lib/redirects-collection.ts"
+			],
 			"@momentumcms/email": ["libs/email/src/index.ts"],
 			"@momentumcms/email/types": ["libs/email/src/types.ts"],
 			"@momentumcms/email/templates": ["libs/email/src/lib/templates/default-templates.ts"],
@@ -80,9 +83,15 @@
 			"@momentumcms/plugins-queue/admin-routes": [
 				"libs/plugins/queue/src/lib/queue-admin-routes.ts"
 			],
+			"@momentumcms/plugins-queue/collections": [
+				"libs/plugins/queue/src/lib/queue-jobs.collection.ts"
+			],
 			"@momentumcms/plugins/cron": ["libs/plugins/cron/src/index.ts"],
 			"@momentumcms/plugins-cron": ["libs/plugins/cron/src/index.ts"],
 			"@momentumcms/plugins-cron/admin-routes": ["libs/plugins/cron/src/lib/cron-admin-routes.ts"],
+			"@momentumcms/plugins-cron/collections": [
+				"libs/plugins/cron/src/lib/cron-schedules.collection.ts"
+			],
 			"@momentumcms/example-config": ["libs/example-config/src/index.ts"],
 			"@momentumcms/example-config/collections": ["libs/example-config/src/collections/index.ts"],
 			"@momentumcms/example-config/globals": ["libs/example-config/src/globals/index.ts"],

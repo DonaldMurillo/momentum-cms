@@ -1,4 +1,4 @@
-import { test, expect, TEST_CREDENTIALS, checkA11y } from '../fixtures';
+import { test, expect, TEST_CREDENTIALS, checkA11y, clickAndWaitForNav } from '../fixtures';
 
 /**
  * Form builder plugin E2E tests.
@@ -27,11 +27,13 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 		await page.waitForLoadState('domcontentloaded');
 
 		await expect(page.locator('mcms-table')).toBeVisible({ timeout: 10000 });
-		await page
+
+		// Retry the click to handle Angular SSR hydration timing.
+		const contactCell = page
 			.locator('mcms-table-cell')
 			.filter({ hasText: /Contact Us/i })
-			.first()
-			.click();
+			.first();
+		await clickAndWaitForNav(contactCell, page, /\/admin\/collections\/forms\/[a-f0-9-]+/);
 
 		// Clicking a row lands on the view page — click Edit to enter edit mode
 		const editButton = page.getByRole('button', { name: 'Edit' });
@@ -1087,6 +1089,11 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 	// ─── Live Page Inline Editing ──────────────────────────────────────
 
 	test.describe('Live page inline editing', { tag: ['@ui', '@blocks'] }, () => {
+		test.skip(
+			() => process.env['E2E_SERVER_FLAVOR'] === 'analog',
+			'CDK overlay/dialog does not initialise on SSR-hydrated public pages in Analog',
+		);
+
 		test('should show Edit Block button and open inline edit dialog with relationship dropdown', async ({
 			authenticatedPage,
 		}) => {
