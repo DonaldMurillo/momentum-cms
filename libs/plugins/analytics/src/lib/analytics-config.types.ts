@@ -71,6 +71,8 @@ export interface AnalyticsConfig {
 	ingestPath?: string;
 	/** Rate limit for ingest endpoint (requests per minute per IP). @default 100 */
 	ingestRateLimit?: number;
+	/** Rate limit window in milliseconds. @default 60000 */
+	ingestRateLimitWindow?: number;
 	/** Batch flush interval in ms. @default 5000 */
 	flushInterval?: number;
 	/** Batch size before forced flush. @default 100 */

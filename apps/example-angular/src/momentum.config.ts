@@ -73,6 +73,7 @@ export const analytics = analyticsPlugin({
 	flushInterval: 1000, // 1s for fast E2E feedback
 	flushBatchSize: 10,
 	ingestRateLimit: 10, // Low for rate-limiting E2E test
+	ingestRateLimitWindow: 5000, // 5s window so rate-limit test doesn't block other tests
 	excludeCollections: ['_seed_tracking'],
 	adminDashboard: true,
 	trackingRules: { cacheTtl: 0 }, // No cache for E2E testing

@@ -184,6 +184,7 @@ export function analyticsPlugin(config: AnalyticsConfig): AnalyticsPluginInstanc
 			const ingestRouter = createIngestRouter({
 				eventStore,
 				rateLimit: config.ingestRateLimit,
+				rateLimitWindow: config.ingestRateLimitWindow,
 			});
 			registerMiddleware({
 				path: config.ingestPath ?? '/analytics/collect',

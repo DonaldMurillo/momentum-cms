@@ -32,6 +32,7 @@
 				},
 				"externalDependencies": [
 					"better-sqlite3",
+					"@napi-rs/image",
 					"@nestjs/microservices",
 					"@nestjs/websockets",
 					"class-validator",

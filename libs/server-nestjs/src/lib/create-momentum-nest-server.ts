@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { Module, type INestApplication } from '@nestjs/common';
+import express from 'express';
 import type { Express, RequestHandler } from 'express';
 import type { MomentumConfig, ResolvedMomentumConfig } from '@momentumcms/core';
 import {
@@ -12,6 +13,7 @@ import {
 	initializeMomentum,
 	createHealthMiddleware,
 	momentumApiMiddleware,
+	createOpenAPIMiddleware,
 	createDeferredSessionResolver,
 	getPluginMiddleware,
 	getPluginProviders,
@@ -49,6 +51,26 @@ export interface CreateMomentumNestServerOptions {
 	 * @default true
 	 */
 	webhooks?: boolean;
+
+	/**
+	 * Mount OpenAPI docs at /{prefix}/docs.
+	 * @default false
+	 */
+	openapi?: boolean;
+
+	/**
+	 * Callback invoked with the Express instance BEFORE the CMS API catch-all is mounted.
+	 * Use this to register custom routes under /{prefix}/ that must take priority
+	 * over the CMS collection router (e.g., test infrastructure endpoints).
+	 */
+	beforeApiMiddleware?: (app: Express, prefix: string) => void;
+
+	/**
+	 * Callback invoked with the Express instance AFTER the CMS API but BEFORE NestJS init.
+	 * Use this to register static file serving and Angular SSR handlers.
+	 * Middleware registered here runs before NestJS's built-in 404 handler.
+	 */
+	afterApiMiddleware?: (app: Express) => void;
 
 	/**
 	 * Auth plugin instance for session resolution.
@@ -134,6 +156,7 @@ export async function createMomentumNestServer(
 		config,
 		prefix = 'api',
 		health = true,
+		openapi = false,
 		publishScheduler = false,
 		webhooks = true,
 	} = options;
@@ -168,6 +191,15 @@ export async function createMomentumNestServer(
 	// which are registered during app.init().
 	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- NestJS Express adapter returns Express instance
 	const expressApp = app.getHttpAdapter().getInstance() as Express;
+
+	// 5a. NestJS platform-express uses Express 5 which defaults to 'simple' query parser.
+	// CMS API requires 'extended' (qs) for nested where[slug][equals]=... filters.
+	expressApp.set('query parser', 'extended');
+
+	// 5b. Add JSON body parser before any middleware.
+	// NestJS only registers body parsers during app.init() (step 15), but our CMS
+	// middleware and consumer callbacks need parsed bodies immediately.
+	expressApp.use(express.json());
 
 	// 6. Mount health endpoint (with ?checkSeeds=true support for E2E infrastructure)
 	if (health) {
@@ -210,14 +242,29 @@ export async function createMomentumNestServer(
 		expressApp.use(mw.path, mw.handler as import('express').Router);
 	}
 
-	// 11. Mount ALL CMS API routes (CRUD, versions, publish, batch, search,
-	//     GraphQL, file upload, import/export, OpenAPI, etc.)
+	// 11. Mount OpenAPI docs before the CMS API catch-all
+	if (openapi) {
+		expressApp.use(`/${prefix}/docs`, createOpenAPIMiddleware({ config }));
+	}
+
+	// 12. Allow consumer to register custom routes before the CMS API catch-all
+	if (options.beforeApiMiddleware) {
+		options.beforeApiMiddleware(expressApp, prefix);
+	}
+
+	// 13. Mount ALL CMS API routes (CRUD, versions, publish, batch, search,
+	//     GraphQL, file upload, import/export, etc.)
 	expressApp.use(`/${prefix}`, momentumApiMiddleware(config));
 
-	// 12. Now initialize NestJS (registers its own routes AFTER our middleware)
+	// 14. Allow consumer to register static files and SSR BEFORE NestJS init
+	if (options.afterApiMiddleware) {
+		options.afterApiMiddleware(expressApp);
+	}
+
+	// 15. Now initialize NestJS (registers its own routes AFTER our middleware)
 	await app.init();
 
-	// 13. SSR provider helper
+	// 16. SSR provider helper
 	function getSsrProviders(user?: { id: string; email: string; role: string }): unknown[] {
 		const pluginProviderList = getPluginProviders().map((p) => ({
 			provide: p.token,
@@ -229,7 +276,7 @@ export async function createMomentumNestServer(
 		return pluginProviderList;
 	}
 
-	// 14. Shutdown handler
+	// 17. Shutdown handler
 	async function shutdown(): Promise<void> {
 		schedulerHandle?.stop();
 		await init.shutdown();

@@ -16,6 +16,7 @@ import { postgresQueueAdapter } from '@momentumcms/queue';
 import { queuePlugin } from '@momentumcms/plugins/queue';
 import { cronPlugin } from '@momentumcms/plugins/cron';
 import { formBuilderPlugin } from '@momentumcms/plugins-form-builder';
+import { imagePlugin } from '@momentumcms/plugins/image';
 import { join } from 'node:path';
 import { collections } from '@momentumcms/example-config/collections';
 import { globals } from '@momentumcms/example-config/globals';
@@ -72,6 +73,7 @@ export const analytics = analyticsPlugin({
 	flushInterval: 1000, // 1s for fast E2E feedback
 	flushBatchSize: 10,
 	ingestRateLimit: 10, // Low for rate-limiting E2E test
+	ingestRateLimitWindow: 5000, // 5s window so rate-limit test doesn't block other tests
 	excludeCollections: ['_seed_tracking'],
 	adminDashboard: true,
 	trackingRules: { cacheTtl: 0 }, // No cache for E2E testing
@@ -104,6 +106,13 @@ export const cron = cronPlugin({
 export const forms = formBuilderPlugin({
 	honeypot: true,
 	rateLimitPerMinute: 10,
+});
+
+/**
+ * Image processing plugin — generates size variants and detects dimensions.
+ */
+export const images = imagePlugin({
+	formatPreference: 'original',
 });
 
 export const seo = seoPlugin({
@@ -150,7 +159,7 @@ const config = defineMomentumConfig({
 		level: 'debug',
 		format: 'pretty',
 	},
-	plugins: [events, analytics, seo, redirects, email, authPlugin, queue, cron, forms],
+	plugins: [events, analytics, seo, redirects, email, authPlugin, queue, cron, forms, images],
 	seeding: {
 		...exampleSeedingConfig,
 		defaults: (helpers) => [
