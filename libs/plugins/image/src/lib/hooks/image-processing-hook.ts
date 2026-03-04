@@ -49,8 +49,17 @@ export function createImageProcessingHook(options: HookOptions): HookFunction {
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- hook data is Record<string, unknown>, safe narrowing
 		const originalPath = (data['path'] as string) ?? file.originalName;
 
-		// 1. Get dimensions
-		const dims = await processor.getDimensions(file.buffer, file.mimeType);
+		// 1. Get dimensions — if the image can't be decoded (e.g., valid magic bytes
+		//    but no actual image data), treat it as non-processable
+		let dims: Awaited<ReturnType<typeof processor.getDimensions>>;
+		try {
+			dims = await processor.getDimensions(file.buffer, file.mimeType);
+		} catch (err) {
+			if (options.logger) {
+				options.logger.warn('Image dimensions could not be read — skipping processing:', err);
+			}
+			return cleanData;
+		}
 
 		// 2. Guard against decompression bombs
 		const maxPixels = options.maxPixels ?? DEFAULT_MAX_PIXELS;

@@ -47,6 +47,13 @@ const flavorConfigs: Record<string, FlavorConfig> = {
 		waitForSeeds: true,
 		buildCommand: 'nx build example-analog',
 	},
+	nestjs: {
+		appName: 'nestjs',
+		serverBinary: 'dist/apps/example-nestjs/server/server.mjs',
+		healthEndpoint: '/api/health?checkSeeds=true',
+		waitForSeeds: true,
+		buildCommand: 'nx build example-nestjs',
+	},
 };
 
 /**

@@ -35,6 +35,7 @@ nx run-many -t lint
 | admin          | libs/admin          | browser   | Angular admin UI components              |
 | server-core    | libs/server-core    | server    | Framework-agnostic handlers              |
 | server-express | libs/server-express | server    | Express adapter (Angular SSR)            |
+| server-nestjs  | libs/server-nestjs  | server    | NestJS adapter (Angular SSR)             |
 | server-analog  | libs/server-analog  | server    | Nitro/h3 adapter (Analog.js)             |
 | db-drizzle     | libs/db-drizzle     | server    | Drizzle adapter, schema generator        |
 | auth           | libs/auth           | server    | Better Auth integration                  |

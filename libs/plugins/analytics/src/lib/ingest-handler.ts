@@ -29,8 +29,10 @@ const VALID_CATEGORIES: Set<AnalyticsCategory> = new Set([
 export interface IngestHandlerOptions {
 	/** Event store to buffer events */
 	eventStore: EventStore;
-	/** Rate limit per IP per minute. @default 100 */
+	/** Rate limit per IP per window. @default 100 */
 	rateLimit?: number;
+	/** Rate limit window in milliseconds. @default 60000 */
+	rateLimitWindow?: number;
 }
 
 /**
@@ -54,8 +56,8 @@ function isValidClientEvent(event: unknown): event is Partial<AnalyticsEvent> {
  * @returns Express router
  */
 export function createIngestRouter(options: IngestHandlerOptions): Router {
-	const { eventStore, rateLimit = 100 } = options;
-	const limiter = new RateLimiter(rateLimit);
+	const { eventStore, rateLimit = 100, rateLimitWindow } = options;
+	const limiter = new RateLimiter(rateLimit, rateLimitWindow);
 	const logger = createLogger('Analytics:Ingest');
 	const router = createRouter();
 

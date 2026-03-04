@@ -4,7 +4,8 @@ import { GridCell } from '@angular/aria/grid';
 /**
  * Table header cell (th) component.
  *
- * Usage: Provide role="columnheader" when using in table headers.
+ * GridCell manages the `role` attribute imperatively. Pass `role="columnheader"`
+ * when used inside `<mcms-table-header>` for correct ARIA semantics.
  *
  * @example
  * ```html
@@ -31,9 +32,6 @@ import { GridCell } from '@angular/aria/grid';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TableHead {
-	/** ARIA role for the header cell (forwarded to GridCell). */
-	readonly role = input<'gridcell' | 'columnheader' | 'rowheader'>('columnheader');
-
 	/** Whether this column is disabled. */
 	readonly disabled = input(false);
 

@@ -43,6 +43,7 @@
 - [REST API](server/rest-api.md) — All endpoints: CRUD, versions, batch, globals, media
 - [GraphQL](server/graphql.md) — Auto-generated schema and queries
 - [Express Adapter](server/express-adapter.md) — Angular SSR integration
+- [NestJS Adapter](server/nestjs-adapter.md) — Angular SSR with NestJS
 - [Analog Adapter](server/analog-adapter.md) — Nitro/h3 integration
 - [OpenAPI](server/openapi.md) — Swagger UI and spec generation
 

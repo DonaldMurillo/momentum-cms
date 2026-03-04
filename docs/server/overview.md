@@ -6,8 +6,8 @@ Momentum CMS uses a layered server architecture with framework-agnostic handlers
 
 ```
 ┌─────────────────────────┐
-│   Framework Adapters    │
-│  Express  │  Analog/h3  │
+│      Framework Adapters       │
+│  Express  │  NestJS  │  Analog │
 ├───────────┴─────────────┤
 │      server-core        │
 │  (handlers, middleware)  │
@@ -24,6 +24,7 @@ Momentum CMS uses a layered server architecture with framework-agnostic handlers
 | ----------------------------- | --------------------------------------------------- |
 | `@momentumcms/server-core`    | Framework-agnostic handlers, validation, middleware |
 | `@momentumcms/server-express` | Express adapter for Angular SSR                     |
+| `@momentumcms/server-nestjs`  | NestJS adapter for Angular SSR                      |
 | `@momentumcms/server-analog`  | Nitro/h3 adapter for Analog.js                      |
 
 ## Request Lifecycle
@@ -56,6 +57,7 @@ const momentum = await initializeMomentum({
 
 - [REST API](rest-api.md) — All endpoints
 - [Express Adapter](express-adapter.md) — Angular SSR
+- [NestJS Adapter](nestjs-adapter.md) — Angular SSR with NestJS
 - [Analog Adapter](analog-adapter.md) — Nitro/h3
 - [GraphQL](graphql.md) — GraphQL schema
 - [OpenAPI](openapi.md) — Swagger docs

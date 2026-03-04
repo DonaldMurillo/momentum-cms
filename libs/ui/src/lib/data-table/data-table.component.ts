@@ -92,17 +92,17 @@ import { DropdownMenuItem } from '../dropdown-menu/dropdown-menu-item.component'
 					<mcms-table-header>
 						<mcms-table-row>
 							@if (selectable()) {
-								<mcms-table-head class="w-12">
+								<mcms-table-head role="columnheader" class="w-12">
 									<mcms-skeleton class="h-4 w-4" />
 								</mcms-table-head>
 							}
 							@for (col of columns(); track col.field) {
-								<mcms-table-head [style.width]="col.width" [style.min-width]="col.minWidth || '100px'">
+								<mcms-table-head role="columnheader" [style.width]="col.width" [style.min-width]="col.minWidth || '100px'">
 									<mcms-skeleton class="h-4 w-20" />
 								</mcms-table-head>
 							}
 							@if (rowActions().length > 0) {
-								<mcms-table-head class="w-12" />
+								<mcms-table-head role="columnheader" class="w-12" />
 							}
 						</mcms-table-row>
 					</mcms-table-header>
@@ -141,7 +141,7 @@ import { DropdownMenuItem } from '../dropdown-menu/dropdown-menu-item.component'
 					<mcms-table-header>
 						<mcms-table-row>
 							@if (selectable()) {
-								<mcms-table-head class="w-12">
+								<mcms-table-head role="columnheader" class="w-12">
 									<mcms-checkbox
 										[value]="allSelected()"
 										[indeterminate]="someSelected()"
@@ -152,6 +152,7 @@ import { DropdownMenuItem } from '../dropdown-menu/dropdown-menu-item.component'
 							}
 							@for (col of columns(); track col.field) {
 								<mcms-table-head
+									role="columnheader"
 									[style.width]="col.width"
 									[style.min-width]="col.minWidth || '100px'"
 									[style.text-align]="col.align || 'left'"
@@ -187,7 +188,7 @@ import { DropdownMenuItem } from '../dropdown-menu/dropdown-menu-item.component'
 								</mcms-table-head>
 							}
 							@if (rowActions().length > 0) {
-								<mcms-table-head class="w-12" />
+								<mcms-table-head role="columnheader" class="w-12" />
 							}
 						</mcms-table-row>
 					</mcms-table-header>

@@ -32,6 +32,7 @@ export default defineConfig({
 			'@momentumcms/server-core': resolve(__dirname, 'libs/server-core/src/index.ts'),
 			'@momentumcms/server-express': resolve(__dirname, 'libs/server-express/src/index.ts'),
 			'@momentumcms/server-analog': resolve(__dirname, 'libs/server-analog/src/index.ts'),
+			'@momentumcms/server-nestjs': resolve(__dirname, 'libs/server-nestjs/src/index.ts'),
 			'@momentumcms/admin': resolve(__dirname, 'libs/admin/src/index.ts'),
 			'@momentumcms/db-drizzle': resolve(__dirname, 'libs/db-drizzle/src/index.ts'),
 			'@momentumcms/auth': resolve(__dirname, 'libs/auth/src/index.ts'),

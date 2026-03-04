@@ -392,7 +392,12 @@ export class RelationshipFieldRenderer {
 			const whereClause = f.filterOptions({ data: this.formModel() });
 			for (const [key, val] of Object.entries(whereClause)) {
 				if (val !== undefined && val !== null) {
-					params[`where[${key}]`] = String(val);
+					// Decompose bracket notation in key to produce proper qs-compatible nesting.
+					// e.g. "status[equals]" -> "where[status][equals]" (not "where[status[equals]]")
+					// This ensures both Express/qs and Analog/nestBracketParams parse it correctly.
+					const keyParts = key.split(/[[\]]+/).filter(Boolean);
+					const paramKey = 'where' + keyParts.map((p) => `[${p}]`).join('');
+					params[paramKey] = String(val);
 				}
 			}
 		}

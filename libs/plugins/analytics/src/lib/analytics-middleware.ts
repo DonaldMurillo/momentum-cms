@@ -48,6 +48,7 @@ export function createAnalyticsMiddleware(plugin: AnalyticsPluginInstance): Anal
 	const ingestRouter = createIngestRouter({
 		eventStore,
 		rateLimit: analyticsConfig.ingestRateLimit,
+		rateLimitWindow: analyticsConfig.ingestRateLimitWindow,
 	});
 
 	const apiCollector = createApiCollectorMiddleware((event) => eventStore.add(event));

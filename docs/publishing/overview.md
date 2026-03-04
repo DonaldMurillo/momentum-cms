@@ -81,7 +81,7 @@ This will:
 4. **Generate** changelogs for each project
 5. **Commit** the changelog changes
 6. **Tag** the commit with `v{version}`
-7. **Publish** all 14 packages to npm
+7. **Publish** all packages to npm
 
 The `--yes` flag auto-confirms the publish step. Without it, Nx will skip publishing.
 
@@ -165,7 +165,7 @@ npm config set //registry.npmjs.org/:_authToken=YOUR_AUTOMATION_TOKEN
 
 ## Publishable Projects
 
-These 14 projects are included in each release (configured in `nx.json`):
+These projects are included in each release (configured in `nx.json`):
 
 | Project             | npm Package                      |
 | ------------------- | -------------------------------- |
@@ -178,6 +178,7 @@ These 14 projects are included in each release (configured in `nx.json`):
 | db-drizzle          | `@momentumcms/db-drizzle`        |
 | server-core         | `@momentumcms/server-core`       |
 | server-express      | `@momentumcms/server-express`    |
+| server-nestjs       | `@momentumcms/server-nestjs`     |
 | server-analog       | `@momentumcms/server-analog`     |
 | plugins-core        | `@momentumcms/plugins-core`      |
 | plugins-analytics   | `@momentumcms/plugins-analytics` |

@@ -7,13 +7,13 @@
  * 2. Build all publishable @momentumcms/* packages
  * 3. Publish them to local Verdaccio
  * 4. Build create-momentum-app CLI
- * 5. Run CLI for each flavor (angular + analog) × database (postgres + sqlite)
+ * 5. Run CLI for each flavor (angular + analog + nestjs) × database (postgres + sqlite)
  * 6. Verify generated projects: files, npm install
  * 7. Start dev server briefly to verify dependency optimization (catches missing peer deps)
  * 8. Run tsc --noEmit
  * 9. Build the generated project (ng build / vite build)
  * 10. Start production server and verify health + SSR endpoints (SQLite only)
- * 9. Cleanup
+ * 11. Cleanup
  *
  * Usage:
  *   npx tsx scripts/test-create-app.ts              # Full test (all flavors)
@@ -49,6 +49,7 @@ const PUBLISHABLE_LIBS = [
 	'server-core',
 	'server-express',
 	'server-analog',
+	'server-nestjs',
 	'ui',
 	'admin',
 	'queue',
@@ -62,7 +63,7 @@ const PUBLISHABLE_LIBS = [
 	'plugins-form-builder',
 ];
 
-type Flavor = 'angular' | 'analog';
+type Flavor = 'angular' | 'analog' | 'nestjs';
 type Database = 'postgres' | 'sqlite';
 
 interface TestConfig {
@@ -78,7 +79,10 @@ function parseArgs(): TestConfig {
 	const dbArg = args.find((_, i) => args[i - 1] === '--database');
 	return {
 		skipInstall: args.includes('--skip-install'),
-		flavor: flavorArg === 'angular' || flavorArg === 'analog' ? flavorArg : undefined,
+		flavor:
+			flavorArg === 'angular' || flavorArg === 'analog' || flavorArg === 'nestjs'
+				? flavorArg
+				: undefined,
 		database: dbArg === 'postgres' || dbArg === 'sqlite' ? dbArg : undefined,
 		verbose: args.includes('--verbose') || args.includes('-v'),
 	};
@@ -218,6 +222,7 @@ function resolveDistPath(lib: string): string {
 		'server-core': 'dist/libs/server-core',
 		'server-express': 'dist/libs/server-express',
 		'server-analog': 'dist/libs/server-analog',
+		'server-nestjs': 'dist/libs/server-nestjs',
 		'plugins-core': 'dist/libs/plugins/core',
 		'plugins-analytics': 'dist/libs/plugins/analytics',
 		'plugins-otel': 'dist/libs/plugins/otel',
@@ -387,6 +392,26 @@ function verifyProject(projectDir: string, flavor: Flavor, database: Database): 
 			'src/app/pages/posts.page.ts',
 			'src/app/pages/post-block-providers.ts',
 			'src/app/pages/blocks/hero-block.component.ts',
+			'src/collections/posts.collection.ts',
+		],
+		nestjs: [
+			'angular.json',
+			'src/server.ts',
+			'src/momentum.config.ts',
+			'src/app/app.ts',
+			'src/app/app.config.ts',
+			'src/app/app.config.server.ts',
+			'src/app/app.routes.ts',
+			'src/app/app.routes.server.ts',
+			'src/app/pages/welcome.ts',
+			'src/app/pages/posts.ts',
+			'src/app/pages/post-detail.ts',
+			'src/app/pages/post-detail.resolver.ts',
+			'src/app/pages/post-block-providers.ts',
+			'src/app/pages/blocks/hero-block.component.ts',
+			'src/app/pages/blocks/text-block.component.ts',
+			'src/app/pages/blocks/image-text-block.component.ts',
+			'src/main.server.ts',
 			'src/collections/posts.collection.ts',
 		],
 	};
@@ -584,11 +609,11 @@ async function verifyDevServer(projectDir: string, flavor: Flavor): Promise<void
 	console.log(`${LOG_PREFIX} Starting dev server to verify dependency optimization...`);
 
 	const port = await findFreePort();
-	const cmd = flavor === 'angular' ? 'npx' : 'npx';
+	const cmd = 'npx';
 	const args =
-		flavor === 'angular'
-			? ['ng', 'serve', '--port', String(port)]
-			: ['vite', '--port', String(port)];
+		flavor === 'analog'
+			? ['vite', '--port', String(port)]
+			: ['ng', 'serve', '--port', String(port)];
 
 	const proc = spawn(cmd, args, {
 		cwd: projectDir,
@@ -732,9 +757,9 @@ async function startAndVerifyServer(
 
 	// Determine the server entry point based on flavor
 	const serverEntry =
-		flavor === 'angular'
-			? path.join(projectDir, 'dist', projectName, 'server', 'server.mjs')
-			: path.join(projectDir, 'dist', 'analog', 'server', 'index.mjs');
+		flavor === 'analog'
+			? path.join(projectDir, 'dist', 'analog', 'server', 'index.mjs')
+			: path.join(projectDir, 'dist', projectName, 'server', 'server.mjs');
 
 	if (!fs.existsSync(serverEntry)) {
 		throw new Error(`Server entry not found: ${serverEntry}`);
@@ -800,8 +825,8 @@ async function startAndVerifyServer(
 
 		// Verify SSR returns HTML at root and /admin renders admin content.
 		// Analog SSR has a known JIT compilation issue with Nitro, so only
-		// enforce SSR page checks for Angular. Health endpoint already verified above.
-		if (flavor === 'angular') {
+		// enforce SSR page checks for Angular/NestJS. Health endpoint already verified above.
+		if (flavor === 'angular' || flavor === 'nestjs') {
 			const rootRes = await fetch(`http://localhost:${port}/`);
 			if (!rootRes.ok) {
 				throw new Error(`/ returned status ${rootRes.status}`);
@@ -830,7 +855,10 @@ async function startAndVerifyServer(
 			}
 			console.log(`${LOG_PREFIX} Admin SPA shell served correctly at /admin.`);
 
-			// Run Playwright browser tests (full user flow)
+			// Verify first-user creation + login via API (critical auth flow)
+			await verifyFirstUserAndAuth(port);
+
+			// Run Playwright browser tests (UI rendering + post CRUD)
 			await runPlaywrightTests(port);
 		} else {
 			console.log(`${LOG_PREFIX} Skipping SSR page checks for ${flavor} (known Nitro JIT issue).`);
@@ -841,8 +869,131 @@ async function startAndVerifyServer(
 }
 
 /**
+ * Verify first-user creation and login via pure API calls (no browser).
+ * Tests the critical auth flow: sign-up, sign-in, session, and access control.
+ */
+async function verifyFirstUserAndAuth(port: number): Promise<void> {
+	const baseUrl = `http://localhost:${port}`;
+	console.log(`${LOG_PREFIX} Verifying first-user creation + auth flow via API...`);
+
+	// 1. Verify unauthenticated request to protected endpoint is denied (403 Access Denied)
+	console.log(`${LOG_PREFIX}   [Auth] Unauthenticated POST /api/posts → expect 403`);
+	const unauthRes = await fetch(`${baseUrl}/api/posts`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ title: 'Should Fail' }),
+	});
+	if (unauthRes.status !== 403) {
+		const body = await unauthRes.text();
+		throw new Error(
+			`Expected 403 for unauthenticated POST /api/posts, got ${unauthRes.status}.\n${body}`,
+		);
+	}
+	console.log(`${LOG_PREFIX}   [Auth] Unauthenticated access correctly denied (403).`);
+
+	// 2. Create first admin user via sign-up API
+	console.log(`${LOG_PREFIX}   [Auth] Creating first user via POST /api/auth/sign-up/email`);
+	const signUpRes = await fetch(`${baseUrl}/api/auth/sign-up/email`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json', Origin: baseUrl },
+		body: JSON.stringify({
+			name: 'Test Admin',
+			email: 'admin@test.com',
+			password: 'testpass123',
+		}),
+	});
+	if (!signUpRes.ok) {
+		const body = await signUpRes.text();
+		throw new Error(`First user sign-up failed: status ${signUpRes.status}.\n${body}`);
+	}
+	console.log(`${LOG_PREFIX}   [Auth] First user created (status ${signUpRes.status}).`);
+
+	// 3. Login via sign-in API and capture session cookie
+	console.log(`${LOG_PREFIX}   [Auth] Logging in via POST /api/auth/sign-in/email`);
+	const signInRes = await fetch(`${baseUrl}/api/auth/sign-in/email`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json', Origin: baseUrl },
+		body: JSON.stringify({
+			email: 'admin@test.com',
+			password: 'testpass123',
+		}),
+	});
+	if (!signInRes.ok) {
+		const body = await signInRes.text();
+		throw new Error(`Login failed: status ${signInRes.status}.\n${body}`);
+	}
+	const setCookies = signInRes.headers.getSetCookie();
+	if (!setCookies.length) {
+		throw new Error('Login succeeded but no Set-Cookie header returned.');
+	}
+	const cookieHeader = setCookies.map((c) => c.split(';')[0]).join('; ');
+	console.log(`${LOG_PREFIX}   [Auth] Login succeeded, session cookie received.`);
+
+	// 4. Verify authenticated request to protected endpoint succeeds
+	console.log(`${LOG_PREFIX}   [Auth] Authenticated POST /api/posts → expect 201`);
+	const authPostRes = await fetch(`${baseUrl}/api/posts`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Cookie: cookieHeader,
+		},
+		body: JSON.stringify({ title: 'Auth Test Post', slug: 'auth-test-post' }),
+	});
+	if (authPostRes.status !== 201) {
+		const body = await authPostRes.text();
+		throw new Error(
+			`Authenticated POST /api/posts expected 201, got ${authPostRes.status}.\n${body}`,
+		);
+	}
+	console.log(`${LOG_PREFIX}   [Auth] Authenticated post creation succeeded (201).`);
+
+	// 5. Verify the created post is readable via the API
+	console.log(`${LOG_PREFIX}   [Auth] GET /api/posts → verify post exists`);
+	const listRes = await fetch(`${baseUrl}/api/posts`, {
+		headers: { Cookie: cookieHeader },
+	});
+	if (!listRes.ok) {
+		throw new Error(`GET /api/posts failed: status ${listRes.status}`);
+	}
+	const listBody = await listRes.json();
+	if (!listBody.docs || listBody.docs.length < 1) {
+		throw new Error(`Expected at least 1 post, got ${JSON.stringify(listBody)}`);
+	}
+	const foundPost = listBody.docs.find((d: { title?: string }) => d.title === 'Auth Test Post');
+	if (!foundPost) {
+		throw new Error('Created post not found in GET /api/posts response.');
+	}
+	console.log(`${LOG_PREFIX}   [Auth] Post found in listing (totalDocs: ${listBody.totalDocs}).`);
+
+	// 6. Verify GET /api/access returns permissions for authenticated user
+	console.log(`${LOG_PREFIX}   [Auth] GET /api/access → verify permissions`);
+	const accessRes = await fetch(`${baseUrl}/api/access`, {
+		headers: { Cookie: cookieHeader },
+	});
+	if (!accessRes.ok) {
+		throw new Error(`GET /api/access failed: status ${accessRes.status}`);
+	}
+	const accessBody = await accessRes.json();
+	if (!accessBody.collections || accessBody.collections.length === 0) {
+		throw new Error('GET /api/access returned no collections.');
+	}
+	const postsAccess = accessBody.collections.find((c: { slug: string }) => c.slug === 'posts');
+	if (!postsAccess) {
+		throw new Error('No "posts" collection in /api/access response.');
+	}
+	if (!postsAccess.canCreate || !postsAccess.canRead || !postsAccess.canUpdate) {
+		throw new Error(
+			`Authenticated user should have CRUD access to posts: ${JSON.stringify(postsAccess)}`,
+		);
+	}
+	console.log(`${LOG_PREFIX}   [Auth] Permissions verified: posts collection is accessible.`);
+
+	console.log(`${LOG_PREFIX} First-user creation + auth flow verified via API.`);
+}
+
+/**
  * Run Playwright browser tests against a running server.
- * Tests the full user flow: setup redirect → create admin → login → admin portal.
+ * User is already created by verifyFirstUserAndAuth — tests login flow + UI rendering.
  */
 async function runPlaywrightTests(port: number): Promise<void> {
 	console.log(`${LOG_PREFIX} Running Playwright browser tests...`);
@@ -861,53 +1012,33 @@ async function runPlaywrightTests(port: number): Promise<void> {
 		console.log(`${LOG_PREFIX}   [Playwright] Landing page renders correctly.`);
 		await landingPage.close();
 
-		// --- Test 2: /admin redirects to /admin/setup (no users in DB) ---
-		console.log(`${LOG_PREFIX}   [Playwright] Test 2: Admin redirect to setup`);
-		const setupPage = await browser.newPage();
-		await setupPage.goto(`${baseUrl}/admin`);
-		await setupPage.waitForURL(/\/admin\/setup/, { timeout: 15000 });
-		const setupHeading = setupPage.getByRole('heading', { name: /welcome to momentum cms/i });
-		await setupHeading.waitFor({ state: 'visible', timeout: 10000 });
-		console.log(`${LOG_PREFIX}   [Playwright] Redirected to /admin/setup correctly.`);
+		// --- Test 2: /admin redirects to login (user exists but not authenticated) ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 2: Admin redirect to login`);
+		const loginRedirectPage = await browser.newPage();
+		await loginRedirectPage.goto(`${baseUrl}/admin`);
+		await loginRedirectPage.waitForURL(/\/admin\/login/, { timeout: 15000 });
+		console.log(`${LOG_PREFIX}   [Playwright] Redirected to /admin/login correctly.`);
+		await loginRedirectPage.close();
 
-		// --- Test 3: Create admin account via setup form ---
-		console.log(`${LOG_PREFIX}   [Playwright] Test 3: Create admin account`);
-		// Use input[name=...] selectors because mcms-input wraps a native input —
-		// placeholder selectors resolve to 2 elements (component host + inner input).
-		await setupPage.locator('input[name="name"]').fill('Test Admin');
-		await setupPage.locator('input[name="email"]').fill('admin@test.com');
-		await setupPage.locator('input[name="password"]').fill('testpass123');
-		await setupPage.locator('input[name="confirmPassword"]').fill('testpass123');
-		await setupPage.getByRole('button', { name: /create admin account/i }).click();
+		// --- Test 3: Login and verify admin dashboard ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 3: Login and verify dashboard`);
+		const dashPage = await browser.newPage();
+		await dashPage.goto(`${baseUrl}/admin/login`);
+		await dashPage.waitForLoadState('networkidle');
+		await dashPage.locator('input[name="email"]').fill('admin@test.com');
+		await dashPage.locator('input[name="password"]').fill('testpass123');
+		await dashPage.getByRole('button', { name: /sign in/i }).click();
+		await dashPage.waitForURL(/\/admin(?!\/login|\/setup)/, { timeout: 15000 });
 
-		// After creating admin, should redirect to /admin (dashboard)
-		await setupPage.waitForURL(/\/admin(?!\/setup|\/login)/, { timeout: 15000 });
-		console.log(`${LOG_PREFIX}   [Playwright] Admin account created, redirected to dashboard.`);
-
-		// --- Test 4: Verify admin dashboard content ---
-		console.log(`${LOG_PREFIX}   [Playwright] Test 4: Verify admin dashboard`);
-		const dashboardHeading = setupPage.getByRole('heading', { name: /dashboard/i });
+		const dashboardHeading = dashPage.getByRole('heading', { name: /dashboard/i });
 		await dashboardHeading.waitFor({ state: 'visible', timeout: 10000 });
-		// Verify sidebar has Posts collection link
-		const postsLink = setupPage.getByRole('link', { name: /posts/i });
+		const postsLink = dashPage.getByRole('link', { name: /posts/i });
 		await postsLink.waitFor({ state: 'visible', timeout: 5000 });
-		console.log(`${LOG_PREFIX}   [Playwright] Dashboard loaded with Posts in sidebar.`);
-		await setupPage.close();
+		console.log(`${LOG_PREFIX}   [Playwright] Login succeeded, dashboard loaded with Posts.`);
+		await dashPage.close();
 
-		// --- Test 5: Login flow with existing user ---
-		console.log(`${LOG_PREFIX}   [Playwright] Test 5: Login with existing user`);
-		const loginPage = await browser.newPage();
-		await loginPage.goto(`${baseUrl}/admin/login`);
-		await loginPage.waitForLoadState('networkidle');
-		await loginPage.locator('input[name="email"]').fill('admin@test.com');
-		await loginPage.locator('input[name="password"]').fill('testpass123');
-		await loginPage.getByRole('button', { name: /sign in/i }).click();
-		await loginPage.waitForURL(/\/admin(?!\/login|\/setup)/, { timeout: 15000 });
-		console.log(`${LOG_PREFIX}   [Playwright] Login succeeded, redirected to dashboard.`);
-		await loginPage.close();
-
-		// --- Test 6: Create a post via REST API ---
-		console.log(`${LOG_PREFIX}   [Playwright] Test 6: Create post via API`);
+		// --- Test 4: Create a post via REST API ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 4: Create post via API`);
 		const apiContext = await browser.newPage();
 		// Login first to get auth cookies
 		await apiContext.goto(`${baseUrl}/admin/login`);
@@ -957,8 +1088,8 @@ async function runPlaywrightTests(port: number): Promise<void> {
 		console.log(`${LOG_PREFIX}   [Playwright] Post created via API (status ${createRes.status}).`);
 		await apiContext.close();
 
-		// --- Test 7: Posts listing page at /posts ---
-		console.log(`${LOG_PREFIX}   [Playwright] Test 7: Posts listing page`);
+		// --- Test 5: Posts listing page at /posts ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 5: Posts listing page`);
 		const postsPage = await browser.newPage();
 		await postsPage.goto(`${baseUrl}/posts`);
 		await postsPage.waitForLoadState('networkidle');
@@ -977,17 +1108,15 @@ async function runPlaywrightTests(port: number): Promise<void> {
 			throw new Error(`Expected at least 1 post card, found ${cardCount}`);
 		}
 
-		// Verify the post title is visible
-		const firstPostTitle = postsPage.locator('[data-testid="post-title"]').first();
-		await firstPostTitle.waitFor({ state: 'visible', timeout: 5000 });
-		const titleText = await firstPostTitle.textContent();
-		if (!titleText?.includes('Hello World Post')) {
-			throw new Error(`Expected post title "Hello World Post", got "${titleText}"`);
-		}
+		// Verify "Hello World Post" is visible among the post titles
+		const helloPostTitle = postsPage.locator('[data-testid="post-title"]', {
+			hasText: 'Hello World Post',
+		});
+		await helloPostTitle.waitFor({ state: 'visible', timeout: 5000 });
 		console.log(`${LOG_PREFIX}   [Playwright] Posts listing renders ${cardCount} post(s).`);
 
-		// --- Test 8: Search filters posts ---
-		console.log(`${LOG_PREFIX}   [Playwright] Test 8: Search filters posts`);
+		// --- Test 6: Search filters posts ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 6: Search filters posts`);
 		const searchInput = postsPage.locator('[data-testid="posts-search"]');
 		await searchInput.fill('nonexistent-query-xyz');
 		// Wait for the empty state to appear
@@ -1001,8 +1130,8 @@ async function runPlaywrightTests(port: number): Promise<void> {
 		console.log(`${LOG_PREFIX}   [Playwright] Search clear: posts grid restored.`);
 		await postsPage.close();
 
-		// --- Test 9: Post detail page with blocks ---
-		console.log(`${LOG_PREFIX}   [Playwright] Test 9: Post detail page with blocks`);
+		// --- Test 7: Post detail page with blocks ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 7: Post detail page with blocks`);
 		const detailPage = await browser.newPage();
 		await detailPage.goto(`${baseUrl}/posts/hello-world-post`);
 		await detailPage.waitForLoadState('networkidle');
@@ -1032,8 +1161,8 @@ async function runPlaywrightTests(port: number): Promise<void> {
 		console.log(`${LOG_PREFIX}   [Playwright] Post detail page renders with title and blocks.`);
 		await detailPage.close();
 
-		// --- Test 10: Non-existent post shows error state ---
-		console.log(`${LOG_PREFIX}   [Playwright] Test 10: Non-existent post error state`);
+		// --- Test 8: Non-existent post shows error state ---
+		console.log(`${LOG_PREFIX}   [Playwright] Test 8: Non-existent post error state`);
 		const errorPage = await browser.newPage();
 		await errorPage.goto(`${baseUrl}/posts/does-not-exist-slug`);
 		await errorPage.waitForLoadState('networkidle');
@@ -1074,7 +1203,7 @@ async function main(): Promise<void> {
 	let exitCode = 0;
 
 	// Default to SQLite only (no external DB dependency) unless specified
-	const flavors: Flavor[] = config.flavor ? [config.flavor] : ['angular', 'analog'];
+	const flavors: Flavor[] = config.flavor ? [config.flavor] : ['angular', 'analog', 'nestjs'];
 	const databases: Database[] = config.database ? [config.database] : ['sqlite'];
 
 	console.log(`${LOG_PREFIX} Starting create-momentum-app E2E test`);
@@ -1149,7 +1278,7 @@ async function main(): Promise<void> {
 						installDeps(projectDir, port);
 
 						// Verify plugin packages can be installed and imported
-						if (flavor === 'angular') {
+						if (flavor === 'angular' || flavor === 'nestjs') {
 							verifyPluginConsumption(projectDir, port);
 						}
 

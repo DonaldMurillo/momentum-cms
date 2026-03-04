@@ -1,4 +1,4 @@
-import { test, expect, TEST_CREDENTIALS } from '../fixtures';
+import { test, expect, TEST_CREDENTIALS, clickAndWaitForNav } from '../fixtures';
 import type { APIRequestContext } from '@playwright/test';
 
 /**
@@ -70,13 +70,9 @@ test.describe('Admin Collection View', { tag: ['@admin'] }, () => {
 			const firstRow = page.locator('mcms-table-body mcms-table-row').first();
 			await expect(firstRow).toBeVisible({ timeout: 15000 });
 
-			// Click the first row (SPA navigation to view page)
-			await firstRow.click();
-
-			// Should navigate to the view page
-			await expect(page).toHaveURL(/\/admin\/collections\/articles\/[a-f0-9-]+$/, {
-				timeout: 10000,
-			});
+			// Click the first row (SPA navigation to view page).
+			// Retry the click to handle Angular SSR hydration timing.
+			await clickAndWaitForNav(firstRow, page, /\/admin\/collections\/articles\/[a-f0-9-]+$/);
 
 			// Entity view heading should appear
 			const heading = page.locator('main h1').first();
@@ -142,21 +138,8 @@ test.describe('Admin Collection View', { tag: ['@admin'] }, () => {
 			const firstDataCell = firstRow.locator('mcms-table-cell').nth(1);
 			await expect(firstDataCell).toContainText(/.+/, { timeout: 15000 });
 
-			// Use expect.poll to retry the click — Angular event bindings may not be
-			// attached yet even though the DOM is rendered (hydration race).
-			await expect
-				.poll(
-					async () => {
-						const currentUrl = page.url();
-						if (/\/admin\/collections\/pages\/[a-f0-9-]+$/.test(currentUrl)) {
-							return currentUrl;
-						}
-						await firstDataCell.click({ timeout: 2000 }).catch((_e: unknown) => undefined);
-						return page.url();
-					},
-					{ timeout: 15000, intervals: [500, 1000, 1500, 2000] },
-				)
-				.toMatch(/\/admin\/collections\/pages\/[a-f0-9-]+$/);
+			// Retry the click to handle Angular SSR hydration timing.
+			await clickAndWaitForNav(firstDataCell, page, /\/admin\/collections\/pages\/[a-f0-9-]+$/);
 
 			const heading = page.locator('main h1').first();
 			await expect(heading).toBeVisible({ timeout: 15000 });

@@ -1,0 +1,38 @@
+{
+	"name": "@momentumcms/server-nestjs",
+	"version": "0.5.2",
+	"description": "NestJS adapter for Momentum CMS",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/DonaldMurillo/momentum-cms.git",
+		"directory": "libs/server-nestjs"
+	},
+	"homepage": "https://github.com/DonaldMurillo/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/DonaldMurillo/momentum-cms/issues"
+	},
+	"keywords": [
+		"cms",
+		"momentum-cms",
+		"nestjs",
+		"server"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"main": "./index.cjs",
+	"types": "./src/index.d.ts",
+	"peerDependencies": {
+		"@momentumcms/auth": ">=0.0.1",
+		"@momentumcms/core": ">=0.0.1",
+		"@momentumcms/plugins-core": ">=0.0.1",
+		"@momentumcms/server-core": ">=0.0.1",
+		"@momentumcms/server-express": ">=0.0.1",
+		"@nestjs/common": "^10.0.0 || ^11.0.0",
+		"@nestjs/core": "^10.0.0 || ^11.0.0",
+		"express": "^4.0.0 || ^5.0.0",
+		"rxjs": "^7.0.0"
+	}
+}
