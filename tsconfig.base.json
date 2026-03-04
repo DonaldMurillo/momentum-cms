@@ -66,6 +66,7 @@
 				"libs/plugins/redirects/src/lib/redirects-collection.ts"
 			],
 			"@momentumcms/email": ["libs/email/src/index.ts"],
+			"@momentumcms/email/server": ["libs/email/src/server.ts"],
 			"@momentumcms/email/types": ["libs/email/src/types.ts"],
 			"@momentumcms/email/templates": ["libs/email/src/lib/templates/default-templates.ts"],
 			"@momentumcms/email-builder": ["libs/email-builder/src/index.ts"],

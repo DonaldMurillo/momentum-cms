@@ -56,6 +56,7 @@ export default defineConfig(({ mode: _mode }) => {
 							__dirname,
 							'../../libs/email/src/lib/templates/default-templates.ts',
 						),
+						'@momentumcms/email/server': resolve(__dirname, '../../libs/email/src/server.ts'),
 						'@momentumcms/email/types': resolve(__dirname, '../../libs/email/src/types.ts'),
 						'@momentumcms/email': resolve(__dirname, '../../libs/email/src/index.ts'),
 						'@momentumcms/example-config/collections': resolve(
@@ -129,6 +130,11 @@ export default defineConfig(({ mode: _mode }) => {
 						'@momentumcms/queue': resolve(__dirname, '../../libs/queue/src/index.ts'),
 						'@momentumcms/storage': resolve(__dirname, '../../libs/storage/src/index.ts'),
 						'@momentumcms/logger': resolve(__dirname, '../../libs/logger/src/index.ts'),
+					},
+					// Externalize juice so Rollup leaves it as a runtime import.
+					// juice is a CJS package that causes OOM if bundled into the Nitro server.
+					rollupConfig: {
+						external: ['juice'],
 					},
 				},
 			}),

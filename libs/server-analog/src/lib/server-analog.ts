@@ -65,13 +65,9 @@ async function renderEmailPreviewHTML(
 	doc: Record<string, unknown>,
 	blocksFieldName: string,
 ): Promise<string> {
-	// Dynamic import with variable to prevent Nitro/Rollup from bundling the email module
-	// (bundling it causes OOM and CJS/ESM interop issues with the juice dependency).
-	// At runtime, Nitro resolves the module via its alias config in vite.config.ts.
-	const emailPkg = '@momentumcms/email';
-	const emailModule: { renderEmailFromBlocks: (opts: { blocks: unknown[] }) => string } =
-		await import(emailPkg);
-	const { renderEmailFromBlocks } = emailModule;
+	// Import from the server-safe sub-path to avoid bundling Angular components
+	// (which require the JIT compiler). juice is externalized via rollupConfig.external.
+	const { renderEmailFromBlocks } = await import('@momentumcms/email/server');
 	const blocks = doc[blocksFieldName];
 	if (!Array.isArray(blocks) || blocks.length === 0) {
 		return '<html><body style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:#666;font-family:sans-serif"><p>No email blocks yet.</p></body></html>';

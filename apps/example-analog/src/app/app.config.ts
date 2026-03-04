@@ -59,33 +59,43 @@ injectSeoFields(adminCollections, { collections: ['categories', 'articles', 'pag
 const pageRoutes: Routes = [
 	{
 		path: '',
-		pathMatch: 'full',
-		loadComponent: () => import('@momentumcms/example-config/pages').then((m) => m.PageComponent),
-		data: { slug: 'home' },
-		resolve: { pageData: pageResolver },
-	},
-	// Articles listing page
-	{
-		path: 'articles',
 		loadComponent: () =>
-			import('@momentumcms/example-config/pages').then((m) => m.ArticlesPageComponent),
-	},
-	// Article detail page
-	{
-		path: 'articles/:slug',
-		loadComponent: () =>
-			import('@momentumcms/example-config/pages').then((m) => m.ArticleDetailComponent),
-		resolve: { articleData: articleDetailResolver },
-	},
-	// Experiments page (must be before :slug catch-all)
-	{
-		path: 'experiments',
-		loadComponent: () => import('@momentumcms/example-config/pages').then((m) => m.ExperimentsPage),
-	},
-	{
-		path: ':slug',
-		loadComponent: () => import('@momentumcms/example-config/pages').then((m) => m.PageComponent),
-		resolve: { pageData: pageResolver },
+			import('@momentumcms/example-config/pages').then((m) => m.AppLayoutComponent),
+		children: [
+			{
+				path: '',
+				pathMatch: 'full',
+				loadComponent: () =>
+					import('@momentumcms/example-config/pages').then((m) => m.PageComponent),
+				data: { slug: 'home' },
+				resolve: { pageData: pageResolver },
+			},
+			// Articles listing page
+			{
+				path: 'articles',
+				loadComponent: () =>
+					import('@momentumcms/example-config/pages').then((m) => m.ArticlesPageComponent),
+			},
+			// Article detail page
+			{
+				path: 'articles/:slug',
+				loadComponent: () =>
+					import('@momentumcms/example-config/pages').then((m) => m.ArticleDetailComponent),
+				resolve: { articleData: articleDetailResolver },
+			},
+			// Experiments page (must be before :slug catch-all)
+			{
+				path: 'experiments',
+				loadComponent: () =>
+					import('@momentumcms/example-config/pages').then((m) => m.ExperimentsPage),
+			},
+			{
+				path: ':slug',
+				loadComponent: () =>
+					import('@momentumcms/example-config/pages').then((m) => m.PageComponent),
+				resolve: { pageData: pageResolver },
+			},
+		],
 	},
 ];
 

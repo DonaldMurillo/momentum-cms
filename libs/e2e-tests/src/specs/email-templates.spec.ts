@@ -423,11 +423,6 @@ test.describe('Email Templates — Admin UI', { tag: ['@admin'] }, () => {
 });
 
 test.describe('Email Templates — Preview API', { tag: ['@api'] }, () => {
-	test.skip(
-		() => process.env['E2E_SERVER_FLAVOR'] === 'analog',
-		'Nitro bundler cannot resolve @momentumcms/email dynamic import at runtime (juice CJS dep)',
-	);
-
 	test('GET preview should render email HTML from saved data', async ({ authenticatedPage }) => {
 		// Find the password-reset template ID
 		const listResponse = await authenticatedPage.request.get(

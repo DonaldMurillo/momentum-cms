@@ -32,6 +32,11 @@
 			"import": "./index.js",
 			"require": "./index.cjs"
 		},
+		"./server": {
+			"types": "./src/server.d.ts",
+			"import": "./server.js",
+			"require": "./server.cjs"
+		},
 		"./types": {
 			"types": "./src/types.d.ts",
 			"import": "./types.js",
@@ -45,6 +50,9 @@
 	},
 	"typesVersions": {
 		"*": {
+			"server": [
+				"src/server.d.ts"
+			],
 			"types": [
 				"src/types.d.ts"
 			],
