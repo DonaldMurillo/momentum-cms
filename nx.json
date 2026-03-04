@@ -169,7 +169,8 @@
 			"plugins-form-builder",
 			"queue",
 			"plugins-queue",
-			"plugins-cron"
+			"plugins-cron",
+			"plugins-image"
 		],
 		"version": {
 			"preVersionCommand": "npx nx run-many -t build",
