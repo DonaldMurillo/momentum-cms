@@ -70,8 +70,8 @@ collections: [Posts, <PascalName>],
 4. Remind user to run schema generation:
 
 ```bash
-npx drizzle-kit generate
-npx drizzle-kit push
+npm run migrate:generate
+npm run migrate:run
 ```
 
 ## Field Types Available

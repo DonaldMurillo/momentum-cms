@@ -4,6 +4,7 @@ import {
 	computed,
 	effect,
 	input,
+	signal,
 	untracked,
 } from '@angular/core';
 import {
@@ -14,7 +15,13 @@ import {
 	moveItemInArray,
 } from '@angular/cdk/drag-drop';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroPlus, heroTrash, heroBars2 } from '@ng-icons/heroicons/outline';
+import {
+	heroPlus,
+	heroTrash,
+	heroBars2,
+	heroChevronRight,
+	heroChevronDown,
+} from '@ng-icons/heroicons/outline';
 import {
 	Card,
 	CardHeader,
@@ -69,7 +76,7 @@ interface BlockItem {
 		CdkDragHandle,
 		FieldRenderer,
 	],
-	providers: [provideIcons({ heroPlus, heroTrash, heroBars2 })],
+	providers: [provideIcons({ heroPlus, heroTrash, heroBars2, heroChevronRight, heroChevronDown })],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `
 		<mcms-card>
@@ -102,6 +109,19 @@ interface BlockItem {
 						@for (block of blocks(); track $index; let i = $index) {
 							<div cdkDrag class="border rounded-lg bg-card" [cdkDragDisabled]="isDisabled()">
 								<div class="flex items-center gap-3 px-4 py-2 border-b bg-muted/50 rounded-t-lg">
+									<button
+										class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors"
+										(click)="toggleBlockCollapse(i)"
+										[attr.aria-label]="isBlockCollapsed(i) ? 'Expand block' : 'Collapse block'"
+										[attr.aria-expanded]="!isBlockCollapsed(i)"
+										data-testid="block-collapse-toggle"
+									>
+										<ng-icon
+											[name]="isBlockCollapsed(i) ? 'heroChevronRight' : 'heroChevronDown'"
+											size="14"
+											aria-hidden="true"
+										/>
+									</button>
 									<div
 										cdkDragHandle
 										class="cursor-grab text-muted-foreground hover:text-foreground"
@@ -128,18 +148,20 @@ interface BlockItem {
 										</button>
 									}
 								</div>
-								<div class="p-4 space-y-3">
-									@for (subField of getBlockFields(block.blockType); track subField.name) {
-										<mcms-field-renderer
-											[field]="subField"
-											[formNode]="getBlockSubNode(i, subField.name)"
-											[formTree]="formTree()"
-											[formModel]="formModel()"
-											[mode]="mode()"
-											[path]="getBlockSubFieldPath(i, subField.name)"
-										/>
-									}
-								</div>
+								@if (!isBlockCollapsed(i)) {
+									<div class="p-4 space-y-3" data-testid="block-fields">
+										@for (subField of getBlockFields(block.blockType); track subField.name) {
+											<mcms-field-renderer
+												[field]="subField"
+												[formNode]="getBlockSubNode(i, subField.name)"
+												[formTree]="formTree()"
+												[formModel]="formModel()"
+												[mode]="mode()"
+												[path]="getBlockSubFieldPath(i, subField.name)"
+											/>
+										}
+									</div>
+								}
 							</div>
 						}
 					</div>
@@ -178,6 +200,9 @@ export class BlocksFieldRenderer {
 
 	/** Field path (e.g., "content") */
 	readonly path = input.required<string>();
+
+	/** Tracks which block indices are collapsed */
+	private readonly collapsedBlocks = signal(new Set<number>());
 
 	/** Bridge: extract FieldState from formNode */
 	private readonly nodeState = computed(() => getFieldNodeState(this.formNode()));
@@ -264,6 +289,22 @@ export class BlocksFieldRenderer {
 		return map;
 	});
 
+	/** Whether a block at the given index is collapsed */
+	isBlockCollapsed(index: number): boolean {
+		return this.collapsedBlocks().has(index);
+	}
+
+	/** Toggle the collapsed state of a block */
+	toggleBlockCollapse(index: number): void {
+		const next = new Set(this.collapsedBlocks());
+		if (next.has(index)) {
+			next.delete(index);
+		} else {
+			next.add(index);
+		}
+		this.collapsedBlocks.set(next);
+	}
+
 	/** Get display label for a block type */
 	getBlockLabel(blockType: string): string {
 		const def = this.blockDefMap().get(blockType);
@@ -294,6 +335,7 @@ export class BlocksFieldRenderer {
 		const blocks = [...this.blocks()];
 		moveItemInArray(blocks, event.previousIndex, event.currentIndex);
 		state.value.set(blocks);
+		this.remapCollapsedIndicesOnReorder(event.previousIndex, event.currentIndex);
 	}
 
 	/** Add a new block of the given type */
@@ -318,5 +360,43 @@ export class BlocksFieldRenderer {
 		if (!state) return;
 		const blocks = this.blocks().filter((_, i) => i !== index);
 		state.value.set(blocks);
+		this.removeCollapsedIndex(index);
+	}
+
+	/** Remove an index from collapsedBlocks and shift higher indices down */
+	private removeCollapsedIndex(removedIndex: number): void {
+		const prev = this.collapsedBlocks();
+		const next = new Set<number>();
+		for (const idx of prev) {
+			if (idx < removedIndex) {
+				next.add(idx);
+			} else if (idx > removedIndex) {
+				next.add(idx - 1);
+			}
+			// idx === removedIndex is dropped
+		}
+		this.collapsedBlocks.set(next);
+	}
+
+	/** Remap collapsed indices after a drag-drop reorder */
+	private remapCollapsedIndicesOnReorder(from: number, to: number): void {
+		const prev = this.collapsedBlocks();
+		const next = new Set<number>();
+		for (const idx of prev) {
+			if (idx === from) {
+				next.add(to);
+			} else {
+				let mapped = idx;
+				if (from < to) {
+					// Moved forward: items between (from, to] shift down by 1
+					if (idx > from && idx <= to) mapped = idx - 1;
+				} else {
+					// Moved backward: items between [to, from) shift up by 1
+					if (idx >= to && idx < from) mapped = idx + 1;
+				}
+				next.add(mapped);
+			}
+		}
+		this.collapsedBlocks.set(next);
 	}
 }

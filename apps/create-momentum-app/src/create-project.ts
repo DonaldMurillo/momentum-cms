@@ -8,7 +8,10 @@ import type { CLIOptions } from './cli';
 const TEMPLATE_EXT = '.tmpl';
 
 function getTemplatesDir(): string {
-	return path.resolve(__dirname, 'templates');
+	// In dist, templates are alongside the bundle. In source (tests), they're one level up.
+	const distPath = path.resolve(__dirname, 'templates');
+	if (fs.existsSync(distPath)) return distPath;
+	return path.resolve(__dirname, '..', 'templates');
 }
 
 function interpolate(content: string, vars: Record<string, string>): string {
@@ -156,7 +159,11 @@ export async function createProject(options: CLIOptions): Promise<void> {
 	}
 
 	const templatesDir = getTemplatesDir();
-	const pkgJson = fs.readJsonSync(path.resolve(__dirname, 'package.json'));
+	// In dist, package.json is alongside the bundle. In source (tests), it's one level up.
+	const pkgJsonPath = fs.existsSync(path.resolve(__dirname, 'package.json'))
+		? path.resolve(__dirname, 'package.json')
+		: path.resolve(__dirname, '..', 'package.json');
+	const pkgJson = fs.readJsonSync(pkgJsonPath);
 	const packageVersion: string = pkgJson.version ?? '0.0.1';
 
 	const vars: Record<string, string> = {
@@ -169,8 +176,8 @@ export async function createProject(options: CLIOptions): Promise<void> {
 				: "import { sqliteAdapter } from '@momentumcms/db-drizzle';",
 		dbAdapter:
 			database === 'postgres'
-				? `postgresAdapter({\n\t\tconnectionString: process.env['DATABASE_URL'] ?? 'postgresql://postgres:postgres@localhost:5432/momentum',\n\t})`
-				: `sqliteAdapter({\n\t\tfilename: process.env['DATABASE_PATH'] ?? './data/momentum.db',\n\t})`,
+				? `postgresAdapter({\n\t\tconnectionString: process.env['DATABASE_URL'] ?? 'postgresql://postgres:postgres@localhost:5432/${projectName}',\n\t})`
+				: `sqliteAdapter({\n\t\tfilename: process.env['DATABASE_PATH'] ?? './data/${projectName}.db',\n\t})`,
 		dbPoolSetup:
 			database === 'postgres'
 				? `import type { PostgresAdapterWithRaw } from '@momentumcms/db-drizzle';
@@ -186,8 +193,8 @@ const pool = (dbAdapter as PostgresAdapterWithRaw).getPool();`
 		dbDevPackage: database === 'postgres' ? '' : '"@types/better-sqlite3": "^7.6.13",',
 		envDbVar:
 			database === 'postgres'
-				? 'DATABASE_URL=postgresql://postgres:postgres@localhost:5432/momentum'
-				: 'DATABASE_PATH=./data/momentum.db',
+				? `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/${projectName}`
+				: `DATABASE_PATH=./data/${projectName}.db`,
 		defaultPort: '4200',
 		externalDependencies: [
 			database === 'postgres' ? '"pg", "pg-native"' : '"better-sqlite3"',
@@ -216,7 +223,7 @@ This project uses PostgreSQL via Docker. The database is configured in \`docker-
 **Connection Details:**
 - Host: \`localhost\`
 - Port: \`5432\`
-- Database: \`momentum\`
+- Database: \`${projectName}\`
 - Username: \`postgres\`
 - Password: \`postgres\`
 
@@ -239,7 +246,7 @@ docker compose logs -f postgres
 You can also use an external PostgreSQL instance by updating \`DATABASE_URL\` in \`.env\`.`
 				: `### SQLite
 
-This project uses SQLite with the database file at \`./data/momentum.db\`.  
+This project uses SQLite with the database file at \`./data/${projectName}.db\`.  
 The database is automatically created on first run - no setup required.`,
 	};
 

@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/plugins-seo",
-	"version": "0.5.2",
+	"version": "0.5.3",
 	"description": "SEO plugin for Momentum CMS — meta tags, sitemap, robots.txt, analysis",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
@@ -44,9 +44,9 @@
 	"dependencies": {
 		"@angular/common": "^21.0.0",
 		"@angular/core": "^21.0.0",
-		"@momentumcms/core": "0.5.2",
-		"@momentumcms/plugins-core": "0.5.2",
-		"@momentumcms/ui": "0.5.2",
+		"@momentumcms/core": "0.5.3",
+		"@momentumcms/plugins-core": "0.5.3",
+		"@momentumcms/ui": "0.5.3",
 		"@ng-icons/core": "^33.0.0",
 		"@ng-icons/heroicons": "^33.0.0",
 		"express": "^4.21.0"

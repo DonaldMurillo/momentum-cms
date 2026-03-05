@@ -12,7 +12,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: momentum
+      POSTGRES_DB: {{projectName}}
     volumes:
       - {{projectName}}_postgres_data:/var/lib/postgresql/data
     healthcheck:
