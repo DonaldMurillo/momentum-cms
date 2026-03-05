@@ -283,6 +283,214 @@ describe('BlocksFieldRenderer', () => {
 		});
 	});
 
+	describe('collapse/expand', () => {
+		it('should start with all blocks expanded', () => {
+			setup({}, [
+				{ blockType: 'hero', heading: 'A', subheading: 'B' },
+				{ blockType: 'cta', buttonText: 'Click' },
+			]);
+			expect(component.isBlockCollapsed(0)).toBe(false);
+			expect(component.isBlockCollapsed(1)).toBe(false);
+		});
+
+		it('should collapse a block when toggled', () => {
+			setup({}, [
+				{ blockType: 'hero', heading: 'A', subheading: 'B' },
+				{ blockType: 'cta', buttonText: 'Click' },
+			]);
+			component.toggleBlockCollapse(0);
+			expect(component.isBlockCollapsed(0)).toBe(true);
+			expect(component.isBlockCollapsed(1)).toBe(false);
+		});
+
+		it('should expand a collapsed block when toggled again', () => {
+			setup({}, [{ blockType: 'hero', heading: 'A', subheading: 'B' }]);
+			component.toggleBlockCollapse(0);
+			expect(component.isBlockCollapsed(0)).toBe(true);
+
+			component.toggleBlockCollapse(0);
+			expect(component.isBlockCollapsed(0)).toBe(false);
+		});
+
+		it('should track collapse state independently per block', () => {
+			setup({}, [
+				{ blockType: 'hero', heading: 'A', subheading: 'B' },
+				{ blockType: 'cta', buttonText: 'Click' },
+				{ blockType: 'hero', heading: 'C', subheading: 'D' },
+			]);
+			component.toggleBlockCollapse(0);
+			component.toggleBlockCollapse(2);
+
+			expect(component.isBlockCollapsed(0)).toBe(true);
+			expect(component.isBlockCollapsed(1)).toBe(false);
+			expect(component.isBlockCollapsed(2)).toBe(true);
+		});
+
+		it('should hide block fields in template when collapsed', () => {
+			setup({}, [
+				{ blockType: 'hero', heading: 'A', subheading: 'B' },
+				{ blockType: 'cta', buttonText: 'Click' },
+			]);
+
+			// Both block field sections should be visible initially
+			const blockFields = fixture.nativeElement.querySelectorAll('[data-testid="block-fields"]');
+			expect(blockFields.length).toBe(2);
+
+			// Collapse first block
+			component.toggleBlockCollapse(0);
+			fixture.detectChanges();
+
+			const afterCollapse = fixture.nativeElement.querySelectorAll('[data-testid="block-fields"]');
+			expect(afterCollapse.length).toBe(1);
+		});
+
+		it('should update aria-expanded on collapse toggle button', () => {
+			setup({}, [{ blockType: 'hero', heading: 'A', subheading: 'B' }]);
+
+			const collapseBtn = fixture.nativeElement.querySelector(
+				'[data-testid="block-collapse-toggle"]',
+			);
+			expect(collapseBtn).toBeTruthy();
+			expect(collapseBtn.getAttribute('aria-expanded')).toBe('true');
+			expect(collapseBtn.getAttribute('aria-label')).toBe('Collapse block');
+
+			component.toggleBlockCollapse(0);
+			fixture.detectChanges();
+
+			expect(collapseBtn.getAttribute('aria-expanded')).toBe('false');
+			expect(collapseBtn.getAttribute('aria-label')).toBe('Expand block');
+		});
+	});
+
+	describe('collapse state after removeBlock', () => {
+		it('should clear collapse state of the removed block', () => {
+			setup({}, [
+				{ blockType: 'hero', heading: 'A', subheading: 'B' },
+				{ blockType: 'cta', buttonText: 'Click' },
+				{ blockType: 'hero', heading: 'C', subheading: 'D' },
+			]);
+			component.toggleBlockCollapse(1);
+			expect(component.isBlockCollapsed(1)).toBe(true);
+
+			component.removeBlock(1);
+			fixture.detectChanges();
+
+			// Index 1 is now old block 2 — should not be collapsed
+			expect(component.isBlockCollapsed(0)).toBe(false);
+			expect(component.isBlockCollapsed(1)).toBe(false);
+		});
+
+		it('should shift collapsed indices down when a lower block is removed', () => {
+			setup({}, [
+				{ blockType: 'hero', heading: 'A', subheading: 'B' },
+				{ blockType: 'cta', buttonText: 'Click' },
+				{ blockType: 'hero', heading: 'C', subheading: 'D' },
+			]);
+			component.toggleBlockCollapse(2);
+			expect(component.isBlockCollapsed(2)).toBe(true);
+
+			component.removeBlock(0);
+			fixture.detectChanges();
+
+			// Old block 2 is now at index 1
+			expect(component.isBlockCollapsed(0)).toBe(false);
+			expect(component.isBlockCollapsed(1)).toBe(true);
+		});
+
+		it('should not shift collapsed indices below the removed index', () => {
+			setup({}, [
+				{ blockType: 'hero', heading: 'A', subheading: 'B' },
+				{ blockType: 'cta', buttonText: 'Click' },
+				{ blockType: 'hero', heading: 'C', subheading: 'D' },
+			]);
+			component.toggleBlockCollapse(0);
+			expect(component.isBlockCollapsed(0)).toBe(true);
+
+			component.removeBlock(2);
+			fixture.detectChanges();
+
+			// Block 0 should remain collapsed
+			expect(component.isBlockCollapsed(0)).toBe(true);
+			expect(component.isBlockCollapsed(1)).toBe(false);
+		});
+	});
+
+	describe('collapse state after reorder (onDrop)', () => {
+		it('should move collapse state when a block is dragged forward', () => {
+			setup({}, [
+				{ blockType: 'hero', heading: 'A', subheading: 'B' },
+				{ blockType: 'cta', buttonText: 'Click' },
+				{ blockType: 'hero', heading: 'C', subheading: 'D' },
+			]);
+			component.toggleBlockCollapse(0);
+			expect(component.isBlockCollapsed(0)).toBe(true);
+
+			// Drag block 0 to position 2
+			component.onDrop({ previousIndex: 0, currentIndex: 2 } as any);
+			fixture.detectChanges();
+
+			expect(component.isBlockCollapsed(0)).toBe(false);
+			expect(component.isBlockCollapsed(1)).toBe(false);
+			expect(component.isBlockCollapsed(2)).toBe(true);
+		});
+
+		it('should move collapse state when a block is dragged backward', () => {
+			setup({}, [
+				{ blockType: 'hero', heading: 'A', subheading: 'B' },
+				{ blockType: 'cta', buttonText: 'Click' },
+				{ blockType: 'hero', heading: 'C', subheading: 'D' },
+			]);
+			component.toggleBlockCollapse(2);
+			expect(component.isBlockCollapsed(2)).toBe(true);
+
+			// Drag block 2 to position 0
+			component.onDrop({ previousIndex: 2, currentIndex: 0 } as any);
+			fixture.detectChanges();
+
+			expect(component.isBlockCollapsed(0)).toBe(true);
+			expect(component.isBlockCollapsed(1)).toBe(false);
+			expect(component.isBlockCollapsed(2)).toBe(false);
+		});
+
+		it('should shift intermediate block indices when dragging forward', () => {
+			setup({}, [
+				{ blockType: 'hero', heading: 'A', subheading: 'B' },
+				{ blockType: 'cta', buttonText: 'Click' },
+				{ blockType: 'hero', heading: 'C', subheading: 'D' },
+			]);
+			// Collapse block 1 (middle)
+			component.toggleBlockCollapse(1);
+			expect(component.isBlockCollapsed(1)).toBe(true);
+
+			// Drag block 0 to position 2 — block 1 should shift to index 0
+			component.onDrop({ previousIndex: 0, currentIndex: 2 } as any);
+			fixture.detectChanges();
+
+			expect(component.isBlockCollapsed(0)).toBe(true);
+			expect(component.isBlockCollapsed(1)).toBe(false);
+			expect(component.isBlockCollapsed(2)).toBe(false);
+		});
+
+		it('should handle multiple collapsed blocks during reorder', () => {
+			setup({}, [
+				{ blockType: 'hero', heading: 'A', subheading: 'B' },
+				{ blockType: 'cta', buttonText: 'Click' },
+				{ blockType: 'hero', heading: 'C', subheading: 'D' },
+			]);
+			component.toggleBlockCollapse(0);
+			component.toggleBlockCollapse(2);
+
+			// Drag block 0 to position 2
+			component.onDrop({ previousIndex: 0, currentIndex: 2 } as any);
+			fixture.detectChanges();
+
+			// Old block 0 moved to 2, old block 2 shifted to 1
+			expect(component.isBlockCollapsed(0)).toBe(false);
+			expect(component.isBlockCollapsed(1)).toBe(true);
+			expect(component.isBlockCollapsed(2)).toBe(true);
+		});
+	});
+
 	describe('getBlockSubFieldPath', () => {
 		it('should build correct path', () => {
 			setup();

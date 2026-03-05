@@ -284,8 +284,16 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	/** Model signal — the single source of truth for form data */
 	readonly formModel = signal<Record<string, unknown>>({});
 
-	/** Alias for backward compatibility (CollectionEditPage reads formData) */
-	readonly formData = this.formModel;
+	/** Reactive form data that tracks Signal Forms changes for downstream consumers (e.g. live preview).
+	 * Reads the root FieldState value directly so it re-triggers when any field value changes,
+	 * unlike formModel which may keep the same object reference after in-place mutations. */
+	readonly formData = computed((): Record<string, unknown> => {
+		const ef = this.entityForm();
+		if (!ef) return this.formModel();
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- FieldState value is the full model
+		const val = ef().value() as Record<string, unknown> | null;
+		return val ?? this.formModel();
+	});
 
 	/** Signal forms tree — created once when collection is available */
 	readonly entityForm = signal<ReturnType<typeof form<Record<string, unknown>>> | null>(null);

@@ -236,12 +236,35 @@ export interface Settings {
 	updatedAt: string;
 }
 
+export interface EventsSectionsSpeakerBlock {
+	blockType: 'speaker';
+	name: string;
+	topic?: string;
+	_analytics?: {
+		trackImpressions?: boolean;
+		trackHover?: boolean;
+	};
+}
+
+export interface EventsSectionsScheduleBlock {
+	blockType: 'schedule';
+	time: string;
+	activity: string;
+	_analytics?: {
+		trackImpressions?: boolean;
+		trackHover?: boolean;
+	};
+}
+
+export type EventsSectionsBlock = EventsSectionsSpeakerBlock | EventsSectionsScheduleBlock;
+
 export interface Events {
 	id: string;
 	title: string;
 	description?: string;
 	location?: string;
 	eventDate?: string;
+	sections?: EventsSectionsBlock[];
 	createdAt: string;
 	updatedAt: string;
 }

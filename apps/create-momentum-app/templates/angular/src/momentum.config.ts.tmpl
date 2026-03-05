@@ -13,16 +13,16 @@ const dbAdapter = {{dbAdapter}};
 
 {{dbPoolSetup}}
 
-const authBaseURL =
-	process.env['BETTER_AUTH_URL'] || `http://localhost:${process.env['PORT'] || {{defaultPort}}}`;
+const PORT = Number(process.env['PORT']) || {{defaultPort}};
+const BASE_URL = process.env['BETTER_AUTH_URL'] || `http://localhost:${PORT}`;
 
 /**
  * Auth plugin - manages Better Auth integration, user tables, and middleware.
  */
 export const authPlugin = momentumAuth({
 	{{authDbConfig}}
-	baseURL: authBaseURL,
-	trustedOrigins: [authBaseURL],
+	baseURL: BASE_URL,
+	trustedOrigins: [BASE_URL],
 });
 
 /**
@@ -30,7 +30,7 @@ export const authPlugin = momentumAuth({
  */
 export const seo = seoPlugin({
 	collections: ['posts'],
-	siteUrl: `http://localhost:${process.env['PORT'] || {{defaultPort}}}`,
+	siteUrl: BASE_URL,
 	analysis: true,
 	sitemap: true,
 	robots: true,
@@ -56,7 +56,7 @@ const config = defineMomentumConfig({
 		},
 	},
 	server: {
-		port: Number(process.env['PORT']) || {{defaultPort}},
+		port: PORT,
 		cors: {
 			origin: '*',
 			methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],

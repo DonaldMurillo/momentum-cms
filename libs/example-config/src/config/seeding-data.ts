@@ -18,6 +18,14 @@ interface ArticleDoc {
 	category?: string;
 }
 
+interface EventDoc {
+	[key: string]: unknown;
+	title: string;
+	description?: string;
+	location?: string;
+	sections?: Array<{ blockType: string; [key: string]: unknown }>;
+}
+
 interface PageDoc {
 	[key: string]: unknown;
 	title: string;
@@ -289,6 +297,17 @@ export const exampleSeedingConfig: SeedingConfig = {
 		}),
 		collection<SettingsDoc>('settings').create('settings-minimal', {
 			siteName: 'Minimal Site',
+		}),
+		// Seed event with blocks for standard blocks collapse/expand E2E testing
+		collection<EventDoc>('events').create('event-conference', {
+			title: 'Tech Conference 2026',
+			description: 'Annual technology conference for E2E testing.',
+			location: 'Test Arena',
+			sections: [
+				{ blockType: 'speaker', name: 'Alice Johnson', topic: 'Angular Signals' },
+				{ blockType: 'schedule', time: '10:00 AM', activity: 'Opening Keynote' },
+				{ blockType: 'speaker', name: 'Bob Smith', topic: 'Headless CMS Architecture' },
+			],
 		}),
 	],
 	seed: async (ctx) => {

@@ -10,7 +10,7 @@ Add and configure a plugin in this Momentum CMS project.
 
 ## Arguments
 
-- `$ARGUMENTS` - Plugin name: "analytics", "otel", "event-bus", or an npm package name
+- `$ARGUMENTS` - Plugin name: "seo", "analytics", "otel", "event-bus", or an npm package name
 
 ## Steps
 
@@ -22,6 +22,43 @@ Add and configure a plugin in this Momentum CMS project.
 6. Remind the user to restart the dev server
 
 ## Official Plugins
+
+### SEO (`@momentumcms/plugins-seo`)
+
+Adds SEO fields to collections, sitemap.xml, robots.txt, meta tag API, and an admin dashboard. **Included by default** in scaffolded projects.
+
+```bash
+npm install @momentumcms/plugins-seo
+```
+
+```typescript
+// In src/momentum.config.ts
+import { seoPlugin } from '@momentumcms/plugins-seo';
+
+const seo = seoPlugin({
+	collections: ['posts'], // Collection slugs to inject SEO fields into (or '*' for all)
+	siteUrl: BASE_URL, // Base URL for sitemaps and canonical URLs
+	analysis: true, // Enable SEO scoring analysis on save
+	sitemap: true, // Enable /sitemap.xml endpoint
+	robots: true, // Enable /robots.txt endpoint
+	metaApi: true, // Enable /api/seo/meta/:collection/:id endpoint
+	adminDashboard: true, // Enable SEO admin pages (dashboard, sitemap, robots)
+});
+
+const config = defineMomentumConfig({
+	// ...existing config
+	plugins: [authPlugin, seo],
+});
+```
+
+**What it adds:**
+
+- SEO fields (title, description, keywords, Open Graph, Twitter cards) injected into specified collections via a tabbed "SEO" section
+- SEO analysis scoring (title length, description, keyword density) with per-document scores
+- Sitemap.xml generation from published documents
+- Robots.txt generation with configurable rules
+- Meta tag API endpoint for headless frontends
+- Admin dashboard with SEO overview, sitemap settings, and robots.txt editor
 
 ### Analytics (`@momentumcms/plugins-analytics`)
 

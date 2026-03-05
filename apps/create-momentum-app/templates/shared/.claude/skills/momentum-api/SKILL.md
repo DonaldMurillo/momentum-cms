@@ -62,6 +62,18 @@ const updated = await this.api.collection<Post>('posts').update('123', { title: 
 const result = await this.api.collection<Post>('posts').delete('123');
 ```
 
+### With Generated Types
+
+1. Generate types: `npm run generate`
+2. Import and use:
+
+```typescript
+import type { Post, User } from '../generated/momentum.types';
+
+const posts = await this.api.collection<Post>('posts').find();
+const users = await this.api.collection<User>('users').find();
+```
+
 ## Find Options
 
 ```typescript
@@ -78,6 +90,7 @@ interface FindOptions {
 ```typescript
 import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { injectMomentumAPI } from '@momentumcms/admin';
+import type { Post } from '../generated/momentum.types';
 
 @Component({
 	selector: 'app-posts',
@@ -88,17 +101,23 @@ import { injectMomentumAPI } from '@momentumcms/admin';
 			@for (post of posts(); track post.id) {
 				<article>
 					<h2>{{ post.title }}</h2>
+					<p>{{ post.content }}</p>
 					<button (click)="deletePost(post.id)">Delete</button>
 				</article>
 			}
 		}
+
+		<form (submit)="createPost($event)">
+			<input #titleInput placeholder="Title" />
+			<button type="submit">Create Post</button>
+		</form>
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PostsComponent {
 	private readonly api = injectMomentumAPI();
 
-	readonly posts = signal<any[]>([]);
+	readonly posts = signal<Post[]>([]);
 	readonly loading = signal(true);
 
 	constructor() {
@@ -108,7 +127,7 @@ export class PostsComponent {
 	async loadPosts(): Promise<void> {
 		this.loading.set(true);
 		try {
-			const result = await this.api.collection('posts').find({
+			const result = await this.api.collection<Post>('posts').find({
 				limit: 20,
 				sort: '-createdAt',
 			});
@@ -118,8 +137,21 @@ export class PostsComponent {
 		}
 	}
 
+	async createPost(event: Event): Promise<void> {
+		event.preventDefault();
+		const form = event.target as HTMLFormElement;
+		const input = form.querySelector('input') as HTMLInputElement;
+
+		const post = await this.api.collection<Post>('posts').create({
+			title: input.value,
+		});
+
+		this.posts.update((posts) => [post, ...posts]);
+		input.value = '';
+	}
+
 	async deletePost(id: string): Promise<void> {
-		await this.api.collection('posts').delete(id);
+		await this.api.collection<Post>('posts').delete(id);
 		this.posts.update((posts) => posts.filter((p) => p.id !== id));
 	}
 }
@@ -131,23 +163,16 @@ export class PostsComponent {
 - **Browser**: HTTP calls to `/api/*`
 - **Same interface** - code works identically on both platforms
 
-## TransferState (SSR Hydration)
-
-TransferState is **enabled by default** for read operations. Data fetched during SSR is cached and reused on browser hydration.
-
-```typescript
-// Default: TransferState enabled (no duplicate fetch on hydration)
-const posts = await this.api.collection<Post>('posts').find({ limit: 10 });
-
-// Opt-out: always fetch fresh data
-const posts = await this.api.collection<Post>('posts').find({ limit: 10, transfer: false });
-```
-
-Requires `provideClientHydration()` in app config.
-
 ## Error Handling
 
 ```typescript
+import {
+	CollectionNotFoundError,
+	DocumentNotFoundError,
+	AccessDeniedError,
+	ValidationError,
+} from '@momentumcms/server-core';
+
 try {
 	await this.api.collection('posts').create({ title: '' });
 } catch (error) {
@@ -155,4 +180,59 @@ try {
 		console.error('Validation failed:', error.errors);
 	}
 }
+```
+
+## Type Generation
+
+Generate types from your collections:
+
+```bash
+npm run generate
+```
+
+Output files (do not edit manually):
+
+- `src/generated/momentum.types.ts` — TypeScript interfaces
+- `src/generated/momentum.config.ts` — Browser-safe admin config
+
+## TransferState (SSR Hydration)
+
+TransferState is **enabled by default** for all read operations (`find`, `findById`, `findSignal`, `findByIdSignal`). Data fetched during SSR is automatically cached and reused on browser hydration, eliminating duplicate HTTP calls.
+
+### Default Behavior (TransferState enabled)
+
+```typescript
+// SSR: Fetches and caches | Browser: Reads from cache (no HTTP)
+const posts = await this.api.collection<Post>('posts').find({ limit: 10 });
+const post = await this.api.collection<Post>('posts').findById(id);
+```
+
+### Opt-out
+
+Use `transfer: false` to disable TransferState for a specific call:
+
+```typescript
+const posts = await this.api.collection<Post>('posts').find({
+	limit: 10,
+	transfer: false,
+});
+```
+
+### Signal Methods
+
+```typescript
+// Signals also use TransferState by default
+readonly posts = this.api.collection<Post>('posts').findSignal({ limit: 10 });
+readonly post = this.api.collection<Post>('posts').findByIdSignal(id);
+```
+
+### Requirements
+
+Ensure `provideClientHydration()` is in your app config:
+
+```typescript
+// app.config.ts
+export const appConfig: ApplicationConfig = {
+	providers: [provideClientHydration()],
+};
 ```

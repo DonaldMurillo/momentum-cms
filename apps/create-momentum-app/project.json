@@ -33,6 +33,13 @@
 				"access": "public"
 			}
 		},
+		"test": {
+			"executor": "@nx/vitest:test",
+			"outputs": ["{workspaceRoot}/coverage/apps/create-momentum-app"],
+			"options": {
+				"config": "apps/create-momentum-app/vitest.config.ts"
+			}
+		},
 		"lint": {
 			"executor": "@nx/eslint:lint"
 		}

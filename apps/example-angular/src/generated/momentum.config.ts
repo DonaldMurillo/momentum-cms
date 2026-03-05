@@ -1273,6 +1273,100 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 					type: 'date',
 					label: 'Event Date',
 				},
+				{
+					name: 'sections',
+					type: 'blocks',
+					label: 'Event Sections',
+					blocks: [
+						{
+							slug: 'speaker',
+							fields: [
+								{
+									name: 'name',
+									type: 'text',
+									required: true,
+									label: 'Speaker Name',
+								},
+								{
+									name: 'topic',
+									type: 'text',
+									label: 'Talk Topic',
+								},
+								{
+									name: '_analytics',
+									type: 'group',
+									label: 'Analytics',
+									admin: {
+										collapsible: true,
+										defaultOpen: false,
+									},
+									fields: [
+										{
+											name: 'trackImpressions',
+											type: 'checkbox',
+											label: 'Track Impressions',
+											defaultValue: false,
+										},
+										{
+											name: 'trackHover',
+											type: 'checkbox',
+											label: 'Track Hover',
+											defaultValue: false,
+										},
+									],
+								},
+							],
+							labels: {
+								singular: 'Speaker',
+								plural: 'Speakers',
+							},
+						},
+						{
+							slug: 'schedule',
+							fields: [
+								{
+									name: 'time',
+									type: 'text',
+									required: true,
+									label: 'Time',
+								},
+								{
+									name: 'activity',
+									type: 'text',
+									required: true,
+									label: 'Activity',
+								},
+								{
+									name: '_analytics',
+									type: 'group',
+									label: 'Analytics',
+									admin: {
+										collapsible: true,
+										defaultOpen: false,
+									},
+									fields: [
+										{
+											name: 'trackImpressions',
+											type: 'checkbox',
+											label: 'Track Impressions',
+											defaultValue: false,
+										},
+										{
+											name: 'trackHover',
+											type: 'checkbox',
+											label: 'Track Hover',
+											defaultValue: false,
+										},
+									],
+								},
+							],
+							labels: {
+								singular: 'Schedule',
+								plural: 'Schedules',
+							},
+						},
+					],
+				},
 			],
 			admin: {
 				useAsTitle: 'title',

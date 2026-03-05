@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { PLATFORM_ID } from '@angular/core';
+import { PLATFORM_ID, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -458,6 +458,53 @@ describe('EntityFormWidget', () => {
 			expect(model).toHaveProperty('title');
 			expect(model).toHaveProperty('email');
 			expect(model).toHaveProperty('content');
+		});
+	});
+
+	describe('formData computed', () => {
+		it('should fall back to formModel when entityForm is null', () => {
+			component.entityForm.set(null);
+			component.formModel.set({ title: 'fallback' });
+			expect(component.formData()).toEqual({ title: 'fallback' });
+		});
+
+		it('should read from entityForm value when form exists', () => {
+			// Mock: entityForm() returns a callable that has a .value() signal
+			const mockValue = signal<Record<string, unknown>>({ title: 'from-form-tree' });
+
+			const mockForm = (() => ({ value: mockValue })) as unknown as NonNullable<
+				ReturnType<typeof component.entityForm>
+			>;
+			component.entityForm.set(mockForm);
+
+			expect(component.formData()['title']).toBe('from-form-tree');
+		});
+
+		it('should fall back to formModel when entityForm value is null', () => {
+			const mockValue = signal<Record<string, unknown> | null>(null);
+
+			const mockForm = (() => ({ value: mockValue })) as unknown as NonNullable<
+				ReturnType<typeof component.entityForm>
+			>;
+			component.entityForm.set(mockForm);
+			component.formModel.set({ title: 'model-fallback' });
+
+			expect(component.formData()['title']).toBe('model-fallback');
+		});
+
+		it('should reactively update when entityForm value changes', () => {
+			const mockValue = signal<Record<string, unknown>>({ title: 'initial' });
+
+			const mockForm = (() => ({ value: mockValue })) as unknown as NonNullable<
+				ReturnType<typeof component.entityForm>
+			>;
+			component.entityForm.set(mockForm);
+
+			expect(component.formData()['title']).toBe('initial');
+
+			// Simulate a form field change
+			mockValue.set({ title: 'updated' });
+			expect(component.formData()['title']).toBe('updated');
 		});
 	});
 
