@@ -232,7 +232,6 @@ These are planned features and improvements, in no particular priority order.
 
 - **Headless UI component library** — Fully customizable, unstyled components built on Angular CDK + Angular Aria, usable anywhere (not just the admin)
 - **UX polish pass** — Improve interactions, transitions, and overall usability across the admin dashboard
-- **Localization (i18n)** — Multi-language content management with locale-aware fields and admin UI
 - **Better Auth plugin adapters** — Pre-built adapters for remaining Better Auth plugins (OAuth providers, magic links, passkeys); admin and organization plugins are shipped
 - **Resend adapter** — Email delivery via Resend for transactional emails and auth flows
 - **Docker deployment guide** — Fully tested Docker setup for deploying to a standard VPS with PostgreSQL, reverse proxy, and persistent storage
