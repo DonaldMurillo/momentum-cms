@@ -106,14 +106,12 @@ Inject content into named positions within existing pages. Slots are additive â€
 
 #### Shell Slots
 
-| Slot Key               | Position                        |
-| ---------------------- | ------------------------------- |
-| `shell:header`         | Top of main content area        |
-| `shell:footer`         | Bottom of main content area     |
-| `shell:nav-start`      | After Dashboard link in sidebar |
-| `shell:nav-end`        | After plugin routes in sidebar  |
-| `shell:sidebar-header` | Top of sidebar                  |
-| `shell:sidebar-footer` | Bottom of sidebar               |
+| Slot Key          | Position                        |
+| ----------------- | ------------------------------- |
+| `shell:header`    | Top of main content area        |
+| `shell:footer`    | Bottom of main content area     |
+| `shell:nav-start` | After Dashboard link in sidebar |
+| `shell:nav-end`   | After plugin routes in sidebar  |
 
 #### Dashboard Slots
 

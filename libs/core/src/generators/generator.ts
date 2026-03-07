@@ -556,7 +556,9 @@ function serializeComponentLoaders(
 		// Group 2 = dot access (.MemberName), Group 3 = bracket access (["MemberName"])
 		const memberName = memberMatch[2] || memberMatch[3];
 		const safeKey = needsQuoting(key) ? safeQuote(key) : key;
-		entries.push(`${indent}\t${safeKey}: () => import('${rel}').then((m) => m.${memberName})`);
+		entries.push(
+			`${indent}\t${safeKey}: () => import(${JSON.stringify(rel)}).then((m) => m.${memberName})`,
+		);
 	}
 	if (entries.length === 0) return null;
 	return `{\n${entries.join(',\n')},\n${indent}}`;
@@ -932,10 +934,20 @@ export function generateAdminConfig(
 	const globals = config.globals ?? [];
 	const plugins = config.plugins ?? [];
 
-	// Plugins that have admin routes with browser imports
-	const pluginsWithAdminRoutes = plugins.filter(
-		(p) => p.browserImports?.adminRoutes && p.adminRoutes && p.adminRoutes.length > 0,
-	);
+	// Plugins that have admin routes with browser imports (validate exportName is a safe identifier)
+	const SAFE_IDENTIFIER = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
+	const pluginsWithAdminRoutes = plugins.filter((p) => {
+		if (!p.browserImports?.adminRoutes || !p.adminRoutes || p.adminRoutes.length === 0)
+			return false;
+		const exportName = p.browserImports.adminRoutes.exportName;
+		if (!SAFE_IDENTIFIER.test(exportName)) {
+			console.warn(
+				`[generateAdminConfig] Skipping plugin "${p.name}": exportName "${exportName}" is not a valid identifier`,
+			);
+			return false;
+		}
+		return true;
+	});
 
 	// Header
 	lines.push('/**');
@@ -958,7 +970,7 @@ export function generateAdminConfig(
 	for (const plugin of pluginsWithAdminRoutes) {
 		const imp = plugin.browserImports?.adminRoutes;
 		if (!imp) continue;
-		lines.push(`import { ${imp.exportName} } from '${imp.path}';`);
+		lines.push(`import { ${imp.exportName} } from ${JSON.stringify(imp.path)};`);
 	}
 
 	lines.push('');

@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, Type } from '@angular/core';
 import { ActivatedRoute, Data, Params } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
+import { vi } from 'vitest';
 import { AdminPageResolver } from '../admin-page-resolver.component';
 import { AdminComponentRegistry } from '../../../services/admin-component-registry.service';
 import type { HasUnsavedChanges } from '../../../guards/unsaved-changes.guard';
@@ -215,6 +216,68 @@ describe('AdminPageResolver', () => {
 		expect(fixture.nativeElement.querySelector('[data-testid="default-list"]')).toBeFalsy();
 	});
 
+	describe('race condition protection', () => {
+		it('should not render stale component when a slow loader resolves after a fast one', async () => {
+			const { provider, data$, params$ } = createMockRoute(
+				{
+					adminPageKey: 'collection-list',
+					adminPageFallback: () => Promise.resolve(DefaultList),
+				},
+				{ slug: 'articles' },
+			);
+			TestBed.configureTestingModule({ imports: [AdminPageResolver], providers: [provider] });
+			registry = TestBed.inject(AdminComponentRegistry);
+
+			// Register a slow loader for articles
+			let resolveSlowLoader!: (value: Type<unknown>) => void;
+			const slowPromise = new Promise<Type<unknown>>((resolve) => {
+				resolveSlowLoader = resolve;
+			});
+			registry.register('collections/articles/list', () => slowPromise);
+
+			const fixture = TestBed.createComponent(AdminPageResolver);
+			fixture.detectChanges();
+
+			// Navigate away to categories before articles loader resolves
+			params$.next({ slug: 'categories' });
+			data$.next({
+				adminPageKey: 'collection-list',
+				adminPageFallback: () => Promise.resolve(DefaultList),
+			});
+			fixture.detectChanges();
+			await flushAndDetect(fixture);
+
+			// Default list should be showing for categories
+			expect(fixture.nativeElement.querySelector('[data-testid="default-list"]')).toBeTruthy();
+
+			// Now the slow articles loader resolves — should NOT overwrite the current page
+			resolveSlowLoader(CustomArticlesList as Type<unknown>);
+			await flushAndDetect(fixture);
+
+			// Should still show default list, NOT the stale custom articles list
+			expect(fixture.nativeElement.querySelector('[data-testid="default-list"]')).toBeTruthy();
+			expect(
+				fixture.nativeElement.querySelector('[data-testid="custom-articles-list"]'),
+			).toBeFalsy();
+		});
+
+		it('should handle loader errors gracefully without leaving a permanent spinner', async () => {
+			const consoleError = vi.spyOn(console, 'error').mockImplementation(vi.fn());
+			const { provider } = createMockRoute({
+				adminPageKey: 'dashboard',
+				adminPageFallback: () => Promise.reject(new Error('Module not found')),
+			});
+			TestBed.configureTestingModule({ imports: [AdminPageResolver], providers: [provider] });
+			const fixture = TestBed.createComponent(AdminPageResolver);
+			fixture.detectChanges();
+			await flushAndDetect(fixture);
+
+			// Should not throw unhandled rejection — error should be caught
+			expect(consoleError).toHaveBeenCalled();
+			consoleError.mockRestore();
+		});
+	});
+
 	describe('HasUnsavedChanges delegation', () => {
 		it('should return false when resolved component does not implement HasUnsavedChanges', async () => {
 			const { provider } = createMockRoute({
@@ -241,6 +304,13 @@ describe('AdminPageResolver', () => {
 
 			// Initially not dirty
 			expect(fixture.componentInstance.hasUnsavedChanges()).toBe(false);
+
+			// Set dirty = true via the NgComponentOutlet instance
+			const outlet = fixture.componentInstance['outlet']();
+			expect(outlet?.componentInstance).toBeTruthy();
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- validated by expect above
+			(outlet!.componentInstance as DirtyEditPage).dirty = true;
+			expect(fixture.componentInstance.hasUnsavedChanges()).toBe(true);
 		});
 
 		it('should return false when no component is resolved yet', () => {

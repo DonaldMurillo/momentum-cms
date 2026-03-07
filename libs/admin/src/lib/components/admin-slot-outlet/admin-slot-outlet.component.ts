@@ -25,7 +25,7 @@ import type { AdminSlotContext } from '../../services/admin-component-registry.t
 	selector: 'mcms-admin-slot',
 	imports: [NgComponentOutlet],
 	changeDetection: ChangeDetectionStrategy.OnPush,
-	host: { class: 'contents' },
+	host: { class: 'block' },
 	template: `
 		@for (component of resolvedComponents(); track $index) {
 			<ng-container *ngComponentOutlet="component; inputs: slotInputs()" />
@@ -52,6 +52,9 @@ export class AdminSlotOutlet {
 		...this.context(),
 	}));
 
+	/** Incremented on every effect run to detect stale promise resolutions. */
+	private loadGeneration = 0;
+
 	constructor() {
 		effect(() => {
 			const slot = this.slot();
@@ -63,10 +66,18 @@ export class AdminSlotOutlet {
 				return;
 			}
 
-			Promise.all(loaders.map((loader) => loader())).then((components) => {
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- loaders resolve to unknown from registry, safe cast to Type[]
-				this.resolvedComponents.set(components as Type<unknown>[]);
-			});
+			const generation = ++this.loadGeneration;
+			Promise.all(loaders.map((loader) => loader()))
+				.then((components) => {
+					if (generation !== this.loadGeneration) return;
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- loaders resolve to unknown from registry, safe cast to Type[]
+					this.resolvedComponents.set(components as Type<unknown>[]);
+				})
+				.catch((err: unknown) => {
+					if (generation !== this.loadGeneration) return;
+					console.error('[AdminSlotOutlet] Failed to load slot components:', err);
+					this.resolvedComponents.set([]);
+				});
 		});
 	}
 }

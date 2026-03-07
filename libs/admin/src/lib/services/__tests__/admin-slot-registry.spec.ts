@@ -86,4 +86,13 @@ describe('AdminSlotRegistry', () => {
 			expect(resolved).toEqual([loader]);
 		});
 	});
+
+	describe('idempotent registration', () => {
+		it('should not duplicate loaders when the same loader is registered twice', () => {
+			const loader = () => Promise.resolve(BannerComponent);
+			registry.register('dashboard:before', loader);
+			registry.register('dashboard:before', loader);
+			expect(registry.getAll('dashboard:before')).toHaveLength(1);
+		});
+	});
 });

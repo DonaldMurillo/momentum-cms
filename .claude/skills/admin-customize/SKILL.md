@@ -116,14 +116,12 @@ Slots inject content around existing pages without replacing them. Multiple comp
 
 #### Shell Slots (visible on all authenticated pages)
 
-| Slot Key               | Position                        |
-| ---------------------- | ------------------------------- |
-| `shell:header`         | Top of main content area        |
-| `shell:footer`         | Bottom of main content area     |
-| `shell:nav-start`      | After Dashboard link in sidebar |
-| `shell:nav-end`        | After plugin routes in sidebar  |
-| `shell:sidebar-header` | Top of sidebar                  |
-| `shell:sidebar-footer` | Bottom of sidebar               |
+| Slot Key          | Position                        |
+| ----------------- | ------------------------------- |
+| `shell:header`    | Top of main content area        |
+| `shell:footer`    | Bottom of main content area     |
+| `shell:nav-start` | After Dashboard link in sidebar |
+| `shell:nav-end`   | After plugin routes in sidebar  |
 
 #### Page Slots
 

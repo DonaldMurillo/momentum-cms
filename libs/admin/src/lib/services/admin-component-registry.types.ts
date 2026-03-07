@@ -35,8 +35,6 @@ export type AdminSlotKey =
 	| 'shell:footer'
 	| 'shell:nav-start'
 	| 'shell:nav-end'
-	| 'shell:sidebar-header'
-	| 'shell:sidebar-footer'
 	// Dashboard slots
 	| 'dashboard:before'
 	| 'dashboard:after'

@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, Type } from '@angular/core';
+import { vi } from 'vitest';
 import { AdminSlotOutlet } from '../admin-slot-outlet.component';
 import { AdminSlotRegistry } from '../../../services/admin-slot-registry.service';
 
@@ -82,8 +83,66 @@ describe('AdminSlotOutlet', () => {
 		expect(fixture.nativeElement.querySelector('[data-testid="footer"]')).toBeTruthy();
 	});
 
-	it('should have contents host class for layout transparency', () => {
+	it('should not use contents host class (CLAUDE.md: breaks height inheritance)', () => {
 		createComponent('dashboard:before');
-		expect(fixture.nativeElement.classList.contains('contents')).toBe(true);
+		expect(fixture.nativeElement.classList.contains('contents')).toBe(false);
+	});
+
+	it('should not render stale components when slot input changes rapidly', async () => {
+		// Register a slow loader for slot A and a fast loader for slot B
+		let resolveSlowLoader!: (value: unknown) => void;
+		const slowPromise = new Promise((resolve) => {
+			resolveSlowLoader = resolve;
+		});
+		registry.register('slot-a', () => slowPromise);
+		registry.register('slot-b', () => Promise.resolve(FooterComponent as Type<unknown>));
+
+		// Start with slot A (slow)
+		createComponent('slot-a');
+		fixture.detectChanges();
+
+		// Switch to slot B before slot A resolves
+		fixture.componentRef.setInput('slot', 'slot-b');
+		fixture.detectChanges();
+		await flushAndDetect(fixture);
+
+		// Slot B should be showing
+		expect(fixture.nativeElement.querySelector('[data-testid="footer"]')).toBeTruthy();
+
+		// Now slot A resolves — should NOT overwrite
+		resolveSlowLoader(BannerComponent as Type<unknown>);
+		await flushAndDetect(fixture);
+
+		// Should still show footer (slot B), NOT banner (stale slot A)
+		expect(fixture.nativeElement.querySelector('[data-testid="footer"]')).toBeTruthy();
+		expect(fixture.nativeElement.querySelector('[data-testid="banner"]')).toBeFalsy();
+	});
+
+	it('should handle loader errors gracefully', async () => {
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(vi.fn());
+		registry.register('dashboard:before', () => Promise.reject(new Error('Failed to load')));
+		createComponent('dashboard:before');
+		await flushAndDetect(fixture);
+
+		// Should reset to empty on error, not leave stale components
+		expect(fixture.componentInstance.resolvedComponents()).toEqual([]);
+		expect(consoleError).toHaveBeenCalled();
+		consoleError.mockRestore();
+	});
+
+	it('should re-render when a slot is registered after component creation', async () => {
+		createComponent('dashboard:before');
+		await flushAndDetect(fixture);
+
+		// No components initially
+		expect(fixture.nativeElement.querySelector('[data-testid="banner"]')).toBeFalsy();
+
+		// Register a slot after the component is already created
+		registry.register('dashboard:before', () => Promise.resolve(BannerComponent as Type<unknown>));
+		fixture.detectChanges();
+		await flushAndDetect(fixture);
+
+		// Should now render the banner
+		expect(fixture.nativeElement.querySelector('[data-testid="banner"]')).toBeTruthy();
 	});
 });

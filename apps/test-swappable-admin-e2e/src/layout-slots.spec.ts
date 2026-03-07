@@ -189,21 +189,23 @@ test.describe('Collection View Slots', { tag: ['@admin', '@swappable'] }, () => 
 		);
 		const articlesData = await articlesResponse.json();
 
-		if (articlesData.docs?.length > 0) {
-			const articleId = articlesData.docs[0].id;
-			await authenticatedPage.goto(`/admin/collections/articles/${articleId}`);
-			await authenticatedPage.waitForLoadState('domcontentloaded');
+		expect(
+			articlesData.docs?.length,
+			'Expected at least one article to exist for view slot test',
+		).toBeGreaterThan(0);
+		const articleId = articlesData.docs[0].id;
+		await authenticatedPage.goto(`/admin/collections/articles/${articleId}`);
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-			// Per-collection + global before slot
-			const viewBefore = authenticatedPage.locator('[data-testid="view-before-status"]');
-			await expect(viewBefore).toBeVisible({ timeout: 15000 });
-			await expect(viewBefore).toContainText('beforeView');
+		// Per-collection + global before slot
+		const viewBefore = authenticatedPage.locator('[data-testid="view-before-status"]');
+		await expect(viewBefore).toBeVisible({ timeout: 15000 });
+		await expect(viewBefore).toContainText('beforeView');
 
-			// Global after slot
-			const viewAfter = authenticatedPage.locator('[data-testid="view-after-related"]');
-			await expect(viewAfter).toBeVisible({ timeout: 15000 });
-			await expect(viewAfter).toContainText('collection-view:after');
-		}
+		// Global after slot
+		const viewAfter = authenticatedPage.locator('[data-testid="view-after-related"]');
+		await expect(viewAfter).toBeVisible({ timeout: 15000 });
+		await expect(viewAfter).toContainText('collection-view:after');
 	});
 
 	test('should render global view slots on non-articles collections', async ({
@@ -215,19 +217,21 @@ test.describe('Collection View Slots', { tag: ['@admin', '@swappable'] }, () => 
 		);
 		const categoriesData = await categoriesResponse.json();
 
-		if (categoriesData.docs?.length > 0) {
-			const categoryId = categoriesData.docs[0].id;
-			await authenticatedPage.goto(`/admin/collections/categories/${categoryId}`);
-			await authenticatedPage.waitForLoadState('domcontentloaded');
+		expect(
+			categoriesData.docs?.length,
+			'Expected at least one category to exist for view slot test',
+		).toBeGreaterThan(0);
+		const categoryId = categoriesData.docs[0].id;
+		await authenticatedPage.goto(`/admin/collections/categories/${categoryId}`);
+		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-			// Global view:before (registered via provider for all collections) should show
-			const viewBefore = authenticatedPage.locator('[data-testid="view-before-status"]');
-			await expect(viewBefore).toBeVisible({ timeout: 15000 });
+		// Global view:before (registered via provider for all collections) should show
+		const viewBefore = authenticatedPage.locator('[data-testid="view-before-status"]');
+		await expect(viewBefore).toBeVisible({ timeout: 15000 });
 
-			// Global view:after should show
-			const viewAfter = authenticatedPage.locator('[data-testid="view-after-related"]');
-			await expect(viewAfter).toBeVisible({ timeout: 15000 });
-		}
+		// Global view:after should show
+		const viewAfter = authenticatedPage.locator('[data-testid="view-after-related"]');
+		await expect(viewAfter).toBeVisible({ timeout: 15000 });
 	});
 });
 

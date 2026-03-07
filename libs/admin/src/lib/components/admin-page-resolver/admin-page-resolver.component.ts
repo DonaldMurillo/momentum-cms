@@ -35,7 +35,7 @@ import type { HasUnsavedChanges } from '../../guards/unsaved-changes.guard';
 	selector: 'mcms-admin-page-resolver',
 	imports: [NgComponentOutlet],
 	changeDetection: ChangeDetectionStrategy.OnPush,
-	host: { class: 'contents' },
+	host: { class: 'block' },
 	template: `
 		@if (resolvedComponent()) {
 			<ng-container *ngComponentOutlet="resolvedComponent()" />
@@ -54,6 +54,9 @@ export class AdminPageResolver implements OnInit, HasUnsavedChanges {
 
 	readonly resolvedComponent = signal<Type<unknown> | null>(null);
 
+	/** Incremented on every load to detect stale promise resolutions. */
+	private loadGeneration = 0;
+
 	ngOnInit(): void {
 		combineLatest([this.route.data, this.route.params])
 			.pipe(takeUntilDestroyed(this.destroyRef))
@@ -68,8 +71,17 @@ export class AdminPageResolver implements OnInit, HasUnsavedChanges {
 				const override = this.registry.resolve(pageKey, slug);
 				const loader = override ?? fallback;
 				if (loader) {
-					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- loader resolves to unknown from registry, safe cast to Type
-					loader().then((component) => this.resolvedComponent.set(component as Type<unknown>));
+					const generation = ++this.loadGeneration;
+					loader()
+						.then((component) => {
+							if (generation !== this.loadGeneration) return;
+							// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- loader resolves to unknown from registry, safe cast to Type
+							this.resolvedComponent.set(component as Type<unknown>);
+						})
+						.catch((err: unknown) => {
+							if (generation !== this.loadGeneration) return;
+							console.error('[AdminPageResolver] Failed to load component:', err);
+						});
 				}
 			});
 	}

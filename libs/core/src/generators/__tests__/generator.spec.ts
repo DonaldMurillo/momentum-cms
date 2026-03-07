@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
 	generateTypes,
 	generateAdminConfig,
@@ -1414,7 +1414,7 @@ describe('generateAdminConfig', () => {
 		};
 		const output = generateAdminConfig(config, './momentum.types');
 		expect(output).toContain(
-			"import { analyticsAdminRoutes } from '@momentumcms/plugins-analytics/admin-routes';",
+			'import { analyticsAdminRoutes } from "@momentumcms/plugins-analytics/admin-routes";',
 		);
 		expect(output).toContain('adminRoutes: analyticsAdminRoutes');
 	});
@@ -1719,7 +1719,7 @@ describe('generateAdminConfig — component loaders', () => {
 		expect(output).toContain('components:');
 		expect(output).toContain('beforeDashboard:');
 		// Path should be rewritten from ./app/... to ../app/...
-		expect(output).toContain("import('../app/custom-components/dashboard-banner.component')");
+		expect(output).toContain('import("../app/custom-components/dashboard-banner.component")');
 	});
 
 	it('should emit per-collection admin.components with rewritten import paths', () => {
@@ -1753,8 +1753,8 @@ describe('generateAdminConfig — component loaders', () => {
 		expect(output).toContain('components:');
 		expect(output).toContain('list:');
 		expect(output).toContain('beforeEdit:');
-		expect(output).toContain("import('../app/custom-articles-list.component')");
-		expect(output).toContain("import('../app/custom-edit-warning.component')");
+		expect(output).toContain('import("../app/custom-articles-list.component")');
+		expect(output).toContain('import("../app/custom-edit-warning.component")');
 		// Non-component admin props should still be emitted
 		expect(output).toContain('group: "Content"');
 	});
@@ -1830,7 +1830,7 @@ describe('generateAdminConfig — component loaders', () => {
 		expect(output).toContain('admin:');
 		expect(output).toContain('components:');
 		expect(output).toContain('list:');
-		expect(output).toContain("import('../app/list.component')");
+		expect(output).toContain('import("../app/list.component")');
 	});
 
 	it('should handle deeply nested paths correctly', () => {
@@ -1854,6 +1854,61 @@ describe('generateAdminConfig — component loaders', () => {
 		expect(output).toContain('dashboard:');
 		// ../../shared from /project/src/app/ => /project/shared
 		// from /project/src/app/generated/ => ../../../shared
-		expect(output).toContain("import('../../../shared/components/dashboard.component')");
+		expect(output).toContain('import("../../../shared/components/dashboard.component")');
+	});
+});
+
+// ============================================
+// Security: Component Loader Path Sanitization
+// ============================================
+
+describe('security: component loader path sanitization', () => {
+	it('should safely escape plugin browserImports path with special characters', () => {
+		const config = {
+			collections: [{ slug: 'posts', fields: [] }],
+			plugins: [
+				{
+					name: 'evil-plugin',
+					adminRoutes: [{ path: 'evil', loadComponent: () => Promise.resolve({}) }],
+					browserImports: {
+						adminRoutes: {
+							path: "@evil/plugin'); console.log('pwned",
+							exportName: 'evilRoutes',
+						},
+					},
+				},
+			],
+		};
+		const output = generateAdminConfig(config, './momentum.types');
+		// The path must be wrapped in double quotes (JSON.stringify) so single quotes inside are harmless
+		// It should NOT produce: from '@evil/plugin'); console.log('pwned';
+		// It should produce: from "@evil/plugin'); console.log('pwned";
+		expect(output).not.toMatch(/from '@evil/);
+		expect(output).toContain('from "@evil/plugin\'); console.log(\'pwned"');
+	});
+
+	it('should reject plugin browserImports with malicious exportName', () => {
+		const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(vi.fn());
+		const config = {
+			collections: [{ slug: 'posts', fields: [] }],
+			plugins: [
+				{
+					name: 'evil-plugin',
+					adminRoutes: [{ path: 'evil', loadComponent: () => Promise.resolve({}) }],
+					browserImports: {
+						adminRoutes: {
+							path: '@evil/plugin',
+							exportName: "evilRoutes } from 'x'; import { eval",
+						},
+					},
+				},
+			],
+		};
+		const output = generateAdminConfig(config, './momentum.types');
+		// The invalid exportName should be rejected entirely — no import emitted
+		expect(output).not.toContain('evilRoutes');
+		expect(output).not.toContain('@evil/plugin');
+		expect(consoleWarn).toHaveBeenCalled();
+		consoleWarn.mockRestore();
 	});
 });

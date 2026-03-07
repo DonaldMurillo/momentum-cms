@@ -20,9 +20,10 @@ export class AdminSlotRegistry {
 	/** Incremented on every register() so signal-based consumers re-evaluate. */
 	private readonly _version = signal(0);
 
-	/** Register a lazy loader for a slot. Multiple loaders per slot are supported. */
+	/** Register a lazy loader for a slot. Multiple loaders per slot are supported. Duplicate loaders are skipped. */
 	register(slot: string, loader: Loader): void {
 		const existing = this.slots.get(slot) ?? [];
+		if (existing.includes(loader)) return;
 		existing.push(loader);
 		this.slots.set(slot, existing);
 		this._version.update((v) => v + 1);
