@@ -225,12 +225,12 @@ test.describe('Versioning outcomes', { tag: ['@versioning', '@api'] }, () => {
 			(v) => v.version['title'] === v1.title && v.version['content'] === v1.content,
 		);
 		expect(v1Version, 'Should find V1 in version history').toBeDefined();
+		if (!v1Version) return;
 
 		// Restore it
 		const restoreRes = await admin.post(`/api/articles/${articleId}/versions/restore`, {
 			headers: { 'Content-Type': 'application/json' },
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Checked by expect above
-			data: { versionId: v1Version!.id },
+			data: { versionId: v1Version.id },
 		});
 		expect(restoreRes.ok(), 'Restore must succeed').toBe(true);
 

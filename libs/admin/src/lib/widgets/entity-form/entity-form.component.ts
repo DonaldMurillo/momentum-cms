@@ -112,7 +112,7 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 							@if (hasVersioning() && mode() === 'edit' && entityId()) {
 								<mcms-publish-controls
 									[collection]="collection().slug"
-									[documentId]="entityId()!"
+									[documentId]="entityId() ?? ''"
 									[documentLabel]="collectionLabelSingular()"
 									[initialStatus]="documentStatus()"
 									(statusChanged)="onStatusChanged($event)"
@@ -244,7 +244,7 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 				<div class="mt-8">
 					<mcms-version-history
 						[collection]="collection().slug"
-						[documentId]="entityId()!"
+						[documentId]="entityId() ?? ''"
 						[documentLabel]="collectionLabelSingular()"
 						(restored)="onVersionRestored()"
 					/>
