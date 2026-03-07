@@ -69,6 +69,7 @@ Domain-specific guidance lives in workflow elements, not here. Key ones:
 - `/e2e-test` — Playwright tests (dashboard-first, no blind tests)
 - `/migrations` — Migration CLI, Drizzle Kit, code generation, schematics
 - `/admin-config` — Admin route wiring, plugin browser imports, field renderers
+- `/admin-customize` — Swappable pages, layout slots, per-collection overrides
 - `/momentum-api` — Angular API client usage (queries, CRUD, SSR hydration)
 - `code-quality` agent — DRY/KISS/SRP + Angular anti-patterns (runs before completion)
 - `test-reviewer` agent — Catches lying tests (runs after writing tests)

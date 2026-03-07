@@ -17,16 +17,17 @@ Momentum CMS is a headless CMS built with Angular. You define collections in Typ
 
 ## Available Skills
 
-| Skill                  | Usage                          | Description                                                      |
-| ---------------------- | ------------------------------ | ---------------------------------------------------------------- |
-| `/collection <name>`   | `/collection products`         | Generate a new collection with fields, access control, and hooks |
-| `/momentum-api <op>`   | `/momentum-api crud posts`     | Guide for using `injectMomentumAPI()` in Angular components      |
-| `/add-plugin <name>`   | `/add-plugin analytics`        | Add and configure a Momentum CMS plugin                          |
-| `/admin-config <what>` | `/admin-config field-renderer` | Wire admin routes, plugin imports, and custom field renderers    |
-| `/api-route <name>`    | `/api-route health`            | Generate API route handlers for Express or Analog.js             |
-| `/component <name>`    | `/component post-card`         | Generate an Angular component with signals and OnPush            |
-| `/e2e-test <feature>`  | `/e2e-test posts`              | Write Playwright E2E tests (dashboard-first, no blind tests)     |
-| `/migrations <op>`     | `/migrations generate`         | Run migrations, generate schemas, and manage code generation     |
+| Skill                     | Usage                          | Description                                                      |
+| ------------------------- | ------------------------------ | ---------------------------------------------------------------- |
+| `/collection <name>`      | `/collection products`         | Generate a new collection with fields, access control, and hooks |
+| `/momentum-api <op>`      | `/momentum-api crud posts`     | Guide for using `injectMomentumAPI()` in Angular components      |
+| `/add-plugin <name>`      | `/add-plugin analytics`        | Add and configure a Momentum CMS plugin                          |
+| `/admin-config <what>`    | `/admin-config field-renderer` | Wire admin routes, plugin imports, and custom field renderers    |
+| `/admin-customize <what>` | `/admin-customize slot`        | Swappable pages, layout slots, per-collection overrides          |
+| `/api-route <name>`       | `/api-route health`            | Generate API route handlers for Express or Analog.js             |
+| `/component <name>`       | `/component post-card`         | Generate an Angular component with signals and OnPush            |
+| `/e2e-test <feature>`     | `/e2e-test posts`              | Write Playwright E2E tests (dashboard-first, no blind tests)     |
+| `/migrations <op>`        | `/migrations generate`         | Run migrations, generate schemas, and manage code generation     |
 
 ## Common Workflows
 
