@@ -150,6 +150,7 @@ interface MomentumConfig {
 		basePath?: string;
 		branding?: { logo?: string; title?: string };
 		toasts?: boolean;
+		components?: Record<string, unknown>;
 	};
 	plugins?: PluginDescriptor[];
 }
@@ -514,6 +515,56 @@ export function serializeValue(value: unknown, indent = '\t'): string {
 }
 
 /**
+ * Serialize component loader functions by extracting the import path and
+ * exported member name, then reconstructing a clean dynamic import expression.
+ *
+ * Uses Function.toString() to parse the import path and member name, then
+ * rewrites the import path to be relative to the output file.
+ *
+ * This reconstructs a clean function rather than emitting raw toString() output,
+ * which may contain bundler transforms (e.g., esbuild interop wrappers) that
+ * cause TypeScript compilation errors.
+ */
+function serializeComponentLoaders(
+	components: Record<string, unknown>,
+	configPath: string,
+	outputPath: string,
+	indent: string,
+): string | null {
+	const entries: string[] = [];
+	for (const [key, value] of Object.entries(components)) {
+		if (typeof value !== 'function') continue;
+		const source = value.toString();
+
+		// Extract import path — match both native import() and bundler variants
+		const importMatch = /(?:import|__vite_ssr_dynamic_import__)\(\s*['"]([^'"]+)['"]\s*\)/.exec(
+			source,
+		);
+		if (!importMatch) continue;
+
+		const importPath = importMatch[1];
+		const abs = resolve(dirname(configPath), importPath);
+		const rel = computeRelativeImport(outputPath, abs + '.ts');
+
+		// Extract the exported member name from the final .then() in the chain.
+		// Matches dot access: .then((m) => m.MemberName) or .then(m=>m.MemberName)
+		// Matches bracket access: .then((m) => m["MemberName"]) (vitest/esbuild transform)
+		const memberMatch =
+			/\.then\(\s*\(?\s*(\w+)\s*\)?\s*=>\s*\1(?:\.(\w+)|\[["'](\w+)["']\])\s*\)/.exec(source);
+		if (!memberMatch) continue;
+
+		// Group 2 = dot access (.MemberName), Group 3 = bracket access (["MemberName"])
+		const memberName = memberMatch[2] || memberMatch[3];
+		const safeKey = needsQuoting(key) ? safeQuote(key) : key;
+		entries.push(
+			`${indent}\t${safeKey}: () => import(${JSON.stringify(rel)}).then((m) => m.${memberName})`,
+		);
+	}
+	if (entries.length === 0) return null;
+	return `{\n${entries.join(',\n')},\n${indent}}`;
+}
+
+/**
  * Serialize a field definition, stripping server-only properties.
  * For relationship fields, resolves collection() at build time into an inline stub.
  */
@@ -712,7 +763,12 @@ function serializeTabsArray(
 /**
  * Serialize a collection definition, stripping server-only properties.
  */
-export function serializeCollection(collection: CollectionDefinition, indent = '\t'): string {
+export function serializeCollection(
+	collection: CollectionDefinition,
+	indent = '\t',
+	configPath?: string,
+	outputPath?: string,
+): string {
 	const parts: string[] = [];
 
 	// Always emit slug first
@@ -728,8 +784,11 @@ export function serializeCollection(collection: CollectionDefinition, indent = '
 
 	// Admin config (convert function-type preview to URL template, strip other functions)
 	if (collection.admin) {
+		// Extract components before generic serialization (they contain functions we want to preserve)
+		const componentsObj = collection.admin['components'];
+
 		const adminEntries = Object.entries(collection.admin)
-			.filter(([, v]) => v !== undefined)
+			.filter(([k, v]) => v !== undefined && k !== 'components')
 			.map(([k, v]): [string, unknown] => {
 				if (k === 'preview' && typeof v === 'function') {
 					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowed by typeof check
@@ -739,9 +798,31 @@ export function serializeCollection(collection: CollectionDefinition, indent = '
 				return [k, v];
 			})
 			.filter(([, v]) => typeof v !== 'function');
-		if (adminEntries.length > 0) {
-			const adminObj = Object.fromEntries(adminEntries);
-			parts.push(`${indent}\tadmin: ${serializeValue(adminObj, indent + '\t')}`);
+
+		// Serialize component loaders with path rewriting
+		let componentsStr: string | null = null;
+		if (componentsObj && typeof componentsObj === 'object' && configPath && outputPath) {
+			const loaders: Record<string, unknown> = {};
+			for (const [k, v] of Object.entries(componentsObj)) {
+				loaders[k] = v;
+			}
+			componentsStr = serializeComponentLoaders(loaders, configPath, outputPath, indent + '\t\t');
+		}
+
+		if (adminEntries.length > 0 || componentsStr) {
+			// Build admin object piece by piece to avoid regex-based injection issues
+			const adminProps: string[] = [];
+			if (adminEntries.length > 0) {
+				const adminObj = Object.fromEntries(adminEntries);
+				for (const [k, v] of Object.entries(adminObj)) {
+					const key = needsQuoting(k) ? safeQuote(k) : k;
+					adminProps.push(`${indent}\t\t${key}: ${serializeValue(v, indent + '\t\t')}`);
+				}
+			}
+			if (componentsStr) {
+				adminProps.push(`${indent}\t\tcomponents: ${componentsStr}`);
+			}
+			parts.push(`${indent}\tadmin: {\n${adminProps.join(',\n')},\n${indent}\t}`);
 		}
 	}
 
@@ -842,16 +923,31 @@ export function computeRelativeImport(fromFile: string, toFile: string): string 
  * Collections and globals are inlined with server-only properties stripped.
  * Only plugin admin routes are still imported (they have loadComponent functions).
  */
-export function generateAdminConfig(config: MomentumConfig, typesRelPath: string): string {
+export function generateAdminConfig(
+	config: MomentumConfig,
+	typesRelPath: string,
+	configPath?: string,
+	outputPath?: string,
+): string {
 	const lines: string[] = [];
 	const allCollections = resolveAllCollections(config);
 	const globals = config.globals ?? [];
 	const plugins = config.plugins ?? [];
 
-	// Plugins that have admin routes with browser imports
-	const pluginsWithAdminRoutes = plugins.filter(
-		(p) => p.browserImports?.adminRoutes && p.adminRoutes && p.adminRoutes.length > 0,
-	);
+	// Plugins that have admin routes with browser imports (validate exportName is a safe identifier)
+	const SAFE_IDENTIFIER = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
+	const pluginsWithAdminRoutes = plugins.filter((p) => {
+		if (!p.browserImports?.adminRoutes || !p.adminRoutes || p.adminRoutes.length === 0)
+			return false;
+		const exportName = p.browserImports.adminRoutes.exportName;
+		if (!SAFE_IDENTIFIER.test(exportName)) {
+			console.warn(
+				`[generateAdminConfig] Skipping plugin "${p.name}": exportName "${exportName}" is not a valid identifier`,
+			);
+			return false;
+		}
+		return true;
+	});
 
 	// Header
 	lines.push('/**');
@@ -874,7 +970,7 @@ export function generateAdminConfig(config: MomentumConfig, typesRelPath: string
 	for (const plugin of pluginsWithAdminRoutes) {
 		const imp = plugin.browserImports?.adminRoutes;
 		if (!imp) continue;
-		lines.push(`import { ${imp.exportName} } from '${imp.path}';`);
+		lines.push(`import { ${imp.exportName} } from ${JSON.stringify(imp.path)};`);
 	}
 
 	lines.push('');
@@ -886,7 +982,7 @@ export function generateAdminConfig(config: MomentumConfig, typesRelPath: string
 	// Collections (inlined)
 	if (allCollections.length > 0) {
 		const collectionItems = allCollections
-			.map((c) => `\t\t${serializeCollection(c, '\t\t')}`)
+			.map((c) => `\t\t${serializeCollection(c, '\t\t', configPath, outputPath)}`)
 			.join(',\n');
 		lines.push(`\tcollections: [\n${collectionItems},\n\t],`);
 	} else {
@@ -901,12 +997,32 @@ export function generateAdminConfig(config: MomentumConfig, typesRelPath: string
 
 	// Admin settings
 	if (config.admin) {
-		const adminObj: Record<string, unknown> = {};
-		if (config.admin.basePath) adminObj['basePath'] = config.admin.basePath;
-		if (config.admin.branding) adminObj['branding'] = config.admin.branding;
-		if (config.admin.toasts !== undefined) adminObj['toasts'] = config.admin.toasts;
-		if (Object.keys(adminObj).length > 0) {
-			lines.push(`\tadmin: ${serializeValue(adminObj)},`);
+		const adminParts: string[] = [];
+		if (config.admin.basePath) {
+			adminParts.push(`\t\tbasePath: ${JSON.stringify(config.admin.basePath)}`);
+		}
+		if (config.admin.branding) {
+			adminParts.push(`\t\tbranding: ${serializeValue(config.admin.branding, '\t\t')}`);
+		}
+		if (config.admin.toasts !== undefined) {
+			adminParts.push(`\t\ttoasts: ${String(config.admin.toasts)}`);
+		}
+
+		// Serialize component loaders with path rewriting
+		if (config.admin.components && configPath && outputPath) {
+			const componentsStr = serializeComponentLoaders(
+				config.admin.components,
+				configPath,
+				outputPath,
+				'\t\t',
+			);
+			if (componentsStr) {
+				adminParts.push(`\t\tcomponents: ${componentsStr}`);
+			}
+		}
+
+		if (adminParts.length > 0) {
+			lines.push(`\tadmin: {\n${adminParts.join(',\n')},\n\t},`);
 		}
 	}
 
@@ -1004,7 +1120,12 @@ export default async function runGenerator(
 			console.info(`Types generated: ${typesOutputPath}`);
 
 			// Generate admin config (inlined, stripped)
-			const adminConfigContent = generateAdminConfig(config, typesRelPath);
+			const adminConfigContent = generateAdminConfig(
+				config,
+				typesRelPath,
+				configPath,
+				configOutputPath,
+			);
 			mkdirSync(dirname(configOutputPath), { recursive: true });
 			writeFileSync(configOutputPath, adminConfigContent, 'utf-8');
 			console.info(`Admin config generated: ${configOutputPath}`);

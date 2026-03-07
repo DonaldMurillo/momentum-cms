@@ -5,6 +5,7 @@ import { getCollectionsFromRouteData } from '../../utils/route-data';
 import { CollectionAccessService } from '../../services/collection-access.service';
 import { CollectionCardWidget } from '../../widgets/collection-card/collection-card.component';
 import { groupCollections } from '../../utils/group-collections';
+import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-outlet.component';
 
 /**
  * Dashboard Page Component
@@ -13,10 +14,12 @@ import { groupCollections } from '../../utils/group-collections';
  */
 @Component({
 	selector: 'mcms-dashboard',
-	imports: [CollectionCardWidget],
+	imports: [CollectionCardWidget, AdminSlotOutlet],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block max-w-6xl' },
 	template: `
+		<mcms-admin-slot slot="dashboard:before" />
+
 		<header class="mb-10">
 			<h1 class="text-4xl font-bold tracking-tight text-foreground">Dashboard</h1>
 			<p class="text-muted-foreground mt-3 text-lg">Manage your content and collections</p>
@@ -66,6 +69,8 @@ import { groupCollections } from '../../utils/group-collections';
 				</section>
 			}
 		}
+
+		<mcms-admin-slot slot="dashboard:after" />
 	`,
 })
 export class DashboardPage {

@@ -1,0 +1,90 @@
+{
+	"name": "test-swappable-admin",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"projectType": "application",
+	"prefix": "test",
+	"sourceRoot": "apps/test-swappable-admin/src",
+	"tags": ["scope:app"],
+	"targets": {
+		"build": {
+			"executor": "@angular/build:application",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/apps/test-swappable-admin",
+				"browser": "apps/test-swappable-admin/src/main.ts",
+				"tsConfig": "apps/test-swappable-admin/tsconfig.app.json",
+				"assets": [
+					{
+						"glob": "**/*",
+						"input": "apps/test-swappable-admin/public"
+					}
+				],
+				"styles": ["apps/test-swappable-admin/src/styles.css"],
+				"server": "apps/test-swappable-admin/src/main.server.ts",
+				"ssr": {
+					"entry": "apps/test-swappable-admin/src/server.ts"
+				},
+				"externalDependencies": ["better-sqlite3", "@napi-rs/image"],
+				"outputMode": "server"
+			},
+			"configurations": {
+				"production": {
+					"budgets": [
+						{
+							"type": "initial",
+							"maximumWarning": "1mb",
+							"maximumError": "2mb"
+						},
+						{
+							"type": "anyComponentStyle",
+							"maximumWarning": "4kb",
+							"maximumError": "8kb"
+						}
+					],
+					"outputHashing": "all"
+				},
+				"development": {
+					"optimization": false,
+					"extractLicenses": false,
+					"sourceMap": true
+				}
+			},
+			"defaultConfiguration": "production"
+		},
+		"serve": {
+			"continuous": true,
+			"executor": "@angular/build:dev-server",
+			"options": {
+				"port": 4100
+			},
+			"configurations": {
+				"production": {
+					"buildTarget": "test-swappable-admin:build:production"
+				},
+				"development": {
+					"buildTarget": "test-swappable-admin:build:development"
+				}
+			},
+			"defaultConfiguration": "development"
+		},
+		"lint": {
+			"executor": "@nx/eslint:lint"
+		},
+		"serve-static": {
+			"continuous": true,
+			"executor": "@nx/web:file-server",
+			"options": {
+				"buildTarget": "test-swappable-admin:build",
+				"port": 4100,
+				"staticFilePath": "dist/apps/test-swappable-admin/browser",
+				"spa": true
+			}
+		},
+		"generate": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "npx tsx --tsconfig apps/test-swappable-admin/tsconfig.app.json libs/core/src/generators/generator.ts apps/test-swappable-admin/src/momentum.config.ts --types apps/test-swappable-admin/src/generated/momentum.types.ts --config apps/test-swappable-admin/src/generated/momentum.config.ts"
+			}
+		}
+	}
+}

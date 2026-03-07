@@ -58,6 +58,7 @@ Full documentation is available in the [docs/](docs/README.md) directory, coveri
 - **Email Builder** - Visual email template editor with live preview, Handlebars templating, and pluggable transport (SMTP, Resend)
 - **Queue & Cron** - Background job processing with configurable concurrency, retry policies, and scheduled task execution
 - **Image Processing** - Automatic image variant generation with focal point cropping, powered by `@napi-rs/image` (no Sharp dependency)
+- **Swappable Admin** - Replace built-in admin pages with custom components and inject content into layout slots, with per-collection overrides
 
 ## Define a Collection
 
@@ -223,16 +224,14 @@ This starts a local Verdaccio registry, publishes all packages, runs `create-mom
 - **Redirects** — Collection-based URL redirect management with server middleware
 - **Image Processing** — Automatic image resizing and variant generation using `@napi-rs/image` (Rust/NAPI), with focal point cropping and admin UI picker
 - **Versioning & Drafts** — Document versioning with draft/publish workflow, revision history, auto-versioning on update, role-based publish controls, and admin UI status filtering
+- **Swappable Admin** — Replace built-in admin pages (dashboard, list, edit, view) with custom components and inject content into layout slots (header, footer, sidebar, before/after) with per-collection overrides
 
 ### Planned
 
 These are planned features and improvements, in no particular priority order.
 
 - **Headless UI component library** — Fully customizable, unstyled components built on Angular CDK + Angular Aria, usable anywhere (not just the admin)
-- **Swappable admin components** — Replace built-in admin components with your own custom implementations
-- **Customizable admin layouts** — Angular slots and dynamic rendering for extending admin pages without forking
 - **UX polish pass** — Improve interactions, transitions, and overall usability across the admin dashboard
-- **Localization (i18n)** — Multi-language content management with locale-aware fields and admin UI
 - **Better Auth plugin adapters** — Pre-built adapters for remaining Better Auth plugins (OAuth providers, magic links, passkeys); admin and organization plugins are shipped
 - **Resend adapter** — Email delivery via Resend for transactional emails and auth flows
 - **Docker deployment guide** — Fully tested Docker setup for deploying to a standard VPS with PostgreSQL, reverse proxy, and persistent storage

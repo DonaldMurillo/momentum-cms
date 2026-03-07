@@ -20,6 +20,7 @@ import {
 	CardFooter,
 } from '@momentumcms/ui';
 import { MomentumAuthService } from '../../services/auth.service';
+import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-outlet.component';
 
 /**
  * Login Page Component
@@ -39,6 +40,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 		CardDescription,
 		CardContent,
 		CardFooter,
+		AdminSlotOutlet,
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: {
@@ -46,6 +48,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 	},
 	template: `
 		<main>
+			<mcms-admin-slot slot="login:before" />
 			<mcms-card class="w-full max-w-md">
 				<mcms-card-header class="text-center">
 					<mcms-card-title>Sign In</mcms-card-title>
@@ -183,6 +186,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 					<p class="text-sm text-muted-foreground">Momentum CMS</p>
 				</mcms-card-footer>
 			</mcms-card>
+			<mcms-admin-slot slot="login:after" />
 		</main>
 	`,
 })

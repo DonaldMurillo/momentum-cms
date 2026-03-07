@@ -1,3 +1,20 @@
+## 0.5.4 (2026-03-07)
+
+### 🚀 Features
+
+- Versioning & drafts with draft/publish workflow ([#50](https://github.com/DonaldMurillo/momentum-cms/pull/50))
+- swappable admin pages & layout slots with config-driven code generation ([425b4199](https://github.com/DonaldMurillo/momentum-cms/commit/425b4199))
+
+### 🩹 Fixes
+
+- race conditions, code injection, and test quality in swappable admin ([eaa9dcec](https://github.com/DonaldMurillo/momentum-cms/commit/eaa9dcec))
+
+### ❤️ Thank You
+
+- Claude Haiku 4.5
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.5.0 (2026-02-23)
 
 This was a version bump only for admin to align it with other projects, there were no code changes.

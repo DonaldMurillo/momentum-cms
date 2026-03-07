@@ -46,6 +46,12 @@ browserImports: {
 }
 ```
 
+### Component loaders in generated config
+
+The generator emits `admin.components` (global) and per-collection `admin.components` as lazy-loading functions with rewritten import paths. This means `momentum.config.ts` is the single source of truth for page overrides and layout slots.
+
+For swappable pages and layout slots, see `/admin-customize`.
+
 ## Custom Field Renderers
 
 Field renderers are lazily loaded via `FieldRendererRegistry`. Built-in renderers are registered with `provideMomentumFieldRenderers()`.

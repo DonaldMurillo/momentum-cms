@@ -7,7 +7,7 @@
  */
 
 import type { CollectionConfig, UserContext } from './collections';
-import type { MomentumConfig } from './config';
+import type { AdminComponentsConfig, MomentumConfig } from './config';
 
 /**
  * Descriptor for Express middleware/routes that a plugin wants auto-mounted.
@@ -204,6 +204,12 @@ export interface MomentumPlugin {
 
 	/** Called on graceful shutdown. Clean up resources. */
 	onShutdown?(context: PluginContext): void | Promise<void>;
+
+	/**
+	 * Admin component overrides and layout slots registered by this plugin.
+	 * Merged into the global registries at admin init time.
+	 */
+	adminComponents?: AdminComponentsConfig;
 
 	/** Browser-safe import descriptors for the admin config generator.
 	 *  Tells the generator where to import collections, admin routes, and

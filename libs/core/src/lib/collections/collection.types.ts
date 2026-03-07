@@ -122,6 +122,42 @@ export interface AdminConfig {
 		/** HTTP endpoint path for the action (e.g., '/api/auth/api-keys') */
 		endpoint?: string;
 	}>;
+
+	/**
+	 * Custom components for this collection's admin pages.
+	 * Register page replacements and per-collection layout slots.
+	 */
+	components?: CollectionAdminComponentsConfig;
+}
+
+/**
+ * Per-collection admin component overrides and layout slots.
+ * Used in `AdminConfig.components` for collection-specific customization.
+ *
+ * Loaders use `() => Promise<unknown>` to stay framework-agnostic.
+ */
+export interface CollectionAdminComponentsConfig {
+	/** Replace the list page for this collection */
+	list?: () => Promise<unknown>;
+	/** Replace the edit page for this collection */
+	edit?: () => Promise<unknown>;
+	/** Replace the view page for this collection */
+	view?: () => Promise<unknown>;
+
+	/** Slot: before the collection list */
+	beforeList?: () => Promise<unknown>;
+	/** Slot: after the collection list */
+	afterList?: () => Promise<unknown>;
+	/** Slot: before the edit form */
+	beforeEdit?: () => Promise<unknown>;
+	/** Slot: after the edit form */
+	afterEdit?: () => Promise<unknown>;
+	/** Slot: sidebar panel on edit page */
+	editSidebar?: () => Promise<unknown>;
+	/** Slot: before the view page */
+	beforeView?: () => Promise<unknown>;
+	/** Slot: after the view page */
+	afterView?: () => Promise<unknown>;
 }
 
 // ============================================

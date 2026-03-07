@@ -6,6 +6,7 @@ import type { AdminConfig, CollectionConfig } from '@momentumcms/core';
 import { DialogService } from '@momentumcms/ui';
 import { getCollectionsFromRouteData } from '../../utils/route-data';
 import { EntityListWidget } from '../../widgets/entity-list/entity-list.component';
+import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-outlet.component';
 import type { Entity, EntityAction } from '../../widgets/widget.types';
 import type { EntityListBulkActionEvent } from '../../widgets/entity-list/entity-list.types';
 import { injectMomentumAPI } from '../../services/momentum-api.service';
@@ -23,11 +24,12 @@ import {
  */
 @Component({
 	selector: 'mcms-collection-list',
-	imports: [EntityListWidget],
+	imports: [EntityListWidget, AdminSlotOutlet],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `
 		@if (collection(); as col) {
+			<mcms-admin-slot slot="collection-list:before" [collectionSlug]="col.slug" />
 			<mcms-entity-list
 				#entityList
 				[collection]="col"
@@ -39,6 +41,7 @@ import {
 				(bulkAction)="onBulkAction($event)"
 				(headerActionClick)="onHeaderAction($event)"
 			/>
+			<mcms-admin-slot slot="collection-list:after" [collectionSlug]="col.slug" />
 		} @else {
 			<div class="p-12 text-center text-muted-foreground">Collection not found</div>
 		}

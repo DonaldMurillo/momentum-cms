@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import type { CollectionConfig, GlobalConfig } from '@momentumcms/core';
+import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-outlet.component';
 import {
 	Sidebar,
 	SidebarNav,
@@ -84,6 +85,7 @@ interface PluginRouteGroup {
 		DropdownLabel,
 		DropdownTrigger,
 		NgIcon,
+		AdminSlotOutlet,
 	],
 	providers: [
 		provideIcons({
@@ -149,6 +151,8 @@ interface PluginRouteGroup {
 						[exact]="true"
 					/>
 
+					<mcms-admin-slot slot="shell:nav-start" />
+
 					<!-- Collection Sections (grouped by admin.group) -->
 					@for (group of collectionGroups(); track group.id) {
 						<mcms-sidebar-section [title]="group.name">
@@ -193,6 +197,8 @@ interface PluginRouteGroup {
 							}
 						</mcms-sidebar-section>
 					}
+
+					<mcms-admin-slot slot="shell:nav-end" />
 				</mcms-sidebar-nav>
 			</div>
 

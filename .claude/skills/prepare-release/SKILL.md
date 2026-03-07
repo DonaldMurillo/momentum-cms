@@ -1,38 +1,38 @@
 ---
 name: prepare-release
-description: Prepare a patch/minor/major version release for all Momentum CMS packages. Bumps versions, verifies builds/tests, adds new packages to Nx release config, and commits. Triggers include "prepare release", "bump version", "release patch", or "/prepare-release".
+description: Prepare a patch/minor/major version release for all Momentum CMS packages. Bumps versions, generates changelogs, verifies builds/tests, adds new packages to Nx release config, and commits. Triggers include "prepare release", "bump version", "release patch", or "/prepare-release".
 argument-hint: <patch|minor|major>
 allowed-tools: Bash(npx *), Bash(npm *), Bash(grep *), Bash(find *), Bash(ls *), Bash(git *), Read, Glob, Grep, Edit, Write
 ---
 
 # Prepare Release Skill
 
-Prepare a new version release for all `@momentumcms/*` packages in the monorepo.
+Prepare a new version release for all `@momentumcms/*` packages in the monorepo using `nx release`.
 
 ## Inputs
 
 - **bump type**: `patch` (default), `minor`, or `major` from the argument
 - If no argument provided, default to `patch`
 
-## Step 1: Determine Current Version
+## Step 1: Verify Git Tags Exist
 
-Find the current version from any lib's `package.json`:
+Nx Release resolves the current version from git tags matching `v{version}`. Verify the latest tag matches the current package version:
 
 ```bash
+git tag -l 'v*' | sort -V | tail -1
 grep '"version"' libs/core/package.json
 ```
 
-All packages share the same version (lockstep versioning).
+If the latest tag doesn't match the current version (e.g., packages are at `0.5.3` but latest tag is `v0.5.0`), create the missing tag on the correct commit:
 
-## Step 2: Calculate New Version
+```bash
+git log --all --oneline | grep "bump version to X.Y.Z"
+git tag vX.Y.Z <commit-hash>
+```
 
-Given current version `X.Y.Z`:
+**This is critical** — without the correct tag, Nx Release will calculate the wrong next version.
 
-- `patch` -> `X.Y.(Z+1)`
-- `minor` -> `X.(Y+1).0`
-- `major` -> `(X+1).0.0`
-
-## Step 3: Verify New Packages Are in Nx Release Config
+## Step 2: Verify New Packages Are in Nx Release Config
 
 Read `nx.json` and check the `release.projects` array. Every library in `libs/` and `libs/plugins/` that has a `package.json` with `@momentumcms/` name MUST be in this array.
 
@@ -55,26 +55,22 @@ Compare against `release.projects` in `nx.json`. If any are missing:
    }
    ```
 
-## Step 4: Bump All Versions
+## Step 3: Dry Run
 
-Replace the old version with the new version in ALL publishable `package.json` files. This includes:
-
-- The `"version"` field
-- Any `"@momentumcms/*"` dependency references
+Run `nx release` in dry-run mode to preview version bumps and changelogs:
 
 ```bash
-find libs apps/create-momentum-app -name "package.json" -not -path "*/node_modules/*" -exec grep -l "OLD_VERSION" {} \; | while read f; do
-  sed -i '' "s/OLD_VERSION/NEW_VERSION/g" "$f"
-done
+npx nx release --specifier=<bump> --dry-run --skip-publish 2>&1
 ```
 
-Verify no old version references remain:
+Check the output for:
 
-```bash
-grep -r "OLD_VERSION" libs/*/package.json libs/plugins/*/package.json apps/create-momentum-app/package.json
-```
+- **Correct base version** — should resolve from the latest git tag
+- **Correct new version** — patch/minor/major applied correctly
+- **Changelog entries** — features, fixes, and contributors look right
+- **Errors** — especially peer dependency range issues (e.g., `preserveMatchingDependencyRanges` failures). Fix any range issues in the relevant `package.json` before proceeding.
 
-## Step 5: Run Full Test Suite
+## Step 4: Run Full Test Suite
 
 Run the full test suite to verify nothing is broken:
 
@@ -82,7 +78,7 @@ Run the full test suite to verify nothing is broken:
 npm run test:all -- --skip cli-scaffold
 ```
 
-The CLI scaffold test is slow and unrelated to library code; skip it unless the release includes CLI template changes.
+The CLI scaffold test is slow and unrelated to library code; skip it unless the release includes CLI template changes. Run in background since it takes a while.
 
 Check results:
 
@@ -91,47 +87,47 @@ Check results:
 - **Analog E2E**: Must pass (flaky tests that retry and pass are OK)
 - **Migration Tests**: Must pass
 
-## Step 6: Build All Packages
+## Step 5: Execute Release
+
+Once dry run and tests look good, run for real:
 
 ```bash
-npx nx run-many -t build
+npx nx release --specifier=<bump> --skip-publish
 ```
 
-All packages must build successfully.
+This will:
 
-## Step 7: Verify Dist Versions
+1. **Build all packages** (via `preVersionCommand`)
+2. **Bump versions** in all `package.json` files (source and dist)
+3. **Update internal dependency versions** automatically
+4. **Generate per-project changelogs** from conventional commits
+5. **Stage, commit, and tag** with `chore(release): publish X.Y.Z` and `vX.Y.Z`
 
-Spot-check that dist output has the correct version:
+## Step 6: Verify
 
 ```bash
-grep '"version"' dist/libs/core/package.json dist/libs/plugins/redirects/package.json
+git log --oneline -3
+git tag -l 'v*' | sort -V | tail -3
+grep '"version"' libs/core/package.json dist/libs/core/package.json
 ```
 
-## Step 8: Commit
-
-Stage and commit with a conventional commit message:
-
-```
-chore(release): bump version to X.Y.Z
-
-Bump all @momentumcms/* packages from OLD to NEW.
-[Include any notable additions like new packages]
-```
-
-## Step 9: Summary
+## Step 7: Summary
 
 Print a summary:
 
-- Old version -> New version
+- Old version → New version
 - Number of packages bumped
 - Any new packages added to release config
-- Test results
+- Test results (or note if still running)
 - Reminder: `npx nx release publish` to publish to npm (do NOT run this automatically)
+- Reminder: `git push --follow-tags` to push the release commit and tag
 
 ## Important Notes
 
 - **Never run `npx nx release publish`** without explicit user confirmation
+- **Never run `git push`** without explicit user confirmation
 - All packages use lockstep versioning (same version number)
 - The root `package.json` version (`0.0.0`) is intentionally static and should NOT be bumped
-- `conventionalCommits: true` in nx.json means Nx Release can auto-determine version bumps from commit messages, but this skill does manual bumps for explicit control
-- Always verify the `nx-release-publish` target exists in new packages' `project.json` before releasing
+- Nx Release handles version bumping, dependency updates, changelogs, commit, and tagging — do NOT do these manually
+- The `nx.json` config has `conventionalCommits: true` so changelogs are generated from commit messages automatically
+- `manifestRootsToUpdate` includes `dist/{projectRoot}` so dist versions are updated too

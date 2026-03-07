@@ -64,6 +64,12 @@ const SUITES: SuiteConfig[] = [
 		logFile: 'nestjs-e2e.log',
 	},
 	{
+		name: 'swappable-admin-e2e',
+		label: 'Swappable Admin E2E',
+		command: ['npx', 'nx', 'e2e', 'test-swappable-admin-e2e'],
+		logFile: 'swappable-admin-e2e.log',
+	},
+	{
 		name: 'migration-tests',
 		label: 'Migration Tests',
 		command: ['npx', 'nx', 'test', 'migrations'],

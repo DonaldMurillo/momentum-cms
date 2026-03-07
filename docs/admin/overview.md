@@ -161,6 +161,7 @@ const myPlugin: MomentumPlugin = {
 
 ## Related
 
+- [Customization](customization.md) — Swappable pages and layout slots
 - [API Service](api-service.md) — Data access from components
 - [Theme](theme.md) — Dark mode and theming
 - [Tailwind Setup](tailwind-setup.md) — Styling configuration

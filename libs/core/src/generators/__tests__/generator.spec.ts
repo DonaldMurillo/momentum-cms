@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
 	generateTypes,
 	generateAdminConfig,
@@ -1414,7 +1414,7 @@ describe('generateAdminConfig', () => {
 		};
 		const output = generateAdminConfig(config, './momentum.types');
 		expect(output).toContain(
-			"import { analyticsAdminRoutes } from '@momentumcms/plugins-analytics/admin-routes';",
+			'import { analyticsAdminRoutes } from "@momentumcms/plugins-analytics/admin-routes";',
 		);
 		expect(output).toContain('adminRoutes: analyticsAdminRoutes');
 	});
@@ -1689,5 +1689,226 @@ describe('security: string escaping in generated TypeScript', () => {
 		expect(output).toContain(`"x'; }; x('bad');//"`);
 		// Interface name must be sanitized — no special characters
 		expect(output).not.toMatch(/export interface.*[';]/);
+	});
+});
+
+// ============================================
+// Component Loader Serialization Tests
+// ============================================
+
+describe('generateAdminConfig — component loaders', () => {
+	it('should emit global admin.components with rewritten import paths', () => {
+		const config = {
+			collections: [{ slug: 'posts', fields: [] }],
+			admin: {
+				basePath: '/admin',
+				components: {
+					beforeDashboard: () =>
+						import('./app/custom-components/dashboard-banner.component').then(
+							(m: Record<string, unknown>) => m['DashboardBannerComponent'],
+						),
+				},
+			},
+		};
+		const output = generateAdminConfig(
+			config,
+			'./momentum.types',
+			'/project/src/momentum.config.ts',
+			'/project/src/generated/momentum.config.ts',
+		);
+		expect(output).toContain('components:');
+		expect(output).toContain('beforeDashboard:');
+		// Path should be rewritten from ./app/... to ../app/...
+		expect(output).toContain('import("../app/custom-components/dashboard-banner.component")');
+	});
+
+	it('should emit per-collection admin.components with rewritten import paths', () => {
+		const config = {
+			collections: [
+				{
+					slug: 'articles',
+					fields: [{ name: 'title', type: 'text' }],
+					admin: {
+						group: 'Content',
+						components: {
+							list: () =>
+								import('./app/custom-articles-list.component').then(
+									(m: Record<string, unknown>) => m['CustomArticlesListComponent'],
+								),
+							beforeEdit: () =>
+								import('./app/custom-edit-warning.component').then(
+									(m: Record<string, unknown>) => m['EditWarningComponent'],
+								),
+						},
+					},
+				},
+			],
+		};
+		const output = generateAdminConfig(
+			config,
+			'./momentum.types',
+			'/project/src/momentum.config.ts',
+			'/project/src/generated/momentum.config.ts',
+		);
+		expect(output).toContain('components:');
+		expect(output).toContain('list:');
+		expect(output).toContain('beforeEdit:');
+		expect(output).toContain('import("../app/custom-articles-list.component")');
+		expect(output).toContain('import("../app/custom-edit-warning.component")');
+		// Non-component admin props should still be emitted
+		expect(output).toContain('group: "Content"');
+	});
+
+	it('should not emit components when no configPath/outputPath provided', () => {
+		const config = {
+			collections: [{ slug: 'posts', fields: [] }],
+			admin: {
+				basePath: '/admin',
+				components: {
+					footer: () =>
+						import('./app/footer.component').then(
+							(m: Record<string, unknown>) => m['FooterComponent'],
+						),
+				},
+			},
+		};
+		// No configPath/outputPath — backward compatibility
+		const output = generateAdminConfig(config, './momentum.types');
+		// Should NOT contain the component loaders (paths can't be rewritten)
+		expect(output).not.toContain('footer:');
+	});
+
+	it('should skip non-function values in components', () => {
+		const config = {
+			collections: [
+				{
+					slug: 'items',
+					fields: [],
+					admin: {
+						components: {
+							stringValue: 'not-a-function',
+							loader: () =>
+								import('./app/comp.component').then((m: Record<string, unknown>) => m['Comp']),
+						},
+					},
+				},
+			],
+		};
+		const output = generateAdminConfig(
+			config,
+			'./momentum.types',
+			'/project/src/config.ts',
+			'/project/src/generated/config.ts',
+		);
+		expect(output).toContain('loader:');
+		expect(output).not.toContain('stringValue');
+	});
+
+	it('should handle collection with only components in admin (no other admin props)', () => {
+		const config = {
+			collections: [
+				{
+					slug: 'items',
+					fields: [],
+					admin: {
+						components: {
+							list: () =>
+								import('./app/list.component').then(
+									(m: Record<string, unknown>) => m['ListComponent'],
+								),
+						},
+					},
+				},
+			],
+		};
+		const output = generateAdminConfig(
+			config,
+			'./momentum.types',
+			'/project/src/config.ts',
+			'/project/src/generated/config.ts',
+		);
+		expect(output).toContain('admin:');
+		expect(output).toContain('components:');
+		expect(output).toContain('list:');
+		expect(output).toContain('import("../app/list.component")');
+	});
+
+	it('should handle deeply nested paths correctly', () => {
+		const config = {
+			collections: [{ slug: 'posts', fields: [] }],
+			admin: {
+				components: {
+					dashboard: () =>
+						import('../../shared/components/dashboard.component').then(
+							(m: Record<string, unknown>) => m['Dashboard'],
+						),
+				},
+			},
+		};
+		const output = generateAdminConfig(
+			config,
+			'./momentum.types',
+			'/project/src/app/momentum.config.ts',
+			'/project/src/app/generated/momentum.config.ts',
+		);
+		expect(output).toContain('dashboard:');
+		// ../../shared from /project/src/app/ => /project/shared
+		// from /project/src/app/generated/ => ../../../shared
+		expect(output).toContain('import("../../../shared/components/dashboard.component")');
+	});
+});
+
+// ============================================
+// Security: Component Loader Path Sanitization
+// ============================================
+
+describe('security: component loader path sanitization', () => {
+	it('should safely escape plugin browserImports path with special characters', () => {
+		const config = {
+			collections: [{ slug: 'posts', fields: [] }],
+			plugins: [
+				{
+					name: 'evil-plugin',
+					adminRoutes: [{ path: 'evil', loadComponent: () => Promise.resolve({}) }],
+					browserImports: {
+						adminRoutes: {
+							path: "@evil/plugin'); console.log('pwned",
+							exportName: 'evilRoutes',
+						},
+					},
+				},
+			],
+		};
+		const output = generateAdminConfig(config, './momentum.types');
+		// The path must be wrapped in double quotes (JSON.stringify) so single quotes inside are harmless
+		// It should NOT produce: from '@evil/plugin'); console.log('pwned';
+		// It should produce: from "@evil/plugin'); console.log('pwned";
+		expect(output).not.toMatch(/from '@evil/);
+		expect(output).toContain('from "@evil/plugin\'); console.log(\'pwned"');
+	});
+
+	it('should reject plugin browserImports with malicious exportName', () => {
+		const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(vi.fn());
+		const config = {
+			collections: [{ slug: 'posts', fields: [] }],
+			plugins: [
+				{
+					name: 'evil-plugin',
+					adminRoutes: [{ path: 'evil', loadComponent: () => Promise.resolve({}) }],
+					browserImports: {
+						adminRoutes: {
+							path: '@evil/plugin',
+							exportName: "evilRoutes } from 'x'; import { eval",
+						},
+					},
+				},
+			],
+		};
+		const output = generateAdminConfig(config, './momentum.types');
+		// The invalid exportName should be rejected entirely — no import emitted
+		expect(output).not.toContain('evilRoutes');
+		expect(output).not.toContain('@evil/plugin');
+		expect(consoleWarn).toHaveBeenCalled();
+		consoleWarn.mockRestore();
 	});
 });

@@ -21,7 +21,11 @@ import type { AdminPluginRoute } from '../../routes/momentum-admin-routes';
 import { MomentumAuthService } from '../../services/auth.service';
 import { CollectionAccessService } from '../../services/collection-access.service';
 import { EntitySheetService } from '../../services/entity-sheet.service';
+import { AdminComponentRegistry } from '../../services/admin-component-registry.service';
+import { AdminSlotRegistry } from '../../services/admin-slot-registry.service';
+import { registerConfigComponents } from '../../services/provide-admin-components';
 import { EntitySheetContentComponent } from '../entity-sheet/entity-sheet-content.component';
+import { AdminSlotOutlet } from '../admin-slot-outlet/admin-slot-outlet.component';
 import { injectUser } from '../../utils/inject-user';
 import { AdminSidebarWidget } from '../../widgets/admin-sidebar/admin-sidebar.component';
 import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
@@ -47,6 +51,7 @@ import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
 		A11yModule,
 		EntitySheetContentComponent,
 		ToastContainer,
+		AdminSlotOutlet,
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: {
@@ -128,9 +133,11 @@ import type { AdminUser, AdminBranding } from '../../widgets/widget.types';
 
 		<!-- Main Content (with top padding on mobile for header, normal padding at md+) -->
 		<main id="mcms-main-content" class="flex-1 p-8 overflow-y-auto overflow-x-hidden pt-20 md:pt-8">
+			<mcms-admin-slot slot="shell:header" />
 			@defer (hydrate on immediate) {
 				<router-outlet />
 			}
+			<mcms-admin-slot slot="shell:footer" />
 		</main>
 
 		<mcms-toast-container />
@@ -174,6 +181,8 @@ export class AdminShellComponent implements OnInit {
 	private readonly auth = inject(MomentumAuthService);
 	private readonly collectionAccess = inject(CollectionAccessService);
 	private readonly sidebar = inject(SidebarService);
+	private readonly componentRegistry = inject(AdminComponentRegistry);
+	private readonly slotRegistry = inject(AdminSlotRegistry);
 	readonly entitySheet = inject(EntitySheetService);
 
 	/** All collections from route data */
@@ -231,6 +240,39 @@ export class AdminShellComponent implements OnInit {
 	});
 
 	ngOnInit(): void {
+		// Register config-level component overrides and slot registrations.
+		// This reads from route data (which has the full MomentumConfig-derived data)
+		// and bridges config declarations into the runtime registries.
+		const routeData = this.route.snapshot.data;
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- route data is Record<string, unknown>
+		const adminComponents = routeData['adminComponents'] as
+			| import('@momentumcms/core').AdminComponentsConfig
+			| undefined;
+		registerConfigComponents(
+			this.allCollections(),
+			adminComponents,
+			this.componentRegistry,
+			this.slotRegistry,
+		);
+
+		// Also register plugin-declared admin components
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- route data is Record<string, unknown>
+		const plugins = routeData['plugins'] as
+			| import('@momentumcms/core').MomentumPlugin[]
+			| undefined;
+		if (plugins) {
+			for (const plugin of plugins) {
+				if (plugin.adminComponents) {
+					registerConfigComponents(
+						[],
+						plugin.adminComponents,
+						this.componentRegistry,
+						this.slotRegistry,
+					);
+				}
+			}
+		}
+
 		// Keyboard shortcuts, auth, and sheet restoration only run in the browser.
 		// SSR user is provided via MOMENTUM_API_CONTEXT (used by injectUser above).
 		if (!isPlatformBrowser(this.platformId)) {
