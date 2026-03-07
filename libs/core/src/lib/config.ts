@@ -260,6 +260,41 @@ export interface DatabaseConfig {
 }
 
 /**
+ * Admin component overrides and layout slot registrations.
+ * Used in `AdminPanelConfig.components` for global overrides
+ * and in `MomentumPlugin.adminComponents` for plugin-level overrides.
+ *
+ * Loaders use `() => Promise<unknown>` so this interface stays
+ * framework-agnostic (core is `env:universal`). The admin package
+ * casts to `Type<unknown>` at registration time.
+ */
+export interface AdminComponentsConfig {
+	/** Replace the dashboard page */
+	dashboard?: () => Promise<unknown>;
+	/** Replace the login page */
+	login?: () => Promise<unknown>;
+	/** Replace the media library page */
+	media?: () => Promise<unknown>;
+
+	/** Slot: before navigation links in sidebar */
+	beforeNavigation?: () => Promise<unknown>;
+	/** Slot: after navigation links in sidebar */
+	afterNavigation?: () => Promise<unknown>;
+	/** Slot: global header (between mobile header and main content) */
+	header?: () => Promise<unknown>;
+	/** Slot: global footer (after main content) */
+	footer?: () => Promise<unknown>;
+	/** Slot: before dashboard content */
+	beforeDashboard?: () => Promise<unknown>;
+	/** Slot: after dashboard content */
+	afterDashboard?: () => Promise<unknown>;
+	/** Slot: before login form */
+	beforeLogin?: () => Promise<unknown>;
+	/** Slot: after login form */
+	afterLogin?: () => Promise<unknown>;
+}
+
+/**
  * Global admin panel configuration.
  * (Distinct from collection-level AdminConfig)
  */
@@ -286,6 +321,13 @@ export interface AdminPanelConfig {
 	 * @default true
 	 */
 	toasts?: boolean;
+
+	/**
+	 * Custom admin component overrides and layout slots.
+	 * Register page replacements (dashboard, login, media) and
+	 * slot components (header, footer, beforeDashboard, etc.).
+	 */
+	components?: AdminComponentsConfig;
 }
 
 /**
@@ -471,10 +513,17 @@ export interface ResolvedSeedingConfig extends SeedingConfig {
 }
 
 /**
+ * AdminPanelConfig with primitive defaults resolved (basePath, branding, toasts).
+ * `components` remains optional since it has no default.
+ */
+export type ResolvedAdminPanelConfig = Required<Omit<AdminPanelConfig, 'components'>> &
+	Pick<AdminPanelConfig, 'components'>;
+
+/**
  * Internal config with resolved defaults.
  */
 export interface ResolvedMomentumConfig extends MomentumConfig {
-	admin: Required<AdminPanelConfig>;
+	admin: ResolvedAdminPanelConfig;
 	server: Required<ServerConfig>;
 	seeding?: ResolvedSeedingConfig;
 	logging: ResolvedLoggingConfig;
@@ -514,6 +563,7 @@ export function defineMomentumConfig(config: MomentumConfig): ResolvedMomentumCo
 			basePath: config.admin?.basePath ?? '/admin',
 			branding: config.admin?.branding ?? {},
 			toasts: config.admin?.toasts ?? true,
+			components: config.admin?.components,
 		},
 		server: {
 			port: config.server?.port ?? 3000,

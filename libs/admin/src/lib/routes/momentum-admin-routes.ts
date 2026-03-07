@@ -21,6 +21,7 @@
 import type { Routes, Route } from '@angular/router';
 import type { Type } from '@angular/core';
 import type {
+	AdminComponentsConfig,
 	CollectionConfig,
 	GlobalConfig,
 	MomentumConfig,
@@ -86,6 +87,8 @@ export interface MomentumAdminRouteData {
 	globals?: GlobalConfig[];
 	branding?: MomentumAdminBranding;
 	pluginRoutes?: AdminPluginRoute[];
+	adminComponents?: AdminComponentsConfig;
+	plugins?: MomentumPlugin[];
 }
 
 /**
@@ -131,6 +134,7 @@ export function momentumAdminRoutes(
 	let branding: MomentumAdminBranding | undefined;
 	let includeAuthRoutes: boolean;
 	let pluginRoutes: AdminPluginRoute[] | undefined;
+	let adminComponents: AdminComponentsConfig | undefined;
 
 	let pluginDescriptors: Array<MomentumPlugin | AdminPluginDescriptor>;
 
@@ -150,6 +154,7 @@ export function momentumAdminRoutes(
 
 		globals = config.globals;
 		branding = config.admin?.branding;
+		adminComponents = config.admin?.components;
 		includeAuthRoutes = true;
 		pluginRoutes = pluginDescriptors.flatMap((p) => p.adminRoutes ?? []).map(toAdminPluginRoute);
 	} else if ('basePath' in configOrOptions) {
@@ -165,6 +170,7 @@ export function momentumAdminRoutes(
 
 		globals = configOrOptions.globals;
 		branding = configOrOptions.branding;
+		adminComponents = undefined; // MomentumAdminOptions doesn't carry config-level components
 		includeAuthRoutes = configOrOptions.includeAuthRoutes ?? true;
 
 		// Merge explicit plugin routes with plugin-declared admin routes
@@ -187,6 +193,7 @@ export function momentumAdminRoutes(
 
 		globals = adminConfig.globals;
 		branding = adminConfig.admin?.branding;
+		adminComponents = adminConfig.admin?.components;
 		includeAuthRoutes = true;
 		pluginRoutes = pluginDescriptors.flatMap((p) => p.adminRoutes ?? []).map(toAdminPluginRoute);
 	}
@@ -203,6 +210,9 @@ export function momentumAdminRoutes(
 		globals,
 		branding,
 		pluginRoutes,
+		adminComponents,
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- AdminPluginDescriptor is a subset of MomentumPlugin
+		plugins: pluginDescriptors as MomentumPlugin[],
 	};
 
 	const routes: Routes = [];
@@ -249,53 +259,110 @@ export function momentumAdminRoutes(
 		data: routeData,
 		canActivate: [authGuard],
 		children: [
-			// Dashboard (default route)
+			// Dashboard (default route) — swappable via AdminComponentRegistry
 			{
 				path: '',
 				loadComponent: (): Promise<Type<unknown>> =>
-					import('../pages/dashboard/dashboard.page').then((m) => m.DashboardPage),
+					import('../components/admin-page-resolver/admin-page-resolver.component').then(
+						(m) => m.AdminPageResolver,
+					),
+				data: {
+					adminPageKey: 'dashboard',
+					adminPageFallback: (): Promise<Type<unknown>> =>
+						import('../pages/dashboard/dashboard.page').then((m) => m.DashboardPage),
+				},
 			},
-			// Media library
+			// Media library — swappable
 			{
 				path: 'media',
 				loadComponent: (): Promise<Type<unknown>> =>
-					import('../pages/media-library/media-library.page').then((m) => m.MediaLibraryPage),
+					import('../components/admin-page-resolver/admin-page-resolver.component').then(
+						(m) => m.AdminPageResolver,
+					),
+				data: {
+					adminPageKey: 'media',
+					adminPageFallback: (): Promise<Type<unknown>> =>
+						import('../pages/media-library/media-library.page').then((m) => m.MediaLibraryPage),
+				},
 			},
-			// Collection list
+			// Collection list — swappable (per-collection + global)
 			{
 				path: 'collections/:slug',
 				loadComponent: (): Promise<Type<unknown>> =>
-					import('../pages/collection-list/collection-list.page').then((m) => m.CollectionListPage),
+					import('../components/admin-page-resolver/admin-page-resolver.component').then(
+						(m) => m.AdminPageResolver,
+					),
+				data: {
+					adminPageKey: 'collection-list',
+					adminPageFallback: (): Promise<Type<unknown>> =>
+						import('../pages/collection-list/collection-list.page').then(
+							(m) => m.CollectionListPage,
+						),
+				},
 				canActivate: [collectionAccessGuard],
 			},
-			// Create new document
+			// Create new document — swappable (per-collection + global)
 			{
 				path: 'collections/:slug/new',
 				loadComponent: (): Promise<Type<unknown>> =>
-					import('../pages/collection-edit/collection-edit.page').then((m) => m.CollectionEditPage),
+					import('../components/admin-page-resolver/admin-page-resolver.component').then(
+						(m) => m.AdminPageResolver,
+					),
+				data: {
+					adminPageKey: 'collection-edit',
+					adminPageFallback: (): Promise<Type<unknown>> =>
+						import('../pages/collection-edit/collection-edit.page').then(
+							(m) => m.CollectionEditPage,
+						),
+				},
 				canActivate: [collectionAccessGuard],
 				canDeactivate: [unsavedChangesGuard],
 			},
-			// View existing document
+			// View existing document — swappable (per-collection + global)
 			{
 				path: 'collections/:slug/:id',
 				loadComponent: (): Promise<Type<unknown>> =>
-					import('../pages/collection-view/collection-view.page').then((m) => m.CollectionViewPage),
+					import('../components/admin-page-resolver/admin-page-resolver.component').then(
+						(m) => m.AdminPageResolver,
+					),
+				data: {
+					adminPageKey: 'collection-view',
+					adminPageFallback: (): Promise<Type<unknown>> =>
+						import('../pages/collection-view/collection-view.page').then(
+							(m) => m.CollectionViewPage,
+						),
+				},
 				canActivate: [collectionAccessGuard],
 			},
-			// Edit existing document
+			// Edit existing document — swappable (per-collection + global)
 			{
 				path: 'collections/:slug/:id/edit',
 				loadComponent: (): Promise<Type<unknown>> =>
-					import('../pages/collection-edit/collection-edit.page').then((m) => m.CollectionEditPage),
+					import('../components/admin-page-resolver/admin-page-resolver.component').then(
+						(m) => m.AdminPageResolver,
+					),
+				data: {
+					adminPageKey: 'collection-edit',
+					adminPageFallback: (): Promise<Type<unknown>> =>
+						import('../pages/collection-edit/collection-edit.page').then(
+							(m) => m.CollectionEditPage,
+						),
+				},
 				canActivate: [collectionAccessGuard],
 				canDeactivate: [unsavedChangesGuard],
 			},
-			// Global edit
+			// Global edit — swappable
 			{
 				path: 'globals/:slug',
 				loadComponent: (): Promise<Type<unknown>> =>
-					import('../pages/global-edit/global-edit.page').then((m) => m.GlobalEditPage),
+					import('../components/admin-page-resolver/admin-page-resolver.component').then(
+						(m) => m.AdminPageResolver,
+					),
+				data: {
+					adminPageKey: 'global-edit',
+					adminPageFallback: (): Promise<Type<unknown>> =>
+						import('../pages/global-edit/global-edit.page').then((m) => m.GlobalEditPage),
+				},
 				canDeactivate: [unsavedChangesGuard],
 			},
 			// Plugin-registered routes

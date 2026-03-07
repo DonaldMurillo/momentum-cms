@@ -134,6 +134,23 @@ export {
 	provideFieldRenderer,
 } from './lib/services/provide-field-renderers';
 
+// Admin Component Registry (swappable pages + layout slots)
+export { AdminComponentRegistry } from './lib/services/admin-component-registry.service';
+export { AdminSlotRegistry } from './lib/services/admin-slot-registry.service';
+export {
+	provideAdminComponent,
+	provideAdminSlot,
+	registerConfigComponents,
+} from './lib/services/provide-admin-components';
+export type {
+	ComponentLoader,
+	AdminComponentKey,
+	AdminSlotKey,
+	AdminSlotContext,
+} from './lib/services/admin-component-registry.types';
+export { AdminSlotOutlet } from './lib/components/admin-slot-outlet/admin-slot-outlet.component';
+export { AdminPageResolver } from './lib/components/admin-page-resolver/admin-page-resolver.component';
+
 // Field Renderers (for custom forms)
 export { FieldRenderer } from './lib/widgets/entity-form/field-renderers/field-renderer.component';
 export { TextFieldRenderer } from './lib/widgets/entity-form/field-renderers/text-field.component';

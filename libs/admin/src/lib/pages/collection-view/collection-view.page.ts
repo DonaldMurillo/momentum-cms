@@ -5,6 +5,7 @@ import { map } from 'rxjs/operators';
 import type { CollectionConfig } from '@momentumcms/core';
 import { getCollectionsFromRouteData } from '../../utils/route-data';
 import { EntityViewWidget } from '../../widgets/entity-view/entity-view.component';
+import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-outlet.component';
 import type { Entity } from '../../widgets/widget.types';
 
 /**
@@ -17,11 +18,12 @@ import type { Entity } from '../../widgets/widget.types';
  */
 @Component({
 	selector: 'mcms-collection-view',
-	imports: [EntityViewWidget],
+	imports: [EntityViewWidget, AdminSlotOutlet],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `
 		@if (collection(); as col) {
+			<mcms-admin-slot slot="collection-view:before" [collectionSlug]="col.slug" />
 			@if (entityId(); as id) {
 				<mcms-entity-view
 					[collection]="col"
@@ -33,6 +35,7 @@ import type { Entity } from '../../widgets/widget.types';
 			} @else {
 				<div class="p-12 text-center text-muted-foreground">Entity ID not provided</div>
 			}
+			<mcms-admin-slot slot="collection-view:after" [collectionSlug]="col.slug" />
 		} @else {
 			<div class="p-12 text-center text-muted-foreground">Collection not found</div>
 		}

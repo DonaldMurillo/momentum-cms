@@ -147,6 +147,24 @@ export function dashboardPlugin(): MomentumPlugin {
 }
 ```
 
+## Admin Components
+
+Plugins can declare admin component overrides and layout slots via `adminComponents`:
+
+```typescript
+export function brandingPlugin(): MomentumPlugin {
+	return {
+		name: 'branding',
+		adminComponents: {
+			beforeDashboard: () => import('./plugin-banner').then((m) => m.PluginBanner),
+			header: () => import('./custom-header').then((m) => m.CustomHeader),
+		},
+	};
+}
+```
+
+Available keys match `AdminComponentsConfig` — see [Admin Customization](../admin/customization.md) for the full list of page keys and slot positions.
+
 ## Using the API in onReady
 
 The `onReady` lifecycle has full API access:

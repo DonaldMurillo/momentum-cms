@@ -54,6 +54,13 @@ const flavorConfigs: Record<string, FlavorConfig> = {
 		waitForSeeds: true,
 		buildCommand: 'nx build example-nestjs',
 	},
+	'swappable-admin': {
+		appName: 'swappable-admin',
+		serverBinary: 'dist/apps/test-swappable-admin/server/server.mjs',
+		healthEndpoint: '/api/health?checkSeeds=true',
+		waitForSeeds: true,
+		buildCommand: 'nx build test-swappable-admin',
+	},
 };
 
 /**

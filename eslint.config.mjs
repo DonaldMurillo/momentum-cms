@@ -25,6 +25,8 @@ export default [
 					enforceBuildableLibDependency: true,
 					allow: [
 						'^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$',
+						// Core is universal and used both statically and via lazy-loaded routes in admin
+						'@momentumcms/core',
 						// Browser-safe sub-paths from server-tagged libs
 						'@momentumcms/auth/core',
 						'@momentumcms/auth/collections',
@@ -135,7 +137,7 @@ export default [
 	},
 	{
 		// Relax rules for test and story files
-		files: ['**/*.spec.ts', '**/*.test.ts', '**/e2e/**/*.ts', '**/*.stories.ts'],
+		files: ['**/*.spec.ts', '**/*.test.ts', '**/e2e/**/*.ts', '**/*-e2e/**/*.ts', '**/*.stories.ts'],
 		rules: {
 			'@typescript-eslint/no-explicit-any': 'off',
 			'@typescript-eslint/consistent-type-assertions': 'off',
@@ -155,6 +157,13 @@ export default [
 			'@typescript-eslint/explicit-function-return-type': 'off',
 			'@nx/enforce-module-boundaries': 'off',
 			'local/no-direct-browser-apis': 'off',
+		},
+	},
+	{
+		// E2E app specs use relative imports to shared fixtures (no npm scope alias)
+		files: ['apps/**-e2e/src/**/*.ts'],
+		rules: {
+			'@nx/enforce-module-boundaries': 'off',
 		},
 	},
 	{

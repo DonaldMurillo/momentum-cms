@@ -19,6 +19,7 @@ import {
 	type BlockEditDialogData,
 } from '../../widgets/visual-block-editor/block-edit-dialog.component';
 import type { HasUnsavedChanges } from '../../guards/unsaved-changes.guard';
+import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-outlet.component';
 
 /**
  * Collection Edit Page Component
@@ -28,11 +29,12 @@ import type { HasUnsavedChanges } from '../../guards/unsaved-changes.guard';
  */
 @Component({
 	selector: 'mcms-collection-edit',
-	imports: [EntityFormWidget, LivePreviewComponent, Button],
+	imports: [EntityFormWidget, LivePreviewComponent, Button, AdminSlotOutlet],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `
 		@if (collection(); as col) {
+			<mcms-admin-slot slot="collection-edit:before" [collectionSlug]="col.slug" />
 			@if (previewConfig(); as preview) {
 				@if (showPreview()) {
 					<!-- Split layout: form + preview -->
@@ -67,6 +69,7 @@ import type { HasUnsavedChanges } from '../../guards/unsaved-changes.guard';
 								(editBlockRequest)="onEditBlockRequest($event)"
 							/>
 						</div>
+						<mcms-admin-slot slot="collection-edit:sidebar" [collectionSlug]="col.slug" />
 					</div>
 				} @else {
 					<!-- Full-width form (preview hidden) -->
@@ -91,15 +94,21 @@ import type { HasUnsavedChanges } from '../../guards/unsaved-changes.guard';
 					</mcms-entity-form>
 				}
 			} @else {
-				<!-- Standard layout: form only -->
-				<mcms-entity-form
-					#entityForm
-					[collection]="col"
-					[entityId]="entityId()"
-					[mode]="mode()"
-					[basePath]="basePath"
-				/>
+				<!-- Standard layout: form + optional sidebar -->
+				<div class="flex gap-6">
+					<div class="min-w-0 flex-1">
+						<mcms-entity-form
+							#entityForm
+							[collection]="col"
+							[entityId]="entityId()"
+							[mode]="mode()"
+							[basePath]="basePath"
+						/>
+					</div>
+					<mcms-admin-slot slot="collection-edit:sidebar" [collectionSlug]="col.slug" />
+				</div>
 			}
+			<mcms-admin-slot slot="collection-edit:after" [collectionSlug]="col.slug" />
 		} @else {
 			<div class="p-12 text-center text-muted-foreground">Collection not found</div>
 		}
