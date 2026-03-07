@@ -1,0 +1,32 @@
+{
+	"name": "@momentumcms/headless",
+	"version": "0.5.4",
+	"description": "Headless UI component library — unstyled, accessible components built on Angular CDK + Angular Aria",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/DonaldMurillo/momentum-cms.git",
+		"directory": "libs/headless"
+	},
+	"homepage": "https://github.com/DonaldMurillo/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/DonaldMurillo/momentum-cms/issues"
+	},
+	"keywords": [
+		"headless",
+		"ui-components",
+		"angular",
+		"accessible",
+		"unstyled",
+		"angular-aria",
+		"angular-cdk"
+	],
+	"peerDependencies": {
+		"@angular/aria": "^21.0.0",
+		"@angular/common": "^21.0.0",
+		"@angular/core": "^21.0.0",
+		"@angular/cdk": "^21.0.0"
+	},
+	"sideEffects": false
+}

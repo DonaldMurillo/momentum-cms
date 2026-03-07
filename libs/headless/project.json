@@ -1,0 +1,46 @@
+{
+	"name": "headless",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/headless/src",
+	"prefix": "hdl",
+	"projectType": "library",
+	"tags": ["scope:lib", "env:browser"],
+	"targets": {
+		"build": {
+			"executor": "@nx/angular:package",
+			"outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+			"options": {
+				"project": "libs/headless/ng-package.json",
+				"tsConfig": "libs/headless/tsconfig.lib.json"
+			},
+			"configurations": {
+				"production": {
+					"tsConfig": "libs/headless/tsconfig.lib.prod.json"
+				},
+				"development": {}
+			},
+			"defaultConfiguration": "production"
+		},
+		"copy-assets": {
+			"executor": "nx:run-commands",
+			"options": {
+				"commands": ["cp LICENSE dist/libs/headless/"]
+			},
+			"dependsOn": ["build"]
+		},
+		"nx-release-publish": {
+			"dependsOn": ["copy-assets"],
+			"options": {
+				"packageRoot": "dist/{projectRoot}",
+				"access": "public"
+			}
+		},
+		"test": {
+			"executor": "@nx/angular:unit-test",
+			"options": {}
+		},
+		"lint": {
+			"executor": "@nx/eslint:lint"
+		}
+	}
+}
