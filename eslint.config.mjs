@@ -149,6 +149,7 @@ export default [
 			// Test-only anti-pattern rules
 			'local/no-catch-silent-failure': 'error',
 			'local/no-or-logic-assertions': 'error',
+			'local/no-silent-test-exit': 'error',
 		},
 	},
 	{

@@ -7,6 +7,7 @@ const noDirectBrowserApis = require('./no-direct-browser-apis');
 const noCatchSilentFailure = require('./no-catch-silent-failure');
 const noOrLogicAssertions = require('./no-or-logic-assertions');
 const noNonNullAssertionDisable = require('./no-non-null-assertion-disable');
+const noSilentTestExit = require('./no-silent-test-exit');
 
 module.exports = {
 	rules: {
@@ -16,5 +17,6 @@ module.exports = {
 		'no-catch-silent-failure': noCatchSilentFailure,
 		'no-or-logic-assertions': noOrLogicAssertions,
 		'no-non-null-assertion-disable': noNonNullAssertionDisable,
+		'no-silent-test-exit': noSilentTestExit,
 	},
 };

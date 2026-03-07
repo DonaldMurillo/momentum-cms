@@ -45,8 +45,7 @@ describe('FormFieldRegistry', () => {
 	it('should resolve the loader to a component', async () => {
 		registry.register('test', () => Promise.resolve(TestFieldComponent));
 		const loader = registry.get('test');
-		expect(loader).toBeDefined();
-		if (!loader) return;
+		if (!loader) throw new Error('Expected loader to be registered');
 		const component = await loader();
 		expect(component).toBe(TestFieldComponent);
 	});

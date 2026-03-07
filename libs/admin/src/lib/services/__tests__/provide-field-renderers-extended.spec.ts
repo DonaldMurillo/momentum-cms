@@ -62,17 +62,16 @@ describe('provideMomentumFieldRenderers lazy loaders', () => {
 		it('should resolve to the exact same class reference for all text-group types', async () => {
 			const textLoader = registry.get('text');
 			expect(textLoader).toBeDefined();
-			if (!textLoader) return;
+			if (!textLoader) throw new Error('Expected text loader to be registered');
 			const textComponent = await textLoader();
 			expect(textComponent).toBeDefined();
 
 			const textareaLoader = registry.get('textarea');
 			const emailLoader = registry.get('email');
 			const slugLoader = registry.get('slug');
-			expect(textareaLoader).toBeDefined();
-			expect(emailLoader).toBeDefined();
-			expect(slugLoader).toBeDefined();
-			if (!textareaLoader || !emailLoader || !slugLoader) return;
+			if (!textareaLoader || !emailLoader || !slugLoader) {
+				throw new Error('Expected textarea, email, and slug loaders to be registered');
+			}
 
 			const textareaComponent = await textareaLoader();
 			const emailComponent = await emailLoader();

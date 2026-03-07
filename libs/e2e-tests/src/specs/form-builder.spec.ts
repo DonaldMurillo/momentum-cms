@@ -844,7 +844,7 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			expect(ourSub, 'Test submission must exist').toBeTruthy();
 
 			// Navigate to the detail view
-			if (!ourSub) return;
+			if (!ourSub) throw new Error('Test submission not found');
 			await authenticatedPage.goto(`/admin/collections/form-submissions/${ourSub.id}`);
 			await authenticatedPage.waitForLoadState('domcontentloaded');
 

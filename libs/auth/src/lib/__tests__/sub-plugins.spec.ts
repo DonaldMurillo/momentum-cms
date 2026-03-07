@@ -113,8 +113,7 @@ describe('Auth Sub-Plugins', () => {
 
 		it('should mark all collections as managed', () => {
 			const plugin = authOrganization();
-			expect(plugin.collections).toBeDefined();
-			if (!plugin.collections) return;
+			if (!plugin.collections) throw new Error('Expected collections to be defined');
 			for (const col of plugin.collections) {
 				expect(col.managed).toBe(true);
 			}
