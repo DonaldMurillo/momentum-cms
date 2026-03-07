@@ -86,7 +86,8 @@ export function startPublishScheduler(
 
 				for (const doc of scheduled) {
 					try {
-						const api = getMomentumAPI();
+						// Use overrideAccess since the scheduler is a system-level operation
+						const api = getMomentumAPI().setContext({ overrideAccess: true });
 						const versionOps = api.collection(collection.slug).versions();
 						if (!versionOps) continue;
 

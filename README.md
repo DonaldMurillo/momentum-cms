@@ -222,6 +222,7 @@ This starts a local Verdaccio registry, publishes all packages, runs `create-mom
 - **Queue & Cron** — Background job processing with configurable concurrency, retry policies, and scheduled task execution
 - **Redirects** — Collection-based URL redirect management with server middleware
 - **Image Processing** — Automatic image resizing and variant generation using `@napi-rs/image` (Rust/NAPI), with focal point cropping and admin UI picker
+- **Versioning & Drafts** — Document versioning with draft/publish workflow, revision history, auto-versioning on update, role-based publish controls, and admin UI status filtering
 
 ### Planned
 
@@ -231,8 +232,6 @@ These are planned features and improvements, in no particular priority order.
 - **Swappable admin components** — Replace built-in admin components with your own custom implementations
 - **Customizable admin layouts** — Angular slots and dynamic rendering for extending admin pages without forking
 - **UX polish pass** — Improve interactions, transitions, and overall usability across the admin dashboard
-- **Multi-step form wizard** — Multi-page forms with step navigation, progress tracking, and per-step validation
-- **Versioning & drafts** — Document versioning with draft/publish workflow and revision history
 - **Localization (i18n)** — Multi-language content management with locale-aware fields and admin UI
 - **Better Auth plugin adapters** — Pre-built adapters for remaining Better Auth plugins (OAuth providers, magic links, passkeys); admin and organization plugins are shipped
 - **Resend adapter** — Email delivery via Resend for transactional emails and auth flows

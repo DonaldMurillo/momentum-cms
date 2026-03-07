@@ -16,7 +16,13 @@ import type {
 	RequestContext,
 } from '@momentumcms/core';
 import { createLogger } from '@momentumcms/logger';
-import { flattenDataFields, validateFieldConstraints, getSoftDeleteField } from '@momentumcms/core';
+import {
+	flattenDataFields,
+	validateFieldConstraints,
+	getSoftDeleteField,
+	hasVersionDrafts,
+} from '@momentumcms/core';
+import type { DocumentStatus } from '@momentumcms/core';
 import {
 	hasFieldAccessControl,
 	filterCreatableFields,
@@ -295,6 +301,14 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			}
 		}
 
+		// Draft visibility: only users with readDrafts access see drafts
+		if (hasVersionDrafts(this.collectionConfig) && !this.context.overrideAccess) {
+			const canSeeDrafts = await this.canReadDrafts();
+			if (!canSeeDrafts) {
+				whereParams['_status'] = 'published';
+			}
+		}
+
 		const query: Record<string, unknown> = {
 			...queryOptions,
 			...whereParams,
@@ -385,6 +399,18 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			(doc as Record<string, unknown>)[softDeleteField]
 		) {
 			return null;
+		}
+
+		// Draft visibility: only users with readDrafts access see drafts
+		if (hasVersionDrafts(this.collectionConfig) && !this.context.overrideAccess) {
+			const canSeeDrafts = await this.canReadDrafts();
+			if (!canSeeDrafts) {
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
+				const record = doc as Record<string, unknown>;
+				if (record['_status'] !== 'published') {
+					return null;
+				}
+			}
 		}
 
 		// Filter by defaultWhere constraints (e.g., user-scoped filtering)
@@ -517,6 +543,23 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Enforce defaultWhere constraints (e.g., user-scoped filtering)
 		if (!this.matchesDefaultWhereConstraints(originalDoc)) {
 			throw new DocumentNotFoundError(this.slug, id);
+		}
+
+		// Auto-create version snapshot of previous state for versioned collections
+		if (hasVersionDrafts(this.collectionConfig) && this.adapter.createVersion) {
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- _status is a known string field
+			const status = (originalDoc['_status'] as DocumentStatus) ?? 'draft';
+			await this.adapter.createVersion(this.slug, id, originalDoc, { status });
+
+			// Enforce maxPerDoc limit
+			const versionsConfig = this.collectionConfig.versions;
+			const maxPerDoc =
+				typeof versionsConfig === 'object' && versionsConfig !== null
+					? versionsConfig.maxPerDoc
+					: undefined;
+			if (maxPerDoc && this.adapter.deleteVersions) {
+				await this.adapter.deleteVersions(this.slug, id, maxPerDoc);
+			}
 		}
 
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Partial<T> is compatible with Record<string, unknown>
@@ -961,6 +1004,33 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		const allowed = await Promise.resolve(accessFn(accessArgs));
 		if (!allowed) {
 			throw new AccessDeniedError(operation, this.slug);
+		}
+	}
+
+	/**
+	 * Check if the current user can see draft documents (non-throwing).
+	 * Uses `access.readDrafts` if configured, otherwise falls back to `access.update`.
+	 */
+	private async canReadDrafts(): Promise<boolean> {
+		if (!this.context.user) return false;
+
+		// 1. Use explicit readDrafts access if configured
+		const readDraftsFn = this.collectionConfig.access?.readDrafts;
+		if (readDraftsFn) {
+			try {
+				return !!(await Promise.resolve(readDraftsFn({ req: this.buildRequestContext() })));
+			} catch {
+				return false;
+			}
+		}
+
+		// 2. Fallback: check update access
+		const updateFn = this.collectionConfig.access?.update;
+		if (!updateFn) return true; // No access control = allow
+		try {
+			return !!(await Promise.resolve(updateFn({ req: this.buildRequestContext() })));
+		} catch {
+			return false;
 		}
 	}
 

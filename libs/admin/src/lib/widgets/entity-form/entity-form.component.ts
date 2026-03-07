@@ -14,7 +14,7 @@ import {
 import { Router } from '@angular/router';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { form, submit } from '@angular/forms/signals';
-import type { CollectionConfig, Field, ImageSizeConfig } from '@momentumcms/core';
+import type { CollectionConfig, Field, ImageSizeConfig, DocumentStatus } from '@momentumcms/core';
 import { flattenDataFields, humanizeFieldName, isUploadCollection } from '@momentumcms/core';
 import {
 	Card,
@@ -37,6 +37,7 @@ import { type EntityFormMode, createInitialFormData } from './entity-form.types'
 import { applyCollectionSchema } from './form-schema-builder';
 import { FieldRenderer } from './field-renderers/field-renderer.component';
 import { VersionHistoryWidget } from '../version-history/version-history.component';
+import { PublishControlsWidget } from '../publish-controls/publish-controls.component';
 import { CollectionUploadZoneComponent } from './collection-upload-zone.component';
 import { FocalPointPickerComponent } from '../focal-point-picker/focal-point-picker.component';
 import { ImageVariantsDisplay } from '../image-variants/image-variants-display.component';
@@ -71,6 +72,7 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 		BreadcrumbItem,
 		BreadcrumbSeparator,
 		VersionHistoryWidget,
+		PublishControlsWidget,
 		CollectionUploadZoneComponent,
 		FocalPointPickerComponent,
 		ImageVariantsDisplay,
@@ -95,17 +97,28 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 			<div class="mb-8">
 				<div class="flex items-start justify-between gap-4">
 					<div>
-						<h1 class="text-2xl font-semibold tracking-tight">
-							@if (isGlobal()) {
-								{{ collectionLabelSingular() }}
-							} @else if (mode() === 'create') {
-								Create {{ collectionLabelSingular() }}
-							} @else if (mode() === 'edit') {
-								Edit {{ collectionLabelSingular() }}
-							} @else {
-								View {{ collectionLabelSingular() }}
+						<div class="flex items-center gap-3">
+							<h1 class="text-2xl font-semibold tracking-tight">
+								@if (isGlobal()) {
+									{{ collectionLabelSingular() }}
+								} @else if (mode() === 'create') {
+									Create {{ collectionLabelSingular() }}
+								} @else if (mode() === 'edit') {
+									Edit {{ collectionLabelSingular() }}
+								} @else {
+									View {{ collectionLabelSingular() }}
+								}
+							</h1>
+							@if (hasVersioning() && mode() === 'edit' && entityId()) {
+								<mcms-publish-controls
+									[collection]="collection().slug"
+									[documentId]="entityId()!"
+									[documentLabel]="collectionLabelSingular()"
+									[initialStatus]="documentStatus()"
+									(statusChanged)="onStatusChanged($event)"
+								/>
 							}
-						</h1>
+						</div>
 						<p class="mt-1 text-muted-foreground">
 							@if (isGlobal()) {
 								Manage {{ collectionLabelSingular().toLowerCase() }} settings.
@@ -478,6 +491,13 @@ export class EntityFormWidget<T extends Entity = Entity> {
 			return !!versions.drafts;
 		}
 		return false;
+	});
+
+	/** Current document status (from form model or default to 'draft') */
+	readonly documentStatus = computed((): DocumentStatus => {
+		const data = this.formModel();
+		if (data['_status'] === 'published') return 'published';
+		return 'draft';
 	});
 
 	/** Whether draft save is available (edit mode with existing entity) */
@@ -863,6 +883,14 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	 */
 	switchToEdit(): void {
 		this.modeChange.emit('edit');
+	}
+
+	/**
+	 * Handle status change from publish controls.
+	 */
+	onStatusChanged(status: DocumentStatus): void {
+		const data = { ...this.formModel(), _status: status };
+		this.formModel.set(data);
 	}
 
 	/**
