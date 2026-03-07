@@ -844,8 +844,8 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			expect(ourSub, 'Test submission must exist').toBeTruthy();
 
 			// Navigate to the detail view
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- verified above
-			await authenticatedPage.goto(`/admin/collections/form-submissions/${ourSub!.id}`);
+			if (!ourSub) throw new Error('Test submission not found');
+			await authenticatedPage.goto(`/admin/collections/form-submissions/${ourSub.id}`);
 			await authenticatedPage.waitForLoadState('domcontentloaded');
 
 			// Verify key labels are visible

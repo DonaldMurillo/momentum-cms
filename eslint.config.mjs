@@ -130,6 +130,9 @@ export default [
 			// Use inject(DOCUMENT) and .defaultView for SSR safety
 			'local/no-direct-browser-apis': 'error',
 
+			// Ban eslint-disable comments for protected rules (no-non-null-assertion, no-silent-test-exit)
+			'local/no-disable-protected-rules': 'error',
+
 			// no-catch-silent-failure and no-or-logic-assertions → test-only (see test block below)
 		},
 	},
@@ -146,6 +149,7 @@ export default [
 			// Test-only anti-pattern rules
 			'local/no-catch-silent-failure': 'error',
 			'local/no-or-logic-assertions': 'error',
+			'local/no-silent-test-exit': 'error',
 		},
 	},
 	{

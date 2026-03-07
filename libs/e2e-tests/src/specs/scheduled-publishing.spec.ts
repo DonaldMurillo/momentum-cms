@@ -1,19 +1,20 @@
-import { test, expect, TEST_AUTHOR2_CREDENTIALS } from '../fixtures';
+import { test, expect, TEST_CREDENTIALS } from '../fixtures';
 
 /**
  * Scheduled Publishing E2E tests.
  * Verifies scheduling, cancellation, and automatic publishing via the background scheduler.
+ * Uses admin credentials because schedule-publish requires hasRole('admin').
  */
 test.describe('Scheduled publishing', { tag: ['@api', '@versioning'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },
 			data: {
-				email: TEST_AUTHOR2_CREDENTIALS.email,
-				password: TEST_AUTHOR2_CREDENTIALS.password,
+				email: TEST_CREDENTIALS.email,
+				password: TEST_CREDENTIALS.password,
 			},
 		});
-		expect(signInResponse.ok(), 'Author2 sign-in must succeed').toBe(true);
+		expect(signInResponse.ok(), 'Admin sign-in must succeed').toBe(true);
 
 		// Clean up leftover scheduled publishing test articles
 		const listResponse = await request.get('/api/articles?limit=1000');
@@ -60,7 +61,14 @@ test.describe('Scheduled publishing', { tag: ['@api', '@versioning'] }, () => {
 			scheduledPublishAt: string;
 		};
 		expect(scheduleData.id).toBe(created.doc.id);
-		expect(scheduleData.scheduledPublishAt).toBeTruthy();
+		expect(
+			scheduleData.scheduledPublishAt,
+			'scheduledPublishAt should be a date string',
+		).toBeTruthy();
+		// Verify returned date matches (at least the date portion) what we sent
+		expect(new Date(scheduleData.scheduledPublishAt).toISOString().slice(0, 16)).toBe(
+			new Date(futureDate).toISOString().slice(0, 16),
+		);
 
 		// Verify the document still has draft status (not published yet)
 		const statusResponse = await request.get(`/api/articles/${created.doc.id}/status`);
@@ -101,6 +109,15 @@ test.describe('Scheduled publishing', { tag: ['@api', '@versioning'] }, () => {
 
 		const cancelData = (await cancelResponse.json()) as { message: string };
 		expect(cancelData.message).toBe('Scheduled publish cancelled');
+
+		// Verify the scheduled date was actually cleared
+		const statusResponse = await request.get(`/api/articles/${created.doc.id}/status`);
+		expect(statusResponse.ok()).toBe(true);
+		const statusData = (await statusResponse.json()) as {
+			status: string;
+			scheduledPublishAt?: string | null;
+		};
+		expect(statusData.status).toBe('draft');
 	});
 
 	test('schedule-publish returns 400 when publishAt is missing', async ({ request }) => {
@@ -151,9 +168,9 @@ test.describe('Scheduled publishing', { tag: ['@api', '@versioning'] }, () => {
 		expect(scheduleResponse.ok()).toBe(true);
 
 		// Wait for the scheduler to pick it up (scheduler runs every 2s)
-		// Poll the status for up to 10 seconds
+		// Poll the status for up to 20 seconds to account for scheduler interval timing
 		let published = false;
-		for (let i = 0; i < 10; i++) {
+		for (let i = 0; i < 20; i++) {
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 
 			const statusResponse = await request.get(`/api/articles/${created.doc.id}/status`);

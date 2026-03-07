@@ -17,6 +17,7 @@ import {
 	flattenDataFields,
 	ReferentialIntegrityError,
 	getSoftDeleteField,
+	hasVersionDrafts,
 } from '@momentumcms/core';
 import { createLogger } from '@momentumcms/logger';
 
@@ -171,16 +172,6 @@ function getTableName(collection: CollectionConfig): string {
 }
 
 /**
- * Check if a collection has version drafts enabled.
- */
-function hasVersionDrafts(collection: CollectionConfig): boolean {
-	const versions = collection.versions;
-	if (!versions) return false;
-	if (typeof versions === 'boolean') return false;
-	return !!versions.drafts;
-}
-
-/**
  * Validates that a collection slug is safe for use in SQL.
  * Prevents potential SQL injection via table names.
  */
@@ -226,6 +217,7 @@ function createVersionTableSql(collection: CollectionConfig): string | null {
 			CONSTRAINT "fk_${tableName}_parent" FOREIGN KEY ("parent") REFERENCES "${baseTable}"("id") ON DELETE CASCADE
 		);
 		CREATE INDEX IF NOT EXISTS "idx_${tableName}_parent" ON "${tableName}"("parent");
+		CREATE INDEX IF NOT EXISTS "idx_${tableName}_status" ON "${tableName}"("_status");
 		CREATE INDEX IF NOT EXISTS "idx_${tableName}_createdAt" ON "${tableName}"("createdAt");
 	`;
 }

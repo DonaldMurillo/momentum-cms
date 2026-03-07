@@ -113,9 +113,8 @@ describe('Auth Sub-Plugins', () => {
 
 		it('should mark all collections as managed', () => {
 			const plugin = authOrganization();
-			expect(plugin.collections).toBeDefined();
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		for (const col of plugin.collections!) {
+			if (!plugin.collections) throw new Error('Expected collections to be defined');
+			for (const col of plugin.collections) {
 				expect(col.managed).toBe(true);
 			}
 		});

@@ -5,6 +5,9 @@ import {
 	relationship,
 	upload,
 	allowAll,
+	isAuthenticated,
+	hasRole,
+	or,
 } from '@momentumcms/core';
 import type { FieldHookFunction } from '@momentumcms/core';
 import { Categories } from './categories.collection';
@@ -69,13 +72,14 @@ export const Articles = defineCollection({
 	},
 	access: {
 		read: allowAll(),
-		create: allowAll(),
-		update: allowAll(),
-		delete: allowAll(),
-		admin: allowAll(),
-		// Version access controls - allow all for testing
-		readVersions: allowAll(),
-		publishVersions: allowAll(),
-		restoreVersions: allowAll(),
+		create: or(hasRole('admin'), hasRole('editor')),
+		update: or(hasRole('admin'), hasRole('editor')),
+		delete: hasRole('admin'),
+		admin: isAuthenticated(),
+		// Version access controls - role-based for draft/publish workflow
+		readDrafts: or(hasRole('admin'), hasRole('editor')),
+		readVersions: isAuthenticated(),
+		publishVersions: hasRole('admin'),
+		restoreVersions: hasRole('admin'),
 	},
 });

@@ -1,21 +1,22 @@
-import { test, expect, TEST_AUTHOR2_CREDENTIALS } from '../fixtures';
+import { test, expect, TEST_CREDENTIALS } from '../fixtures';
 
 /**
  * Version diff E2E tests.
  * Verifies the compare versions API endpoint and version diff UI.
  *
  * Versions are created by explicit publish/draft operations, not by standard CRUD.
+ * Uses admin credentials because publish requires hasRole('admin').
  */
 test.describe('Version diff', { tag: ['@versioning', '@admin'] }, () => {
 	test.beforeEach(async ({ request }) => {
 		const signInResponse = await request.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },
 			data: {
-				email: TEST_AUTHOR2_CREDENTIALS.email,
-				password: TEST_AUTHOR2_CREDENTIALS.password,
+				email: TEST_CREDENTIALS.email,
+				password: TEST_CREDENTIALS.password,
 			},
 		});
-		expect(signInResponse.ok(), 'Author2 sign-in must succeed').toBe(true);
+		expect(signInResponse.ok(), 'Admin sign-in must succeed').toBe(true);
 
 		// Clean up leftover diff test articles
 		const listResponse = await request.get('/api/articles?limit=1000');

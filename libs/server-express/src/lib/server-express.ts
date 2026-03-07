@@ -358,6 +358,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			res.json(result);
 		} catch (error) {
 			const message = sanitizeErrorMessage(error, 'Unknown error');
+			if (error instanceof Error && error.name === 'AccessDeniedError') {
+				res.status(403).json({ error: 'Access denied' });
+				return;
+			}
 			res.status(500).json({ error: 'Failed to fetch versions', message });
 		}
 	});
@@ -393,6 +397,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			res.json(version);
 		} catch (error) {
 			const message = sanitizeErrorMessage(error, 'Unknown error');
+			if (error instanceof Error && error.name === 'AccessDeniedError') {
+				res.status(403).json({ error: 'Access denied' });
+				return;
+			}
 			res.status(500).json({ error: 'Failed to fetch version', message });
 		}
 	});
@@ -439,6 +447,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				res.status(400).json({ error: 'Version parent mismatch', message });
 				return;
 			}
+			if (error instanceof Error && error.name === 'AccessDeniedError') {
+				res.status(403).json({ error: 'Access denied' });
+				return;
+			}
 			res.status(500).json({ error: 'Failed to restore version', message });
 		}
 	});
@@ -466,6 +478,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			res.json({ doc: published, message: 'Document published successfully' });
 		} catch (error) {
 			const message = sanitizeErrorMessage(error, 'Unknown error');
+			if (error instanceof Error && error.name === 'AccessDeniedError') {
+				res.status(403).json({ error: 'Access denied' });
+				return;
+			}
 			res.status(500).json({ error: 'Failed to publish document', message });
 		}
 	});
@@ -502,6 +518,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			res.json(result);
 		} catch (error) {
 			const message = sanitizeErrorMessage(error, 'Unknown error');
+			if (error instanceof Error && error.name === 'AccessDeniedError') {
+				res.status(403).json({ error: 'Access denied' });
+				return;
+			}
 			res.status(500).json({ error: 'Failed to schedule publish', message });
 		}
 	});
@@ -528,6 +548,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			res.json({ message: 'Scheduled publish cancelled' });
 		} catch (error) {
 			const message = sanitizeErrorMessage(error, 'Unknown error');
+			if (error instanceof Error && error.name === 'AccessDeniedError') {
+				res.status(403).json({ error: 'Access denied' });
+				return;
+			}
 			res.status(500).json({ error: 'Failed to cancel scheduled publish', message });
 		}
 	});
@@ -555,6 +579,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			res.json({ doc: unpublished, message: 'Document unpublished successfully' });
 		} catch (error) {
 			const message = sanitizeErrorMessage(error, 'Unknown error');
+			if (error instanceof Error && error.name === 'AccessDeniedError') {
+				res.status(403).json({ error: 'Access denied' });
+				return;
+			}
 			res.status(500).json({ error: 'Failed to unpublish document', message });
 		}
 	});
@@ -583,6 +611,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			res.json({ version: draft, message: 'Draft saved successfully' });
 		} catch (error) {
 			const message = sanitizeErrorMessage(error, 'Unknown error');
+			if (error instanceof Error && error.name === 'AccessDeniedError') {
+				res.status(403).json({ error: 'Access denied' });
+				return;
+			}
 			res.status(500).json({ error: 'Failed to save draft', message });
 		}
 	});
@@ -619,11 +651,16 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				return;
 			}
 
-			const differences = await versionOps.compare(versionId1, versionId2);
+			const parentId = req.params['id'];
+			const differences = await versionOps.compare(versionId1, versionId2, parentId);
 
 			res.json({ differences });
 		} catch (error) {
 			const message = sanitizeErrorMessage(error, 'Unknown error');
+			if (error instanceof Error && error.name === 'AccessDeniedError') {
+				res.status(403).json({ error: 'Access denied' });
+				return;
+			}
 			res.status(500).json({ error: 'Failed to compare versions', message });
 		}
 	});

@@ -80,9 +80,9 @@ export function buildGraphQLSchema(collections: CollectionConfig[]): GraphQLSche
 
 	function getOrCreateEnum(field: SelectField, parentName: string): GraphQLEnumType {
 		const key = `${parentName}_${field.name}`;
-		if (enumCache.has(key)) {
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			return enumCache.get(key)!;
+		const cached = enumCache.get(key);
+		if (cached) {
+			return cached;
 		}
 
 		const values: Record<string, { value: string | number }> = {};
@@ -206,9 +206,9 @@ export function buildGraphQLSchema(collections: CollectionConfig[]): GraphQLSche
 
 	/** Build or retrieve a cached GraphQLObjectType for a set of fields. */
 	function getOrCreateObjectType(fields: Field[], typeName: string): GraphQLObjectType {
-		if (typeCache.has(typeName)) {
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			return typeCache.get(typeName)!;
+		const cachedType = typeCache.get(typeName);
+		if (cachedType) {
+			return cachedType;
 		}
 
 		const objType = new GraphQLObjectType({
@@ -233,9 +233,9 @@ export function buildGraphQLSchema(collections: CollectionConfig[]): GraphQLSche
 	/** Build or retrieve a cached GraphQLInputObjectType. */
 	function getOrCreateInputType(fields: Field[], typeName: string): GraphQLInputObjectType {
 		const inputName = `${typeName}Input`;
-		if (inputCache.has(inputName)) {
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			return inputCache.get(inputName)!;
+		const cachedInput = inputCache.get(inputName);
+		if (cachedInput) {
+			return cachedInput;
 		}
 
 		const inputType = new GraphQLInputObjectType({

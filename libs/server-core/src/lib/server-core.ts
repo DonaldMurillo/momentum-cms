@@ -319,11 +319,12 @@ export function createInMemoryAdapter(): DatabaseAdapter {
 	let idCounter = 1;
 
 	function getStore(collection: string): Map<string, Record<string, unknown>> {
-		if (!store.has(collection)) {
-			store.set(collection, new Map());
+		let collectionStore = store.get(collection);
+		if (!collectionStore) {
+			collectionStore = new Map();
+			store.set(collection, collectionStore);
 		}
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		return store.get(collection)!;
+		return collectionStore;
 	}
 
 	return {
