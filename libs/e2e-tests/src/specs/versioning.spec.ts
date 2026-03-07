@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures';
+import { test, expect, TEST_CREDENTIALS } from '../fixtures';
 
 /**
  * Versioning & Drafts E2E Tests
@@ -10,9 +10,19 @@ import { test, expect } from '../fixtures';
  * - Version restoration
  * - Draft saving
  * - Status endpoints
+ *
+ * All operations require admin auth (create, publish, restore, delete).
  */
 test.describe.serial('Versioning API Tests', { tag: ['@versioning', '@api'] }, () => {
 	let testArticleId: string;
+
+	test.beforeEach(async ({ request }) => {
+		const signIn = await request.post('/api/auth/sign-in/email', {
+			headers: { 'Content-Type': 'application/json' },
+			data: { email: TEST_CREDENTIALS.email, password: TEST_CREDENTIALS.password },
+		});
+		expect(signIn.ok(), 'Admin sign-in must succeed').toBe(true);
+	});
 
 	test('should create a versioned article', async ({ request }) => {
 		const response = await request.post('/api/articles', {
@@ -22,15 +32,16 @@ test.describe.serial('Versioning API Tests', { tag: ['@versioning', '@api'] }, (
 			},
 		});
 
-		expect(response.ok()).toBeTruthy();
+		expect(response.ok()).toBe(true);
 		const data = await response.json();
-		expect(data.doc).toBeDefined();
-		expect(data.doc.id).toBeDefined();
+		expect(data.doc).toMatchObject({ id: expect.any(String) });
 		testArticleId = data.doc.id;
 
-		// Verify article is retrievable
+		// Verify article is retrievable with correct data
 		const getResponse = await request.get(`/api/articles/${testArticleId}`);
-		expect(getResponse.ok()).toBeTruthy();
+		expect(getResponse.ok()).toBe(true);
+		const getData = await getResponse.json();
+		expect(getData.doc.title).toBe('Version Test Article');
 	});
 
 	test('should get document status (default draft)', async ({ request }) => {
@@ -57,19 +68,18 @@ test.describe.serial('Versioning API Tests', { tag: ['@versioning', '@api'] }, (
 	test('should list versions after publish', async ({ request }) => {
 		const response = await request.get(`/api/articles/${testArticleId}/versions`);
 
-		expect(response.ok()).toBeTruthy();
+		expect(response.ok()).toBe(true);
 		const data = await response.json();
-		expect(data.docs).toBeDefined();
-		expect(Array.isArray(data.docs)).toBeTruthy();
+		expect(Array.isArray(data.docs)).toBe(true);
 		// Should have at least one version from the publish action
 		expect(data.docs.length).toBeGreaterThanOrEqual(1);
 
-		// Verify version structure
+		// Verify version structure has required fields with actual values
 		const version = data.docs[0];
-		expect(version.id).toBeDefined();
+		expect(typeof version.id).toBe('string');
 		expect(version.parent).toBe(testArticleId);
-		expect(version._status).toBeDefined();
-		expect(version.createdAt).toBeDefined();
+		expect(['draft', 'published']).toContain(version._status);
+		expect(typeof version.createdAt).toBe('string');
 	});
 
 	test('should unpublish document', async ({ request }) => {
@@ -93,11 +103,10 @@ test.describe.serial('Versioning API Tests', { tag: ['@versioning', '@api'] }, (
 			},
 		});
 
-		expect(response.ok()).toBeTruthy();
+		expect(response.ok()).toBe(true);
 		const data = await response.json();
 		expect(data.message).toBe('Draft saved successfully');
-		expect(data.version).toBeDefined();
-		expect(data.version.autosave).toBe(true);
+		expect(data.version).toMatchObject({ id: expect.any(String), autosave: true });
 
 		// Verify the draft version has the correct content
 		const versionResponse = await request.get(
@@ -119,10 +128,10 @@ test.describe.serial('Versioning API Tests', { tag: ['@versioning', '@api'] }, (
 		// Now get the specific version
 		const response = await request.get(`/api/articles/${testArticleId}/versions/${versionId}`);
 
-		expect(response.ok()).toBeTruthy();
+		expect(response.ok()).toBe(true);
 		const data = await response.json();
 		expect(data.id).toBe(versionId);
-		expect(data.version).toBeDefined();
+		expect(data.version).toMatchObject({ title: expect.any(String) });
 	});
 
 	test('should update article to create new state', async ({ request }) => {
@@ -155,17 +164,17 @@ test.describe.serial('Versioning API Tests', { tag: ['@versioning', '@api'] }, (
 			},
 		});
 
-		expect(response.ok()).toBeTruthy();
+		expect(response.ok()).toBe(true);
 		const data = await response.json();
 		expect(data.message).toBe('Version restored successfully');
-		expect(data.doc).toBeDefined();
+		expect(data.doc).toMatchObject({ id: expect.any(String) });
 
 		// Verify the article content actually reverted
 		const getResponse = await request.get(`/api/articles/${testArticleId}`);
 		expect(getResponse.ok()).toBeTruthy();
 		const articleData = await getResponse.json();
-		// After restoring, the title should no longer be "Modified Title Before Restore"
-		expect(articleData.doc.title).not.toBe('Modified Title Before Restore');
+		// After restoring, the title should revert to the original
+		expect(articleData.doc.title).toBe('Version Test Article');
 	});
 
 	test('should return 400 for non-versioned collection', async ({ request }) => {
@@ -185,6 +194,14 @@ test.describe.serial('Versioning API Tests', { tag: ['@versioning', '@api'] }, (
 });
 
 test.describe('Versioning with Seeded Data', { tag: ['@versioning', '@api'] }, () => {
+	test.beforeEach(async ({ request }) => {
+		const signIn = await request.post('/api/auth/sign-in/email', {
+			headers: { 'Content-Type': 'application/json' },
+			data: { email: TEST_CREDENTIALS.email, password: TEST_CREDENTIALS.password },
+		});
+		expect(signIn.ok(), 'Admin sign-in must succeed').toBe(true);
+	});
+
 	test('should be able to publish seeded article', async ({ request }) => {
 		// Get the seeded "Welcome Article"
 		const listResponse = await request.get('/api/articles?limit=100');
@@ -205,7 +222,8 @@ test.describe('Versioning with Seeded Data', { tag: ['@versioning', '@api'] }, (
 		expect(statusData.status).toBe('published');
 
 		// Unpublish to restore original state
-		await request.post(`/api/articles/${welcomeArticle.id}/unpublish`);
+		const unpublishRes = await request.post(`/api/articles/${welcomeArticle.id}/unpublish`);
+		expect(unpublishRes.ok(), 'Unpublish should succeed').toBe(true);
 	});
 
 	test('should list versions for seeded article after modifications', async ({ request }) => {
@@ -222,7 +240,6 @@ test.describe('Versioning with Seeded Data', { tag: ['@versioning', '@api'] }, (
 		expect(versionsResponse.ok()).toBeTruthy();
 
 		const versionsData = await versionsResponse.json();
-		expect(versionsData.docs).toBeDefined();
-		expect(Array.isArray(versionsData.docs)).toBeTruthy();
+		expect(Array.isArray(versionsData.docs)).toBe(true);
 	});
 });

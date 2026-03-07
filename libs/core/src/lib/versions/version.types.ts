@@ -189,6 +189,23 @@ export interface SchedulePublishResult {
 }
 
 // ============================================
+// Version Utilities
+// ============================================
+
+/**
+ * Check if a collection has version drafts enabled.
+ * `versions: true` enables versioning but NOT drafts.
+ * Only `versions: { drafts: true }` (or `{ drafts: { ... } }`) enables drafts.
+ */
+export function hasVersionDrafts(collection: {
+	versions?: boolean | { drafts?: boolean | object };
+}): boolean {
+	const v = collection.versions;
+	if (!v || typeof v === 'boolean') return false;
+	return !!v.drafts;
+}
+
+// ============================================
 // Version Events (for hooks)
 // ============================================
 

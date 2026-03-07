@@ -51,6 +51,8 @@ export interface AccessConfig {
 	publishVersions?: AccessFunction;
 	/** Control who can restore previous versions */
 	restoreVersions?: AccessFunction;
+	/** Control who can see draft (unpublished) documents. Falls back to `update` access if not set. */
+	readDrafts?: AccessFunction;
 }
 
 // ============================================

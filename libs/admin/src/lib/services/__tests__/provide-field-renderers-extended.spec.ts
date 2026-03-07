@@ -62,16 +62,20 @@ describe('provideMomentumFieldRenderers lazy loaders', () => {
 		it('should resolve to the exact same class reference for all text-group types', async () => {
 			const textLoader = registry.get('text');
 			expect(textLoader).toBeDefined();
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const textComponent = await textLoader!();
+			if (!textLoader) throw new Error('Expected text loader to be registered');
+			const textComponent = await textLoader();
 			expect(textComponent).toBeDefined();
 
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const textareaComponent = await registry.get('textarea')!();
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const emailComponent = await registry.get('email')!();
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const slugComponent = await registry.get('slug')!();
+			const textareaLoader = registry.get('textarea');
+			const emailLoader = registry.get('email');
+			const slugLoader = registry.get('slug');
+			if (!textareaLoader || !emailLoader || !slugLoader) {
+				throw new Error('Expected textarea, email, and slug loaders to be registered');
+			}
+
+			const textareaComponent = await textareaLoader();
+			const emailComponent = await emailLoader();
+			const slugComponent = await slugLoader();
 
 			expect(textareaComponent).toBe(textComponent);
 			expect(emailComponent).toBe(textComponent);

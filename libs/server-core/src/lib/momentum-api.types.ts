@@ -32,6 +32,8 @@ export interface MomentumAPIContext {
 	depth?: number;
 	/** Show hidden fields (admin only) */
 	showHiddenFields?: boolean;
+	/** Skip access control checks (for system-level operations like publish scheduler) */
+	overrideAccess?: boolean;
 }
 
 // ============================================
@@ -291,6 +293,7 @@ export interface VersionOperations<T = Record<string, unknown>> {
 	compare(
 		versionId1: string,
 		versionId2: string,
+		parentId?: string,
 	): Promise<{ field: string; oldValue: unknown; newValue: unknown }[]>;
 
 	/**

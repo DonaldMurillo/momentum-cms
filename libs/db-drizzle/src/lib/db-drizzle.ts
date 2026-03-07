@@ -13,7 +13,7 @@ import type {
 	VersionCountOptions,
 	CreateVersionOptions,
 } from '@momentumcms/core';
-import { flattenDataFields, getSoftDeleteField } from '@momentumcms/core';
+import { flattenDataFields, getSoftDeleteField, hasVersionDrafts } from '@momentumcms/core';
 
 /**
  * Type guard to check if a value is a record object.
@@ -178,16 +178,6 @@ function createTableSql(collection: CollectionConfig): string {
  */
 function getTableName(collection: CollectionConfig): string {
 	return collection.dbName ?? collection.slug;
-}
-
-/**
- * Check if a collection has versioning with drafts enabled.
- */
-function hasVersionDrafts(collection: CollectionConfig): boolean {
-	const versions = collection.versions;
-	if (!versions) return false;
-	if (typeof versions === 'boolean') return false;
-	return !!versions.drafts;
 }
 
 /**

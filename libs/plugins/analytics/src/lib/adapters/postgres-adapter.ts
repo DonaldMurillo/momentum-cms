@@ -56,8 +56,7 @@ export function postgresAnalyticsAdapter(
 				max: options.poolSize ?? 5,
 			});
 		}
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed non-null after the if block above
-		return pool!;
+		return pool;
 	}
 
 	const adapter: AnalyticsAdapter = {

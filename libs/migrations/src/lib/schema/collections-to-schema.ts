@@ -6,7 +6,7 @@
  * against the "actual" state from introspection.
  */
 import type { CollectionConfig, Field } from '@momentumcms/core';
-import { flattenDataFields, getSoftDeleteField } from '@momentumcms/core';
+import { flattenDataFields, getSoftDeleteField, hasVersionDrafts } from '@momentumcms/core';
 import type {
 	ColumnSnapshot,
 	ForeignKeySnapshot,
@@ -25,8 +25,7 @@ function mapOnDelete(
 	onDelete: 'set-null' | 'restrict' | 'cascade' | undefined,
 	required: boolean,
 ): string {
-	const effective =
-		required && (!onDelete || onDelete === 'set-null') ? 'restrict' : onDelete;
+	const effective = required && (!onDelete || onDelete === 'set-null') ? 'restrict' : onDelete;
 	switch (effective) {
 		case 'restrict':
 			return 'RESTRICT';
@@ -45,25 +44,10 @@ function getTableName(collection: CollectionConfig): string {
 }
 
 /**
- * Check if a collection has versioning with drafts enabled.
- */
-function hasVersionDrafts(collection: CollectionConfig): boolean {
-	const versions = collection.versions;
-	if (!versions) return false;
-	if (typeof versions === 'boolean') return false;
-	return !!versions.drafts;
-}
-
-/**
  * Type guard for CollectionConfig-like objects.
  */
 function isCollectionConfig(value: unknown): value is CollectionConfig {
-	return (
-		typeof value === 'object' &&
-		value !== null &&
-		'slug' in value &&
-		'fields' in value
-	);
+	return typeof value === 'object' && value !== null && 'slug' in value && 'fields' in value;
 }
 
 /**
@@ -102,8 +86,12 @@ function buildAutoColumns(
 
 	// Timestamps (default: true)
 	const timestamps = collection.timestamps;
-	const addCreatedAt = timestamps !== false && (timestamps === true || timestamps === undefined || timestamps.createdAt !== false);
-	const addUpdatedAt = timestamps !== false && (timestamps === true || timestamps === undefined || timestamps.updatedAt !== false);
+	const addCreatedAt =
+		timestamps !== false &&
+		(timestamps === true || timestamps === undefined || timestamps.createdAt !== false);
+	const addUpdatedAt =
+		timestamps !== false &&
+		(timestamps === true || timestamps === undefined || timestamps.updatedAt !== false);
 
 	if (addCreatedAt) {
 		columns.push({
@@ -125,13 +113,20 @@ function buildAutoColumns(
 		});
 	}
 
-	// _status column for versioned collections with drafts
+	// _status and scheduledPublishAt columns for versioned collections with drafts
 	if (hasVersionDrafts(collection)) {
 		columns.push({
 			name: '_status',
 			type: dialect === 'postgresql' ? 'VARCHAR(20)' : 'TEXT',
 			nullable: false,
 			defaultValue: "'draft'",
+			isPrimaryKey: false,
+		});
+		columns.push({
+			name: 'scheduledPublishAt',
+			type: dialect === 'postgresql' ? 'TIMESTAMPTZ' : 'TEXT',
+			nullable: true,
+			defaultValue: null,
 			isPrimaryKey: false,
 		});
 	}
@@ -167,10 +162,7 @@ function fieldToColumn(field: Field, dialect: DatabaseDialect): ColumnSnapshot {
 /**
  * Build foreign key snapshots from relationship fields.
  */
-function buildForeignKeys(
-	tableName: string,
-	fields: Field[],
-): ForeignKeySnapshot[] {
+function buildForeignKeys(tableName: string, fields: Field[]): ForeignKeySnapshot[] {
 	const foreignKeys: ForeignKeySnapshot[] = [];
 
 	for (const field of fields) {
@@ -204,10 +196,7 @@ function buildForeignKeys(
 /**
  * Build index snapshots from collection config.
  */
-function buildIndexes(
-	tableName: string,
-	collection: CollectionConfig,
-): IndexSnapshot[] {
+function buildIndexes(tableName: string, collection: CollectionConfig): IndexSnapshot[] {
 	const indexes: IndexSnapshot[] = [];
 
 	// Soft-delete field index

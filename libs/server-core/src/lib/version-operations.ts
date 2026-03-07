@@ -343,6 +343,7 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 	async compare(
 		versionId1: string,
 		versionId2: string,
+		parentId?: string,
 	): Promise<{ field: string; oldValue: unknown; newValue: unknown }[]> {
 		// Check readVersions access
 		await this.checkAccess('readVersions');
@@ -352,6 +353,13 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 
 		if (!version1 || !version2) {
 			throw new Error('One or both versions not found');
+		}
+
+		// Validate both versions belong to the specified parent document
+		if (parentId) {
+			if (version1.parent !== parentId || version2.parent !== parentId) {
+				throw new Error('Version does not belong to the specified document');
+			}
 		}
 
 		const data1 = version1.version;
@@ -435,6 +443,11 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 	private async checkAccess(
 		operation: 'read' | 'update' | 'readVersions' | 'publishVersions' | 'restoreVersions',
 	): Promise<void> {
+		// System-level operations (e.g. publish scheduler) bypass access control
+		if (this.context.overrideAccess) {
+			return;
+		}
+
 		const accessFn = this.collectionConfig.access?.[operation];
 		if (!accessFn) {
 			// No access function defined = allow all

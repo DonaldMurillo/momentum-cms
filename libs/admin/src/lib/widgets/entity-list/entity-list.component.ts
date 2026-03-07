@@ -12,8 +12,13 @@ import {
 	viewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import type { CollectionConfig, Field } from '@momentumcms/core';
-import { humanizeFieldName, getSoftDeleteField, flattenDataFields } from '@momentumcms/core';
+import type { CollectionConfig, Field, DocumentStatus } from '@momentumcms/core';
+import {
+	humanizeFieldName,
+	getSoftDeleteField,
+	flattenDataFields,
+	hasVersionDrafts,
+} from '@momentumcms/core';
 import {
 	DataTable,
 	Button,
@@ -90,6 +95,22 @@ import {
 					}
 				</div>
 				<div class="flex items-center gap-2">
+					@if (hasVersioning()) {
+						<div class="flex items-center gap-1" role="group" aria-label="Filter by status">
+							@for (option of statusFilterOptions; track option.value) {
+								<button
+									mcms-button
+									[variant]="statusFilter() === option.value ? 'outline' : 'ghost'"
+									size="sm"
+									[attr.data-testid]="'status-filter-' + (option.value ?? 'all')"
+									[attr.aria-pressed]="statusFilter() === option.value"
+									(click)="setStatusFilter(option.value)"
+								>
+									{{ option.label }}
+								</button>
+							}
+						</div>
+					}
 					@if (hasSoftDelete()) {
 						<button
 							mcms-button
@@ -163,6 +184,15 @@ import {
 			}
 		</mcms-data-table>
 
+		<!-- Template for badge cells (_status column) -->
+		<ng-template #badgeCell let-value let-column="column">
+			@if (getBadgeConfig(value, column); as badge) {
+				<mcms-badge [variant]="badge.variant">{{ badge.label }}</mcms-badge>
+			} @else {
+				{{ value ?? '-' }}
+			}
+		</ng-template>
+
 		<!-- Template for complex field cells (group, array, json) -->
 		<ng-template #complexCell let-value let-column="column">
 			<div class="flex items-center gap-1.5">
@@ -194,6 +224,9 @@ export class EntityListWidget<T extends Entity = Entity> {
 	/** Template ref for complex cell rendering (group, array, json). */
 	private readonly complexCellTemplate =
 		viewChild<TemplateRef<DataTableCellContext<T>>>('complexCell');
+
+	/** Template ref for badge cell rendering (_status column). */
+	private readonly badgeCellTemplate = viewChild<TemplateRef<DataTableCellContext<T>>>('badgeCell');
 
 	/** The collection configuration */
 	readonly collection = input.required<CollectionConfig>();
@@ -268,9 +301,20 @@ export class EntityListWidget<T extends Entity = Entity> {
 	readonly selectedEntities = signal<T[]>([]);
 	readonly searchQuery = model('');
 	readonly viewingTrash = signal(false);
+	readonly statusFilter = signal<DocumentStatus | null>(null);
+
+	/** Status filter options for versioned collections */
+	readonly statusFilterOptions: { label: string; value: DocumentStatus | null }[] = [
+		{ label: 'All', value: null },
+		{ label: 'Draft', value: 'draft' },
+		{ label: 'Published', value: 'published' },
+	];
 
 	/** Whether the collection has soft delete enabled */
 	readonly hasSoftDelete = computed(() => getSoftDeleteField(this.collection()) !== null);
+
+	/** Whether the collection has versioning with drafts enabled */
+	readonly hasVersioning = computed(() => hasVersionDrafts(this.collection()));
 
 	/** Computed collection label */
 	readonly collectionLabel = computed(() => {
@@ -292,8 +336,9 @@ export class EntityListWidget<T extends Entity = Entity> {
 
 	/** Auto-derive columns from collection fields if not provided */
 	readonly tableColumns = computed(() => {
-		// Read template signal at top level so the computed re-runs when viewChild resolves
+		// Read template signals at top level so the computed re-runs when viewChild resolves
 		const complexTemplate = this.complexCellTemplate();
+		const badgeTemplate = this.badgeCellTemplate();
 
 		const customColumns = this.columns();
 		if (customColumns.length > 0) {
@@ -312,6 +357,23 @@ export class EntityListWidget<T extends Entity = Entity> {
 			}
 			// Limit to 5 auto-derived columns
 			if (columns.length >= 5) break;
+		}
+
+		// Add _status badge column for versioned collections with drafts
+		if (hasVersionDrafts(col)) {
+			columns.push({
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+				field: '_status' as keyof T & string,
+				header: 'Status',
+				sortable: true,
+				type: 'badge',
+				width: '110px',
+				badgeMap: {
+					draft: { label: 'Draft', variant: 'secondary' },
+					published: { label: 'Published', variant: 'default' },
+				},
+				...(badgeTemplate ? { template: badgeTemplate } : {}),
+			});
 		}
 
 		// Add deletedAt column when viewing trash
@@ -376,6 +438,12 @@ export class EntityListWidget<T extends Entity = Entity> {
 			this.searchQuery.set(initialSearch);
 		}
 
+		// Initialize status filter from URL
+		const initialStatus = queryParams['status'];
+		if (initialStatus === 'draft' || initialStatus === 'published') {
+			this.statusFilter.set(initialStatus);
+		}
+
 		// Initialize sort from URL (format: "field" for asc, "-field" for desc)
 		const initialSort = queryParams['sort'];
 		if (typeof initialSort === 'string' && initialSort) {
@@ -388,11 +456,12 @@ export class EntityListWidget<T extends Entity = Entity> {
 			});
 		}
 
-		// Load data when collection, pagination, or trash view changes
+		// Load data when collection, pagination, trash view, or status filter changes
 		effect(() => {
 			const col = this.collection();
 			const page = this.currentPage();
 			const trash = this.viewingTrash();
+			const status = this.statusFilter();
 			let sortState = this.sort();
 			let search = this.searchQuery();
 
@@ -403,18 +472,19 @@ export class EntityListWidget<T extends Entity = Entity> {
 					this.sort.set(undefined);
 					this.currentPage.set(1);
 					this.viewingTrash.set(false);
+					this.statusFilter.set(null);
 					search = '';
 					sortState = undefined;
 					// Clear URL params
 					this.router.navigate([], {
-						queryParams: { search: null, sort: null },
+						queryParams: { search: null, sort: null, status: null },
 						queryParamsHandling: 'merge',
 						replaceUrl: true,
 					});
 				}
 				this.previousCollectionSlug = col.slug;
 
-				this.loadData(col.slug, page, sortState, search, trash);
+				this.loadData(col.slug, page, sortState, search, trash, status);
 			}
 		});
 	}
@@ -428,6 +498,7 @@ export class EntityListWidget<T extends Entity = Entity> {
 		sortState?: DataTableSort<T>,
 		search?: string,
 		onlyDeleted?: boolean,
+		statusFilter?: DocumentStatus | null,
 	): Promise<void> {
 		this.loading.set(true);
 		this.error.set(null);
@@ -448,18 +519,29 @@ export class EntityListWidget<T extends Entity = Entity> {
 					sortState.direction === 'desc' ? `-${String(sortState.field)}` : String(sortState.field);
 			}
 
+			// Build where clause combining search and status filter
+			const whereConditions: Record<string, unknown>[] = [];
+
 			if (search) {
-				// Build where clause for search
 				const searchFields =
 					this.searchFields().length > 0 ? this.searchFields() : this.getDefaultSearchFields();
 
 				if (searchFields.length > 0) {
-					options['where'] = {
-						or: searchFields.map((field) => ({
+					whereConditions.push(
+						...searchFields.map((field) => ({
 							[field]: { contains: search },
 						})),
-					};
+					);
 				}
+			}
+
+			if (statusFilter) {
+				options['where'] = {
+					...(whereConditions.length > 0 ? { or: whereConditions } : {}),
+					_status: { equals: statusFilter },
+				};
+			} else if (whereConditions.length > 0) {
+				options['where'] = { or: whereConditions };
 			}
 
 			const result = await this.api.collection<T>(slug).find(options);
@@ -639,6 +721,18 @@ export class EntityListWidget<T extends Entity = Entity> {
 	}
 
 	/**
+	 * Look up a badge configuration from a column's badgeMap.
+	 */
+	getBadgeConfig(
+		value: unknown,
+		column: EntityListColumn<T>,
+	): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } | null {
+		if (!column.badgeMap || value === null || value === undefined) return null;
+		const key = String(value);
+		return column.badgeMap[key] ?? null;
+	}
+
+	/**
 	 * Generate a brief summary string for complex field values (group, array, json).
 	 */
 	getComplexSummary(value: unknown, type?: string): string {
@@ -793,6 +887,7 @@ export class EntityListWidget<T extends Entity = Entity> {
 				this.sort(),
 				this.searchQuery(),
 				this.viewingTrash(),
+				this.statusFilter(),
 			);
 		}
 	}
@@ -804,6 +899,20 @@ export class EntityListWidget<T extends Entity = Entity> {
 		this.viewingTrash.update((v) => !v);
 		this.currentPage.set(1);
 		this.selectedEntities.set([]);
+	}
+
+	/**
+	 * Set the status filter for versioned collections.
+	 */
+	setStatusFilter(status: DocumentStatus | null): void {
+		this.statusFilter.set(status);
+		this.currentPage.set(1);
+
+		this.router.navigate([], {
+			queryParams: { status: status ?? null },
+			queryParamsHandling: 'merge',
+			replaceUrl: true,
+		});
 	}
 
 	/**
