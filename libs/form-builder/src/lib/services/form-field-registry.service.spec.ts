@@ -45,8 +45,9 @@ describe('FormFieldRegistry', () => {
 	it('should resolve the loader to a component', async () => {
 		registry.register('test', () => Promise.resolve(TestFieldComponent));
 		const loader = registry.get('test');
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- test asserts loader exists
-		const component = await loader!();
+		expect(loader).toBeDefined();
+		if (!loader) return;
+		const component = await loader();
 		expect(component).toBe(TestFieldComponent);
 	});
 });

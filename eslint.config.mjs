@@ -130,6 +130,9 @@ export default [
 			// Use inject(DOCUMENT) and .defaultView for SSR safety
 			'local/no-direct-browser-apis': 'error',
 
+			// Ban eslint-disable comments for no-non-null-assertion — use type guards instead
+			'local/no-non-null-assertion-disable': 'error',
+
 			// no-catch-silent-failure and no-or-logic-assertions → test-only (see test block below)
 		},
 	},

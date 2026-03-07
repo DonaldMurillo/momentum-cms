@@ -43,10 +43,12 @@ export class MemoryAnalyticsAdapter implements AnalyticsAdapter {
 			);
 		}
 		if (options.from) {
-			filtered = filtered.filter((e) => e.timestamp >= options.from!); // eslint-disable-line @typescript-eslint/no-non-null-assertion -- guarded above
+			const from = options.from;
+			filtered = filtered.filter((e) => e.timestamp >= from);
 		}
 		if (options.to) {
-			filtered = filtered.filter((e) => e.timestamp <= options.to!); // eslint-disable-line @typescript-eslint/no-non-null-assertion -- guarded above
+			const to = options.to;
+			filtered = filtered.filter((e) => e.timestamp <= to);
 		}
 
 		const total = filtered.length;
