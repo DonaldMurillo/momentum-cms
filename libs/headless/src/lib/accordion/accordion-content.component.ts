@@ -10,6 +10,8 @@ import { AccordionPanel, AccordionContent } from '@angular/aria/accordion';
 		},
 	],
 	host: {
+		'[attr.data-slot]': '"accordion-content"',
+		'[attr.data-state]': 'panel.visible() ? "open" : "closed"',
 		'[hidden]': '!panel.visible()',
 	},
 	imports: [AccordionContent],

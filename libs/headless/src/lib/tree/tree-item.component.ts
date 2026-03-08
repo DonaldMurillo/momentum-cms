@@ -4,6 +4,14 @@ import { TreeItem, Tree, TreeItemGroup } from '@angular/aria/tree';
 @Component({
 	selector: 'hdl-tree-item',
 	exportAs: 'hdlTreeItem',
+	host: {
+		'[attr.data-slot]': '"tree-item"',
+		'[attr.data-state]': 'treeItem.selected() ? "selected" : "unselected"',
+		'[attr.data-active]': 'treeItem.active() ? "true" : null',
+		'[attr.data-expanded]': 'treeItem.expanded() ? "true" : "false"',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+		'[attr.data-selectable]': 'selectable() ? "true" : "false"',
+	},
 	hostDirectives: [
 		{
 			directive: TreeItem,

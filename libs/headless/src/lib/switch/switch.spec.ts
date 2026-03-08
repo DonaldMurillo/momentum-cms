@@ -28,6 +28,15 @@ describe('HdlSwitch', () => {
 		expect(el.getAttribute('role')).toBe('switch');
 	});
 
+	it('should expose styling contract attributes on the host', () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		const el = fixture.nativeElement.querySelector('hdl-switch');
+		expect(el.getAttribute('data-slot')).toBe('switch');
+		expect(el.getAttribute('data-state')).toBe('unchecked');
+		expect(el.getAttribute('data-disabled')).toBeNull();
+	});
+
 	it('should have aria-checked="false" by default', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();
@@ -49,6 +58,7 @@ describe('HdlSwitch', () => {
 		el.click();
 		fixture.detectChanges();
 		expect(el.getAttribute('aria-checked')).toBe('true');
+		expect(el.getAttribute('data-state')).toBe('checked');
 	});
 
 	it('should toggle on Enter key', () => {
@@ -96,6 +106,7 @@ describe('HdlSwitch', () => {
 		fixture.detectChanges();
 		const el = fixture.nativeElement.querySelector('hdl-switch');
 		expect(el.getAttribute('aria-disabled')).toBe('true');
+		expect(el.getAttribute('data-disabled')).toBe('true');
 	});
 
 	it('should have tabindex="-1" when disabled', () => {

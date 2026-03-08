@@ -3,6 +3,12 @@ import { Option } from '@angular/aria/listbox';
 
 @Component({
 	selector: 'hdl-option',
+	host: {
+		'[attr.data-slot]': '"option"',
+		'[attr.data-state]': 'option.selected() ? "selected" : "unselected"',
+		'[attr.data-active]': 'option.active() ? "true" : null',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+	},
 	hostDirectives: [
 		{
 			directive: Option,

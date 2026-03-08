@@ -19,6 +19,9 @@ import { HdlTooltipContent } from './tooltip-content.component';
 @Directive({
 	selector: '[hdlTooltip]',
 	host: {
+		'[attr.data-slot]': '"tooltip-trigger"',
+		'[attr.data-state]': 'isVisible() ? "open" : "closed"',
+		'[attr.data-disabled]': 'tooltipDisabled() ? "true" : null',
 		'(mouseenter)': 'onMouseEnter()',
 		'(mouseleave)': 'onMouseLeave()',
 		'(focus)': 'onFocus()',
@@ -128,6 +131,7 @@ export class HdlTooltipTrigger implements OnDestroy {
 		this.overlayRef = this.overlay.create({
 			positionStrategy,
 			scrollStrategy,
+			panelClass: 'hdl-tooltip-panel',
 		});
 
 		const portal = new ComponentPortal(HdlTooltipContent, this.viewContainerRef);

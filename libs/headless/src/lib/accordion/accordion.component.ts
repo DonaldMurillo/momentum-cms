@@ -3,6 +3,11 @@ import { AccordionGroup } from '@angular/aria/accordion';
 
 @Component({
 	selector: 'hdl-accordion',
+	host: {
+		'[attr.data-slot]': '"accordion"',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+		'[attr.data-multiple]': 'multiExpandable() ? "true" : null',
+	},
 	hostDirectives: [
 		{
 			directive: AccordionGroup,

@@ -4,6 +4,9 @@ import { HdlRadioGroup } from './radio-group.component';
 @Component({
 	selector: 'hdl-radio-item',
 	host: {
+		'[attr.data-slot]': '"radio-item"',
+		'[attr.data-state]': 'isSelected() ? "checked" : "unchecked"',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
 		role: 'radio',
 		'[attr.aria-checked]': 'isSelected()',
 		'[attr.aria-disabled]': 'disabled() || null',

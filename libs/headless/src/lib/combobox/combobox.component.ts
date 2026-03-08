@@ -3,6 +3,12 @@ import { Combobox } from '@angular/aria/combobox';
 
 @Component({
 	selector: 'hdl-combobox',
+	host: {
+		'[attr.data-slot]': '"combobox"',
+		'[attr.data-state]': 'combobox.expanded() ? "open" : "closed"',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+		'[attr.data-readonly]': 'readonly() ? "true" : null',
+	},
 	hostDirectives: [
 		{
 			directive: Combobox,

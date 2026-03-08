@@ -4,6 +4,9 @@ import type { Toast } from './toast.types';
 @Component({
 	selector: 'hdl-toast',
 	host: {
+		'[attr.data-slot]': '"toast"',
+		'[attr.data-variant]': 'toast().variant',
+		'[attr.data-dismissible]': 'toast().dismissible ? "true" : "false"',
 		role: 'status',
 		'[attr.aria-atomic]': 'true',
 	},

@@ -20,6 +20,9 @@ import { getPopoverPositions } from './popover.utils';
 	selector: '[hdlPopoverTrigger]',
 	exportAs: 'hdlPopoverTrigger',
 	host: {
+		'[attr.data-slot]': '"popover-trigger"',
+		'[attr.data-state]': 'isOpen() ? "open" : "closed"',
+		'[attr.data-disabled]': 'popoverDisabled() ? "true" : null',
 		'(click)': 'toggle()',
 		'(keydown.enter)': 'toggle(); $event.preventDefault()',
 		'(keydown.space)': 'toggle(); $event.preventDefault()',
@@ -88,7 +91,8 @@ export class HdlPopoverTrigger implements OnDestroy {
 			positionStrategy,
 			scrollStrategy,
 			hasBackdrop: true,
-			backdropClass: 'cdk-overlay-transparent-backdrop',
+			panelClass: 'hdl-popover-panel',
+			backdropClass: ['cdk-overlay-transparent-backdrop', 'hdl-popover-backdrop'],
 		});
 
 		this.overlayRef.backdropClick().subscribe(() => {

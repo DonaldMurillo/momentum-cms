@@ -3,6 +3,12 @@ import { AccordionTrigger } from '@angular/aria/accordion';
 
 @Component({
 	selector: 'hdl-accordion-trigger',
+	host: {
+		'[attr.data-slot]': '"accordion-trigger"',
+		'[attr.data-state]': 'expanded() ? "open" : "closed"',
+		'[attr.data-active]': 'trigger.active() ? "true" : null',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+	},
 	hostDirectives: [
 		{
 			directive: AccordionTrigger,

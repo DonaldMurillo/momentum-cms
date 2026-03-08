@@ -10,6 +10,8 @@ import { TabPanel } from '@angular/aria/tabs';
 		},
 	],
 	host: {
+		'[attr.data-slot]': '"tab-panel"',
+		'[attr.data-state]': 'tabPanel.visible() ? "visible" : "hidden"',
 		'[hidden]': '!tabPanel.visible()',
 	},
 	template: `<ng-content />`,

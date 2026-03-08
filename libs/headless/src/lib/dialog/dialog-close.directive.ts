@@ -4,6 +4,7 @@ import { HdlDialogRef } from './dialog-ref';
 @Directive({
 	selector: '[hdlDialogClose]',
 	host: {
+		'[attr.data-slot]': '"dialog-close"',
 		'(click)': 'onClose()',
 		'(keydown.enter)': 'onClose()',
 		'(keydown.space)': 'onClose(); $event.preventDefault()',

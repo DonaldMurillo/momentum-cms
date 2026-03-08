@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 @Component({
 	selector: 'hdl-tooltip-content',
 	host: {
+		'[attr.data-slot]': '"tooltip-content"',
 		role: 'tooltip',
 		'[id]': 'id()',
 	},

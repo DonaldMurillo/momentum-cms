@@ -11,6 +11,8 @@ import { TreeItemGroup, TreeItem } from '@angular/aria/tree';
 		},
 	],
 	host: {
+		'[attr.data-slot]': '"tree-item-group"',
+		'[attr.data-state]': 'isExpanded() ? "open" : "closed"',
 		'[hidden]': '!isExpanded()',
 	},
 	template: `<ng-content />`,

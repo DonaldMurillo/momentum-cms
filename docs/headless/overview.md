@@ -18,3 +18,5 @@ npx nx test headless
 npx nx lint headless
 npx nx build headless
 ```
+
+See [Styling](styling.md) for the recommended global Tailwind layer and the stable `data-slot` / overlay selectors exposed by the primitives.

@@ -3,6 +3,9 @@ import { ChangeDetectionStrategy, Component, input, model } from '@angular/core'
 @Component({
 	selector: 'hdl-checkbox',
 	host: {
+		'[attr.data-slot]': '"checkbox"',
+		'[attr.data-state]': 'indeterminate() ? "indeterminate" : (value() ? "checked" : "unchecked")',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
 		role: 'checkbox',
 		'[attr.aria-checked]': 'indeterminate() ? "mixed" : value()',
 		'[attr.aria-disabled]': 'disabled() || null',

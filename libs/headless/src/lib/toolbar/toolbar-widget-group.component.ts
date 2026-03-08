@@ -3,6 +3,11 @@ import { ToolbarWidgetGroup } from '@angular/aria/toolbar';
 
 @Component({
 	selector: 'hdl-toolbar-widget-group',
+	host: {
+		'[attr.data-slot]': '"toolbar-widget-group"',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+		'[attr.data-multiple]': 'multi() ? "true" : null',
+	},
 	hostDirectives: [
 		{
 			directive: ToolbarWidgetGroup,

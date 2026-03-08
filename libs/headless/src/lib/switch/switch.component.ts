@@ -3,6 +3,9 @@ import { ChangeDetectionStrategy, Component, input, model } from '@angular/core'
 @Component({
 	selector: 'hdl-switch',
 	host: {
+		'[attr.data-slot]': '"switch"',
+		'[attr.data-state]': 'value() ? "checked" : "unchecked"',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
 		role: 'switch',
 		'[attr.aria-checked]': 'value()',
 		'[attr.aria-disabled]': 'disabled() || null',

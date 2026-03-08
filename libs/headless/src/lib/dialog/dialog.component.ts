@@ -5,6 +5,8 @@ import { A11yModule } from '@angular/cdk/a11y';
 	selector: 'hdl-dialog',
 	imports: [A11yModule],
 	host: {
+		'[attr.data-slot]': '"dialog"',
+		'[attr.data-state]': '"open"',
 		role: 'dialog',
 		'[attr.aria-modal]': 'true',
 		'[attr.aria-labelledby]': 'titleId()',

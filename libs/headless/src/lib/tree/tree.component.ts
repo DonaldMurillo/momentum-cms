@@ -4,6 +4,13 @@ import { Tree } from '@angular/aria/tree';
 @Component({
 	selector: 'hdl-tree',
 	exportAs: 'hdlTree',
+	host: {
+		'[attr.data-slot]': '"tree"',
+		'[attr.data-orientation]': 'orientation()',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+		'[attr.data-selection-mode]': 'selectionMode()',
+		'[attr.data-multiple]': 'multi() ? "true" : null',
+	},
 	hostDirectives: [
 		{
 			directive: Tree,

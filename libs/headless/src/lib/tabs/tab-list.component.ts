@@ -3,6 +3,12 @@ import { TabList } from '@angular/aria/tabs';
 
 @Component({
 	selector: 'hdl-tab-list',
+	host: {
+		'[attr.data-slot]': '"tab-list"',
+		'[attr.data-orientation]': 'orientation()',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+		'[attr.data-selection-mode]': 'selectionMode()',
+	},
 	hostDirectives: [
 		{
 			directive: TabList,

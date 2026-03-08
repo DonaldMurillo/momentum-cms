@@ -71,7 +71,7 @@ export class HdlDialogService {
 			.centerHorizontally()
 			.centerVertically();
 
-		const panelClasses: string[] = [];
+		const panelClasses = ['hdl-dialog-panel'];
 		if (config?.panelClass) {
 			if (Array.isArray(config.panelClass)) {
 				panelClasses.push(...config.panelClass);
@@ -80,12 +80,17 @@ export class HdlDialogService {
 			}
 		}
 
+		const backdropClasses = ['hdl-dialog-backdrop'];
+		if (config?.backdropClass) {
+			backdropClasses.push(config.backdropClass);
+		}
+
 		return {
 			positionStrategy,
 			scrollStrategy: this.overlay.scrollStrategies.block(),
 			hasBackdrop: config?.hasBackdrop ?? true,
-			backdropClass: config?.backdropClass,
-			panelClass: panelClasses.length > 0 ? panelClasses : undefined,
+			backdropClass: backdropClasses,
+			panelClass: panelClasses,
 			width: config?.width,
 			maxWidth: config?.maxWidth,
 			minWidth: config?.minWidth,

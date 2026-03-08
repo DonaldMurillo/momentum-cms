@@ -3,6 +3,9 @@ import { ComboboxInput } from '@angular/aria/combobox';
 
 @Component({
 	selector: 'input[hdl-combobox-input]',
+	host: {
+		'[attr.data-slot]': '"combobox-input"',
+	},
 	hostDirectives: [ComboboxInput],
 	template: ``,
 	changeDetection: ChangeDetectionStrategy.OnPush,

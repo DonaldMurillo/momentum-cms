@@ -57,6 +57,7 @@
 ## Headless UI
 
 - [Overview](headless/overview.md) — Unstyled Angular primitives, accessibility guarantees, and validation commands
+- [Styling](headless/styling.md) — Global-layer theming contract, slots, states, and overlay selectors
 
 ## Storage
 

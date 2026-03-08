@@ -3,6 +3,11 @@ import { Grid } from '@angular/aria/grid';
 
 @Component({
 	selector: 'hdl-grid',
+	host: {
+		'[attr.data-slot]': '"grid"',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+		'[attr.data-focus-mode]': 'focusMode()',
+	},
 	hostDirectives: [
 		{
 			directive: Grid,

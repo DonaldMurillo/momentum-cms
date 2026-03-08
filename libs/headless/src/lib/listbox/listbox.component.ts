@@ -3,6 +3,13 @@ import { Listbox } from '@angular/aria/listbox';
 
 @Component({
 	selector: 'hdl-listbox',
+	host: {
+		'[attr.data-slot]': '"listbox"',
+		'[attr.data-orientation]': 'orientation()',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+		'[attr.data-selection-mode]': 'selectionMode()',
+		'[attr.data-multiple]': 'multi() ? "true" : null',
+	},
 	hostDirectives: [
 		{
 			directive: Listbox,

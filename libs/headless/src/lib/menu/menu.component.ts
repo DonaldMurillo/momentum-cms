@@ -3,6 +3,11 @@ import { Menu } from '@angular/aria/menu';
 
 @Component({
 	selector: 'hdl-menu',
+	host: {
+		'[attr.data-slot]': '"menu"',
+		'[attr.data-state]': 'menu.visible() ? "open" : "closed"',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+	},
 	hostDirectives: [
 		{
 			directive: Menu,

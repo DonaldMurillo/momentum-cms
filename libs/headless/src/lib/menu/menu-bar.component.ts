@@ -3,6 +3,10 @@ import { MenuBar } from '@angular/aria/menu';
 
 @Component({
 	selector: 'hdl-menu-bar',
+	host: {
+		'[attr.data-slot]': '"menu-bar"',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+	},
 	hostDirectives: [
 		{
 			directive: MenuBar,

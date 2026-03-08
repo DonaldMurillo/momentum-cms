@@ -13,6 +13,7 @@ let nextId = 0;
 @Component({
 	selector: 'hdl-dialog-title',
 	host: {
+		'[attr.data-slot]': '"dialog-title"',
 		'[id]': 'id()',
 	},
 	template: `<ng-content />`,

@@ -3,6 +3,11 @@ import { Toolbar } from '@angular/aria/toolbar';
 
 @Component({
 	selector: 'hdl-toolbar',
+	host: {
+		'[attr.data-slot]': '"toolbar"',
+		'[attr.data-orientation]': 'orientation()',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+	},
 	hostDirectives: [
 		{
 			directive: Toolbar,

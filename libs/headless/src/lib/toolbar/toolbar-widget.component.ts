@@ -3,6 +3,12 @@ import { ToolbarWidget } from '@angular/aria/toolbar';
 
 @Component({
 	selector: 'button[hdl-toolbar-widget]',
+	host: {
+		'[attr.data-slot]': '"toolbar-widget"',
+		'[attr.data-active]': 'widget.active() ? "true" : null',
+		'[attr.data-state]': 'widget.selected() ? "selected" : "unselected"',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+	},
 	hostDirectives: [
 		{
 			directive: ToolbarWidget,

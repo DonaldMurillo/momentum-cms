@@ -6,6 +6,8 @@ import { HdlToast } from './toast.component';
 	selector: 'hdl-toast-container',
 	imports: [HdlToast],
 	host: {
+		'[attr.data-slot]': '"toast-container"',
+		'[attr.data-position]': 'toastService.position()',
 		'[attr.aria-live]': '"polite"',
 		'[attr.aria-relevant]': '"additions removals"',
 	},

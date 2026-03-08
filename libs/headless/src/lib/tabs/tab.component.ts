@@ -3,6 +3,12 @@ import { Tab } from '@angular/aria/tabs';
 
 @Component({
 	selector: 'hdl-tab',
+	host: {
+		'[attr.data-slot]': '"tab"',
+		'[attr.data-state]': 'tab.selected() ? "selected" : "unselected"',
+		'[attr.data-active]': 'tab.active() ? "true" : null',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+	},
 	hostDirectives: [
 		{
 			directive: Tab,

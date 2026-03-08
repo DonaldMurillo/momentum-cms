@@ -54,6 +54,8 @@ describe('HdlDialog', () => {
 		fixture.detectChanges();
 		const dialog = fixture.nativeElement.querySelector('hdl-dialog');
 		expect(dialog.getAttribute('role')).toBe('dialog');
+		expect(dialog.getAttribute('data-slot')).toBe('dialog');
+		expect(dialog.getAttribute('data-state')).toBe('open');
 	});
 
 	it('should have aria-modal="true"', () => {
@@ -196,6 +198,8 @@ describe('HdlDialogService', () => {
 		firstRef.afterClosed.subscribe(() => closed('first'));
 		secondRef.afterClosed.subscribe(() => closed('second'));
 
+		expect(document.querySelectorAll('.hdl-dialog-panel')).toHaveLength(2);
+		expect(document.querySelectorAll('.hdl-dialog-backdrop')).toHaveLength(2);
 		expect(document.querySelectorAll('.cdk-overlay-pane')).toHaveLength(2);
 
 		service.closeAll();

@@ -10,6 +10,8 @@ import {
 @Component({
 	selector: 'hdl-radio-group',
 	host: {
+		'[attr.data-slot]': '"radio-group"',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
 		role: 'radiogroup',
 		'[attr.aria-disabled]': 'disabled() || null',
 		'(keydown)': 'onKeydown($event)',

@@ -3,6 +3,14 @@ import { MenuItem } from '@angular/aria/menu';
 
 @Component({
 	selector: 'hdl-menu-item',
+	host: {
+		'[attr.data-slot]': '"menu-item"',
+		'[attr.data-active]': 'menuItem.active() ? "true" : null',
+		'[attr.data-expanded]':
+			'menuItem.expanded() === null ? null : (menuItem.expanded() ? "true" : "false")',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+		'[attr.data-has-popup]': 'menuItem.hasPopup() ? "true" : null',
+	},
 	hostDirectives: [
 		{
 			directive: MenuItem,
