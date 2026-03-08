@@ -7,6 +7,7 @@ import { MenuTrigger, Menu } from '@angular/aria/menu';
 		'[attr.data-slot]': '"menu-trigger"',
 		'[attr.data-state]': 'menuTrigger.expanded() ? "open" : "closed"',
 		'[attr.data-has-popup]': 'menuTrigger.hasPopup() ? "true" : null',
+		role: 'button',
 	},
 	hostDirectives: [
 		{

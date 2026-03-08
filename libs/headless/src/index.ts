@@ -81,3 +81,21 @@ export { HdlCheckbox } from './lib/checkbox/checkbox.component';
 // Radio Group
 export { HdlRadioGroup } from './lib/radio-group/radio-group.component';
 export { HdlRadioItem } from './lib/radio-group/radio-item.component';
+
+// Field
+export { HdlField } from './lib/field/field.component';
+export { HdlLabel } from './lib/field/label.component';
+export { HdlDescription } from './lib/field/description.component';
+export { HdlError } from './lib/field/error.component';
+
+// Input
+export { HdlInput } from './lib/input/input.component';
+
+// Textarea
+export { HdlTextarea } from './lib/textarea/textarea.component';
+
+// Chips
+export { HdlChips } from './lib/chips/chips.component';
+export { HdlChip } from './lib/chips/chip.component';
+export { HdlChipInput } from './lib/chips/chip-input.component';
+export { HdlChipRemove } from './lib/chips/chip-remove.directive';

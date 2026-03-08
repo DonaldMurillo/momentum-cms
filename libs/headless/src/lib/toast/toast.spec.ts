@@ -169,4 +169,29 @@ describe('HdlToastService', () => {
 		expect(toast.getAttribute('data-variant')).toBe('success');
 		expect(toast.getAttribute('data-dismissible')).toBe('true');
 	});
+
+	it('should render toast title, description, and action content', async () => {
+		const action = vi.fn();
+		const fixture = TestBed.createComponent(ToastHost);
+		service.show('Styled toast', 'With details', {
+			action: { label: 'Undo', onClick: action },
+		});
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const toast = fixture.nativeElement.querySelector('hdl-toast');
+		const title = toast.querySelector('[data-slot="toast-title"]');
+		const description = toast.querySelector('[data-slot="toast-description"]');
+		const actionButton = toast.querySelector('[data-slot="toast-action"]');
+		const dismissButton = toast.querySelector('[data-slot="toast-dismiss"]');
+
+		expect(title?.textContent).toContain('Styled toast');
+		expect(description?.textContent).toContain('With details');
+		expect(actionButton?.textContent).toContain('Undo');
+		expect(dismissButton?.textContent).toContain('Dismiss');
+
+		actionButton.click();
+		expect(action).toHaveBeenCalledTimes(1);
+	});
 });

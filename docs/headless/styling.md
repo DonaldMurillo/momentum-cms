@@ -20,6 +20,12 @@ Overlay primitives also expose stable panel or backdrop selectors:
 - Popover: `.hdl-popover-panel`, `.hdl-popover-backdrop`
 - Tooltip: `.hdl-tooltip-panel`
 
+Form primitives also expose stable field slots:
+
+- Field: `field`, `label`, `description`, `error`
+- Text entry: `input`, `textarea`
+- Chips: `chips`, `chip`, `chip-input`, `chip-remove`
+
 ## Recommended Tailwind Structure
 
 Define tokens in `@layer base` and component recipes in `@layer components`.
@@ -51,6 +57,24 @@ Define tokens in `@layer base` and component recipes in `@layer components`.
 		background-color: hsl(var(--hdl-bg));
 		color: hsl(var(--hdl-fg));
 		border-color: hsl(var(--hdl-border));
+	}
+
+	[data-slot='field'] {
+		@apply flex flex-col gap-3;
+	}
+
+	[data-slot='input'],
+	[data-slot='textarea'] {
+		@apply w-full rounded-2xl border px-4 py-3;
+		border-color: hsl(var(--hdl-border));
+		background-color: hsl(var(--hdl-bg));
+		color: hsl(var(--hdl-fg));
+	}
+
+	[data-slot='chips'] {
+		@apply flex flex-wrap items-center gap-2 rounded-2xl border px-3 py-3;
+		border-color: hsl(var(--hdl-border));
+		background-color: hsl(var(--hdl-bg));
 	}
 
 	.hdl-dialog-backdrop {
@@ -96,5 +120,17 @@ For primitives that render your own inner content, style the children you projec
 Treat the styling surface as a contract, not as incidental markup.
 
 - Unit specs in `libs/headless` should assert stable `data-slot` and state attributes on hosts plus overlay selectors for dialog, popover, and tooltip.
-- The Angular example app exposes a live styling harness at `/headless-styling-lab` so global recipes, scoped theme overrides, and ad hoc host classes can be exercised together.
-- Browser coverage lives in `libs/e2e-tests/src/specs/headless-styling.spec.ts` and checks computed styles for global defaults, scoped overrides, ad hoc overrides, and overlay-driven primitives.
+- The Angular example app exposes a live styling harness at `/headless-styling-lab`, and it starts with a coverage matrix so every currently exported primitive family is visible before the detailed demos.
+- The lab route is intentionally client-rendered in the example app. It is a demo/test harness with many interactive primitives, and treating it as SEO-worthy SSR content only makes the server eat glue.
+- The lab now includes a dedicated form-foundations section for field semantics, input, textarea, and chips with visible state readouts, not just selection and overlay primitives.
+- The matrix is an inventory, not fake navigation. If a primitive is not shipped yet, say so explicitly on the page instead of linking somewhere misleading or silently omitting it.
+- The lab should pair each primitive with a visible readout or outcome. For example, the combobox shows all primitives first, filters them live, and records the selected value instead of pretending a styled list alone proves anything.
+- Browser coverage lives in `libs/e2e-tests/src/specs/headless-styling.spec.ts` and checks inventory presence, theme switching, global defaults, scoped overrides, ad hoc overrides, overlay primitives, hidden-region behavior, functional readouts for each primitive family, and the public `/showcase` link into the lab.
+
+## Guardrails
+
+- When a primitive uses `[hidden]` for collapsed or inactive content, the global layer must preserve that behavior with an explicit `[hidden] { display: none; }` rule for the affected slot.
+- Prefer host-scoped custom properties for ad hoc overrides so one-off variants can change tokens or geometry without breaking projected child elements like switch thumbs.
+- Rounded popup hosts such as menus, listboxes, and combobox popups should be block-level and usually need `overflow: hidden` so inline descendants or nested backgrounds do not leak corner artifacts.
+- Fixed-position containers like the toast viewport need an explicit width; otherwise the custom-element host can collapse to `0px` and clip the rendered content.
+- Use the interaction the demo reliably exposes in the browser. In the current lab, tooltip coverage uses hover and the listbox demo stays single-select because that is the behavior the harness proves cleanly.
