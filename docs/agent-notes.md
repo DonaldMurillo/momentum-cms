@@ -17,3 +17,12 @@
 - Evidence: `docs/headless/styling.md`, `libs/headless/src/lib/dialog/dialog.service.ts`, `npx nx test headless`
 - Next time: Style against `data-slot` and overlay selectors first; treat raw tag names and incidental ARIA as fallback selectors, not the primary contract.
 - Status: active
+
+## 2026-03-08 - Headless customization testing
+
+- Scope: headless
+- Trigger: A global styling contract is only trustworthy if both the selectors and the rendered browser output are exercised.
+- Approach: Keep fast contract assertions in `libs/headless`, use `/headless-styling-lab` in `example-angular` as the integration harness, and verify computed styles in `libs/e2e-tests/src/specs/headless-styling.spec.ts`.
+- Evidence: `npx nx test headless`, `npx playwright test -c apps/example-angular-e2e/playwright.config.ts libs/e2e-tests/src/specs/headless-styling.spec.ts`
+- Next time: Extend the styling lab first when adding a new primitive, then add the matching unit and browser assertions in the same change.
+- Status: active

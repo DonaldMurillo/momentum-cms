@@ -54,6 +54,21 @@ describe('HdlCombobox', () => {
 		expect(input.getAttribute('role')).toBe('combobox');
 	});
 
+	it('should expose styling contract attributes on the combobox and input', async () => {
+		const fixture = TestBed.createComponent(TestHostDisabled);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const host = fixture.nativeElement.querySelector('hdl-combobox');
+		const input = fixture.nativeElement.querySelector('input');
+
+		expect(host.getAttribute('data-slot')).toBe('combobox');
+		expect(host.getAttribute('data-state')).toBe('closed');
+		expect(host.getAttribute('data-disabled')).toBe('true');
+		expect(input.getAttribute('data-slot')).toBe('combobox-input');
+	});
+
 	it('should have no styles on the host', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

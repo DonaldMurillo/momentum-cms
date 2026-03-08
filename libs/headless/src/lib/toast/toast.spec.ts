@@ -1,6 +1,14 @@
 import { TestBed } from '@angular/core/testing';
+import { Component } from '@angular/core';
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { HdlToastService } from './toast.service';
+import { HdlToastContainer } from './toast-container.component';
+
+@Component({
+	imports: [HdlToastContainer],
+	template: `<hdl-toast-container />`,
+})
+class ToastHost {}
 
 describe('HdlToastService', () => {
 	let service: HdlToastService;
@@ -142,5 +150,23 @@ describe('HdlToastService', () => {
 		expect(toast.dismissible).toBe(false);
 		expect(toast.duration).toBe(3000);
 		expect(toast.action).toBe(action);
+	});
+
+	it('should expose styling contract attributes on toast container and toasts', async () => {
+		const fixture = TestBed.createComponent(ToastHost);
+		service.setPosition('top-center');
+		service.success('Styled toast');
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const container = fixture.nativeElement.querySelector('hdl-toast-container');
+		const toast = fixture.nativeElement.querySelector('hdl-toast');
+
+		expect(container.getAttribute('data-slot')).toBe('toast-container');
+		expect(container.getAttribute('data-position')).toBe('top-center');
+		expect(toast.getAttribute('data-slot')).toBe('toast');
+		expect(toast.getAttribute('data-variant')).toBe('success');
+		expect(toast.getAttribute('data-dismissible')).toBe('true');
 	});
 });

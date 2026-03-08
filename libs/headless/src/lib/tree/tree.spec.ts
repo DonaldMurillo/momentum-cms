@@ -56,6 +56,22 @@ describe('HdlTree', () => {
 		expect(items[0].getAttribute('role')).toBe('treeitem');
 	});
 
+	it('should expose styling contract attributes on the tree and items', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const tree = fixture.nativeElement.querySelector('hdl-tree');
+		const items = fixture.nativeElement.querySelectorAll('hdl-tree-item');
+
+		expect(tree.getAttribute('data-slot')).toBe('tree');
+		expect(tree.getAttribute('data-orientation')).toBe('vertical');
+		expect(items[0].getAttribute('data-slot')).toBe('tree-item');
+		expect(items[0].getAttribute('data-state')).toBe('unselected');
+		expect(items[0].getAttribute('data-expanded')).toBe('false');
+	});
+
 	it('should have no styles on the host', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

@@ -56,6 +56,28 @@ describe('HdlTabs', () => {
 		expect(panels[1].hidden).toBe(true);
 	});
 
+	it('should expose styling contract attributes for tabs and panels', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const tabs = fixture.nativeElement.querySelector('hdl-tabs');
+		const tabList = fixture.nativeElement.querySelector('hdl-tab-list');
+		const tabEls = fixture.nativeElement.querySelectorAll('hdl-tab');
+		const panels = fixture.nativeElement.querySelectorAll('hdl-tab-panel');
+
+		expect(tabs.getAttribute('data-slot')).toBe('tabs');
+		expect(tabList.getAttribute('data-slot')).toBe('tab-list');
+		expect(tabList.getAttribute('data-orientation')).toBe('horizontal');
+		expect(tabEls[0].getAttribute('data-slot')).toBe('tab');
+		expect(tabEls[0].getAttribute('data-state')).toBe('selected');
+		expect(tabEls[1].getAttribute('data-state')).toBe('unselected');
+		expect(panels[0].getAttribute('data-slot')).toBe('tab-panel');
+		expect(panels[0].getAttribute('data-state')).toBe('visible');
+		expect(panels[1].getAttribute('data-state')).toBe('hidden');
+	});
+
 	it('should expose TabList directive via inject()', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

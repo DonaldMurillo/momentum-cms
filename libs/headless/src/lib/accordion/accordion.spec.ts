@@ -56,6 +56,20 @@ describe('HdlAccordion', () => {
 		expect(contents[1].hidden).toBe(true);
 	});
 
+	it('should expose styling contract attributes on the accordion hosts', () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		const accordion = fixture.nativeElement.querySelector('hdl-accordion');
+		const trigger = fixture.nativeElement.querySelector('hdl-accordion-trigger');
+		const content = fixture.nativeElement.querySelector('hdl-accordion-content');
+
+		expect(accordion.getAttribute('data-slot')).toBe('accordion');
+		expect(trigger.getAttribute('data-slot')).toBe('accordion-trigger');
+		expect(trigger.getAttribute('data-state')).toBe('closed');
+		expect(content.getAttribute('data-slot')).toBe('accordion-content');
+		expect(content.getAttribute('data-state')).toBe('closed');
+	});
+
 	it('should expose AccordionTrigger directive via inject()', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

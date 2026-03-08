@@ -89,4 +89,157 @@
 		background-color: hsl(var(--mcms-background));
 		color: hsl(var(--mcms-foreground));
 	}
+
+	:root {
+		--hdl-lab-surface: #fff7ed;
+		--hdl-lab-panel: #ffffff;
+		--hdl-lab-border: #fed7aa;
+		--hdl-lab-muted: #ffedd5;
+		--hdl-lab-text: #2a211b;
+		--hdl-lab-text-muted: #6b4f3b;
+		--hdl-lab-accent: #f97316;
+		--hdl-lab-accent-strong: #c2410c;
+		--hdl-lab-contrast: #111827;
+		--hdl-lab-ring: rgba(249, 115, 22, 0.28);
+		--hdl-lab-tooltip: #111827;
+		--hdl-lab-tooltip-text: #f8fafc;
+	}
+
+	[data-headless-theme='berry'] {
+		--hdl-lab-muted: #fce7f3;
+		--hdl-lab-border: #f9a8d4;
+		--hdl-lab-accent: #db2777;
+		--hdl-lab-accent-strong: #9d174d;
+		--hdl-lab-ring: rgba(219, 39, 119, 0.24);
+	}
+}
+
+@layer components {
+	[data-slot='switch'] {
+		@apply relative inline-flex h-7 w-14 shrink-0 cursor-pointer items-center border transition duration-200;
+		border-radius: 999px;
+		border-color: var(--hdl-lab-border);
+		background-color: var(--hdl-lab-muted);
+	}
+
+	[data-slot='switch']:focus-visible,
+	[data-slot='tab']:focus-visible,
+	[data-slot='dialog-close']:focus-visible,
+	[hdlPopoverTrigger]:focus-visible,
+	[hdlTooltip]:focus-visible,
+	.lab-trigger:focus-visible {
+		outline: 3px solid var(--hdl-lab-ring);
+		outline-offset: 3px;
+	}
+
+	[data-slot='switch'] > .headless-thumb {
+		@apply pointer-events-none block h-5 w-5 rounded-full bg-white shadow-sm transition duration-200;
+		transform: translateX(0.25rem);
+	}
+
+	[data-slot='switch'][data-state='checked'] {
+		background-color: var(--hdl-lab-accent);
+		border-color: var(--hdl-lab-accent-strong);
+	}
+
+	[data-slot='switch'][data-state='checked'] > .headless-thumb {
+		transform: translateX(1.8rem);
+	}
+
+	[data-slot='tab-list'] {
+		@apply inline-flex w-full flex-wrap gap-2 rounded-full border p-1;
+		border-color: var(--hdl-lab-border);
+		background-color: var(--hdl-lab-muted);
+	}
+
+	[data-slot='tab'] {
+		@apply rounded-full px-4 py-2 text-sm font-semibold transition duration-200;
+		color: var(--hdl-lab-text-muted);
+	}
+
+	[data-slot='tab'][data-state='selected'] {
+		background-color: var(--hdl-lab-accent);
+		color: #fff7ed;
+		box-shadow: 0 14px 30px -18px var(--hdl-lab-accent-strong);
+	}
+
+	[data-slot='tab-panel'] {
+		@apply mt-4 rounded-[1.5rem] border p-5;
+		border-color: var(--hdl-lab-border);
+		background-color: color-mix(in srgb, var(--hdl-lab-panel) 90%, var(--hdl-lab-surface) 10%);
+	}
+
+	[data-slot='dialog'],
+	[data-slot='popover-content'],
+	[data-slot='toast'] {
+		@apply border shadow-2xl;
+		border-color: var(--hdl-lab-border);
+		background-color: var(--hdl-lab-panel);
+		color: var(--hdl-lab-text);
+	}
+
+	[data-slot='dialog'] {
+		@apply block rounded-[1.75rem] p-6;
+	}
+
+	[data-slot='dialog-title'] {
+		@apply block text-xl font-bold tracking-tight text-slate-950;
+	}
+
+	[data-slot='dialog-description'] {
+		@apply block text-sm leading-6;
+		color: var(--hdl-lab-text-muted);
+	}
+
+	[data-slot='dialog-close'] {
+		@apply rounded-full transition duration-200;
+	}
+
+	.hdl-dialog-backdrop {
+		background: rgba(15, 23, 42, 0.45);
+		backdrop-filter: blur(6px);
+	}
+
+	[data-slot='popover-content'] {
+		@apply block rounded-[1.5rem] p-4;
+		min-width: 18rem;
+	}
+
+	[data-slot='tooltip-content'] {
+		@apply rounded-full px-3 py-2 text-sm font-medium shadow-lg;
+		background-color: var(--hdl-lab-tooltip);
+		color: var(--hdl-lab-tooltip-text);
+	}
+
+	[data-slot='toast-container'] {
+		@apply fixed bottom-6 right-6 z-50 flex max-w-sm flex-col gap-3;
+	}
+
+	[data-slot='toast'] {
+		@apply block rounded-[1.5rem] border-l-4 p-4;
+	}
+
+	[data-slot='toast'][data-variant='success'] {
+		border-left-color: #16a34a;
+		background-color: #f0fdf4;
+	}
+
+	.lab-trigger {
+		@apply rounded-full border px-4 py-2 text-sm font-semibold transition duration-200;
+		border-color: var(--hdl-lab-border);
+		background-color: color-mix(in srgb, var(--hdl-lab-panel) 84%, var(--hdl-lab-surface) 16%);
+		color: var(--hdl-lab-text);
+	}
+
+	.lab-trigger:hover {
+		background-color: var(--hdl-lab-muted);
+	}
+
+	.lab-switch--adhoc {
+		--hdl-lab-accent: #0f766e;
+		--hdl-lab-accent-strong: #115e59;
+		width: 4.5rem;
+		border-radius: 1rem;
+		background-color: #d1fae5;
+	}
 }

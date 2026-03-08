@@ -90,3 +90,11 @@ For primitives that render your own inner content, style the children you projec
 	}
 }
 ```
+
+## Testing Customization
+
+Treat the styling surface as a contract, not as incidental markup.
+
+- Unit specs in `libs/headless` should assert stable `data-slot` and state attributes on hosts plus overlay selectors for dialog, popover, and tooltip.
+- The Angular example app exposes a live styling harness at `/headless-styling-lab` so global recipes, scoped theme overrides, and ad hoc host classes can be exercised together.
+- Browser coverage lives in `libs/e2e-tests/src/specs/headless-styling.spec.ts` and checks computed styles for global defaults, scoped overrides, ad hoc overrides, and overlay-driven primitives.

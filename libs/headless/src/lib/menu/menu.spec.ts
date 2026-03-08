@@ -47,6 +47,18 @@ describe('HdlMenu', () => {
 		expect(items[1].getAttribute('aria-disabled')).toBe('true');
 	});
 
+	it('should expose styling contract attributes on the menu and items', () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		const menu = fixture.nativeElement.querySelector('hdl-menu');
+		const items = fixture.nativeElement.querySelectorAll('hdl-menu-item');
+
+		expect(menu.getAttribute('data-slot')).toBe('menu');
+		expect(menu.getAttribute('data-state')).toBe('open');
+		expect(items[0].getAttribute('data-slot')).toBe('menu-item');
+		expect(items[1].getAttribute('data-disabled')).toBe('true');
+	});
+
 	it('should have no styles on the host', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

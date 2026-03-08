@@ -80,6 +80,22 @@ describe('HdlGrid', () => {
 		expect(cells[0].getAttribute('role')).toBe('gridcell');
 	});
 
+	it('should expose styling contract attributes on grid rows and cells', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const grid = fixture.nativeElement.querySelector('hdl-grid');
+		const rows = fixture.nativeElement.querySelectorAll('hdl-grid-row');
+		const cells = fixture.nativeElement.querySelectorAll('hdl-grid-cell');
+
+		expect(grid.getAttribute('data-slot')).toBe('grid');
+		expect(rows[0].getAttribute('data-slot')).toBe('grid-row');
+		expect(cells[0].getAttribute('data-slot')).toBe('grid-cell');
+		expect(cells[0].getAttribute('data-state')).toBe('unselected');
+	});
+
 	it('should have no styles on the host', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

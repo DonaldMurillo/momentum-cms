@@ -46,6 +46,21 @@ describe('HdlToolbar', () => {
 		expect(el.getAttribute('role')).toBe('toolbar');
 	});
 
+	it('should expose styling contract attributes on the toolbar and widgets', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const toolbar = fixture.nativeElement.querySelector('hdl-toolbar');
+		const widgets = fixture.nativeElement.querySelectorAll('button[hdl-toolbar-widget]');
+
+		expect(toolbar.getAttribute('data-slot')).toBe('toolbar');
+		expect(toolbar.getAttribute('data-orientation')).toBe('horizontal');
+		expect(widgets[0].getAttribute('data-slot')).toBe('toolbar-widget');
+		expect(widgets[0].getAttribute('data-state')).toBe('unselected');
+	});
+
 	it('should have no styles on the host', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

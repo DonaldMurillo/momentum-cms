@@ -59,6 +59,19 @@ describe('HdlListbox', () => {
 		expect(optionComp.value()).toBe('opt1');
 	});
 
+	it('should expose styling contract attributes on the listbox and options', () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		const listbox = fixture.nativeElement.querySelector('hdl-listbox');
+		const options = fixture.nativeElement.querySelectorAll('hdl-option');
+
+		expect(listbox.getAttribute('data-slot')).toBe('listbox');
+		expect(listbox.getAttribute('data-orientation')).toBe('vertical');
+		expect(options[0].getAttribute('data-slot')).toBe('option');
+		expect(options[0].getAttribute('data-state')).toBe('unselected');
+		expect(options[2].getAttribute('data-disabled')).toBe('true');
+	});
+
 	it('should have no styles on the host', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();
