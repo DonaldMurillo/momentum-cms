@@ -120,8 +120,12 @@ export interface CollectionOperations<T = Record<string, unknown>> {
 
 	/**
 	 * Find a single document by ID.
+	 *
+	 * @throws {DocumentNotFoundError} when the document does not exist,
+	 *   is soft-deleted, is a draft the caller cannot read, or fails
+	 *   scoped access constraints.
 	 */
-	findById(id: string, options?: { depth?: number; withDeleted?: boolean }): Promise<T | null>;
+	findById(id: string, options?: { depth?: number; withDeleted?: boolean }): Promise<T>;
 
 	/**
 	 * Create a new document.

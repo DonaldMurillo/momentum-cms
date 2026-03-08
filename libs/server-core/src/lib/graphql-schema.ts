@@ -390,7 +390,14 @@ export function buildGraphQLSchema(collections: CollectionConfig[]): GraphQLSche
 					const api = getMomentumAPI();
 					const ctx = buildAPIContext(context);
 					const contextApi = Object.keys(ctx).length > 0 ? api.setContext(ctx) : api;
-					return contextApi.collection(col.slug).findById(args.id);
+					try {
+						return await contextApi.collection(col.slug).findById(args.id);
+					} catch (err) {
+						if (err instanceof Error && err.name === 'DocumentNotFoundError') {
+							return null;
+						}
+						throw err;
+					}
 				},
 			} satisfies GraphQLFieldConfig<unknown, GraphQLContext>;
 

@@ -184,9 +184,7 @@ test.describe('Collection Edit Slots', { tag: ['@admin', '@swappable'] }, () => 
 test.describe('Collection View Slots', { tag: ['@admin', '@swappable'] }, () => {
 	test('should render view slots on article view page', async ({ authenticatedPage }) => {
 		// Get an article ID via API
-		const articlesResponse = await authenticatedPage.request.get(
-			'/api/collections/articles?limit=1',
-		);
+		const articlesResponse = await authenticatedPage.request.get('/api/articles?limit=1');
 		const articlesData = await articlesResponse.json();
 
 		expect(
@@ -197,10 +195,11 @@ test.describe('Collection View Slots', { tag: ['@admin', '@swappable'] }, () => 
 		await authenticatedPage.goto(`/admin/collections/articles/${articleId}`);
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		// Per-collection + global before slot
-		const viewBefore = authenticatedPage.locator('[data-testid="view-before-status"]');
-		await expect(viewBefore).toBeVisible({ timeout: 15000 });
-		await expect(viewBefore).toContainText('beforeView');
+		// Per-collection config slot + global provider slot both render beforeView
+		const viewBeforeAll = authenticatedPage.locator('[data-testid="view-before-status"]');
+		await expect(viewBeforeAll.first()).toBeVisible({ timeout: 15000 });
+		await expect(viewBeforeAll).toHaveCount(2);
+		await expect(viewBeforeAll.first()).toContainText('beforeView');
 
 		// Global after slot
 		const viewAfter = authenticatedPage.locator('[data-testid="view-after-related"]');
@@ -212,9 +211,7 @@ test.describe('Collection View Slots', { tag: ['@admin', '@swappable'] }, () => 
 		authenticatedPage,
 	}) => {
 		// Get a category ID to navigate to its view
-		const categoriesResponse = await authenticatedPage.request.get(
-			'/api/collections/categories?limit=1',
-		);
+		const categoriesResponse = await authenticatedPage.request.get('/api/categories?limit=1');
 		const categoriesData = await categoriesResponse.json();
 
 		expect(

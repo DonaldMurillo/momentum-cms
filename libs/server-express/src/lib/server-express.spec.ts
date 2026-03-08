@@ -86,7 +86,7 @@ describe('momentumApiMiddleware', () => {
 			const res = await request(app).get('/api/posts/nonexistent');
 
 			expect(res.status).toBe(404);
-			expect(res.body.error).toBe('Document not found');
+			expect(res.body.error).toContain('not found');
 		});
 	});
 
@@ -164,6 +164,44 @@ describe('momentumApiMiddleware', () => {
 			const res = await request(app).get('/api/posts');
 
 			expect(res.headers['access-control-allow-origin']).toBe('*');
+		});
+	});
+
+	describe('custom endpoint query.findById', () => {
+		it('should return null for nonexistent doc instead of throwing', async () => {
+			// Add a custom endpoint to posts that uses query.findById
+			const postsWithEndpoint: CollectionConfig = {
+				...mockPostsCollection,
+				endpoints: [
+					{
+						path: 'lookup',
+						method: 'get',
+						handler: async ({ query: q }) => {
+							const doc = await q.findById('posts', 'nonexistent-id');
+							return {
+								status: 200,
+								body: { found: doc !== null, doc },
+							};
+						},
+					},
+				],
+			};
+
+			const endpointAdapter = createInMemoryAdapter();
+			const endpointConfig: MomentumConfig = {
+				collections: [postsWithEndpoint],
+				db: { adapter: endpointAdapter },
+				server: { port: 4000 },
+			};
+			const endpointApp = express();
+			endpointApp.use('/api', momentumApiMiddleware(endpointConfig));
+
+			const res = await request(endpointApp).get('/api/posts/lookup');
+
+			// Should NOT be 500 (unhandled throw) — should return the handler's response
+			expect(res.status).toBe(200);
+			expect(res.body.found).toBe(false);
+			expect(res.body.doc).toBeNull();
 		});
 	});
 });

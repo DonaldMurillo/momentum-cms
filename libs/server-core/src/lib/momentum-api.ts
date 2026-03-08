@@ -372,10 +372,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		};
 	}
 
-	async findById(
-		id: string,
-		options?: { depth?: number; withDeleted?: boolean },
-	): Promise<T | null> {
+	async findById(id: string, options?: { depth?: number; withDeleted?: boolean }): Promise<T> {
 		// Check read access
 		await this.checkAccess('read', id);
 
@@ -387,7 +384,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		const doc = (await this.adapter.findById(this.slug, id)) as T | null;
 
 		if (!doc) {
-			return null;
+			throw new DocumentNotFoundError(this.slug, id);
 		}
 
 		// Filter out soft-deleted documents unless explicitly requested
@@ -398,7 +395,8 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
 			(doc as Record<string, unknown>)[softDeleteField]
 		) {
-			return null;
+			// Soft-deleted docs appear as "not found" to prevent information leakage
+			throw new DocumentNotFoundError(this.slug, id);
 		}
 
 		// Draft visibility: only users with readDrafts access see drafts
@@ -408,7 +406,8 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
 				const record = doc as Record<string, unknown>;
 				if (record['_status'] !== 'published') {
-					return null;
+					// Draft docs appear as "not found" to prevent information leakage
+					throw new DocumentNotFoundError(this.slug, id);
 				}
 			}
 		}
@@ -416,7 +415,8 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Filter by defaultWhere constraints (e.g., user-scoped filtering)
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
 		if (!this.matchesDefaultWhereConstraints(doc as Record<string, unknown>)) {
-			return null;
+			// Scoped docs appear as "not found" to prevent information leakage
+			throw new DocumentNotFoundError(this.slug, id);
 		}
 
 		// Run afterRead hooks

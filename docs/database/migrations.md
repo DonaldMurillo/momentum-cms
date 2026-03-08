@@ -84,6 +84,14 @@ Configure migration behavior in `momentum.config.ts`:
 
 ```typescript
 const config = defineMomentumConfig({
+	db: {
+		adapter: dbAdapter,
+		// Control auto-sync independently of migration mode:
+		// true  — always sync on boot (CREATE TABLE IF NOT EXISTS)
+		// false — never sync; run migrations yourself
+		// 'auto' — sync in push mode, skip in migrate mode (default)
+		syncSchema: 'auto',
+	},
 	migrations: {
 		directory: './migrations', // Migration files directory
 		mode: 'auto', // 'push' (dev), 'migrate' (prod), or 'auto'
@@ -94,6 +102,26 @@ const config = defineMomentumConfig({
 	// ...
 });
 ```
+
+### Schema Sync on Server Start
+
+By default, the server auto-syncs the database schema on boot using `adapter.initialize()` (runs `CREATE TABLE IF NOT EXISTS` and `ALTER TABLE` for new fields). This is controlled by two settings:
+
+| `db.syncSchema`    | `migrations.mode` | Behavior                               |
+| ------------------ | ----------------- | -------------------------------------- |
+| `'auto'` (default) | _none_            | Auto-sync (great for quick start)      |
+| `'auto'`           | `'push'`          | Auto-sync                              |
+| `'auto'`           | `'migrate'`       | **Skip** — run migrations separately   |
+| `true`             | _any_             | **Force** auto-sync regardless of mode |
+| `false`            | _any_             | **Skip** auto-sync regardless of mode  |
+
+**Production:** Set `migrations.mode: 'auto'` (or `'migrate'`) and the server will skip auto-sync, expecting migrations to be applied before deployment.
+
+**Local dev with migrations:** If you're testing the migration workflow locally, set `migrations.mode: 'migrate'` to mimic production behavior.
+
+**Local dev without migrations:** Omit `migrations` (or set `mode: 'push'`) for auto-sync on every boot. This is the default.
+
+**Force sync in tests:** Set `db.syncSchema: true` to auto-sync even when migrations are configured, useful in CI/test environments where you want a fresh schema without running migration files.
 
 ### Push vs Migrate Modes
 

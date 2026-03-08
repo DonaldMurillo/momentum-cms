@@ -415,8 +415,13 @@ export function createComprehensiveMomentumHandler(
 				return { docs: r.docs as Record<string, unknown>[], totalDocs: r.totalDocs };
 			},
 			findById: async (slug, id) => {
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-				return (await contextApi.collection(slug).findById(id)) as Record<string, unknown> | null;
+				try {
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+					return (await contextApi.collection(slug).findById(id)) as Record<string, unknown>;
+				} catch (err) {
+					if (err instanceof Error && err.name === 'DocumentNotFoundError') return null;
+					throw err;
+				}
 			},
 			count: (slug) => contextApi.collection(slug).count(),
 			create: async (slug, data) => {
@@ -1024,13 +1029,11 @@ export function createComprehensiveMomentumHandler(
 					}
 				} else {
 					const contextApi = getContextualAPI(user);
-					const doc = await contextApi.collection(collectionSlug).findById(docId);
-					if (!doc) {
-						utils.setResponseStatus(event, 404);
-						return { error: 'Document not found' };
-					}
 					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- doc type from API
-					docRecord = doc as Record<string, unknown>;
+					docRecord = (await contextApi.collection(collectionSlug).findById(docId)) as Record<
+						string,
+						unknown
+					>;
 				}
 
 				const emailField = getEmailBuilderFieldName(collectionConfig);

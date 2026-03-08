@@ -34,7 +34,7 @@ test.describe(
 
 			expect(response.status()).toBe(404);
 			const body = await response.json();
-			expect(body.error).toBe('Document not found');
+			expect(body.error).toContain('not found');
 		});
 	},
 );

@@ -171,7 +171,7 @@ export interface MomentumAPIServer {
  */
 export interface CollectionOperationsServer<T = Record<string, unknown>> {
 	find(options?: FindOptions): Promise<FindResult<T>>;
-	findById(id: string, options?: { depth?: number; withDeleted?: boolean }): Promise<T | null>;
+	findById(id: string, options?: { depth?: number; withDeleted?: boolean }): Promise<T>;
 	create(data: Partial<T>): Promise<T>;
 	update(id: string, data: Partial<T>): Promise<T>;
 	delete(id: string): Promise<DeleteResult>;
@@ -226,7 +226,7 @@ export interface MomentumClientAPI {
 export interface MomentumCollectionAPI<T = Record<string, unknown>> {
 	// Observable methods (Angular-friendly)
 	find$(options?: FindOptions): Observable<FindResult<T>>;
-	findById$(id: string, options?: FindByIdOptions): Observable<T | null>;
+	findById$(id: string, options?: FindByIdOptions): Observable<T>;
 	create$(data: Partial<T>): Observable<T>;
 	update$(id: string, data: Partial<T>): Observable<T>;
 	delete$(id: string): Observable<DeleteResult>;
@@ -240,7 +240,7 @@ export interface MomentumCollectionAPI<T = Record<string, unknown>> {
 
 	// Promise methods (async/await)
 	find(options?: FindOptions): Promise<FindResult<T>>;
-	findById(id: string, options?: FindByIdOptions): Promise<T | null>;
+	findById(id: string, options?: FindByIdOptions): Promise<T>;
 	create(data: Partial<T>): Promise<T>;
 	update(id: string, data: Partial<T>): Promise<T>;
 	delete(id: string): Promise<DeleteResult>;
@@ -591,7 +591,7 @@ class ServerCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		});
 	}
 
-	findById$(id: string, options?: FindByIdOptions): Observable<T | null> {
+	findById$(id: string, options?: FindByIdOptions): Observable<T> {
 		return new Observable((subscriber) => {
 			this.findById(id, options)
 				.then((result) => {
@@ -711,12 +711,12 @@ class ServerCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		return result;
 	}
 
-	async findById(id: string, options?: FindByIdOptions): Promise<T | null> {
+	async findById(id: string, options?: FindByIdOptions): Promise<T> {
 		const result = await this.ops.findById(id, options);
 
 		// Store in TransferState (enabled by default, opt-out with transfer: false)
 		if (options?.transfer !== false && this.transferState) {
-			const key = generateTransferKey<T | null>(this.slug, 'findById', options, id);
+			const key = generateTransferKey<T>(this.slug, 'findById', options, id);
 			this.transferState.set(key, result);
 		}
 
@@ -913,12 +913,13 @@ class BrowserCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		);
 	}
 
-	findById$(id: string, options?: FindByIdOptions): Observable<T | null> {
+	findById$(id: string, options?: FindByIdOptions): Observable<T> {
 		// Check TransferState cache first (enabled by default, opt-out with transfer: false)
 		if (options?.transfer !== false && this.transferState && !isPlatformServer(this.platformId)) {
-			const key = generateTransferKey<T | null>(this.slug, 'findById', options, id);
+			const key = generateTransferKey<T>(this.slug, 'findById', options, id);
 			if (this.transferState.hasKey(key)) {
-				const cached = this.transferState.get(key, null);
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- TransferState stores T
+				const cached = this.transferState.get(key, null as unknown as T);
 				this.transferState.remove(key);
 				return of(cached);
 			}
@@ -936,7 +937,7 @@ class BrowserCollectionAPI<T> implements MomentumCollectionAPI<T> {
 			this.http
 				.get<ApiResponse<T>>(`${this.endpoint}/${id}`, { params })
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- ApiResponse.doc is unknown
-				.pipe(map((response) => (response.doc as T) ?? null))
+				.pipe(map((response) => response.doc as T))
 		);
 	}
 
@@ -1012,7 +1013,7 @@ class BrowserCollectionAPI<T> implements MomentumCollectionAPI<T> {
 		return firstValueFrom(this.find$(options));
 	}
 
-	findById(id: string, options?: FindByIdOptions): Promise<T | null> {
+	findById(id: string, options?: FindByIdOptions): Promise<T> {
 		return firstValueFrom(this.findById$(id, options));
 	}
 

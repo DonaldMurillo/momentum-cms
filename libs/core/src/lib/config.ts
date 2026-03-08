@@ -10,7 +10,7 @@ import type {
 import type { MomentumPlugin, PluginAdminRouteDescriptor } from './plugins';
 import type { StorageAdapter } from './storage';
 import type { MigrationConfig, ResolvedMigrationConfig } from './migrations';
-import { resolveMigrationConfig } from './migrations';
+import { resolveMigrationConfig, resolveMigrationMode } from './migrations';
 
 /**
  * Minimum password length for user accounts.
@@ -257,6 +257,18 @@ export interface DatabaseConfig {
 	 * Use @momentumcms/db-drizzle for Drizzle ORM support.
 	 */
 	adapter: DatabaseAdapter;
+
+	/**
+	 * Whether to auto-sync the database schema on server start.
+	 *
+	 * - `true`:  Always run `adapter.initialize()` (CREATE TABLE IF NOT EXISTS).
+	 * - `false`: Never auto-sync — expect migrations to be run separately.
+	 * - `'auto'`: Sync when no migration config or in `push` mode;
+	 *             skip when migration mode is `migrate`.
+	 *
+	 * @default 'auto'
+	 */
+	syncSchema?: boolean | 'auto';
 }
 
 /**
@@ -590,6 +602,22 @@ export function defineMomentumConfig(config: MomentumConfig): ResolvedMomentumCo
 		},
 		migrations: resolveMigrationConfig(config.migrations),
 	};
+}
+
+/**
+ * Determine whether the server should auto-sync the database schema on boot.
+ *
+ * Resolution order:
+ * 1. Explicit `db.syncSchema` (true / false) — always wins.
+ * 2. `'auto'` (or omitted) — sync unless migration mode is `'migrate'`.
+ */
+export function shouldSyncSchema(config: MomentumConfig | ResolvedMomentumConfig): boolean {
+	const explicit = config.db.syncSchema ?? 'auto';
+	if (typeof explicit === 'boolean') return explicit;
+	// 'auto': sync unless we're in migrate mode
+	if (!config.migrations) return true;
+	const mode = resolveMigrationMode(config.migrations.mode);
+	return mode !== 'migrate';
 }
 
 /**

@@ -598,18 +598,18 @@ export class EntityFormWidget<T extends Entity = Entity> {
 
 		try {
 			const entity = await this.api.collection<T>(slug).findById(id);
-			if (entity) {
-				this.originalData.set(entity);
-				this.formModel.set({ ...entity });
-				const ef = this.entityForm();
-				if (ef) ef().reset();
-			} else {
+			this.originalData.set(entity);
+			this.formModel.set({ ...entity });
+			const ef = this.entityForm();
+			if (ef) ef().reset();
+		} catch (err) {
+			if (err instanceof Error && err.name === 'DocumentNotFoundError') {
 				this.formError.set(`${this.collectionLabelSingular()} not found`);
 				this.feedback.entityNotFound(this.collectionLabelSingular());
+			} else {
+				this.formError.set('Failed to load data');
+				this.saveError.emit(err instanceof Error ? err : new Error('Failed to load data'));
 			}
-		} catch (err) {
-			this.formError.set('Failed to load data');
-			this.saveError.emit(err instanceof Error ? err : new Error('Failed to load data'));
 		} finally {
 			this.isLoading.set(false);
 		}

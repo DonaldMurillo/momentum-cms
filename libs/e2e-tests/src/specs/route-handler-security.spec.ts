@@ -1,11 +1,15 @@
+import { request as playwrightRequest } from '@playwright/test';
 import { test, expect, TEST_CREDENTIALS } from '../fixtures';
 
 // Configure ALL tests in this file to run serially (shared state across tests)
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Route handler security', { tag: ['@security', '@api'] }, () => {
-	test.beforeAll(async ({ request }) => {
-		const signInResponse = await request.post('/api/auth/sign-in/email', {
+	let adminCtx: Awaited<ReturnType<typeof playwrightRequest.newContext>>;
+
+	test.beforeAll(async ({ workerBaseURL }) => {
+		adminCtx = await playwrightRequest.newContext({ baseURL: workerBaseURL });
+		const signInResponse = await adminCtx.post('/api/auth/sign-in/email', {
 			headers: { 'Content-Type': 'application/json' },
 			data: {
 				email: TEST_CREDENTIALS.email,
@@ -13,6 +17,10 @@ test.describe('Route handler security', { tag: ['@security', '@api'] }, () => {
 			},
 		});
 		expect(signInResponse.ok(), 'Admin sign-in must succeed').toBe(true);
+	});
+
+	test.afterAll(async () => {
+		await adminCtx?.dispose();
 	});
 
 	// ============================================
@@ -60,8 +68,8 @@ test.describe('Route handler security', { tag: ['@security', '@api'] }, () => {
 	test.describe('Unknown POST actions return 404', () => {
 		let articleId: string;
 
-		test('setup: create article for action tests', async ({ request }) => {
-			const response = await request.post('/api/articles', {
+		test('setup: create article for action tests', async () => {
+			const response = await adminCtx.post('/api/articles', {
 				headers: { 'Content-Type': 'application/json' },
 				data: {
 					title: `Security Test Article ${Date.now()}`,
@@ -73,30 +81,30 @@ test.describe('Route handler security', { tag: ['@security', '@api'] }, () => {
 			articleId = data.doc.id;
 		});
 
-		test('POST /:collection/:id/nonexistent-action returns 404', async ({ request }) => {
-			const response = await request.post(`/api/articles/${articleId}/nonexistent-action`, {
+		test('POST /:collection/:id/nonexistent-action returns 404', async () => {
+			const response = await adminCtx.post(`/api/articles/${articleId}/nonexistent-action`, {
 				headers: { 'Content-Type': 'application/json' },
 				data: {},
 			});
 			expect(response.status()).toBe(404);
 		});
 
-		test('POST /:collection/:id/garbage returns 404', async ({ request }) => {
-			const response = await request.post(`/api/articles/${articleId}/garbage`, {
+		test('POST /:collection/:id/garbage returns 404', async () => {
+			const response = await adminCtx.post(`/api/articles/${articleId}/garbage`, {
 				headers: { 'Content-Type': 'application/json' },
 				data: {},
 			});
 			expect(response.status()).toBe(404);
 		});
 
-		test('known action (publish) still works', async ({ request }) => {
-			const response = await request.post(`/api/articles/${articleId}/publish`);
+		test('known action (publish) still works', async () => {
+			const response = await adminCtx.post(`/api/articles/${articleId}/publish`);
 			expect(response.ok()).toBe(true);
 		});
 
-		test('cleanup: delete test article', async ({ request }) => {
+		test('cleanup: delete test article', async () => {
 			if (articleId) {
-				const response = await request.delete(`/api/articles/${articleId}`);
+				const response = await adminCtx.delete(`/api/articles/${articleId}`);
 				expect(response.ok()).toBe(true);
 			}
 		});
@@ -110,8 +118,8 @@ test.describe('Route handler security', { tag: ['@security', '@api'] }, () => {
 		let articleBId: string;
 		let articleAVersionId: string;
 
-		test('setup: create article A', async ({ request }) => {
-			const response = await request.post('/api/articles', {
+		test('setup: create article A', async () => {
+			const response = await adminCtx.post('/api/articles', {
 				headers: { 'Content-Type': 'application/json' },
 				data: {
 					title: `Article A ${Date.now()}`,
@@ -123,8 +131,8 @@ test.describe('Route handler security', { tag: ['@security', '@api'] }, () => {
 			articleAId = data.doc.id;
 		});
 
-		test('setup: create article B', async ({ request }) => {
-			const response = await request.post('/api/articles', {
+		test('setup: create article B', async () => {
+			const response = await adminCtx.post('/api/articles', {
 				headers: { 'Content-Type': 'application/json' },
 				data: {
 					title: `Article B ${Date.now()}`,
@@ -136,13 +144,13 @@ test.describe('Route handler security', { tag: ['@security', '@api'] }, () => {
 			articleBId = data.doc.id;
 		});
 
-		test('setup: publish article A to create a version', async ({ request }) => {
-			const response = await request.post(`/api/articles/${articleAId}/publish`);
+		test('setup: publish article A to create a version', async () => {
+			const response = await adminCtx.post(`/api/articles/${articleAId}/publish`);
 			expect(response.ok()).toBe(true);
 		});
 
-		test('setup: get article A version ID', async ({ request }) => {
-			const response = await request.get(`/api/articles/${articleAId}/versions`);
+		test('setup: get article A version ID', async () => {
+			const response = await adminCtx.get(`/api/articles/${articleAId}/versions`);
 			expect(response.ok()).toBe(true);
 			const data = (await response.json()) as {
 				docs: Array<{ id: string; parent: string }>;
@@ -154,8 +162,8 @@ test.describe('Route handler security', { tag: ['@security', '@api'] }, () => {
 			articleAVersionId = version?.id;
 		});
 
-		test('restoring article A version on article B URL should fail (400)', async ({ request }) => {
-			const response = await request.post(`/api/articles/${articleBId}/versions/restore`, {
+		test('restoring article A version on article B URL should fail (400)', async () => {
+			const response = await adminCtx.post(`/api/articles/${articleBId}/versions/restore`, {
 				headers: { 'Content-Type': 'application/json' },
 				data: { versionId: articleAVersionId },
 			});
@@ -165,8 +173,8 @@ test.describe('Route handler security', { tag: ['@security', '@api'] }, () => {
 			expect(data.error).toContain('mismatch');
 		});
 
-		test('restoring article A version on article A URL should succeed', async ({ request }) => {
-			const response = await request.post(`/api/articles/${articleAId}/versions/restore`, {
+		test('restoring article A version on article A URL should succeed', async () => {
+			const response = await adminCtx.post(`/api/articles/${articleAId}/versions/restore`, {
 				headers: { 'Content-Type': 'application/json' },
 				data: { versionId: articleAVersionId },
 			});
@@ -175,13 +183,13 @@ test.describe('Route handler security', { tag: ['@security', '@api'] }, () => {
 			expect(data.message).toBe('Version restored successfully');
 		});
 
-		test('cleanup: delete test articles', async ({ request }) => {
+		test('cleanup: delete test articles', async () => {
 			if (articleAId) {
-				const responseA = await request.delete(`/api/articles/${articleAId}`);
+				const responseA = await adminCtx.delete(`/api/articles/${articleAId}`);
 				expect(responseA.ok()).toBe(true);
 			}
 			if (articleBId) {
-				const responseB = await request.delete(`/api/articles/${articleBId}`);
+				const responseB = await adminCtx.delete(`/api/articles/${articleBId}`);
 				expect(responseB.ok()).toBe(true);
 			}
 		});
