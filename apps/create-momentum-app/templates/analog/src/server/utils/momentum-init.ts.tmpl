@@ -2,6 +2,7 @@ import 'dotenv/config';
 import {
 	initializeMomentumAPI,
 	registerWebhookHooks,
+	syncDatabaseSchema,
 } from '@momentumcms/server-core';
 import { initializeMomentumLogger, createLogger } from '@momentumcms/logger';
 import { PluginRunner } from '@momentumcms/plugins-core';
@@ -44,19 +45,7 @@ async function initialize(): Promise<void> {
 
 	registerWebhookHooks(momentumConfig.collections);
 
-	if (momentumConfig.db.adapter.initialize) {
-		log.info('Initializing database schema...');
-		await momentumConfig.db.adapter.initialize(momentumConfig.collections);
-	}
-
-	if (
-		momentumConfig.db.adapter.initializeGlobals &&
-		momentumConfig.globals &&
-		momentumConfig.globals.length > 0
-	) {
-		log.info(`Initializing globals table for ${momentumConfig.globals.length} global(s)...`);
-		await momentumConfig.db.adapter.initializeGlobals(momentumConfig.globals);
-	}
+	await syncDatabaseSchema(momentumConfig, log);
 
 	log.info('Initializing API...');
 	const api = initializeMomentumAPI(momentumConfig);

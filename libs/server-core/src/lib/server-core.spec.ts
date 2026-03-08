@@ -144,7 +144,7 @@ describe('createMomentumHandlers', () => {
 
 			const result = await handlers.handleFindById(request);
 
-			expect(result.error).toBe('Document not found');
+			expect(result.error).toContain('not found');
 			expect(result.status).toBe(404);
 		});
 	});

@@ -144,6 +144,9 @@ export {
 // Rate Limiter
 export { RateLimiter } from './lib/rate-limiter';
 
+// Schema Sync
+export { syncDatabaseSchema, type SchemaLogger } from './lib/schema-sync';
+
 // Shared Server Utilities
 export { sanitizeErrorMessage, parseWhereParam, sanitizeFilename } from './lib/shared-server-utils';
 

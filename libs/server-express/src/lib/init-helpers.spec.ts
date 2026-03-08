@@ -15,7 +15,8 @@ vi.mock('@momentumcms/server-core', () => ({
 		total: 4,
 		seeds: [],
 	}),
-	shouldRunSeeding: vi.fn((value) => value === true || value === 'always'),
+	shouldRunSeeding: vi.fn((value: unknown) => value === true || value === 'always'),
+	syncDatabaseSchema: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock the logger module
@@ -42,7 +43,12 @@ vi.mock('@momentumcms/plugins', () => ({
 }));
 
 // Import mocked functions for assertions
-import { initializeMomentumAPI, runSeeding, shouldRunSeeding } from '@momentumcms/server-core';
+import {
+	initializeMomentumAPI,
+	runSeeding,
+	shouldRunSeeding,
+	syncDatabaseSchema,
+} from '@momentumcms/server-core';
 
 // Mock collection for testing
 const mockCollection: CollectionConfig = {
@@ -87,7 +93,7 @@ describe('initializeMomentum', () => {
 			expect(result.isReady()).toBe(true);
 		});
 
-		it('should initialize database schema if adapter supports it', async () => {
+		it('should call syncDatabaseSchema during initialization', async () => {
 			const adapter = createMockAdapter(true);
 			const config: MomentumConfig = {
 				collections: [mockCollection],
@@ -98,11 +104,11 @@ describe('initializeMomentum', () => {
 			const result = initializeMomentum(config, { logging: false });
 			await result.ready;
 
-			expect(adapter.initialize).toHaveBeenCalledWith([mockCollection]);
+			expect(syncDatabaseSchema).toHaveBeenCalledWith(config, expect.any(Object));
 		});
 
-		it('should skip schema initialization if adapter does not support it', async () => {
-			const adapter = createMockAdapter(false);
+		it('should call syncDatabaseSchema BEFORE initializeMomentumAPI', async () => {
+			const adapter = createMockAdapter(true);
 			const config: MomentumConfig = {
 				collections: [mockCollection],
 				db: { adapter },
@@ -112,7 +118,31 @@ describe('initializeMomentum', () => {
 			const result = initializeMomentum(config, { logging: false });
 			await result.ready;
 
-			// Should not throw, just continue
+			const syncOrder = vi.mocked(syncDatabaseSchema).mock.invocationCallOrder[0];
+			const apiOrder = vi.mocked(initializeMomentumAPI).mock.invocationCallOrder[0];
+			expect(syncOrder).toBeLessThan(apiOrder);
+		});
+	});
+
+	describe('syncDatabaseSchema delegation', () => {
+		// Detailed sync behavior (push vs migrate, explicit overrides) is tested
+		// in libs/core/src/__tests__/migrations.spec.ts (shouldSyncSchema) and
+		// libs/server-core schema-sync tests. Here we verify initializeMomentum
+		// delegates correctly.
+
+		it('should pass config to syncDatabaseSchema', async () => {
+			const adapter = createMockAdapter(true);
+			const config: MomentumConfig = {
+				collections: [mockCollection],
+				db: { adapter, syncSchema: false },
+				server: { port: 4000 },
+				migrations: { mode: 'migrate' },
+			};
+
+			const result = initializeMomentum(config, { logging: false });
+			await result.ready;
+
+			expect(syncDatabaseSchema).toHaveBeenCalledWith(config, expect.any(Object));
 			expect(initializeMomentumAPI).toHaveBeenCalled();
 		});
 	});
@@ -226,7 +256,7 @@ describe('initializeMomentum', () => {
 		it('should propagate database initialization errors', async () => {
 			const adapter = createMockAdapter();
 			const initError = new Error('Database connection failed');
-			vi.mocked(adapter.initialize as typeof adapter.initialize).mockRejectedValueOnce(initError);
+			vi.mocked(syncDatabaseSchema).mockRejectedValueOnce(initError);
 
 			const config: MomentumConfig = {
 				collections: [mockCollection],
@@ -530,9 +560,9 @@ describe('createHealthMiddleware', () => {
 				}),
 			);
 
-			// Before ready
-			const _res1 = await request(app).get('/health');
-			// Status depends on timing, but should not error
+			// Before ready — should respond without error regardless of timing
+			const res1 = await request(app).get('/health');
+			expect(res1.status).toBe(200);
 
 			// After ready (with checkSeeds)
 			const res2 = await request(app).get('/health?checkSeeds=true');

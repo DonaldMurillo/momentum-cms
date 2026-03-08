@@ -251,8 +251,10 @@ describe('EntityFormWidget - extended coverage', () => {
 			expect(component.originalData()).toEqual({ id: 'e1', title: 'Loaded Post' });
 		});
 
-		it('should set error when entity not found', async () => {
-			apiMock.mockCollection['findById'].mockResolvedValueOnce(null);
+		it('should set error when findById throws DocumentNotFoundError', async () => {
+			const notFoundErr = new Error('Document "nonexistent" not found in collection "posts"');
+			notFoundErr.name = 'DocumentNotFoundError';
+			apiMock.mockCollection['findById'].mockRejectedValueOnce(notFoundErr);
 
 			fixture.componentRef.setInput('collection', testCollection);
 			fixture.componentRef.setInput('mode', 'edit');

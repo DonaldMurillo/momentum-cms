@@ -71,7 +71,7 @@ test.describe('Collection List Page - Articles', { tag: ['@admin', '@crud'] }, (
 		await expect(authenticatedPage.locator('mcms-table')).toBeVisible();
 
 		// Check that table headers are present
-		// richText fields are excluded from list view, so columns are: Title, Category, Created
+		// richText fields are excluded from list view; articles has versioning so Status is shown
 		await expect(
 			authenticatedPage.locator('mcms-table-head').filter({ hasText: 'Title' }).first(),
 		).toBeVisible();
@@ -79,7 +79,7 @@ test.describe('Collection List Page - Articles', { tag: ['@admin', '@crud'] }, (
 			authenticatedPage.locator('mcms-table-head').filter({ hasText: 'Category' }).first(),
 		).toBeVisible();
 		await expect(
-			authenticatedPage.locator('mcms-table-head').filter({ hasText: 'Created' }).first(),
+			authenticatedPage.locator('mcms-table-head').filter({ hasText: 'Status' }).first(),
 		).toBeVisible();
 
 		// Seeded articles should be visible (check for ones that appear on page 1)

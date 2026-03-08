@@ -536,16 +536,16 @@ export class EntityViewWidget<T extends Entity = Entity> {
 			const entity = await this.api
 				.collection<T>(slug)
 				.findById(id, { depth: 1, withDeleted: this.hasSoftDelete() });
-			if (entity) {
-				this.entity.set(entity);
-				this.resolveRelationships(entity);
-			} else {
+			this.entity.set(entity);
+			this.resolveRelationships(entity);
+		} catch (err) {
+			if (err instanceof Error && err.name === 'DocumentNotFoundError') {
 				this.loadError.set(`${this.collectionLabelSingular()} not found`);
 				this.feedback.entityNotFound(this.collectionLabelSingular());
+			} else {
+				this.loadError.set('Failed to load data');
+				this.feedback.operationFailed('Load failed', err instanceof Error ? err : undefined);
 			}
-		} catch (err) {
-			this.loadError.set('Failed to load data');
-			this.feedback.operationFailed('Load failed', err instanceof Error ? err : undefined);
 		} finally {
 			this.isLoading.set(false);
 		}
