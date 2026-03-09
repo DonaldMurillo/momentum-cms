@@ -5,25 +5,50 @@ import {
 	HdlAccordionContent,
 	HdlAccordionItem,
 	HdlAccordionTrigger,
+	HdlAlertDialog,
+	HdlAlertDialogAction,
+	HdlAlertDialogCancel,
+	HdlAlertDialogDescription,
+	HdlAlertDialogTitle,
 	HdlCheckbox,
 	HdlChip,
 	HdlChipInput,
 	HdlChipRemove,
 	HdlChips,
+	HdlCollapsible,
+	HdlCollapsibleContent,
+	HdlCollapsibleTrigger,
 	HdlCombobox,
 	HdlComboboxInput,
 	HdlComboboxPopup,
+	HdlCommand,
+	HdlCommandEmpty,
+	HdlCommandGroup,
+	HdlCommandInput,
+	HdlCommandItem,
+	HdlCommandList,
+	HdlCommandSeparator,
+	HdlCommandDialog,
+	HdlContextMenuContent,
+	HdlContextMenuTrigger,
 	HdlDescription,
 	HdlDialog,
 	HdlDialogClose,
 	HdlDialogDescription,
 	HdlDialogService,
 	HdlDialogTitle,
+	HdlDrawer,
+	HdlDrawerClose,
+	HdlDrawerDescription,
+	HdlDrawerService,
+	HdlDrawerTitle,
 	HdlError,
 	HdlField,
 	HdlGrid,
 	HdlGridCell,
 	HdlGridRow,
+	HdlHoverCardContent,
+	HdlHoverCardTrigger,
 	HdlInput,
 	HdlLabel,
 	HdlListbox,
@@ -34,8 +59,17 @@ import {
 	HdlOption,
 	HdlPopoverContent,
 	HdlPopoverTrigger,
+	HdlProgress,
 	HdlRadioGroup,
 	HdlRadioItem,
+	HdlSelect,
+	HdlSelectContent,
+	HdlSelectItem,
+	HdlSelectTrigger,
+	HdlSelectValue,
+	HdlSeparator,
+	HdlSkeleton,
+	HdlSpinner,
 	HdlSwitch,
 	HdlTab,
 	HdlTabList,
@@ -47,6 +81,9 @@ import {
 	HdlToolbar,
 	HdlToolbarWidget,
 	HdlToolbarWidgetGroup,
+	HdlToggle,
+	HdlToggleGroup,
+	HdlToggleItem,
 	HdlTooltipTrigger,
 	HdlTree,
 	HdlTreeItem,
@@ -79,6 +116,73 @@ import {
 })
 class HeadlessStylingLabDialogComponent {}
 
+@Component({
+	imports: [
+		HdlAlertDialog,
+		HdlAlertDialogTitle,
+		HdlAlertDialogDescription,
+		HdlAlertDialogAction,
+		HdlAlertDialogCancel,
+	],
+	template: `
+		<hdl-alert-dialog data-testid="alert-dialog-surface">
+			<div class="space-y-4">
+				<div class="space-y-2">
+					<hdl-alert-dialog-title>Delete the current preview?</hdl-alert-dialog-title>
+					<hdl-alert-dialog-description>
+						This proves the confirm flow can use a distinct alert-dialog host while still leaning on
+						the shared overlay service.
+					</hdl-alert-dialog-description>
+				</div>
+				<div class="flex justify-end gap-3">
+					<button hdlAlertDialogCancel type="button" class="lab-trigger" data-testid="alert-cancel">
+						Cancel
+					</button>
+					<button
+						hdlAlertDialogAction
+						type="button"
+						class="lab-trigger"
+						data-testid="alert-confirm"
+					>
+						Delete preview
+					</button>
+				</div>
+			</div>
+		</hdl-alert-dialog>
+	`,
+	changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class HeadlessStylingLabAlertDialogComponent {}
+
+@Component({
+	imports: [HdlDrawer, HdlDrawerTitle, HdlDrawerDescription, HdlDrawerClose],
+	template: `
+		<hdl-drawer side="right" data-testid="drawer-surface">
+			<div class="space-y-4 p-6">
+				<div class="space-y-2">
+					<hdl-drawer-title>Saved views</hdl-drawer-title>
+					<hdl-drawer-description>
+						Drawers use their own overlay classes, side tokens, and focus trap instead of pretending
+						a dialog centered itself by accident.
+					</hdl-drawer-description>
+				</div>
+				<div class="space-y-2 text-sm" style="color: var(--hdl-lab-text-muted);">
+					<p>Editorial Queue</p>
+					<p>Landing Page Audit</p>
+					<p>Release Checklist</p>
+				</div>
+				<div class="flex justify-end">
+					<button hdlDrawerClose type="button" class="lab-trigger" data-testid="drawer-close">
+						Close drawer
+					</button>
+				</div>
+			</div>
+		</hdl-drawer>
+	`,
+	changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class HeadlessStylingLabDrawerComponent {}
+
 type PrimitiveOption = {
 	label: string;
 	value: string;
@@ -103,15 +207,30 @@ type PrimitiveCoverage = {
 		HdlChipInput,
 		HdlChipRemove,
 		HdlChips,
+		HdlCollapsible,
+		HdlCollapsibleContent,
+		HdlCollapsibleTrigger,
 		HdlCombobox,
 		HdlComboboxInput,
 		HdlComboboxPopup,
+		HdlCommand,
+		HdlCommandEmpty,
+		HdlCommandGroup,
+		HdlCommandInput,
+		HdlCommandItem,
+		HdlCommandList,
+		HdlCommandSeparator,
+		HdlCommandDialog,
+		HdlContextMenuContent,
+		HdlContextMenuTrigger,
 		HdlDescription,
 		HdlError,
 		HdlField,
 		HdlGrid,
 		HdlGridCell,
 		HdlGridRow,
+		HdlHoverCardContent,
+		HdlHoverCardTrigger,
 		HdlInput,
 		HdlLabel,
 		HdlListbox,
@@ -122,8 +241,17 @@ type PrimitiveCoverage = {
 		HdlOption,
 		HdlPopoverTrigger,
 		HdlPopoverContent,
+		HdlProgress,
 		HdlRadioGroup,
 		HdlRadioItem,
+		HdlSelect,
+		HdlSelectContent,
+		HdlSelectItem,
+		HdlSelectTrigger,
+		HdlSelectValue,
+		HdlSeparator,
+		HdlSkeleton,
+		HdlSpinner,
 		HdlSwitch,
 		HdlTabs,
 		HdlTabList,
@@ -134,6 +262,9 @@ type PrimitiveCoverage = {
 		HdlToolbar,
 		HdlToolbarWidget,
 		HdlToolbarWidgetGroup,
+		HdlToggle,
+		HdlToggleGroup,
+		HdlToggleItem,
 		HdlTooltipTrigger,
 		HdlTree,
 		HdlTreeItem,
@@ -999,6 +1130,410 @@ type PrimitiveCoverage = {
 			</section>
 
 			<section
+				id="extended-primitives"
+				class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]"
+				data-testid="extended-primitives-section"
+			>
+				<article
+					data-headless-card
+					class="rounded-[2rem] border p-6"
+					data-testid="utility-primitives-card"
+				>
+					<div class="space-y-6">
+						<div class="space-y-2">
+							<h2 class="text-2xl font-bold">Utility and Command Primitives</h2>
+							<p class="text-sm leading-6" style="color: var(--hdl-lab-text-muted);">
+								These are the glue pieces that make real app UI possible: collapsible regions,
+								toggle groups, select, command filtering, and structural feedback primitives.
+							</p>
+						</div>
+
+						<div class="grid gap-6 md:grid-cols-2">
+							<div class="space-y-3">
+								<p
+									data-headless-section-label
+									class="text-xs font-semibold uppercase tracking-[0.2em]"
+								>
+									Collapsible
+								</p>
+								<hdl-collapsible [(open)]="collapsibleOpen" data-testid="collapsible-demo">
+									<hdl-collapsible-trigger data-testid="collapsible-trigger">
+										Editor metadata
+									</hdl-collapsible-trigger>
+									<hdl-collapsible-content data-testid="collapsible-content">
+										Collapsible content keeps the hidden state explicit instead of relying on CSS
+										vibes.
+									</hdl-collapsible-content>
+								</hdl-collapsible>
+								<p
+									class="text-sm leading-6"
+									style="color: var(--hdl-lab-text-muted);"
+									data-testid="collapsible-state"
+								>
+									Collapsible: {{ collapsibleOpen ? 'open' : 'closed' }}
+								</p>
+							</div>
+
+							<div class="space-y-3">
+								<p
+									data-headless-section-label
+									class="text-xs font-semibold uppercase tracking-[0.2em]"
+								>
+									Toggle + Toggle Group
+								</p>
+								<div class="flex flex-wrap gap-3">
+									<hdl-toggle [(pressed)]="soloToggleOn" data-testid="solo-toggle">
+										Preview mode
+									</hdl-toggle>
+									<hdl-toggle-group
+										[(values)]="toggleGroupValues"
+										[multiple]="true"
+										data-testid="toggle-group-demo"
+									>
+										<hdl-toggle-item value="bold" data-testid="toggle-item-bold"
+											>Bold</hdl-toggle-item
+										>
+										<hdl-toggle-item value="italic" data-testid="toggle-item-italic"
+											>Italic</hdl-toggle-item
+										>
+										<hdl-toggle-item value="underline" data-testid="toggle-item-underline"
+											>Underline</hdl-toggle-item
+										>
+									</hdl-toggle-group>
+								</div>
+								<p
+									class="text-sm leading-6"
+									style="color: var(--hdl-lab-text-muted);"
+									data-testid="toggle-state"
+								>
+									Toggle: {{ soloToggleOn ? 'on' : 'off' }}. Group:
+									{{ toggleGroupValues.join(', ') }}
+								</p>
+							</div>
+						</div>
+
+						<div class="grid gap-6 md:grid-cols-2">
+							<div class="space-y-3">
+								<p
+									data-headless-section-label
+									class="text-xs font-semibold uppercase tracking-[0.2em]"
+								>
+									Select
+								</p>
+								<hdl-select [(value)]="selectValue" data-testid="select-demo">
+									<hdl-select-trigger data-testid="select-trigger">
+										<hdl-select-value placeholder="Choose workflow state" />
+									</hdl-select-trigger>
+									<hdl-select-content data-testid="select-content">
+										<hdl-select-item value="draft" data-testid="select-item-draft"
+											>Draft</hdl-select-item
+										>
+										<hdl-select-item value="review" data-testid="select-item-review"
+											>In review</hdl-select-item
+										>
+										<hdl-select-item value="published" data-testid="select-item-published"
+											>Published</hdl-select-item
+										>
+									</hdl-select-content>
+								</hdl-select>
+								<p
+									class="text-sm leading-6"
+									style="color: var(--hdl-lab-text-muted);"
+									data-testid="select-state"
+								>
+									Select value: {{ selectValue || 'none' }}
+								</p>
+							</div>
+
+							<div class="space-y-3">
+								<p
+									data-headless-section-label
+									class="text-xs font-semibold uppercase tracking-[0.2em]"
+								>
+									Command
+								</p>
+								<hdl-command [(value)]="commandSelection" data-testid="command-demo">
+									<input
+										hdlCommandInput
+										data-testid="command-input"
+										class="lab-field"
+										placeholder="Filter command items..."
+									/>
+									<hdl-command-list data-testid="command-list">
+										<hdl-command-empty data-testid="command-empty"
+											>No command results.</hdl-command-empty
+										>
+										<hdl-command-group label="Content tools" data-testid="command-group-content">
+											<p class="lab-command-label" data-testid="command-group-content-label">
+												Content tools
+											</p>
+											<hdl-command-item value="articles" data-testid="command-item-articles">
+												Articles
+											</hdl-command-item>
+											<hdl-command-item value="assets" data-testid="command-item-assets">
+												Assets
+											</hdl-command-item>
+										</hdl-command-group>
+										<hdl-command-separator data-testid="command-separator" />
+										<hdl-command-group label="People" data-testid="command-group-people">
+											<p class="lab-command-label" data-testid="command-group-people-label">
+												People
+											</p>
+											<hdl-command-item value="authors" data-testid="command-item-authors">
+												Authors
+											</hdl-command-item>
+										</hdl-command-group>
+									</hdl-command-list>
+								</hdl-command>
+								<p
+									class="text-sm leading-6"
+									style="color: var(--hdl-lab-text-muted);"
+									data-testid="command-state"
+								>
+									Command selection: {{ commandSelection || 'none' }}
+								</p>
+							</div>
+
+							<div class="space-y-3">
+								<p
+									data-headless-section-label
+									class="text-xs font-semibold uppercase tracking-[0.2em]"
+								>
+									Command Dialog
+								</p>
+								<button
+									type="button"
+									class="lab-trigger"
+									data-testid="command-dialog-trigger"
+									(click)="commandDialogOpen.set(true)"
+								>
+									Open command palette
+									<kbd
+										class="ml-2 rounded border px-1.5 py-0.5 text-xs"
+										style="border-color: var(--hdl-lab-border); color: var(--hdl-lab-text-muted);"
+										>⌘K</kbd
+									>
+								</button>
+								<hdl-command-dialog [(open)]="commandDialogOpen" data-testid="command-dialog">
+									<hdl-command
+										[(value)]="commandDialogSelection"
+										(valueChange)="commandDialogOpen.set(false)"
+										data-testid="command-dialog-command"
+									>
+										<input
+											hdlCommandInput
+											data-testid="command-dialog-input"
+											class="lab-field"
+											placeholder="Type a command or search..."
+										/>
+										<hdl-command-list data-testid="command-dialog-list">
+											<hdl-command-empty>No results found.</hdl-command-empty>
+											<hdl-command-group label="Navigation">
+												<p class="lab-command-label">Navigation</p>
+												<hdl-command-item value="dashboard">Dashboard</hdl-command-item>
+												<hdl-command-item value="collections">Collections</hdl-command-item>
+												<hdl-command-item value="media">Media Library</hdl-command-item>
+											</hdl-command-group>
+											<hdl-command-separator />
+											<hdl-command-group label="Actions">
+												<p class="lab-command-label">Actions</p>
+												<hdl-command-item value="create-post">Create new post</hdl-command-item>
+												<hdl-command-item value="upload">Upload file</hdl-command-item>
+												<hdl-command-item value="settings">Settings</hdl-command-item>
+											</hdl-command-group>
+										</hdl-command-list>
+									</hdl-command>
+								</hdl-command-dialog>
+								<p
+									class="text-sm leading-6"
+									style="color: var(--hdl-lab-text-muted);"
+									data-testid="command-dialog-state"
+								>
+									Dialog open: {{ commandDialogOpen() }} · Last selection:
+									{{ commandDialogSelection() || 'none' }}
+								</p>
+							</div>
+						</div>
+
+						<div class="space-y-3">
+							<p
+								data-headless-section-label
+								class="text-xs font-semibold uppercase tracking-[0.2em]"
+							>
+								Separator, Progress, Spinner, and Skeleton
+							</p>
+							<div class="grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-center">
+								<div class="space-y-3">
+									<div class="flex items-center gap-3">
+										<span>Uploading assets</span>
+										<hdl-separator [decorative]="false" data-testid="separator-demo" />
+										<span>{{ progressValue }}%</span>
+									</div>
+									<hdl-progress [value]="progressValue" data-testid="progress-demo" />
+									<div class="flex items-center gap-3">
+										<hdl-spinner [active]="spinnerActive" data-testid="spinner-demo" />
+										<button
+											type="button"
+											class="lab-trigger"
+											data-testid="progress-advance"
+											(click)="advanceProgress()"
+										>
+											Advance progress
+										</button>
+									</div>
+									<p
+										class="text-sm leading-6"
+										style="color: var(--hdl-lab-text-muted);"
+										data-testid="progress-state"
+									>
+										Progress: {{ progressValue }}%. Spinner:
+										{{ spinnerActive ? 'active' : 'inactive' }}
+									</p>
+								</div>
+								<hdl-separator
+									orientation="vertical"
+									[decorative]="false"
+									data-testid="separator-vertical"
+								/>
+								<div class="space-y-3">
+									<button
+										type="button"
+										class="lab-trigger"
+										data-testid="skeleton-toggle"
+										(click)="toggleSkeletonLoaded()"
+									>
+										{{ skeletonLoaded ? 'Show skeleton' : 'Show loaded card' }}
+									</button>
+									@if (!skeletonLoaded) {
+										<hdl-skeleton data-testid="skeleton-demo">Loading card</hdl-skeleton>
+									} @else {
+										<div class="rounded-2xl border px-4 py-3" data-testid="skeleton-loaded-card">
+											Loaded article card
+										</div>
+									}
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<article
+					data-headless-card
+					class="rounded-[2rem] border p-6"
+					data-testid="overlay-primitives-card"
+				>
+					<div class="space-y-6">
+						<div class="space-y-2">
+							<h2 class="text-2xl font-bold">Overlay and Context Primitives</h2>
+							<p class="text-sm leading-6" style="color: var(--hdl-lab-text-muted);">
+								Context menus, hover cards, alert dialogs, and drawers should all be globally
+								themeable without becoming invisible implementation details.
+							</p>
+						</div>
+
+						<div class="grid gap-6">
+							<div class="space-y-3">
+								<p
+									data-headless-section-label
+									class="text-xs font-semibold uppercase tracking-[0.2em]"
+								>
+									Context Menu + Hover Card
+								</p>
+								<div class="flex flex-wrap gap-3">
+									<div
+										[hdlContextMenuTrigger]="contextMenuTemplate"
+										data-testid="context-menu-target"
+										tabindex="0"
+										class="lab-trigger"
+									>
+										Right click canvas
+									</div>
+									<button
+										type="button"
+										[hdlHoverCardTrigger]="hoverCardTemplate"
+										data-testid="hover-card-trigger"
+										class="lab-trigger"
+									>
+										Hover author card
+									</button>
+								</div>
+								<ng-template #contextMenuTemplate>
+									<hdl-context-menu-content data-testid="context-menu-content">
+										<div class="grid gap-2">
+											<button
+												type="button"
+												class="lab-trigger"
+												data-testid="context-action-copy"
+												(click)="contextMenuAction = 'copy'"
+											>
+												Copy block
+											</button>
+											<button
+												type="button"
+												class="lab-trigger"
+												data-testid="context-action-archive"
+												(click)="contextMenuAction = 'archive'"
+											>
+												Archive block
+											</button>
+										</div>
+									</hdl-context-menu-content>
+								</ng-template>
+								<ng-template #hoverCardTemplate>
+									<hdl-hover-card-content data-testid="hover-card-content">
+										<div class="space-y-1">
+											<p class="text-sm font-semibold">Dom Murillo</p>
+											<p class="text-sm" style="color: var(--hdl-lab-text-muted);">
+												Editing the Managua headless theme contract.
+											</p>
+										</div>
+									</hdl-hover-card-content>
+								</ng-template>
+								<p
+									class="text-sm leading-6"
+									style="color: var(--hdl-lab-text-muted);"
+									data-testid="context-menu-state"
+								>
+									Context menu action: {{ contextMenuAction }}
+								</p>
+							</div>
+
+							<div class="space-y-3">
+								<p
+									data-headless-section-label
+									class="text-xs font-semibold uppercase tracking-[0.2em]"
+								>
+									Alert Dialog + Drawer
+								</p>
+								<div class="flex flex-wrap gap-3">
+									<button
+										type="button"
+										data-testid="alert-dialog-trigger"
+										(click)="openAlertDialog()"
+										class="lab-trigger"
+									>
+										Open alert dialog
+									</button>
+									<button
+										type="button"
+										data-testid="drawer-trigger"
+										(click)="openDrawer()"
+										class="lab-trigger"
+									>
+										Open drawer
+									</button>
+								</div>
+								<p class="text-sm leading-6" style="color: var(--hdl-lab-text-muted);">
+									The alert dialog reuses the shared overlay service with a distinct host contract,
+									and the drawer uses side-aware panel classes instead of faking a centered modal.
+								</p>
+							</div>
+						</div>
+					</div>
+				</article>
+			</section>
+
+			<section
 				id="toast-primitives"
 				data-headless-card
 				class="rounded-[2rem] border p-6"
@@ -1029,6 +1564,7 @@ type PrimitiveCoverage = {
 export class HeadlessStylingLabPage {
 	private readonly document = inject(DOCUMENT);
 	private readonly dialogService = inject(HdlDialogService);
+	private readonly drawerService = inject(HdlDrawerService);
 	private readonly toastService = inject(HdlToastService);
 	readonly primitiveCoverage: PrimitiveCoverage[] = [
 		{
@@ -1058,6 +1594,69 @@ export class HeadlessStylingLabPage {
 			intent: 'Add, remove, and backspace tag values from one headless group.',
 			anchor: 'form-foundations',
 			sectionLabel: 'Form Foundations',
+		},
+		{
+			slug: 'collapsible',
+			label: 'Collapsible',
+			intent: 'Toggle a hidden region with an explicit open and closed contract.',
+			anchor: 'extended-primitives',
+			sectionLabel: 'Utility and Command Primitives',
+		},
+		{
+			slug: 'toggle',
+			label: 'Toggle',
+			intent: 'Flip a single pressed state from one host.',
+			anchor: 'extended-primitives',
+			sectionLabel: 'Utility and Command Primitives',
+		},
+		{
+			slug: 'toggle-group',
+			label: 'Toggle Group',
+			intent: 'Manage a formatting cluster with multi-select behavior.',
+			anchor: 'extended-primitives',
+			sectionLabel: 'Utility and Command Primitives',
+		},
+		{
+			slug: 'select',
+			label: 'Select',
+			intent: 'Choose a single workflow value from a headless trigger and popup.',
+			anchor: 'extended-primitives',
+			sectionLabel: 'Utility and Command Primitives',
+		},
+		{
+			slug: 'command',
+			label: 'Command',
+			intent: 'Filter a command list live and select a result.',
+			anchor: 'extended-primitives',
+			sectionLabel: 'Utility and Command Primitives',
+		},
+		{
+			slug: 'separator',
+			label: 'Separator',
+			intent: 'Expose structural separators without bundling visual rules.',
+			anchor: 'extended-primitives',
+			sectionLabel: 'Utility and Command Primitives',
+		},
+		{
+			slug: 'progress',
+			label: 'Progress',
+			intent: 'Expose determinate loading state and value semantics.',
+			anchor: 'extended-primitives',
+			sectionLabel: 'Utility and Command Primitives',
+		},
+		{
+			slug: 'spinner',
+			label: 'Spinner',
+			intent: 'Surface status semantics for active loading affordances.',
+			anchor: 'extended-primitives',
+			sectionLabel: 'Utility and Command Primitives',
+		},
+		{
+			slug: 'skeleton',
+			label: 'Skeleton',
+			intent: 'Placeholder loading blocks still need a stable host contract.',
+			anchor: 'extended-primitives',
+			sectionLabel: 'Utility and Command Primitives',
 		},
 		{
 			slug: 'switch',
@@ -1171,6 +1770,34 @@ export class HeadlessStylingLabPage {
 			anchor: 'navigation-primitives',
 			sectionLabel: 'Navigation and Data Primitives',
 		},
+		{
+			slug: 'context-menu',
+			label: 'Context Menu',
+			intent: 'Open a menu from pointer context instead of a plain click trigger.',
+			anchor: 'extended-primitives',
+			sectionLabel: 'Overlay and Context Primitives',
+		},
+		{
+			slug: 'hover-card',
+			label: 'Hover Card',
+			intent: 'Reveal contextual card content after hover intent.',
+			anchor: 'extended-primitives',
+			sectionLabel: 'Overlay and Context Primitives',
+		},
+		{
+			slug: 'alert-dialog',
+			label: 'Alert Dialog',
+			intent: 'Render destructive confirmation content with an alertdialog host.',
+			anchor: 'extended-primitives',
+			sectionLabel: 'Overlay and Context Primitives',
+		},
+		{
+			slug: 'drawer',
+			label: 'Drawer',
+			intent: 'Slide in a side-aware overlay with a dedicated drawer contract.',
+			anchor: 'extended-primitives',
+			sectionLabel: 'Overlay and Context Primitives',
+		},
 	];
 	readonly themeMode = signal<'light' | 'dark'>(
 		this.document.documentElement.classList.contains('dark') ? 'dark' : 'light',
@@ -1196,6 +1823,19 @@ export class HeadlessStylingLabPage {
 		{ label: 'Input', value: 'input' },
 		{ label: 'Textarea', value: 'textarea' },
 		{ label: 'Chips', value: 'chips' },
+		{ label: 'Collapsible', value: 'collapsible' },
+		{ label: 'Toggle', value: 'toggle' },
+		{ label: 'Toggle Group', value: 'toggle-group' },
+		{ label: 'Select', value: 'select' },
+		{ label: 'Command', value: 'command' },
+		{ label: 'Separator', value: 'separator' },
+		{ label: 'Progress', value: 'progress' },
+		{ label: 'Spinner', value: 'spinner' },
+		{ label: 'Skeleton', value: 'skeleton' },
+		{ label: 'Context Menu', value: 'context-menu' },
+		{ label: 'Hover Card', value: 'hover-card' },
+		{ label: 'Alert Dialog', value: 'alert-dialog' },
+		{ label: 'Drawer', value: 'drawer' },
 	];
 	readonly comboboxQuery = signal('');
 	readonly comboboxSelection = signal('none');
@@ -1222,6 +1862,17 @@ export class HeadlessStylingLabPage {
 	checkboxFeatured = true;
 	radioDensity = 'comfortable';
 	listboxValues = ['tokens'];
+	collapsibleOpen = false;
+	soloToggleOn = false;
+	toggleGroupValues = ['bold'];
+	selectValue: string | null = 'review';
+	commandSelection: string | null = null;
+	readonly commandDialogOpen = signal(false);
+	readonly commandDialogSelection = signal<string | null>(null);
+	progressValue = 36;
+	spinnerActive = true;
+	skeletonLoaded = false;
+	contextMenuAction = 'none';
 	treeValues = ['settings'];
 	treeContentExpanded = true;
 	gridSelection = 'none';
@@ -1259,6 +1910,15 @@ export class HeadlessStylingLabPage {
 		this.lastMenuAction = action;
 	}
 
+	advanceProgress(): void {
+		this.progressValue = Math.min(this.progressValue + 24, 100);
+		this.spinnerActive = this.progressValue < 100;
+	}
+
+	toggleSkeletonLoaded(): void {
+		this.skeletonLoaded = !this.skeletonLoaded;
+	}
+
 	updateComboboxQuery(event: Event): void {
 		if (event.target instanceof HTMLInputElement) {
 			this.comboboxQuery.set(event.target.value);
@@ -1280,5 +1940,18 @@ export class HeadlessStylingLabPage {
 	updateEditorialNotes(event: Event): void {
 		this.editorialNotes =
 			event.target instanceof HTMLTextAreaElement ? event.target.value : this.editorialNotes;
+	}
+
+	openAlertDialog(): void {
+		this.dialogService.open(HeadlessStylingLabAlertDialogComponent, {
+			width: 'min(30rem, calc(100vw - 2rem))',
+		});
+	}
+
+	openDrawer(): void {
+		this.drawerService.open(HeadlessStylingLabDrawerComponent, {
+			side: 'right',
+			width: 'min(92vw, 28rem)',
+		});
 	}
 }
