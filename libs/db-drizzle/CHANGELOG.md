@@ -1,3 +1,42 @@
+## 0.5.5 (2026-03-09)
+
+### 🚀 Features
+
+- OpenTelemetry observability plugin with metrics, Prometheus, and dashboard ([#53](https://github.com/DonaldMurillo/momentum-cms/pull/53))
+- swappable admin pages & layout slots with security hardening ([#51](https://github.com/DonaldMurillo/momentum-cms/pull/51))
+- Versioning & drafts with draft/publish workflow ([#50](https://github.com/DonaldMurillo/momentum-cms/pull/50))
+- NestJS server adapter + E2E stabilization (0.5.2) ([#48](https://github.com/DonaldMurillo/momentum-cms/pull/48))
+- S3, auth plugin wiring, redirects, and E2E tooling ([#41](https://github.com/DonaldMurillo/momentum-cms/pull/41))
+- client-side page view tracking and content performance improvements ([#39](https://github.com/DonaldMurillo/momentum-cms/pull/39))
+- blocks showcase with articles, pages, and UI fixes ([#36](https://github.com/DonaldMurillo/momentum-cms/pull/36))
+- implement Payload-style migration CLI workflow with clone-test-apply safety ([#35](https://github.com/DonaldMurillo/momentum-cms/pull/35))
+- add named tabs support with nested data grouping and UI improvements ([#30](https://github.com/DonaldMurillo/momentum-cms/pull/30))
+- implement soft deletes with full stack support ([#22](https://github.com/DonaldMurillo/momentum-cms/pull/22))
+- implement globals (singleton collections) with full stack support ([#20](https://github.com/DonaldMurillo/momentum-cms/pull/20))
+- UI polish fixes and database-level FK constraints for relationship integrity ([#13](https://github.com/DonaldMurillo/momentum-cms/pull/13))
+- Add document versioning and drafts system ([#5](https://github.com/DonaldMurillo/momentum-cms/pull/5))
+- Add seeding feature with idempotent data initialization ([#1](https://github.com/DonaldMurillo/momentum-cms/pull/1))
+- Add authentication, UI library, and theme system ([0d387205](https://github.com/DonaldMurillo/momentum-cms/commit/0d387205))
+- Add Tailwind design system and fix SQLite reliability ([6dd79b11](https://github.com/DonaldMurillo/momentum-cms/commit/6dd79b11))
+- Implement admin UI with API integration and SSR hydration ([9ed7b2bd](https://github.com/DonaldMurillo/momentum-cms/commit/9ed7b2bd))
+- Initialize Momentum CMS foundation ([f64f5817](https://github.com/DonaldMurillo/momentum-cms/commit/f64f5817))
+
+### 🩹 Fixes
+
+- add public access to form-builder npm publish config ([#46](https://github.com/DonaldMurillo/momentum-cms/pull/46))
+- Resolve non-null assertion bugs and CLAUDE.md violations ([#44](https://github.com/DonaldMurillo/momentum-cms/pull/44))
+- **create-momentum-app:** add shell option to execFileSync for Windows ([#28](https://github.com/DonaldMurillo/momentum-cms/pull/28))
+- correct repository URLs and add GitHub link to CLI ([#26](https://github.com/DonaldMurillo/momentum-cms/pull/26))
+- address security vulnerabilities from code review ([#9](https://github.com/DonaldMurillo/momentum-cms/pull/9))
+- address security and reliability issues from code review ([#7](https://github.com/DonaldMurillo/momentum-cms/pull/7))
+
+### ❤️ Thank You
+
+- Claude Haiku 4.5
+- Claude Opus 4.5
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.5.4 (2026-03-07)
 
 ### 🚀 Features

@@ -1,3 +1,40 @@
+## 0.5.5 (2026-03-09)
+
+### 🚀 Features
+
+- swappable admin pages & layout slots with security hardening ([#51](https://github.com/DonaldMurillo/momentum-cms/pull/51))
+- NestJS server adapter + E2E stabilization (0.5.2) ([#48](https://github.com/DonaldMurillo/momentum-cms/pull/48))
+- S3, auth plugin wiring, redirects, and E2E tooling ([#41](https://github.com/DonaldMurillo/momentum-cms/pull/41))
+- client-side page view tracking and content performance improvements ([#39](https://github.com/DonaldMurillo/momentum-cms/pull/39))
+- blocks showcase with articles, pages, and UI fixes ([#36](https://github.com/DonaldMurillo/momentum-cms/pull/36))
+- add named tabs support with nested data grouping and UI improvements ([#30](https://github.com/DonaldMurillo/momentum-cms/pull/30))
+- add tracking rules, content performance, and block analytics ([#21](https://github.com/DonaldMurillo/momentum-cms/pull/21))
+- visual block editor & auth-gated admin mode ([#18](https://github.com/DonaldMurillo/momentum-cms/pull/18))
+- Add display formatting and complex field rendering ([#14](https://github.com/DonaldMurillo/momentum-cms/pull/14))
+- UI polish fixes and database-level FK constraints for relationship integrity ([#13](https://github.com/DonaldMurillo/momentum-cms/pull/13))
+- migrate landing page to Momentum CMS UI components ([#3](https://github.com/DonaldMurillo/momentum-cms/pull/3))
+- **ui:** enhance command palette with autofocus, filtering, and keyboard nav ([#2](https://github.com/DonaldMurillo/momentum-cms/pull/2))
+- Add authentication, UI library, and theme system ([0d387205](https://github.com/DonaldMurillo/momentum-cms/commit/0d387205))
+
+### 🩹 Fixes
+
+- add public access to form-builder npm publish config ([#46](https://github.com/DonaldMurillo/momentum-cms/pull/46))
+- Resolve non-null assertion bugs and CLAUDE.md violations ([#44](https://github.com/DonaldMurillo/momentum-cms/pull/44))
+- fix nav highlighting and resolve pre-existing E2E test failures ([#34](https://github.com/DonaldMurillo/momentum-cms/pull/34))
+- **create-momentum-app:** add shell option to execFileSync for Windows ([#28](https://github.com/DonaldMurillo/momentum-cms/pull/28))
+- correct repository URLs and add GitHub link to CLI ([#26](https://github.com/DonaldMurillo/momentum-cms/pull/26))
+- **a11y:** resolve E2E, focus indicator, and error sanitization issues ([#19](https://github.com/DonaldMurillo/momentum-cms/pull/19))
+- resolve CUD toast interceptor issues ([#17](https://github.com/DonaldMurillo/momentum-cms/pull/17), [#1](https://github.com/DonaldMurillo/momentum-cms/issues/1), [#2](https://github.com/DonaldMurillo/momentum-cms/issues/2), [#3](https://github.com/DonaldMurillo/momentum-cms/issues/3), [#4](https://github.com/DonaldMurillo/momentum-cms/issues/4))
+- **admin:** resolve entity sheet issues ([#16](https://github.com/DonaldMurillo/momentum-cms/pull/16))
+- address 7 critical and high-severity security and validation bugs ([#12](https://github.com/DonaldMurillo/momentum-cms/pull/12))
+
+### ❤️ Thank You
+
+- Claude Haiku 4.5
+- Claude Opus 4.5
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.5.4 (2026-03-07)
 
 This was a version bump only for ui to align it with other projects, there were no code changes.
