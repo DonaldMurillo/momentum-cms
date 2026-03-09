@@ -56,6 +56,53 @@ describe('HdlAccordion', () => {
 		expect(contents[1].hidden).toBe(true);
 	});
 
+	it('should expand content when expanded signal is set', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+
+		const triggerDebug = fixture.debugElement.query(
+			(de) => de.nativeElement.tagName === 'HDL-ACCORDION-TRIGGER',
+		);
+		const triggerComp = triggerDebug.componentInstance as HdlAccordionTrigger;
+		const contents: HTMLElement[] = Array.from(
+			fixture.nativeElement.querySelectorAll('hdl-accordion-content'),
+		);
+
+		triggerComp.trigger.expanded.set(true);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		expect(contents[0].hidden).toBe(false);
+		expect(contents[0].getAttribute('data-state')).toBe('open');
+	});
+
+	it('should collapse content when expanded signal is toggled back', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+
+		const triggerDebug = fixture.debugElement.query(
+			(de) => de.nativeElement.tagName === 'HDL-ACCORDION-TRIGGER',
+		);
+		const triggerComp = triggerDebug.componentInstance as HdlAccordionTrigger;
+		const content: HTMLElement = fixture.nativeElement.querySelector('hdl-accordion-content');
+
+		triggerComp.trigger.expanded.set(true);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+		expect(content.hidden).toBe(false);
+
+		triggerComp.trigger.expanded.set(false);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+		expect(content.hidden).toBe(true);
+		expect(content.getAttribute('data-state')).toBe('closed');
+	});
+
 	it('should expose styling contract attributes on the accordion hosts', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

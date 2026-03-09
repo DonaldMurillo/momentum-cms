@@ -45,8 +45,29 @@ describe('HdlMenu', () => {
 		fixture.detectChanges();
 
 		const items = fixture.nativeElement.querySelectorAll('hdl-menu-item');
-		// The disabled item should have aria-disabled set by the MenuItem directive
 		expect(items[1].getAttribute('aria-disabled')).toBe('true');
+	});
+
+	it('should update active state when menu item receives focus', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const items: HTMLElement[] = Array.from(
+			fixture.nativeElement.querySelectorAll('hdl-menu-item'),
+		);
+
+		items[0].focus();
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const itemDebug = fixture.debugElement.query((de) => de.nativeElement === items[0]);
+		if (itemDebug) {
+			const comp = itemDebug.componentInstance as HdlMenuItem;
+			expect(comp.menuItem.active()).toBe(true);
+		}
 	});
 
 	it('should expose styling contract attributes on the menu and items', () => {

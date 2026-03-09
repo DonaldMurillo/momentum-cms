@@ -56,6 +56,53 @@ describe('HdlTree', () => {
 		expect(items[0].getAttribute('role')).toBe('treeitem');
 	});
 
+	it('should reflect selection state when values change via the tree API', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const treeDebug = fixture.debugElement.query((de) => de.nativeElement.tagName === 'HDL-TREE');
+		const treeComp = treeDebug.componentInstance as HdlTree;
+		const items: HTMLElement[] = Array.from(
+			fixture.nativeElement.querySelectorAll('hdl-tree-item'),
+		);
+
+		treeComp.tree.values.set(['item1']);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		expect(items[0].getAttribute('data-state')).toBe('selected');
+		expect(items[1].getAttribute('data-state')).toBe('unselected');
+	});
+
+	it('should update selection state when values change to a different item', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const treeDebug = fixture.debugElement.query((de) => de.nativeElement.tagName === 'HDL-TREE');
+		const treeComp = treeDebug.componentInstance as HdlTree;
+		const items: HTMLElement[] = Array.from(
+			fixture.nativeElement.querySelectorAll('hdl-tree-item'),
+		);
+
+		treeComp.tree.values.set(['item1']);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+		expect(items[0].getAttribute('data-state')).toBe('selected');
+
+		treeComp.tree.values.set(['item2']);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+		expect(items[1].getAttribute('data-state')).toBe('selected');
+		expect(items[0].getAttribute('data-state')).toBe('unselected');
+	});
+
 	it('should expose styling contract attributes on the tree and items', async () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

@@ -9,6 +9,7 @@ let toastIdCounter = 0;
 export class HdlToastService {
 	private readonly document = inject(DOCUMENT);
 	private readonly liveAnnouncer = inject(LiveAnnouncer);
+	private readonly timerIds = new Map<string, number>();
 
 	readonly position = signal<ToastPosition>('bottom-right');
 	readonly maxToasts = signal(5);
@@ -41,9 +42,13 @@ export class HdlToastService {
 		void this.liveAnnouncer.announce(announcement, politeness);
 
 		if (toast.duration > 0) {
-			this.document.defaultView?.setTimeout(() => {
+			const timerId = this.document.defaultView?.setTimeout(() => {
+				this.timerIds.delete(id);
 				this.dismiss(id);
 			}, toast.duration);
+			if (timerId != null) {
+				this.timerIds.set(id, timerId);
+			}
 		}
 
 		return id;
@@ -62,10 +67,19 @@ export class HdlToastService {
 	}
 
 	dismiss(id: string): void {
+		const timerId = this.timerIds.get(id);
+		if (timerId != null) {
+			this.document.defaultView?.clearTimeout(timerId);
+			this.timerIds.delete(id);
+		}
 		this.toasts.update((toasts) => toasts.filter((t) => t.id !== id));
 	}
 
 	dismissAll(): void {
+		for (const timerId of this.timerIds.values()) {
+			this.document.defaultView?.clearTimeout(timerId);
+		}
+		this.timerIds.clear();
 		this.toasts.set([]);
 	}
 

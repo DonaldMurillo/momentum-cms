@@ -54,6 +54,40 @@ describe('HdlCombobox', () => {
 		expect(input.getAttribute('role')).toBe('combobox');
 	});
 
+	it('should start in closed state', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const host = fixture.nativeElement.querySelector('hdl-combobox');
+		expect(host.getAttribute('data-state')).toBe('closed');
+	});
+
+	it('should expose disabled state via data attribute', async () => {
+		const fixture = TestBed.createComponent(TestHostDisabled);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const host = fixture.nativeElement.querySelector('hdl-combobox');
+		expect(host.getAttribute('data-disabled')).toBe('true');
+	});
+
+	it('should expose Combobox directive via inject()', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const comboboxDebug = fixture.debugElement.query(
+			(de) => de.nativeElement.tagName === 'HDL-COMBOBOX',
+		);
+		const comp = comboboxDebug.componentInstance as HdlCombobox;
+		expect(comp.combobox).toBeTruthy();
+		expect(comp.disabled()).toBe(false);
+	});
+
 	it('should expose styling contract attributes on the combobox and input', async () => {
 		const fixture = TestBed.createComponent(TestHostDisabled);
 		fixture.detectChanges();

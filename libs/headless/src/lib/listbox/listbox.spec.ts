@@ -37,6 +37,60 @@ describe('HdlListbox', () => {
 		expect(options[1].textContent).toContain('Option 2');
 	});
 
+	it('should reflect selection state when values change via the listbox API', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const listboxDebug = fixture.debugElement.query(
+			(de) => de.nativeElement.tagName === 'HDL-LISTBOX',
+		);
+		const listboxComp = listboxDebug.componentInstance as HdlListbox;
+		const options: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('hdl-option'));
+
+		listboxComp.listbox.values.set(['opt1']);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		expect(options[0].getAttribute('data-state')).toBe('selected');
+		expect(options[1].getAttribute('data-state')).toBe('unselected');
+	});
+
+	it('should update selection state when values change to a different option', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const listboxDebug = fixture.debugElement.query(
+			(de) => de.nativeElement.tagName === 'HDL-LISTBOX',
+		);
+		const listboxComp = listboxDebug.componentInstance as HdlListbox;
+		const options: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('hdl-option'));
+
+		listboxComp.listbox.values.set(['opt1']);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+		expect(options[0].getAttribute('data-state')).toBe('selected');
+
+		listboxComp.listbox.values.set(['opt2']);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+		expect(options[1].getAttribute('data-state')).toBe('selected');
+		expect(options[0].getAttribute('data-state')).toBe('unselected');
+	});
+
+	it('should mark disabled options with data-disabled', () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		const options = fixture.nativeElement.querySelectorAll('hdl-option');
+		expect(options[2].getAttribute('data-disabled')).toBe('true');
+	});
+
 	it('should expose Listbox directive via inject()', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

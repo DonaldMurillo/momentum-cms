@@ -46,6 +46,56 @@ describe('HdlToolbar', () => {
 		expect(el.getAttribute('role')).toBe('toolbar');
 	});
 
+	it('should reflect selection state when values change via the aria directive', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const toolbarDebug = fixture.debugElement.query(
+			(de) => de.nativeElement.tagName === 'HDL-TOOLBAR',
+		);
+		const toolbarComp = toolbarDebug.componentInstance as HdlToolbar;
+		const widgets: HTMLElement[] = Array.from(
+			fixture.nativeElement.querySelectorAll('button[hdl-toolbar-widget]'),
+		);
+
+		toolbarComp.toolbar.values.set(['bold']);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		expect(widgets[0].getAttribute('data-state')).toBe('selected');
+		expect(widgets[1].getAttribute('data-state')).toBe('unselected');
+	});
+
+	it('should update selection state when values change to a different widget', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const toolbarDebug = fixture.debugElement.query(
+			(de) => de.nativeElement.tagName === 'HDL-TOOLBAR',
+		);
+		const toolbarComp = toolbarDebug.componentInstance as HdlToolbar;
+		const widgets: HTMLElement[] = Array.from(
+			fixture.nativeElement.querySelectorAll('button[hdl-toolbar-widget]'),
+		);
+
+		toolbarComp.toolbar.values.set(['bold']);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+		expect(widgets[0].getAttribute('data-state')).toBe('selected');
+
+		toolbarComp.toolbar.values.set(['italic']);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+		expect(widgets[1].getAttribute('data-state')).toBe('selected');
+	});
+
 	it('should expose styling contract attributes on the toolbar and widgets', async () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

@@ -1,9 +1,9 @@
-import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
-import { A11yModule } from '@angular/cdk/a11y';
+import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
+import { CdkTrapFocus } from '@angular/cdk/a11y';
 
 @Component({
 	selector: 'hdl-drawer',
-	imports: [A11yModule],
+	hostDirectives: [CdkTrapFocus],
 	host: {
 		'[attr.data-slot]': '"drawer"',
 		'[attr.data-state]': '"open"',
@@ -13,17 +13,17 @@ import { A11yModule } from '@angular/cdk/a11y';
 		'[attr.aria-labelledby]': 'titleId()',
 		'[attr.aria-describedby]': 'descriptionId()',
 	},
-	template: `
-		<div cdkTrapFocus cdkTrapFocusAutoCapture>
-			<ng-content />
-		</div>
-	`,
+	template: `<ng-content />`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HdlDrawer {
 	readonly side = input<'left' | 'right' | 'top' | 'bottom'>('right');
 	readonly titleId = signal<string | null>(null);
 	readonly descriptionId = signal<string | null>(null);
+
+	constructor() {
+		inject(CdkTrapFocus).autoCapture = true;
+	}
 
 	registerTitle(id: string): void {
 		this.titleId.set(id);

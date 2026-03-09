@@ -80,6 +80,28 @@ describe('HdlGrid', () => {
 		expect(cells[0].getAttribute('role')).toBe('gridcell');
 	});
 
+	it('should update active state when a cell receives focus', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const cells: HTMLElement[] = Array.from(
+			fixture.nativeElement.querySelectorAll('hdl-grid-cell'),
+		);
+
+		cells[0].focus();
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const cellDebug = fixture.debugElement.query((de) => de.nativeElement === cells[0]);
+		if (cellDebug) {
+			const comp = cellDebug.componentInstance as HdlGridCell;
+			expect(comp.gridCell.active()).toBe(true);
+		}
+	});
+
 	it('should expose styling contract attributes on grid rows and cells', async () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

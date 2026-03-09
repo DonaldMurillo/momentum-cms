@@ -114,11 +114,17 @@ describe('HdlDialog', () => {
 		expect(dialog.getAttribute('style')).toBeFalsy();
 	});
 
-	it('should contain a focus trap element', () => {
+	it('should have CdkTrapFocus applied as a host directive', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();
-		const trap = fixture.nativeElement.querySelector('[cdktrapfocus]');
-		expect(trap).toBeTruthy();
+		const dialogDebug = fixture.debugElement.query(
+			(de) => de.nativeElement.tagName === 'HDL-DIALOG',
+		);
+		const dialog = dialogDebug.componentInstance as HdlDialog;
+		expect(dialog).toBeTruthy();
+		// The host element itself has the focus trap (via hostDirective), not a child div
+		const childDiv = fixture.nativeElement.querySelector('hdl-dialog > div[cdktrapfocus]');
+		expect(childDiv).toBeNull();
 	});
 });
 

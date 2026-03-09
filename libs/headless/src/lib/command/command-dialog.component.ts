@@ -59,6 +59,12 @@ export class HdlCommandDialog {
 	/** Accessible label for the dialog. */
 	readonly label = input('Command palette');
 
+	/** Overlay width. Consumers can override the default. */
+	readonly overlayWidth = input('min(40rem, calc(100vw - 2rem))');
+
+	/** Overlay vertical offset from top. */
+	readonly overlayTop = input('15vh');
+
 	/** Emitted when the dialog is closed. */
 	readonly closed = output<void>();
 
@@ -107,7 +113,11 @@ export class HdlCommandDialog {
 	private openOverlay(): void {
 		if (this.overlayRef?.hasAttached()) return;
 
-		const positionStrategy = this.overlay.position().global().centerHorizontally().top('15vh');
+		const positionStrategy = this.overlay
+			.position()
+			.global()
+			.centerHorizontally()
+			.top(this.overlayTop());
 
 		this.overlayRef = this.overlay.create({
 			positionStrategy,
@@ -115,7 +125,7 @@ export class HdlCommandDialog {
 			hasBackdrop: true,
 			backdropClass: 'hdl-command-dialog-backdrop',
 			panelClass: 'hdl-command-dialog-panel',
-			width: 'min(40rem, calc(100vw - 2rem))',
+			width: this.overlayWidth(),
 		});
 
 		this.portal = new TemplatePortal(this.dialogTpl(), this.vcr);
@@ -134,15 +144,15 @@ export class HdlCommandDialog {
 	}
 
 	private closeOverlay(): void {
-		if (this.overlayRef?.hasAttached()) {
-			this.overlayRef.detach();
+		if (this.overlayRef) {
+			this.overlayRef.dispose();
+			this.overlayRef = null;
+			this.portal = null;
 			this.closed.emit();
 		}
 	}
 
 	private disposeOverlay(): void {
-		this.overlayRef?.dispose();
-		this.overlayRef = null;
-		this.portal = null;
+		this.closeOverlay();
 	}
 }

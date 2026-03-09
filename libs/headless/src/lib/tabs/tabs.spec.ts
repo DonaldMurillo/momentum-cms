@@ -56,6 +56,35 @@ describe('HdlTabs', () => {
 		expect(panels[1].hidden).toBe(true);
 	});
 
+	it('should switch panels when selectedTab changes via the aria directive', async () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const tabListDebug = fixture.debugElement.query(
+			(de) => de.nativeElement.tagName === 'HDL-TAB-LIST',
+		);
+		const tabListComp = tabListDebug.componentInstance as HdlTabList;
+		const tabs: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('hdl-tab'));
+		const panels: HTMLElement[] = Array.from(
+			fixture.nativeElement.querySelectorAll('hdl-tab-panel'),
+		);
+
+		expect(panels[0].hidden).toBe(false);
+		expect(panels[1].hidden).toBe(true);
+
+		tabListComp.tabList.selectedTab.set('tab2');
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		expect(tabs[1].getAttribute('data-state')).toBe('selected');
+		expect(tabs[0].getAttribute('data-state')).toBe('unselected');
+		expect(panels[1].hidden).toBe(false);
+		expect(panels[0].hidden).toBe(true);
+	});
+
 	it('should expose styling contract attributes for tabs and panels', async () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();
