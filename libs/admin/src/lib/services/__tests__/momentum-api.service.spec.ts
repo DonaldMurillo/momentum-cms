@@ -318,9 +318,9 @@ describe('MomentumAPI - Browser Implementation', () => {
 			req.flush({ doc: mockPost });
 		});
 
-		it('should return null when doc is missing from response', () => {
+		it('should return undefined when doc is missing from response', () => {
 			postsApi.findById$('post-999').subscribe((result) => {
-				expect(result).toBeNull();
+				expect(result).toBeUndefined();
 			});
 
 			const req = httpMock.expectOne('/api/posts/post-999');
