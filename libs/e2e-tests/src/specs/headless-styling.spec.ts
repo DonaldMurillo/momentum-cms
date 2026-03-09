@@ -37,6 +37,10 @@ const inventorySlugs = [
 ] as const;
 
 test.describe('Headless Styling Lab', { tag: ['@headless', '@styling'] }, () => {
+	test.skip(
+		() => process.env['E2E_SERVER_FLAVOR'] === 'nestjs',
+		'Headless styling lab page only exists in the Angular example app',
+	);
 	test.setTimeout(120_000);
 
 	test('shows the full primitive inventory before the demos and renders every slot family', async ({

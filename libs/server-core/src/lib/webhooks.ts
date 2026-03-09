@@ -78,7 +78,9 @@ async function sendWebhook(
 		return;
 	}
 
-	const body = JSON.stringify(payload);
+	const body = JSON.stringify(payload, (_key, value) =>
+		typeof value === 'bigint' ? Number(value) : value,
+	);
 	const maxRetries = webhook.retries ?? 0;
 
 	const headers: Record<string, string> = {

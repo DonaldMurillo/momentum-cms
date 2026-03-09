@@ -424,6 +424,19 @@ export class DocumentNotFoundError extends Error {
 }
 
 /**
+ * Error thrown when a document exists but is not visible due to draft status.
+ * Unlike DocumentNotFoundError (→ 404), this maps to 200 with { doc: null }
+ * so the API does not leak document existence while also not falsely claiming
+ * the resource is missing.
+ */
+export class DraftNotVisibleError extends Error {
+	constructor(collection: string, id: string) {
+		super(`Draft "${id}" in collection "${collection}" is not visible to the current user`);
+		this.name = 'DraftNotVisibleError';
+	}
+}
+
+/**
  * Error thrown when access is denied.
  */
 export class AccessDeniedError extends Error {
