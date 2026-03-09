@@ -4,6 +4,7 @@ import {
 	inject,
 	input,
 	OnDestroy,
+	signal,
 	TemplateRef,
 	ViewContainerRef,
 } from '@angular/core';
@@ -17,7 +18,7 @@ import { getPopoverPositions } from '../popover/popover.utils';
 	exportAs: 'hdlHoverCardTrigger',
 	host: {
 		'[attr.data-slot]': '"hover-card-trigger"',
-		'[attr.data-state]': 'isOpen ? "open" : "closed"',
+		'[attr.data-state]': 'isOpen() ? "open" : "closed"',
 		'(mouseenter)': 'scheduleOpen()',
 		'(mouseleave)': 'scheduleClose()',
 		'(focusin)': 'scheduleOpen()',
@@ -34,14 +35,14 @@ export class HdlHoverCardTrigger implements OnDestroy {
 	private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
 	private readonly viewContainerRef = inject(ViewContainerRef);
 
-	isOpen = false;
+	readonly isOpen = signal(false);
 	private overlayRef: OverlayRef | null = null;
 	private openTimeout: number | null = null;
 	private closeTimeout: number | null = null;
 
 	scheduleOpen(): void {
 		this.clearCloseTimeout();
-		if (this.isOpen) return;
+		if (this.isOpen()) return;
 		this.clearOpenTimeout();
 		this.openTimeout =
 			this.doc.defaultView?.setTimeout(() => this.open(), this.openDelay()) ?? null;
@@ -61,7 +62,7 @@ export class HdlHoverCardTrigger implements OnDestroy {
 	}
 
 	private open(): void {
-		if (this.isOpen) return;
+		if (this.isOpen()) return;
 
 		this.overlayRef = this.overlay.create({
 			positionStrategy: this.overlay
@@ -75,7 +76,7 @@ export class HdlHoverCardTrigger implements OnDestroy {
 
 		const portal = new TemplatePortal(this.hdlHoverCardTrigger(), this.viewContainerRef);
 		this.overlayRef.attach(portal);
-		this.isOpen = true;
+		this.isOpen.set(true);
 
 		this.overlayRef.overlayElement.addEventListener('mouseenter', this.handleOverlayEnter);
 		this.overlayRef.overlayElement.addEventListener('mouseleave', this.handleOverlayLeave);
@@ -94,7 +95,7 @@ export class HdlHoverCardTrigger implements OnDestroy {
 			this.overlayRef.dispose();
 			this.overlayRef = null;
 		}
-		this.isOpen = false;
+		this.isOpen.set(false);
 	}
 
 	private readonly handleOverlayEnter = (): void => {

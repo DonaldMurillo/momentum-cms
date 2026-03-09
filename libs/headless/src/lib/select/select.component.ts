@@ -42,6 +42,12 @@ export class HdlSelect {
 		this.triggerElement = element;
 	}
 
+	unregisterTrigger(element: HTMLElement): void {
+		if (this.triggerElement === element) {
+			this.triggerElement = null;
+		}
+	}
+
 	registerContent(id: string): void {
 		this.contentIdValue = id;
 	}

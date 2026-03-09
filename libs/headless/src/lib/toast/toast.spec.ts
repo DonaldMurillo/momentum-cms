@@ -6,7 +6,25 @@ import { HdlToastContainer } from './toast-container.component';
 
 @Component({
 	imports: [HdlToastContainer],
-	template: `<hdl-toast-container />`,
+	template: `
+		<hdl-toast-container [toastContent]="toastTpl" />
+		<ng-template #toastTpl let-toast let-dismissFn="dismiss">
+			<p data-slot="toast-title">{{ toast.title }}</p>
+			@if (toast.description) {
+				<p data-slot="toast-description">{{ toast.description }}</p>
+			}
+			@if (toast.action; as action) {
+				<button type="button" data-slot="toast-action" (click)="action.onClick()">
+					{{ action.label }}
+				</button>
+			}
+			@if (toast.dismissible) {
+				<button type="button" data-slot="toast-dismiss" (click)="dismissFn(toast.id)">
+					Dismiss
+				</button>
+			}
+		</ng-template>
+	`,
 })
 class ToastHost {}
 
@@ -94,6 +112,22 @@ describe('HdlToastService', () => {
 		expect(toasts[1].title).toBe('Third');
 	});
 
+	it('should clear timers for evicted toasts when exceeding max', () => {
+		vi.useFakeTimers();
+		service.setMaxToasts(2);
+		service.show('First', undefined, { duration: 5000 });
+		service.show('Second', undefined, { duration: 5000 });
+		service.show('Third', undefined, { duration: 5000 });
+
+		// The first toast was evicted — its timer should have been cancelled
+		// Advance past the original duration to verify no stale dismiss runs
+		vi.advanceTimersByTime(5000);
+
+		// Only the two remaining toasts should have been auto-dismissed, not a ghost dismiss
+		expect(service.toasts().length).toBe(0);
+		vi.useRealTimers();
+	});
+
 	it('should set position', () => {
 		service.setPosition('top-center');
 		expect(service.position()).toBe('top-center');
@@ -168,6 +202,18 @@ describe('HdlToastService', () => {
 		expect(toast.getAttribute('data-slot')).toBe('toast');
 		expect(toast.getAttribute('data-variant')).toBe('success');
 		expect(toast.getAttribute('data-dismissible')).toBe('true');
+	});
+
+	it('should not render wrapper divs inside toast (headless)', async () => {
+		const fixture = TestBed.createComponent(ToastHost);
+		service.show('Test', 'Description');
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const toast = fixture.nativeElement.querySelector('hdl-toast');
+		const wrapperDivs = toast.querySelectorAll('div[data-slot]');
+		expect(wrapperDivs.length).toBe(0);
 	});
 
 	it('should render toast title, description, and action content', async () => {

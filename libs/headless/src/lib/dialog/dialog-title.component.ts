@@ -1,10 +1,10 @@
 import {
 	ChangeDetectionStrategy,
 	Component,
-	DestroyRef,
 	effect,
 	inject,
 	input,
+	untracked,
 } from '@angular/core';
 import { HdlDialog } from './dialog.component';
 
@@ -21,18 +21,13 @@ let nextId = 0;
 })
 export class HdlDialogTitle {
 	private readonly dialog = inject(HdlDialog);
-	private readonly destroyRef = inject(DestroyRef);
 	readonly id = input(`hdl-dialog-title-${nextId++}`);
 
-	constructor() {
-		effect(() => {
-			this.dialog.registerTitle(this.id());
+	private readonly registrationEffect = effect((onCleanup) => {
+		const id = this.id();
+		untracked(() => this.dialog.registerTitle(id));
+		onCleanup(() => {
+			untracked(() => this.dialog.unregisterTitle(id));
 		});
-
-		this.destroyRef.onDestroy(() => {
-			queueMicrotask(() => {
-				this.dialog.unregisterTitle(this.id());
-			});
-		});
-	}
+	});
 }

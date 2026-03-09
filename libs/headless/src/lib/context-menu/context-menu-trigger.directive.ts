@@ -4,6 +4,7 @@ import {
 	inject,
 	input,
 	OnDestroy,
+	signal,
 	TemplateRef,
 	ViewContainerRef,
 } from '@angular/core';
@@ -16,7 +17,7 @@ import { TemplatePortal } from '@angular/cdk/portal';
 	exportAs: 'hdlContextMenuTrigger',
 	host: {
 		'[attr.data-slot]': '"context-menu-trigger"',
-		'[attr.data-state]': 'isOpen ? "open" : "closed"',
+		'[attr.data-state]': 'isOpen() ? "open" : "closed"',
 		'(contextmenu)': 'openFromPointer($event)',
 		'(keydown.shift.f10)': 'openFromKeyboard($event)',
 		'(keydown.contextmenu)': 'openFromKeyboard($event)',
@@ -30,7 +31,7 @@ export class HdlContextMenuTrigger implements OnDestroy {
 	private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
 	private readonly viewContainerRef = inject(ViewContainerRef);
 
-	isOpen = false;
+	readonly isOpen = signal(false);
 	private overlayRef: OverlayRef | null = null;
 
 	openFromPointer(event: MouseEvent): void {
@@ -47,7 +48,7 @@ export class HdlContextMenuTrigger implements OnDestroy {
 	close(): void {
 		this.overlayRef?.dispose();
 		this.overlayRef = null;
-		this.isOpen = false;
+		this.isOpen.set(false);
 	}
 
 	ngOnDestroy(): void {
@@ -85,7 +86,7 @@ export class HdlContextMenuTrigger implements OnDestroy {
 
 		const portal = new TemplatePortal(this.hdlContextMenuTrigger(), this.viewContainerRef);
 		this.overlayRef.attach(portal);
-		this.isOpen = true;
+		this.isOpen.set(true);
 
 		this.doc.defaultView?.requestAnimationFrame(() => {
 			const focusable = this.overlayRef?.overlayElement.querySelector<HTMLElement>(

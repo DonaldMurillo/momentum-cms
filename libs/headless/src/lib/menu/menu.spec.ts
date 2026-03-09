@@ -64,10 +64,10 @@ describe('HdlMenu', () => {
 		fixture.detectChanges();
 
 		const itemDebug = fixture.debugElement.query((de) => de.nativeElement === items[0]);
-		if (itemDebug) {
-			const comp = itemDebug.componentInstance as HdlMenuItem;
-			expect(comp.menuItem.active()).toBe(true);
-		}
+		expect(itemDebug).toBeTruthy();
+		if (!itemDebug) throw new Error('Expected debug element for focused menu item');
+		const comp = itemDebug.componentInstance as HdlMenuItem;
+		expect(comp.menuItem.active()).toBe(true);
 	});
 
 	it('should expose styling contract attributes on the menu and items', () => {

@@ -62,7 +62,7 @@ export type { TooltipPosition } from './lib/tooltip/tooltip.types';
 
 // Toast
 export { HdlToastService } from './lib/toast/toast.service';
-export { HdlToastContainer } from './lib/toast/toast-container.component';
+export { HdlToastContainer, type HdlToastContext } from './lib/toast/toast-container.component';
 export { HdlToast } from './lib/toast/toast.component';
 export type {
 	Toast,

@@ -128,6 +128,16 @@ describe('HdlAccordion', () => {
 		expect(triggerComp.panelId()).toBe('p1');
 	});
 
+	it('should expose AccordionGroup aria directive via inject()', () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		const accordionDebug = fixture.debugElement.query(
+			(de) => de.nativeElement.tagName === 'HDL-ACCORDION',
+		);
+		const accordionComp = accordionDebug.componentInstance as HdlAccordion;
+		expect(accordionComp.ariaDirective).toBeTruthy();
+	});
+
 	it('should have no styles on the host element', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

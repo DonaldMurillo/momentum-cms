@@ -118,6 +118,14 @@ describe('HdlTabs', () => {
 		expect(tabListComp.orientation()).toBe('horizontal');
 	});
 
+	it('should expose Tabs aria directive via inject()', () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+		const tabsDebug = fixture.debugElement.query((de) => de.nativeElement.tagName === 'HDL-TABS');
+		const tabsComp = tabsDebug.componentInstance as HdlTabs;
+		expect(tabsComp.ariaDirective).toBeTruthy();
+	});
+
 	it('should have no styles on host elements', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

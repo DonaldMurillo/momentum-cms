@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
 import { OverlayModule } from '@angular/cdk/overlay';
 import { HdlDialog } from './dialog.component';
@@ -128,51 +128,73 @@ describe('HdlDialog', () => {
 	});
 });
 
+@Component({
+	selector: 'hdl-test-host-conditional',
+	imports: [HdlDialog, HdlDialogTitle, HdlDialogDescription],
+	template: `
+		<hdl-dialog>
+			@if (showTitle()) {
+				<hdl-dialog-title>Removable Title</hdl-dialog-title>
+			}
+			@if (showDescription()) {
+				<hdl-dialog-description>Removable Description</hdl-dialog-description>
+			}
+			<p>Dialog content</p>
+		</hdl-dialog>
+	`,
+})
+class TestHostConditional {
+	readonly showTitle = signal(true);
+	readonly showDescription = signal(true);
+}
+
 describe('HdlDialogTitle', () => {
-	it('should unregister its id when destroyed', async () => {
-		const dialog = {
-			registerTitle: vi.fn(),
-			unregisterTitle: vi.fn(),
-		};
-
+	beforeEach(async () => {
 		await TestBed.configureTestingModule({
-			imports: [HdlDialogTitle],
-			providers: [{ provide: HdlDialog, useValue: dialog }],
+			imports: [TestHostConditional],
 		}).compileComponents();
+	});
 
-		const fixture = TestBed.createComponent(HdlDialogTitle);
+	it('should clear aria-labelledby on the real dialog when title is destroyed', async () => {
+		const fixture = TestBed.createComponent(TestHostConditional);
 		fixture.detectChanges();
-		const id = fixture.componentInstance.id();
+		await fixture.whenStable();
+		fixture.detectChanges();
 
-		fixture.destroy();
-		await Promise.resolve();
+		const dialog: HTMLElement = fixture.nativeElement.querySelector('hdl-dialog');
+		expect(dialog.getAttribute('aria-labelledby')).toBeTruthy();
 
-		expect(dialog.registerTitle).toHaveBeenCalledWith(id);
-		expect(dialog.unregisterTitle).toHaveBeenCalledWith(id);
+		fixture.componentInstance.showTitle.set(false);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		expect(dialog.getAttribute('aria-labelledby')).toBeNull();
 	});
 });
 
 describe('HdlDialogDescription', () => {
-	it('should unregister its id when destroyed', async () => {
-		const dialog = {
-			registerDescription: vi.fn(),
-			unregisterDescription: vi.fn(),
-		};
-
+	beforeEach(async () => {
 		await TestBed.configureTestingModule({
-			imports: [HdlDialogDescription],
-			providers: [{ provide: HdlDialog, useValue: dialog }],
+			imports: [TestHostConditional],
 		}).compileComponents();
+	});
 
-		const fixture = TestBed.createComponent(HdlDialogDescription);
+	it('should clear aria-describedby on the real dialog when description is destroyed', async () => {
+		const fixture = TestBed.createComponent(TestHostConditional);
 		fixture.detectChanges();
-		const id = fixture.componentInstance.id();
+		await fixture.whenStable();
+		fixture.detectChanges();
 
-		fixture.destroy();
-		await Promise.resolve();
+		const dialog: HTMLElement = fixture.nativeElement.querySelector('hdl-dialog');
+		expect(dialog.getAttribute('aria-describedby')).toBeTruthy();
 
-		expect(dialog.registerDescription).toHaveBeenCalledWith(id);
-		expect(dialog.unregisterDescription).toHaveBeenCalledWith(id);
+		fixture.componentInstance.showDescription.set(false);
+		fixture.detectChanges();
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		expect(dialog.getAttribute('aria-describedby')).toBeNull();
 	});
 });
 

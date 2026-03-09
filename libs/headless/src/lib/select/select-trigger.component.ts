@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, inject } from '@angular/core';
 import { HdlSelect } from './select.component';
 
 @Component({
@@ -26,7 +26,11 @@ export class HdlSelectTrigger {
 	private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
 
 	constructor() {
-		this.select.registerTrigger(this.elementRef.nativeElement);
+		const el = this.elementRef.nativeElement;
+		this.select.registerTrigger(el);
+		inject(DestroyRef).onDestroy(() => {
+			this.select.unregisterTrigger(el);
+		});
 	}
 
 	openFromKeyboard(event: Event): void {

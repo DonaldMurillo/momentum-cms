@@ -32,6 +32,14 @@ export class HdlToastService {
 		this.toasts.update((toasts) => {
 			const newToasts = [...toasts, toast];
 			if (newToasts.length > this.maxToasts()) {
+				const evicted = newToasts.slice(0, newToasts.length - this.maxToasts());
+				for (const t of evicted) {
+					const timerId = this.timerIds.get(t.id);
+					if (timerId != null) {
+						this.document.defaultView?.clearTimeout(timerId);
+						this.timerIds.delete(t.id);
+					}
+				}
 				return newToasts.slice(-this.maxToasts());
 			}
 			return newToasts;

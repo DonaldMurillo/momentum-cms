@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { AccordionGroup } from '@angular/aria/accordion';
 
 @Component({
@@ -18,6 +18,7 @@ import { AccordionGroup } from '@angular/aria/accordion';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HdlAccordion {
+	readonly ariaDirective = inject(AccordionGroup);
 	readonly disabled = input(false);
 	readonly multiExpandable = input(false);
 	readonly wrap = input(true);

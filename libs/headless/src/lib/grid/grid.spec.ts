@@ -96,10 +96,10 @@ describe('HdlGrid', () => {
 		fixture.detectChanges();
 
 		const cellDebug = fixture.debugElement.query((de) => de.nativeElement === cells[0]);
-		if (cellDebug) {
-			const comp = cellDebug.componentInstance as HdlGridCell;
-			expect(comp.gridCell.active()).toBe(true);
-		}
+		expect(cellDebug).toBeTruthy();
+		if (!cellDebug) throw new Error('Expected debug element for focused cell');
+		const comp = cellDebug.componentInstance as HdlGridCell;
+		expect(comp.gridCell.active()).toBe(true);
 	});
 
 	it('should expose styling contract attributes on grid rows and cells', async () => {
