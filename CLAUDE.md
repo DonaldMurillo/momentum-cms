@@ -32,6 +32,7 @@ nx run-many -t lint
 | core           | libs/core           | universal | Collection config, fields, hooks, access |
 | logger         | libs/logger         | universal | Shared logging utilities                 |
 | ui             | libs/ui             | browser   | Shared UI components                     |
+| headless       | libs/headless       | browser   | Zero-style headless UI primitives        |
 | admin          | libs/admin          | browser   | Angular admin UI components              |
 | server-core    | libs/server-core    | server    | Framework-agnostic handlers              |
 | server-express | libs/server-express | server    | Express adapter (Angular SSR)            |

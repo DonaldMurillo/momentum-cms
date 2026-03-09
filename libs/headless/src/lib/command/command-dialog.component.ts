@@ -11,12 +11,16 @@ import {
 	input,
 	model,
 	output,
+	untracked,
 	viewChild,
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
 import { HdlCommandDialogPanel } from './command-dialog-panel.component';
+
+/** Registry mapping shortcut keys to the active instance. Only the last registered instance handles the shortcut. */
+const activeShortcuts = new Map<string, HdlCommandDialog>();
 
 @Component({
 	selector: 'hdl-command-dialog',
@@ -70,14 +74,14 @@ export class HdlCommandDialog {
 
 		effect(() => {
 			if (this.open()) {
-				this.openOverlay();
+				untracked(() => this.openOverlay());
 			} else {
-				this.closeOverlay();
+				untracked(() => this.closeOverlay());
 			}
 		});
 
 		this.destroyRef.onDestroy(() => {
-			this.disposeOverlay();
+			this.closeOverlay();
 			this.removeKeyboardShortcut();
 		});
 	}
@@ -85,6 +89,9 @@ export class HdlCommandDialog {
 	private keydownHandler = (event: KeyboardEvent): void => {
 		const key = this.shortcut();
 		if (!key) return;
+
+		// Only the active instance for this shortcut key handles the event
+		if (activeShortcuts.get(key) !== this) return;
 
 		if ((event.metaKey || event.ctrlKey) && event.key === key) {
 			event.preventDefault();
@@ -95,11 +102,19 @@ export class HdlCommandDialog {
 	};
 
 	private setupKeyboardShortcut(): void {
+		const key = this.shortcut();
+		if (key) {
+			activeShortcuts.set(key, this);
+		}
 		this.document.addEventListener('keydown', this.keydownHandler);
 	}
 
 	private removeKeyboardShortcut(): void {
 		this.document.removeEventListener('keydown', this.keydownHandler);
+		const key = this.shortcut();
+		if (key && activeShortcuts.get(key) === this) {
+			activeShortcuts.delete(key);
+		}
 	}
 
 	private openOverlay(): void {
@@ -142,9 +157,5 @@ export class HdlCommandDialog {
 			this.portal = null;
 			this.closed.emit();
 		}
-	}
-
-	private disposeOverlay(): void {
-		this.closeOverlay();
 	}
 }

@@ -212,6 +212,31 @@ describe('HdlRadioGroup', () => {
 		expect(items[2].getAttribute('tabindex')).toBe('-1');
 	});
 
+	it('should keep at least one item tabbable when value does not match any item', () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+
+		// Set value to something that doesn't match any radio item
+		const group = fixture.debugElement.query(
+			(de) => de.nativeElement.tagName === 'HDL-RADIO-GROUP',
+		);
+		const groupComponent = group.componentInstance as HdlRadioGroup;
+		groupComponent.value.set('nonexistent');
+		fixture.detectChanges();
+
+		const items = fixture.nativeElement.querySelectorAll('hdl-radio-item');
+
+		// No item should claim selection for a non-matching value
+		for (const item of items) {
+			expect(item.getAttribute('aria-checked')).toBe('false');
+		}
+
+		// First enabled item must be tabbable so keyboard users can reach the group
+		expect(items[0].getAttribute('tabindex')).toBe('0');
+		expect(items[1].getAttribute('tabindex')).toBe('-1');
+		expect(items[2].getAttribute('tabindex')).toBe('-1');
+	});
+
 	it('should not move focus with arrow keys when the group is disabled', () => {
 		const fixture = TestBed.createComponent(TestHostDisabled);
 		fixture.detectChanges();

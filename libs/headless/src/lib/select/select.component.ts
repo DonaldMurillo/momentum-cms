@@ -19,7 +19,7 @@ export class HdlSelect {
 	readonly open = signal(false);
 	private readonly labels = signal<Record<string, string>>({});
 	private triggerElement: HTMLElement | null = null;
-	private contentIdValue: string | null = null;
+	readonly contentId = signal<string | null>(null);
 
 	readonly selectedLabel = computed(() => {
 		const value = this.value();
@@ -49,17 +49,13 @@ export class HdlSelect {
 	}
 
 	registerContent(id: string): void {
-		this.contentIdValue = id;
+		this.contentId.set(id);
 	}
 
 	unregisterContent(id: string): void {
-		if (this.contentIdValue === id) {
-			this.contentIdValue = null;
+		if (this.contentId() === id) {
+			this.contentId.set(null);
 		}
-	}
-
-	contentId(): string | null {
-		return this.contentIdValue;
 	}
 
 	focusTrigger(): void {

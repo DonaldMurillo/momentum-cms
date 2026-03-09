@@ -16,6 +16,18 @@ import { HdlCollapsibleContent } from './collapsible-content.component';
 class TestHost {}
 
 describe('HdlCollapsible', () => {
+	it('should update aria-controls on trigger after content registers', () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+
+		const trigger = fixture.nativeElement.querySelector('hdl-collapsible-trigger');
+		const content = fixture.nativeElement.querySelector('hdl-collapsible-content');
+		const contentId = content.getAttribute('id');
+
+		expect(contentId).toBeTruthy();
+		expect(trigger.getAttribute('aria-controls')).toBe(contentId);
+	});
+
 	it('should expose collapsed state by default', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

@@ -29,6 +29,12 @@ export class HdlCommand {
 	private readonly items = signal<CommandItemEntry[]>([]);
 	readonly activeItemId = signal<string | null>(null);
 
+	/** Count of items matching the query filter (regardless of disabled state). Used by empty state. */
+	readonly queryVisibleItemCount = computed(
+		() => this.items().filter((item) => item.isVisible()).length,
+	);
+
+	/** Navigable items: visible AND enabled. Used for keyboard navigation. */
 	readonly visibleItemCount = computed(
 		() => this.items().filter((item) => item.isVisible() && !item.isDisabled()).length,
 	);

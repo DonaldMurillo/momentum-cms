@@ -1,10 +1,12 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { OverlayModule } from '@angular/cdk/overlay';
 import { HdlCommand } from './command.component';
 import { HdlCommandInput } from './command-input.directive';
 import { HdlCommandList } from './command-list.component';
 import { HdlCommandItem } from './command-item.component';
 import { HdlCommandEmpty } from './command-empty.component';
+import { HdlCommandDialog } from './command-dialog.component';
 
 @Component({
 	imports: [HdlCommand, HdlCommandInput, HdlCommandList, HdlCommandItem, HdlCommandEmpty],
@@ -26,6 +28,21 @@ import { HdlCommandEmpty } from './command-empty.component';
 class TestHost {
 	readonly value = signal<string | null>(null);
 }
+
+@Component({
+	imports: [HdlCommand, HdlCommandInput, HdlCommandList, HdlCommandItem, HdlCommandEmpty],
+	template: `
+		<hdl-command>
+			<input hdlCommandInput />
+			<hdl-command-list>
+				<hdl-command-empty>No results</hdl-command-empty>
+				<hdl-command-item value="a" [disabled]="true">Alpha</hdl-command-item>
+				<hdl-command-item value="b" [disabled]="true">Beta</hdl-command-item>
+			</hdl-command-list>
+		</hdl-command>
+	`,
+})
+class TestHostAllDisabled {}
 
 function query(el: HTMLElement, selector: string): HTMLElement {
 	return el.querySelector(selector) as HTMLElement;
@@ -364,7 +381,7 @@ describe('HdlCommand', () => {
 		expect(disabledItem.getAttribute('aria-disabled')).toBe('true');
 	});
 
-	it('should show empty state when only disabled items match the filter', () => {
+	it('should not show empty state when only disabled items match the filter', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();
 
@@ -372,9 +389,89 @@ describe('HdlCommand', () => {
 		typeInto(input, 'settings');
 		fixture.detectChanges();
 
-		// Only the disabled "settings" item matches — empty state should be visible
+		// The disabled "settings" item matches the query and is visible on screen
+		const settingsItem = query(fixture.nativeElement, '[value="settings"]');
+		expect(settingsItem.hasAttribute('hidden')).toBe(false);
+
+		// Empty state should be hidden — items are visible even if disabled
 		const empty = query(fixture.nativeElement, 'hdl-command-empty');
-		expect(empty.hasAttribute('hidden')).toBe(false);
+		expect(empty.hasAttribute('hidden')).toBe(true);
+	});
+
+	it('should not show empty state when all items are visible but disabled (no filter)', () => {
+		const fixture = TestBed.createComponent(TestHostAllDisabled);
+		fixture.detectChanges();
+
+		// With no filter active, all items are visible (even if disabled)
+		const empty = query(fixture.nativeElement, 'hdl-command-empty');
+		const items = queryAll(fixture.nativeElement, 'hdl-command-item');
+
+		// Items should be visible
+		for (const item of items) {
+			expect(item.hasAttribute('hidden')).toBe(false);
+		}
+
+		// Empty state should NOT show when items are visible on screen
+		expect(empty.hasAttribute('hidden')).toBe(true);
+	});
+
+	it('should not register duplicate global shortcuts across instances', async () => {
+		@Component({
+			selector: 'hdl-test-dialog-host-1',
+			imports: [HdlCommandDialog, HdlCommand, HdlCommandInput, HdlCommandList],
+			template: `
+				<hdl-command-dialog [(open)]="open1" shortcut="k">
+					<hdl-command>
+						<input hdlCommandInput />
+						<hdl-command-list />
+					</hdl-command>
+				</hdl-command-dialog>
+			`,
+		})
+		class DialogHost1 {
+			readonly open1 = signal(false);
+		}
+
+		@Component({
+			selector: 'hdl-test-dialog-host-2',
+			imports: [HdlCommandDialog, HdlCommand, HdlCommandInput, HdlCommandList],
+			template: `
+				<hdl-command-dialog [(open)]="open2" shortcut="k">
+					<hdl-command>
+						<input hdlCommandInput />
+						<hdl-command-list />
+					</hdl-command>
+				</hdl-command-dialog>
+			`,
+		})
+		class DialogHost2 {
+			readonly open2 = signal(false);
+		}
+
+		TestBed.configureTestingModule({
+			imports: [OverlayModule, DialogHost1, DialogHost2],
+		});
+
+		const fixture1 = TestBed.createComponent(DialogHost1);
+		const fixture2 = TestBed.createComponent(DialogHost2);
+		fixture1.detectChanges();
+		fixture2.detectChanges();
+		await fixture1.whenStable();
+		await fixture2.whenStable();
+
+		// Simulate Ctrl+K
+		document.dispatchEvent(
+			new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }),
+		);
+		fixture1.detectChanges();
+		fixture2.detectChanges();
+
+		// The last registered instance (fixture2) should be the active one
+		expect(fixture1.componentInstance.open1()).toBe(false);
+		expect(fixture2.componentInstance.open2()).toBe(true);
+
+		fixture1.destroy();
+		fixture2.destroy();
 	});
 
 	it('should set data-state and aria-selected on selected item', () => {

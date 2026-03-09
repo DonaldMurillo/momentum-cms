@@ -31,7 +31,7 @@ import { HdlSelect } from './select.component';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HdlSelectItem {
-	protected readonly option = inject<Option<string>>(Option);
+	readonly option = inject<Option<string>>(Option);
 	private readonly select = inject(HdlSelect);
 	private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
 

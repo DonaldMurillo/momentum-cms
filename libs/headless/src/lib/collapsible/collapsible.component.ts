@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, model } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, model, signal } from '@angular/core';
 
 @Component({
 	selector: 'hdl-collapsible',
@@ -13,19 +13,15 @@ import { ChangeDetectionStrategy, Component, input, model } from '@angular/core'
 export class HdlCollapsible {
 	readonly open = model(false);
 	readonly disabled = input(false);
-	private contentIdValue: string | null = null;
-
-	contentId(): string | null {
-		return this.contentIdValue;
-	}
+	readonly contentId = signal<string | null>(null);
 
 	registerContent(id: string): void {
-		this.contentIdValue = id;
+		this.contentId.set(id);
 	}
 
 	unregisterContent(id: string): void {
-		if (this.contentIdValue === id) {
-			this.contentIdValue = null;
+		if (this.contentId() === id) {
+			this.contentId.set(null);
 		}
 	}
 

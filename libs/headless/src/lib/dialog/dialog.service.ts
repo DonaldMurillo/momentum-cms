@@ -34,14 +34,21 @@ export class HdlDialogService {
 
 		dialogRef.componentRef = componentRef;
 
-		if (!config?.disableClose) {
+		// Auto-detect alertdialog role: default to disableClose unless explicitly overridden
+		const el: HTMLElement = componentRef.location.nativeElement;
+		const isAlertDialog =
+			el.getAttribute('role') === 'alertdialog' ||
+			el.querySelector('[role="alertdialog"]') !== null;
+		const disableClose = config?.disableClose ?? isAlertDialog;
+
+		if (!disableClose) {
 			overlayRef.backdropClick().subscribe(() => {
 				dialogRef.close();
 			});
 		}
 
 		overlayRef.keydownEvents().subscribe((event) => {
-			if (event.key === 'Escape' && !config?.disableClose) {
+			if (event.key === 'Escape' && !disableClose) {
 				dialogRef.close();
 			}
 		});

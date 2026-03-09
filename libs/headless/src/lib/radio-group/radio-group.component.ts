@@ -5,6 +5,7 @@ import {
 	inject,
 	input,
 	model,
+	signal,
 } from '@angular/core';
 
 @Component({
@@ -25,8 +26,32 @@ export class HdlRadioGroup {
 	readonly value = model('');
 	readonly disabled = input(false);
 
+	private readonly registeredValues = signal(new Set<string>());
+
+	registerItemValue(value: string): void {
+		this.registeredValues.update((s) => {
+			const next = new Set(s);
+			next.add(value);
+			return next;
+		});
+	}
+
+	unregisterItemValue(value: string): void {
+		this.registeredValues.update((s) => {
+			const next = new Set(s);
+			next.delete(value);
+			return next;
+		});
+	}
+
 	isInitialTabStop(item: HTMLElement): boolean {
-		if (this.disabled() || this.value()) {
+		if (this.disabled()) {
+			return false;
+		}
+
+		// If value matches a registered item, that item handles tabindex=0 via isSelected().
+		const val = this.value();
+		if (val && this.registeredValues().has(val)) {
 			return false;
 		}
 

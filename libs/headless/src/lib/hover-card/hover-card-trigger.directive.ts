@@ -19,9 +19,9 @@ import { getPopoverPositions } from '../popover/popover.utils';
 	host: {
 		'[attr.data-slot]': '"hover-card-trigger"',
 		'[attr.data-state]': 'isOpen() ? "open" : "closed"',
-		'(mouseenter)': 'scheduleOpen()',
+		'(mouseenter)': 'scheduleOpen(false)',
 		'(mouseleave)': 'scheduleClose()',
-		'(focusin)': 'scheduleOpen()',
+		'(focusin)': 'scheduleOpen(true)',
 		'(focusout)': 'scheduleClose()',
 	},
 })
@@ -39,11 +39,13 @@ export class HdlHoverCardTrigger implements OnDestroy {
 	private overlayRef: OverlayRef | null = null;
 	private openTimeout: number | null = null;
 	private closeTimeout: number | null = null;
+	private openedViaKeyboard = false;
 
-	scheduleOpen(): void {
+	scheduleOpen(keyboard: boolean): void {
 		this.clearCloseTimeout();
 		if (this.isOpen()) return;
 		this.clearOpenTimeout();
+		this.openedViaKeyboard = keyboard;
 		this.openTimeout =
 			this.doc.defaultView?.setTimeout(() => this.open(), this.openDelay()) ?? null;
 	}
@@ -81,11 +83,13 @@ export class HdlHoverCardTrigger implements OnDestroy {
 		this.overlayRef.overlayElement.addEventListener('mouseenter', this.handleOverlayEnter);
 		this.overlayRef.overlayElement.addEventListener('mouseleave', this.handleOverlayLeave);
 
-		this.doc.defaultView?.requestAnimationFrame(() => {
-			this.overlayRef?.overlayElement
-				.querySelector<HTMLElement>('[tabindex], a[href], button:not([disabled])')
-				?.focus();
-		});
+		if (this.openedViaKeyboard) {
+			this.doc.defaultView?.requestAnimationFrame(() => {
+				this.overlayRef?.overlayElement
+					.querySelector<HTMLElement>('[tabindex], a[href], button:not([disabled])')
+					?.focus();
+			});
+		}
 	}
 
 	private close(): void {

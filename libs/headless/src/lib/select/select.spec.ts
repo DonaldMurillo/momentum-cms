@@ -25,6 +25,34 @@ class TestHost {
 }
 
 describe('HdlSelect', () => {
+	it('should update aria-controls on trigger after content registers', () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+
+		const trigger = fixture.nativeElement.querySelector('hdl-select-trigger');
+		const content = fixture.nativeElement.querySelector('hdl-select-content');
+		const contentId = content.getAttribute('id');
+
+		// aria-controls must point to the content element's id
+		expect(contentId).toBeTruthy();
+		expect(trigger.getAttribute('aria-controls')).toBe(contentId);
+	});
+
+	it('should expose option directive publicly on HdlSelectItem', () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+
+		const selectItemDebug = fixture.debugElement.query(
+			(de) => de.nativeElement.tagName === 'HDL-SELECT-ITEM',
+		);
+		const selectItemComponent = selectItemDebug.componentInstance as HdlSelectItem;
+
+		// The option directive must be accessible (public, not protected)
+		// and must be the actual @angular/aria Option directive instance
+		expect(selectItemComponent.option).toBeDefined();
+		expect(selectItemComponent.option.selected).toBeDefined();
+	});
+
 	it('should open from the trigger and reflect the selected label', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

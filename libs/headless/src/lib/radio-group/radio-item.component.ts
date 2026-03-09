@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, input } from '@angular/core';
+import {
+	ChangeDetectionStrategy,
+	Component,
+	ElementRef,
+	computed,
+	effect,
+	inject,
+	input,
+	untracked,
+} from '@angular/core';
 import { HdlRadioGroup } from './radio-group.component';
 
 @Component({
@@ -23,10 +32,17 @@ export class HdlRadioItem {
 	readonly value = input.required<string>();
 	readonly disabled = input(false);
 
-	isSelected(): boolean {
-		return this.radioGroup.value() === this.value();
-	}
+	private readonly registrationEffect = effect((onCleanup) => {
+		const value = this.value();
+		untracked(() => this.radioGroup.registerItemValue(value));
+		onCleanup(() => {
+			untracked(() => this.radioGroup.unregisterItemValue(value));
+		});
+	});
 
+	readonly isSelected = computed(() => this.radioGroup.value() === this.value());
+
+	// Cannot be a computed — isInitialTabStop reads DOM via querySelectorAll
 	tabIndex(): number {
 		if (this.disabled() || this.radioGroup.disabled()) {
 			return -1;
