@@ -170,7 +170,8 @@
 			"queue",
 			"plugins-queue",
 			"plugins-cron",
-			"plugins-image"
+			"plugins-image",
+			"headless"
 		],
 		"version": {
 			"preVersionCommand": "npx nx run-many -t build",
