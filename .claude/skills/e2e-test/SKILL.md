@@ -9,6 +9,27 @@ allowed-tools: Bash(npx playwright *), Bash(npx nx *), Bash(lsof *), Bash(kill *
 
 Write Playwright E2E tests for Momentum CMS features. UI tests simulate real user journeys — they **always start from the admin dashboard** and navigate through the actual UI, never jump directly to deep URLs.
 
+## RULE 0: TESTS ARE USER STORIES, NOT PLUMBING CHECKS
+
+Every E2E test must be framed as a user story: "As a [role], I should be able to [action] so that [outcome]."
+
+Tests that only check "endpoint returns 200" or "component renders" are banned. Those are health checks pretending to be tests. Every test must:
+
+1. **Start with a real user intent** — what is the user trying to accomplish?
+2. **Perform real actions** — create content, navigate UI, trigger workflows
+3. **Assert real outcomes** — the data changed, the UI reflects it, the pipeline delivered end-to-end
+4. **Prove the full pipeline** — not just one layer, but action → processing → visible result
+
+### Bad: Plumbing check
+- "Prometheus endpoint returns 200 with text/plain"
+- "Dashboard component renders 4 cards"
+- "API returns JSON with correct shape"
+
+### Good: User story
+- "As a DevOps engineer, after I create and delete articles, Prometheus shows those exact operation counts"
+- "As an admin, after creating content, the observability dashboard shows that activity with real trace IDs"
+- "As a non-admin, I'm blocked from the summary API but Prometheus scraping still works"
+
 ## RULE 1: DASHBOARD IS THE STARTING POINT
 
 **Every admin UI test starts at `/admin` (the dashboard) and navigates to the feature via the sidebar or dashboard cards.** This is non-negotiable because:

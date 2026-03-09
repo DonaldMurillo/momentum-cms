@@ -238,13 +238,36 @@ function stripTransientKeys(data: Record<string, unknown>): Record<string, unkno
 	return result;
 }
 
+const COMPARISON_OPS = ['gt', 'gte', 'lt', 'lte'] as const;
+
 function flattenWhereClause(where: WhereClause | undefined): Record<string, unknown> {
 	if (!where) return {};
 	const result: Record<string, unknown> = {};
 	for (const [field, condition] of Object.entries(where)) {
-		if (typeof condition === 'object' && condition !== null && 'equals' in condition) {
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Where clause operator object
-			result[field] = (condition as Record<string, unknown>)['equals'];
+		if (typeof condition !== 'object' || condition === null) {
+			result[field] = condition;
+			continue;
+		}
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Where clause operator object
+		const condObj = condition as Record<string, unknown>;
+
+		if ('equals' in condObj) {
+			result[field] = condObj['equals'];
+			continue;
+		}
+
+		// Convert comparison operators (gt/gte/lt/lte) to $-prefixed form for DB adapters
+		const ops: Record<string, unknown> = {};
+		let hasComparisonOp = false;
+		for (const op of COMPARISON_OPS) {
+			if (op in condObj) {
+				ops[`$${op}`] = condObj[op];
+				hasComparisonOp = true;
+			}
+		}
+
+		if (hasComparisonOp) {
+			result[field] = ops;
 		} else {
 			result[field] = condition;
 		}

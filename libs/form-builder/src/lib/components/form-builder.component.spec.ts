@@ -234,7 +234,7 @@ describe('FormBuilderComponent', () => {
 			emitted.push(event);
 		});
 
-		// Call onSubmit directly to avoid FormRoot intercepting the DOM event
+		// Call onSubmit directly to test submission logic
 		await component.onSubmit(new Event('submit', { cancelable: true }));
 		fixture.detectChanges();
 
@@ -318,6 +318,30 @@ describe('FormBuilderComponent', () => {
 		const el = fixture.nativeElement as HTMLElement;
 		const button = el.querySelector('button[type="submit"]') as HTMLButtonElement;
 		expect(button.disabled).toBe(true);
+	});
+
+	it('should handle form submission via DOM submit event', async () => {
+		createComponent(
+			createSchema({
+				fields: [{ name: 'name', type: 'text', label: 'Name', defaultValue: 'John' }],
+			}),
+		);
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		const emitted: Array<{ values: Record<string, unknown>; formId: string }> = [];
+		component.formSubmit.subscribe((event: { values: Record<string, unknown>; formId: string }) => {
+			emitted.push(event);
+		});
+
+		const formEl = (fixture.nativeElement as HTMLElement).querySelector('form');
+		if (!formEl) throw new Error('Form element not found');
+		formEl.dispatchEvent(new Event('submit', { cancelable: true }));
+		await fixture.whenStable();
+		fixture.detectChanges();
+
+		expect(emitted).toHaveLength(1);
+		expect(emitted[0].values['name']).toBe('John');
 	});
 
 	it('should rebuild form tree when schema input changes', async () => {
