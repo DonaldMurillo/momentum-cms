@@ -1,3 +1,30 @@
+## 0.5.5 (2026-03-09)
+
+### 🚀 Features
+
+- swappable admin pages & layout slots with security hardening ([#51](https://github.com/DonaldMurillo/momentum-cms/pull/51))
+- NestJS server adapter + E2E stabilization (0.5.2) ([#48](https://github.com/DonaldMurillo/momentum-cms/pull/48))
+- S3, auth plugin wiring, redirects, and E2E tooling ([#41](https://github.com/DonaldMurillo/momentum-cms/pull/41))
+- client-side page view tracking and content performance improvements ([#39](https://github.com/DonaldMurillo/momentum-cms/pull/39))
+- blocks showcase with articles, pages, and UI fixes ([#36](https://github.com/DonaldMurillo/momentum-cms/pull/36))
+- add named tabs support with nested data grouping and UI improvements ([#30](https://github.com/DonaldMurillo/momentum-cms/pull/30))
+
+### 🩹 Fixes
+
+- add public access to form-builder npm publish config ([#46](https://github.com/DonaldMurillo/momentum-cms/pull/46))
+- Resolve non-null assertion bugs and CLAUDE.md violations ([#44](https://github.com/DonaldMurillo/momentum-cms/pull/44))
+- add auth guard and MIME validation to PATCH upload route; fix pagination with client-side filtering ([#32](https://github.com/DonaldMurillo/momentum-cms/pull/32))
+- **create-momentum-app:** add shell option to execFileSync for Windows ([#28](https://github.com/DonaldMurillo/momentum-cms/pull/28))
+- correct repository URLs and add GitHub link to CLI ([#26](https://github.com/DonaldMurillo/momentum-cms/pull/26))
+- address security and reliability issues from code review ([#7](https://github.com/DonaldMurillo/momentum-cms/pull/7))
+
+### ❤️ Thank You
+
+- Claude Haiku 4.5
+- Claude Opus 4.5
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.5.4 (2026-03-07)
 
 This was a version bump only for storage to align it with other projects, there were no code changes.

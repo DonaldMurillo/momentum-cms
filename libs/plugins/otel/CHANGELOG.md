@@ -1,3 +1,28 @@
+## 0.5.5 (2026-03-09)
+
+### 🚀 Features
+
+- OpenTelemetry observability plugin with metrics, Prometheus, and dashboard ([#53](https://github.com/DonaldMurillo/momentum-cms/pull/53))
+- swappable admin pages & layout slots with security hardening ([#51](https://github.com/DonaldMurillo/momentum-cms/pull/51))
+- NestJS server adapter + E2E stabilization (0.5.2) ([#48](https://github.com/DonaldMurillo/momentum-cms/pull/48))
+- S3, auth plugin wiring, redirects, and E2E tooling ([#41](https://github.com/DonaldMurillo/momentum-cms/pull/41))
+- client-side page view tracking and content performance improvements ([#39](https://github.com/DonaldMurillo/momentum-cms/pull/39))
+- blocks showcase with articles, pages, and UI fixes ([#36](https://github.com/DonaldMurillo/momentum-cms/pull/36))
+- add named tabs support with nested data grouping and UI improvements ([#30](https://github.com/DonaldMurillo/momentum-cms/pull/30))
+
+### 🩹 Fixes
+
+- Analog versioning access control + E2E improvements ([#54](https://github.com/DonaldMurillo/momentum-cms/pull/54))
+- add public access to form-builder npm publish config ([#46](https://github.com/DonaldMurillo/momentum-cms/pull/46))
+- **create-momentum-app:** add shell option to execFileSync for Windows ([#28](https://github.com/DonaldMurillo/momentum-cms/pull/28))
+- correct repository URLs and add GitHub link to CLI ([#26](https://github.com/DonaldMurillo/momentum-cms/pull/26))
+
+### ❤️ Thank You
+
+- Claude Haiku 4.5
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.5.4 (2026-03-07)
 
 This was a version bump only for plugins-otel to align it with other projects, there were no code changes.
