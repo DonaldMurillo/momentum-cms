@@ -110,7 +110,7 @@ export function createOtelQueryRouter(
 				total: typeof result.totalDocs === 'number' ? result.totalDocs : docs.length,
 			});
 		} catch (err) {
-			logger.error('Failed to fetch history', err instanceof Error ? err : new Error(String(err)));
+			logger.error('Failed to fetch history', { error: String(err) });
 			res.status(500).json({ error: 'Failed to fetch metrics history' });
 		}
 	});
@@ -123,7 +123,7 @@ export function createOtelQueryRouter(
 			const deleted = (await snapshotService?.purgeAll()) ?? 0;
 			res.json({ deleted });
 		} catch (err) {
-			logger.error('Failed to purge history', err instanceof Error ? err : new Error(String(err)));
+			logger.error('Failed to purge history', { error: String(err) });
 			res.status(500).json({ error: 'Failed to purge metrics history' });
 		}
 	});
@@ -199,7 +199,7 @@ export function createOtelQueryRouter(
 
 			res.end();
 		} catch (err) {
-			logger.error('Failed to export metrics', err instanceof Error ? err : new Error(String(err)));
+			logger.error('Failed to export metrics', { error: String(err) });
 			if (!res.headersSent) {
 				res.status(500).json({ error: 'Failed to export metrics' });
 			} else {
