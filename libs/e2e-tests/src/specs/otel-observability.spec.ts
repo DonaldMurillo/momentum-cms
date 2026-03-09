@@ -12,8 +12,9 @@ import { test, expect, TEST_CREDENTIALS } from '../fixtures';
  */
 
 // OTel plugin is only configured in the Angular example app
-const otelSkipCondition = () => process.env['E2E_SERVER_FLAVOR'] === 'nestjs';
-const otelSkipReason = 'OTel plugin is not configured in the NestJS example app';
+const otelSkipCondition = () =>
+	process.env['E2E_SERVER_FLAVOR'] === 'nestjs' || process.env['E2E_SERVER_FLAVOR'] === 'analog';
+const otelSkipReason = 'OTel plugin is only configured in the Angular example app';
 
 function uniqueSlug(prefix: string): string {
 	return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

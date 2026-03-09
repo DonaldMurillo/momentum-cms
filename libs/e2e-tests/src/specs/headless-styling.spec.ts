@@ -38,7 +38,9 @@ const inventorySlugs = [
 
 test.describe('Headless Styling Lab', { tag: ['@headless', '@styling'] }, () => {
 	test.skip(
-		() => process.env['E2E_SERVER_FLAVOR'] === 'nestjs',
+		() =>
+			process.env['E2E_SERVER_FLAVOR'] === 'nestjs' ||
+			process.env['E2E_SERVER_FLAVOR'] === 'analog',
 		'Headless styling lab page only exists in the Angular example app',
 	);
 	test.setTimeout(120_000);

@@ -881,6 +881,10 @@ export function createComprehensiveMomentumHandler(
 					});
 					return { doc: restored, message: 'Version restored successfully' };
 				} catch (error) {
+					if (error instanceof Error && error.name === 'AccessDeniedError') {
+						utils.setResponseStatus(event, 403);
+						return { error: 'Access denied' };
+					}
 					const message = sanitizeErrorMessage(error, 'Unknown error');
 					if (error instanceof Error && error.message.includes('mismatch')) {
 						utils.setResponseStatus(event, 400);
@@ -923,6 +927,10 @@ export function createComprehensiveMomentumHandler(
 					);
 					return { differences };
 				} catch (error) {
+					if (error instanceof Error && error.name === 'AccessDeniedError') {
+						utils.setResponseStatus(event, 403);
+						return { error: 'Access denied' };
+					}
 					utils.setResponseStatus(event, 500);
 					return {
 						error: 'Failed to compare versions',
@@ -952,6 +960,10 @@ export function createComprehensiveMomentumHandler(
 					}
 					return version;
 				} catch (error) {
+					if (error instanceof Error && error.name === 'AccessDeniedError') {
+						utils.setResponseStatus(event, 403);
+						return { error: 'Access denied' };
+					}
 					utils.setResponseStatus(event, 500);
 					return {
 						error: 'Failed to fetch version',
@@ -978,6 +990,10 @@ export function createComprehensiveMomentumHandler(
 					});
 					return result;
 				} catch (error) {
+					if (error instanceof Error && error.name === 'AccessDeniedError') {
+						utils.setResponseStatus(event, 403);
+						return { error: 'Access denied' };
+					}
 					utils.setResponseStatus(event, 500);
 					return {
 						error: 'Failed to fetch versions',
@@ -1121,6 +1137,10 @@ export function createComprehensiveMomentumHandler(
 						return { message: 'Scheduled publish cancelled' };
 					}
 				} catch (error) {
+					if (error instanceof Error && error.name === 'AccessDeniedError') {
+						utils.setResponseStatus(event, 403);
+						return { error: 'Access denied' };
+					}
 					utils.setResponseStatus(event, 500);
 					return {
 						error: `Failed to ${action.replace(/-/g, ' ')}`,
@@ -1171,6 +1191,10 @@ export function createComprehensiveMomentumHandler(
 				const status = await versionOps.getStatus(docId);
 				return { status };
 			} catch (error) {
+				if (error instanceof Error && error.name === 'AccessDeniedError') {
+					utils.setResponseStatus(event, 403);
+					return { error: 'Access denied' };
+				}
 				utils.setResponseStatus(event, 500);
 				return {
 					error: 'Failed to get status',
