@@ -40,6 +40,32 @@ function getStatusFromRow(row: Record<string, unknown>): DocumentStatus {
 	return 'draft'; // Default fallback
 }
 
+const COMPARISON_OP_MAP: Record<string, string> = {
+	$gt: '>',
+	$gte: '>=',
+	$lt: '<',
+	$lte: '<=',
+};
+
+function hasComparisonOps(value: object): boolean {
+	return Object.keys(value).some((k) => k in COMPARISON_OP_MAP);
+}
+
+function buildComparisonClauses(
+	key: string,
+	value: object,
+	whereClauses: string[],
+	whereValues: unknown[],
+): void {
+	for (const [op, sqlOp] of Object.entries(COMPARISON_OP_MAP)) {
+		if (op in value) {
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Narrowed by runtime check
+			whereClauses.push(`"${key}" ${sqlOp} ?`);
+			whereValues.push((value as Record<string, unknown>)[op]);
+		}
+	}
+}
+
 /**
  * Safely parse JSON to Record<string, unknown>.
  */
@@ -305,6 +331,8 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 				value['$ne'] === null
 			) {
 				whereClauses.push(`"${key}" IS NOT NULL`);
+			} else if (typeof value === 'object' && value !== null && hasComparisonOps(value)) {
+				buildComparisonClauses(key, value, whereClauses, whereValues);
 			} else {
 				whereClauses.push(`"${key}" = ?`);
 				whereValues.push(value);

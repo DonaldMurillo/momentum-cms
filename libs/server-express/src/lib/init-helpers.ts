@@ -5,6 +5,7 @@ import {
 	runSeeding,
 	shouldRunSeeding,
 	createAdapterApiKeyStore,
+	syncDatabaseSchema,
 	type SeedingResult,
 	type MomentumAuthLike,
 } from '@momentumcms/server-core';
@@ -192,17 +193,8 @@ export function initializeMomentum(
 		// Store all collected middleware for auto-mounting by momentumApiMiddleware()
 		setPluginMiddleware(pluginMiddleware);
 
-		// 2. Initialize database schema if adapter supports it
-		if (config.db.adapter.initialize) {
-			log.info('Initializing database schema...');
-			await config.db.adapter.initialize(config.collections);
-		}
-
-		// 2b. Initialize globals table if globals are configured
-		if (config.db.adapter.initializeGlobals && config.globals && config.globals.length > 0) {
-			log.info(`Initializing globals table for ${config.globals.length} global(s)...`);
-			await config.db.adapter.initializeGlobals(config.globals);
-		}
+		// 2. Initialize database schema (respects db.syncSchema / migrations.mode)
+		await syncDatabaseSchema(config, log);
 
 		// 3. Initialize Momentum API singleton
 		log.info('Initializing API...');

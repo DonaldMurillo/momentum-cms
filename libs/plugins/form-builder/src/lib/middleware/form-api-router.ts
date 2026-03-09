@@ -215,12 +215,16 @@ async function resolveForm(
 ): Promise<FormDoc | null> {
 	const forms = getCollection(api, 'forms');
 
-	// Try by ID first
-	const byId = (await forms.findById(idOrSlug)) ?? null;
-	if (byId) {
-		if (requirePublished && byId['status'] !== 'published') return null;
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- MomentumAPI returns generic Records
-		return byId as unknown as FormDoc;
+	// Try by ID first (findById throws DocumentNotFoundError when doc doesn't exist)
+	try {
+		const byId = await forms.findById(idOrSlug);
+		if (byId) {
+			if (requirePublished && byId['status'] !== 'published') return null;
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- MomentumAPI returns generic Records
+			return byId as unknown as FormDoc;
+		}
+	} catch {
+		// Not found by ID — fall through to slug lookup
 	}
 
 	// Try by slug

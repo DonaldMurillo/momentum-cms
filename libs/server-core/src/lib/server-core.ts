@@ -140,10 +140,7 @@ export function createMomentumHandlers(config: MomentumConfig): MomentumHandlers
 				.collection<Record<string, unknown>>(request.collectionSlug)
 				.findById(request.id, { depth, withDeleted });
 
-			if (!doc) {
-				return { error: 'Document not found', status: 404 };
-			}
-
+			// DocumentNotFoundError is thrown for all invisible docs (caught below → 404).
 			return { doc };
 		} catch (error) {
 			return handleError(error);

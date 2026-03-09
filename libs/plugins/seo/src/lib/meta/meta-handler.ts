@@ -75,7 +75,11 @@ export function createMetaRouter(options: MetaHandlerOptions): Router {
 			const metaTags = buildMetaTags(doc, seoData, siteUrl);
 
 			res.json(metaTags);
-		} catch {
+		} catch (err) {
+			if (err instanceof Error && err.name === 'DocumentNotFoundError') {
+				res.status(404).json({ error: 'Document not found' });
+				return;
+			}
 			res.status(500).json({ error: 'Failed to build meta tags' });
 		}
 	});

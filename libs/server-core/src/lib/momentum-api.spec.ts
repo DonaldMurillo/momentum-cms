@@ -193,13 +193,13 @@ describe('MomentumAPI', () => {
 			expect(mockAdapter.findById).toHaveBeenCalledWith('posts', '1');
 		});
 
-		it('should return null when document not found', async () => {
+		it('should throw DocumentNotFoundError when document does not exist', async () => {
 			const api = initializeMomentumAPI(config);
 			vi.mocked(mockAdapter.findById).mockResolvedValue(null);
 
-			const result = await api.collection('posts').findById('nonexistent');
-
-			expect(result).toBeNull();
+			await expect(api.collection('posts').findById('nonexistent')).rejects.toThrow(
+				DocumentNotFoundError,
+			);
 		});
 	});
 
@@ -456,7 +456,7 @@ describe('MomentumAPI', () => {
 			);
 		});
 
-		it('should filter soft-deleted docs from findById by default', async () => {
+		it('should throw DocumentNotFoundError for soft-deleted docs from findById by default', async () => {
 			resetMomentumAPI();
 			const api = initializeMomentumAPI(softDeleteConfig);
 			vi.mocked(mockAdapter.findById).mockResolvedValue({
@@ -465,9 +465,7 @@ describe('MomentumAPI', () => {
 				deletedAt: '2024-06-01T00:00:00Z',
 			});
 
-			const result = await api.collection('pages').findById('1');
-
-			expect(result).toBeNull();
+			await expect(api.collection('pages').findById('1')).rejects.toThrow(DocumentNotFoundError);
 		});
 
 		it('should return soft-deleted docs from findById when withDeleted is true', async () => {
@@ -565,7 +563,7 @@ describe('MomentumAPI', () => {
 			);
 		});
 
-		it('should reject findById when doc does not match defaultWhere (string constraint)', async () => {
+		it('should throw DocumentNotFoundError when doc does not match defaultWhere (string constraint)', async () => {
 			const api = initializeMomentumAPI(scopedConfig);
 			const authApi = api.setContext({ user: { id: 'user-42' } });
 			// Doc belongs to a different user
@@ -575,9 +573,9 @@ describe('MomentumAPI', () => {
 				ownerId: 'user-99',
 			});
 
-			const result = await authApi.collection('notes').findById('1');
-
-			expect(result).toBeNull();
+			await expect(authApi.collection('notes').findById('1')).rejects.toThrow(
+				DocumentNotFoundError,
+			);
 		});
 
 		it('should allow findById when doc matches defaultWhere (string constraint)', async () => {
@@ -686,6 +684,193 @@ describe('MomentumAPI', () => {
 			// With deep equality, structurally identical objects should match
 			expect(result).toBeDefined();
 			expect(result?.title).toBe('Structured Item');
+		});
+	});
+
+	describe('where clause comparison operators', () => {
+		it('should pass gte operator to the adapter as $gte', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { createdAt: { gte: '2024-01-01' } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ createdAt: { $gte: '2024-01-01' } }),
+			);
+		});
+
+		it('should pass lte operator to the adapter as $lte', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { createdAt: { lte: '2024-12-31' } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ createdAt: { $lte: '2024-12-31' } }),
+			);
+		});
+
+		it('should pass gt operator to the adapter as $gt', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { createdAt: { gt: '2024-01-01' } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ createdAt: { $gt: '2024-01-01' } }),
+			);
+		});
+
+		it('should pass lt operator to the adapter as $lt', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { createdAt: { lt: '2024-12-31' } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ createdAt: { $lt: '2024-12-31' } }),
+			);
+		});
+
+		it('should combine gte and lte into a single operator object', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { createdAt: { gte: '2024-01-01', lte: '2024-12-31' } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({
+					createdAt: { $gte: '2024-01-01', $lte: '2024-12-31' },
+				}),
+			);
+		});
+
+		it('should still handle equals operator', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { status: { equals: 'published' } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ status: 'published' }),
+			);
+		});
+
+		it('should handle plain value where clauses', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { status: 'published' },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ status: 'published' }),
+			);
+		});
+	});
+
+	describe('draft visibility in findById', () => {
+		const versionedCollection: CollectionConfig = {
+			slug: 'articles',
+			labels: { singular: 'Article', plural: 'Articles' },
+			fields: [{ name: 'title', type: 'text', required: true }],
+			versions: { drafts: true },
+			access: {
+				readDrafts: ({ req }) => req.user?.role === 'admin',
+			},
+		};
+
+		let draftConfig: MomentumConfig;
+
+		beforeEach(() => {
+			resetMomentumAPI();
+			draftConfig = {
+				collections: [versionedCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+		});
+
+		it('should throw DocumentNotFoundError when user cannot read drafts and doc is draft', async () => {
+			const api = initializeMomentumAPI(draftConfig);
+			// Non-admin user → readDrafts returns false
+			const userApi = api.setContext({ user: { id: 'user-1', role: 'editor' } });
+			vi.mocked(mockAdapter.findById).mockResolvedValue({
+				id: '1',
+				title: 'Draft Article',
+				_status: 'draft',
+			});
+
+			await expect(userApi.collection('articles').findById('1')).rejects.toThrow(
+				DocumentNotFoundError,
+			);
+		});
+
+		it('should return published doc even when user cannot read drafts', async () => {
+			const api = initializeMomentumAPI(draftConfig);
+			const userApi = api.setContext({ user: { id: 'user-1', role: 'editor' } });
+			vi.mocked(mockAdapter.findById).mockResolvedValue({
+				id: '2',
+				title: 'Published Article',
+				_status: 'published',
+			});
+
+			const result = await userApi.collection('articles').findById('2');
+
+			expect(result).toBeDefined();
+			expect(result?.title).toBe('Published Article');
+		});
+
+		it('should return draft doc when user has readDrafts access', async () => {
+			const api = initializeMomentumAPI(draftConfig);
+			// Admin user → readDrafts returns true
+			const adminApi = api.setContext({ user: { id: 'admin-1', role: 'admin' } });
+			vi.mocked(mockAdapter.findById).mockResolvedValue({
+				id: '1',
+				title: 'Draft Article',
+				_status: 'draft',
+			});
+
+			const result = await adminApi.collection('articles').findById('1');
+
+			expect(result).toBeDefined();
+			expect(result?.title).toBe('Draft Article');
+		});
+
+		it('should return draft doc when overrideAccess is set', async () => {
+			const api = initializeMomentumAPI(draftConfig);
+			// Explicit overrideAccess bypasses draft checks
+			const overrideApi = api.setContext({ overrideAccess: true });
+			vi.mocked(mockAdapter.findById).mockResolvedValue({
+				id: '1',
+				title: 'Draft Article',
+				_status: 'draft',
+			});
+
+			const result = await overrideApi.collection('articles').findById('1');
+
+			expect(result).toBeDefined();
+			expect(result?.title).toBe('Draft Article');
 		});
 	});
 });

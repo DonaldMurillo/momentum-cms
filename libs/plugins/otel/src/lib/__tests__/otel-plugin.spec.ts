@@ -82,10 +82,13 @@ describe('otelPlugin', () => {
 		const plugin = otelPlugin();
 		const collections: CollectionConfig[] = [];
 
+		const registerSpy = vi.spyOn(MomentumLogger, 'registerEnricher');
+
 		plugin.onInit?.(createContext(collections));
 
-		// The enricher should be registered - we can't easily check the enricher list
-		// but we can verify it was registered by checking the shutdown removes it
+		expect(registerSpy).toHaveBeenCalledTimes(1);
+
+		registerSpy.mockRestore();
 	});
 
 	it('should not register a log enricher when enrichLogs is false', () => {

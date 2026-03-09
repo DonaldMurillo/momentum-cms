@@ -17,6 +17,7 @@ import { queuePlugin } from '@momentumcms/plugins/queue';
 import { cronPlugin } from '@momentumcms/plugins/cron';
 import { formBuilderPlugin } from '@momentumcms/plugins-form-builder';
 import { imagePlugin } from '@momentumcms/plugins/image';
+import { otelPlugin } from '@momentumcms/plugins/otel';
 import { join } from 'node:path';
 import { collections } from '@momentumcms/example-config/collections';
 import { globals } from '@momentumcms/example-config/globals';
@@ -121,6 +122,14 @@ export const images = imagePlugin({
 	formatPreference: 'original',
 });
 
+/**
+ * OpenTelemetry observability plugin — metrics, Prometheus, admin dashboard.
+ */
+export const otel = otelPlugin({
+	serviceName: 'momentum-example',
+	metrics: { enabled: true, prometheus: true },
+});
+
 export const seo = seoPlugin({
 	collections: ['categories', 'articles', 'pages'],
 	siteUrl: `http://localhost:${process.env['PORT'] || 4000}`,
@@ -165,7 +174,7 @@ const config = defineMomentumConfig({
 		level: 'debug',
 		format: 'pretty',
 	},
-	plugins: [events, analytics, seo, redirects, email, authPlugin, queue, cron, forms, images],
+	plugins: [events, analytics, seo, redirects, email, authPlugin, queue, cron, forms, images, otel],
 	seeding: {
 		...exampleSeedingConfig,
 		defaults: (helpers) => [

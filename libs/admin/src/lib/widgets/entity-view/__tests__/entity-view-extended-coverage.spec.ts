@@ -411,8 +411,10 @@ describe('EntityViewWidget - extended coverage', () => {
 	// loadEntity error paths
 	// ------------------------------------------------------------------
 	describe('loadEntity error handling', () => {
-		it('should set loadError when entity not found', async () => {
-			apiMock.mockCollection['findById'].mockResolvedValueOnce(null);
+		it('should set loadError when findById throws DocumentNotFoundError', async () => {
+			const notFoundErr = new Error('Document "nonexistent" not found in collection "posts"');
+			notFoundErr.name = 'DocumentNotFoundError';
+			apiMock.mockCollection['findById'].mockRejectedValueOnce(notFoundErr);
 
 			fixture.componentRef.setInput('collection', createMockCollection());
 			fixture.componentRef.setInput('entityId', 'nonexistent');

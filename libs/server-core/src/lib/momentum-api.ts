@@ -238,13 +238,36 @@ function stripTransientKeys(data: Record<string, unknown>): Record<string, unkno
 	return result;
 }
 
+const COMPARISON_OPS = ['gt', 'gte', 'lt', 'lte'] as const;
+
 function flattenWhereClause(where: WhereClause | undefined): Record<string, unknown> {
 	if (!where) return {};
 	const result: Record<string, unknown> = {};
 	for (const [field, condition] of Object.entries(where)) {
-		if (typeof condition === 'object' && condition !== null && 'equals' in condition) {
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Where clause operator object
-			result[field] = (condition as Record<string, unknown>)['equals'];
+		if (typeof condition !== 'object' || condition === null) {
+			result[field] = condition;
+			continue;
+		}
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Where clause operator object
+		const condObj = condition as Record<string, unknown>;
+
+		if ('equals' in condObj) {
+			result[field] = condObj['equals'];
+			continue;
+		}
+
+		// Convert comparison operators (gt/gte/lt/lte) to $-prefixed form for DB adapters
+		const ops: Record<string, unknown> = {};
+		let hasComparisonOp = false;
+		for (const op of COMPARISON_OPS) {
+			if (op in condObj) {
+				ops[`$${op}`] = condObj[op];
+				hasComparisonOp = true;
+			}
+		}
+
+		if (hasComparisonOp) {
+			result[field] = ops;
 		} else {
 			result[field] = condition;
 		}
@@ -372,10 +395,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		};
 	}
 
-	async findById(
-		id: string,
-		options?: { depth?: number; withDeleted?: boolean },
-	): Promise<T | null> {
+	async findById(id: string, options?: { depth?: number; withDeleted?: boolean }): Promise<T> {
 		// Check read access
 		await this.checkAccess('read', id);
 
@@ -387,7 +407,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		const doc = (await this.adapter.findById(this.slug, id)) as T | null;
 
 		if (!doc) {
-			return null;
+			throw new DocumentNotFoundError(this.slug, id);
 		}
 
 		// Filter out soft-deleted documents unless explicitly requested
@@ -398,7 +418,8 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
 			(doc as Record<string, unknown>)[softDeleteField]
 		) {
-			return null;
+			// Soft-deleted docs appear as "not found" to prevent information leakage
+			throw new DocumentNotFoundError(this.slug, id);
 		}
 
 		// Draft visibility: only users with readDrafts access see drafts
@@ -408,7 +429,8 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
 				const record = doc as Record<string, unknown>;
 				if (record['_status'] !== 'published') {
-					return null;
+					// Draft docs appear as "not found" to prevent information leakage
+					throw new DocumentNotFoundError(this.slug, id);
 				}
 			}
 		}
@@ -416,7 +438,8 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Filter by defaultWhere constraints (e.g., user-scoped filtering)
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
 		if (!this.matchesDefaultWhereConstraints(doc as Record<string, unknown>)) {
-			return null;
+			// Scoped docs appear as "not found" to prevent information leakage
+			throw new DocumentNotFoundError(this.slug, id);
 		}
 
 		// Run afterRead hooks

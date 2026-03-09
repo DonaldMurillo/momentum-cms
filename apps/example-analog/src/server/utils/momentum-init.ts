@@ -17,6 +17,7 @@ import {
 	shouldRunSeeding,
 	registerWebhookHooks,
 	startPublishScheduler,
+	syncDatabaseSchema,
 	type SeedingResult,
 } from '@momentumcms/server-core';
 import { initializeMomentumLogger, createLogger } from '@momentumcms/logger';
@@ -76,21 +77,8 @@ async function initialize(): Promise<void> {
 	// 3. Register webhook hooks on collections
 	registerWebhookHooks(momentumConfig.collections);
 
-	// 4. Initialize database schema
-	if (momentumConfig.db.adapter.initialize) {
-		log.info('Initializing database schema...');
-		await momentumConfig.db.adapter.initialize(momentumConfig.collections);
-	}
-
-	// 4b. Initialize globals table
-	if (
-		momentumConfig.db.adapter.initializeGlobals &&
-		momentumConfig.globals &&
-		momentumConfig.globals.length > 0
-	) {
-		log.info(`Initializing globals table for ${momentumConfig.globals.length} global(s)...`);
-		await momentumConfig.db.adapter.initializeGlobals(momentumConfig.globals);
-	}
+	// 4. Initialize database schema (respects db.syncSchema / migrations.mode)
+	await syncDatabaseSchema(momentumConfig, log);
 
 	// 5. Initialize Momentum API singleton
 	log.info('Initializing API...');

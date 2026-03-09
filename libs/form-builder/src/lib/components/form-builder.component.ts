@@ -12,7 +12,7 @@ import {
 	untracked,
 	type WritableSignal,
 } from '@angular/core';
-import { FormRoot, submit } from '@angular/forms/signals';
+import { submit } from '@angular/forms/signals';
 import type { FieldTree } from '@angular/forms/signals';
 import type { FormSchema, FormFieldConfig } from '../types/form-schema.types';
 import type { FormSubmitEvent } from '../types/form-events.types';
@@ -36,12 +36,12 @@ import { FormFieldHostComponent } from './field-renderers/form-field-host.compon
  */
 @Component({
 	selector: 'mcms-form-builder',
-	imports: [FormRoot, FormFieldHostComponent],
+	imports: [FormFieldHostComponent],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `
 		@if (formTree()) {
-			<form [formRoot]="formTree()!" (submit)="onSubmit($event)">
+			<form novalidate (submit)="onSubmit($event)">
 				@if (schema().title) {
 					<h2 class="text-xl font-semibold mb-2">{{ schema().title }}</h2>
 				}

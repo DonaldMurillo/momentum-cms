@@ -734,12 +734,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				// Initial load: render from database
 				const api = getMomentumAPI();
 				const contextApi = user ? api.setContext({ user }) : api;
-				const dbDoc = await contextApi.collection(slug).findById(id);
-				if (!dbDoc) {
-					res.status(404).json({ error: 'Document not found' });
-					return;
-				}
-				doc = dbDoc;
+				doc = await contextApi.collection(slug).findById(id);
 			}
 
 			// For collections with an email-builder field, render the email directly
@@ -995,8 +990,13 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 							return { docs: r.docs as Record<string, unknown>[], totalDocs: r.totalDocs };
 						},
 						findById: async (slug, id) => {
-							// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-							return (await ctxApi.collection(slug).findById(id)) as Record<string, unknown> | null;
+							try {
+								// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+								return (await ctxApi.collection(slug).findById(id)) as Record<string, unknown>;
+							} catch (err) {
+								if (err instanceof Error && err.name === 'DocumentNotFoundError') return null;
+								throw err;
+							}
 						},
 						count: (slug) => ctxApi.collection(slug).count(),
 						create: async (slug, data) => {
