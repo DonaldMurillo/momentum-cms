@@ -19,7 +19,7 @@ import { Toolbar } from '@angular/aria/toolbar';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HdlToolbar {
-	readonly toolbar = inject(Toolbar);
+	readonly ariaDirective = inject(Toolbar);
 	readonly orientation = input<'horizontal' | 'vertical'>('horizontal');
 	readonly disabled = input(false);
 	readonly wrap = input(true);

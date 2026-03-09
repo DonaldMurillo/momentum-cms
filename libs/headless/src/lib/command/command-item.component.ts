@@ -21,7 +21,7 @@ let nextId = 0;
 		'[attr.data-active]': 'active() ? "true" : null',
 		'[attr.data-disabled]': 'disabled() ? "true" : null',
 		'[attr.aria-selected]': 'selected()',
-		'[attr.aria-disabled]': 'disabled()',
+		'[attr.aria-disabled]': 'disabled() || null',
 		'[attr.hidden]': 'visible() ? null : ""',
 		'[attr.id]': 'id',
 		'(click)': 'selectItem()',

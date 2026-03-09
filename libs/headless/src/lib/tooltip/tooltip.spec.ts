@@ -80,6 +80,27 @@ describe('HdlTooltipTrigger', () => {
 		document.querySelector('.cdk-overlay-container')?.replaceChildren();
 	});
 
+	it('should clear pending show timer when mouse leaves before delay elapses', () => {
+		vi.useFakeTimers();
+		const fixture = TestBed.createComponent(TooltipHost);
+		fixture.detectChanges();
+		const trigger = fixture.nativeElement.querySelector('button');
+
+		trigger.dispatchEvent(new MouseEvent('mouseenter'));
+		vi.advanceTimersByTime(0); // delay is 0 for this test host, so it fires immediately
+		fixture.detectChanges();
+
+		// Tooltip should open since delay=0
+		expect(document.querySelector('hdl-tooltip-content')).toBeTruthy();
+
+		// Mouse leave should dismiss
+		trigger.dispatchEvent(new MouseEvent('mouseleave'));
+		vi.advanceTimersByTime(200);
+		fixture.detectChanges();
+
+		expect(document.querySelector('hdl-tooltip-content')).toBeFalsy();
+	});
+
 	it('should expose styling contract attributes and tooltip overlay selectors', () => {
 		vi.useFakeTimers();
 		const fixture = TestBed.createComponent(TooltipHost);

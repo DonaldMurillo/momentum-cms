@@ -16,27 +16,19 @@ import {
 import { DOCUMENT } from '@angular/common';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
-import { A11yModule } from '@angular/cdk/a11y';
+import { HdlCommandDialogPanel } from './command-dialog-panel.component';
 
 @Component({
 	selector: 'hdl-command-dialog',
-	imports: [A11yModule],
+	imports: [HdlCommandDialogPanel],
 	host: {
 		'[attr.data-slot]': '"command-dialog"',
 	},
 	template: `
 		<ng-template #dialogTpl>
-			<div
-				role="dialog"
-				aria-modal="true"
-				[attr.aria-label]="label()"
-				[attr.data-slot]="'command-dialog-panel'"
-				[attr.data-state]="open() ? 'open' : 'closed'"
-				cdkTrapFocus
-				cdkTrapFocusAutoCapture
-			>
+			<hdl-command-dialog-panel [label]="label()" [state]="open() ? 'open' : 'closed'">
 				<ng-content />
-			</div>
+			</hdl-command-dialog-panel>
 		</ng-template>
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,

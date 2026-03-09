@@ -7,8 +7,8 @@ import { HdlTreeItem } from './tree-item.component';
 	imports: [HdlTree, HdlTreeItem],
 	template: `
 		<hdl-tree #tree="hdlTree">
-			<hdl-tree-item [parent]="tree.tree" value="item1">Item 1</hdl-tree-item>
-			<hdl-tree-item [parent]="tree.tree" value="item2">Item 2</hdl-tree-item>
+			<hdl-tree-item [parent]="tree.ariaDirective" value="item1">Item 1</hdl-tree-item>
+			<hdl-tree-item [parent]="tree.ariaDirective" value="item2">Item 2</hdl-tree-item>
 		</hdl-tree>
 	`,
 })
@@ -68,7 +68,7 @@ describe('HdlTree', () => {
 			fixture.nativeElement.querySelectorAll('hdl-tree-item'),
 		);
 
-		treeComp.tree.values.set(['item1']);
+		treeComp.ariaDirective.values.set(['item1']);
 		fixture.detectChanges();
 		await fixture.whenStable();
 		fixture.detectChanges();
@@ -89,13 +89,13 @@ describe('HdlTree', () => {
 			fixture.nativeElement.querySelectorAll('hdl-tree-item'),
 		);
 
-		treeComp.tree.values.set(['item1']);
+		treeComp.ariaDirective.values.set(['item1']);
 		fixture.detectChanges();
 		await fixture.whenStable();
 		fixture.detectChanges();
 		expect(items[0].getAttribute('data-state')).toBe('selected');
 
-		treeComp.tree.values.set(['item2']);
+		treeComp.ariaDirective.values.set(['item2']);
 		fixture.detectChanges();
 		await fixture.whenStable();
 		fixture.detectChanges();

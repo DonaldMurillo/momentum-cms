@@ -33,7 +33,7 @@ let nextId = 0;
 })
 export class HdlSelectContent {
 	protected readonly select = inject(HdlSelect);
-	private readonly listbox = inject<Listbox<string>>(Listbox);
+	readonly ariaDirective = inject<Listbox<string>>(Listbox);
 	private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
 
 	readonly id = input(`hdl-select-content-${nextId++}`);
@@ -41,7 +41,7 @@ export class HdlSelectContent {
 	readonly focusMode = input<'roving' | 'activedescendant'>('roving');
 	readonly selectionMode = input<'follow' | 'explicit'>('explicit');
 	readonly disabled = input(false);
-	readonly values = this.listbox.values;
+	readonly values = this.ariaDirective.values;
 
 	private readonly registrationEffect = effect((onCleanup) => {
 		const id = this.id();
@@ -54,13 +54,14 @@ export class HdlSelectContent {
 	private readonly syncRootToListbox = effect(() => {
 		const selected = this.select.value();
 		const nextValues = selected ? [selected] : [];
-		if (this.listbox.values().join('|') !== nextValues.join('|')) {
-			untracked(() => this.listbox.values.set(nextValues));
+		const current = this.ariaDirective.values();
+		if (current.length !== nextValues.length || current.some((v, i) => v !== nextValues[i])) {
+			untracked(() => this.ariaDirective.values.set(nextValues));
 		}
 	});
 
 	private readonly syncListboxToRoot = effect(() => {
-		const selected = this.listbox.values()[0] ?? null;
+		const selected = this.ariaDirective.values()[0] ?? null;
 		if (selected !== this.select.value()) {
 			untracked(() => {
 				this.select.value.set(selected);

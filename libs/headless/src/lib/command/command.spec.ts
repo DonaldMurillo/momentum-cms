@@ -353,6 +353,30 @@ describe('HdlCommand', () => {
 		}
 	});
 
+	it('should not render aria-disabled="false" on non-disabled items', () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+
+		const enabledItem = query(fixture.nativeElement, '[value="articles"]');
+		expect(enabledItem.getAttribute('aria-disabled')).toBeNull();
+
+		const disabledItem = query(fixture.nativeElement, '[value="settings"]');
+		expect(disabledItem.getAttribute('aria-disabled')).toBe('true');
+	});
+
+	it('should show empty state when only disabled items match the filter', () => {
+		const fixture = TestBed.createComponent(TestHost);
+		fixture.detectChanges();
+
+		const input = query(fixture.nativeElement, 'input') as HTMLInputElement;
+		typeInto(input, 'settings');
+		fixture.detectChanges();
+
+		// Only the disabled "settings" item matches — empty state should be visible
+		const empty = query(fixture.nativeElement, 'hdl-command-empty');
+		expect(empty.hasAttribute('hidden')).toBe(false);
+	});
+
 	it('should set data-state and aria-selected on selected item', () => {
 		const fixture = TestBed.createComponent(TestHost);
 		fixture.detectChanges();

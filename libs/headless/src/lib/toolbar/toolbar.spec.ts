@@ -60,7 +60,7 @@ describe('HdlToolbar', () => {
 			fixture.nativeElement.querySelectorAll('button[hdl-toolbar-widget]'),
 		);
 
-		toolbarComp.toolbar.values.set(['bold']);
+		toolbarComp.ariaDirective.values.set(['bold']);
 		fixture.detectChanges();
 		await fixture.whenStable();
 		fixture.detectChanges();
@@ -83,13 +83,13 @@ describe('HdlToolbar', () => {
 			fixture.nativeElement.querySelectorAll('button[hdl-toolbar-widget]'),
 		);
 
-		toolbarComp.toolbar.values.set(['bold']);
+		toolbarComp.ariaDirective.values.set(['bold']);
 		fixture.detectChanges();
 		await fixture.whenStable();
 		fixture.detectChanges();
 		expect(widgets[0].getAttribute('data-state')).toBe('selected');
 
-		toolbarComp.toolbar.values.set(['italic']);
+		toolbarComp.ariaDirective.values.set(['italic']);
 		fixture.detectChanges();
 		await fixture.whenStable();
 		fixture.detectChanges();

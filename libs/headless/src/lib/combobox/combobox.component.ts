@@ -5,7 +5,7 @@ import { Combobox } from '@angular/aria/combobox';
 	selector: 'hdl-combobox',
 	host: {
 		'[attr.data-slot]': '"combobox"',
-		'[attr.data-state]': 'combobox.expanded() ? "open" : "closed"',
+		'[attr.data-state]': 'ariaDirective.expanded() ? "open" : "closed"',
 		'[attr.data-disabled]': 'disabled() ? "true" : null',
 		'[attr.data-readonly]': 'readonly() ? "true" : null',
 	},
@@ -19,7 +19,7 @@ import { Combobox } from '@angular/aria/combobox';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HdlCombobox {
-	readonly combobox = inject(Combobox);
+	readonly ariaDirective = inject(Combobox);
 	readonly disabled = input(false);
 	readonly filterMode = input<'startsWith' | 'contains'>('startsWith');
 	readonly readonly = input(false);

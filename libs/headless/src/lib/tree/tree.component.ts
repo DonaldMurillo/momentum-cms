@@ -22,7 +22,7 @@ import { Tree } from '@angular/aria/tree';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HdlTree {
-	readonly tree = inject(Tree);
+	readonly ariaDirective = inject(Tree);
 	readonly multi = input(false);
 	readonly selectionMode = input<'follow' | 'explicit'>('explicit');
 	readonly disabled = input(false);

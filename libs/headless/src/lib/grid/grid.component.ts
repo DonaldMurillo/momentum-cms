@@ -18,7 +18,7 @@ import { Grid } from '@angular/aria/grid';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HdlGrid {
-	readonly grid = inject(Grid);
+	readonly ariaDirective = inject(Grid);
 	readonly enableSelection = input(false);
 	readonly disabled = input(false);
 	readonly softDisabled = input(false);

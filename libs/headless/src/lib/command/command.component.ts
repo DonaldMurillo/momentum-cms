@@ -30,7 +30,7 @@ export class HdlCommand {
 	readonly activeItemId = signal<string | null>(null);
 
 	readonly visibleItemCount = computed(
-		() => this.items().filter((item) => item.isVisible()).length,
+		() => this.items().filter((item) => item.isVisible() && !item.isDisabled()).length,
 	);
 
 	readonly visibleItems = computed(() =>

@@ -5,7 +5,7 @@ import { Menu } from '@angular/aria/menu';
 	selector: 'hdl-menu',
 	host: {
 		'[attr.data-slot]': '"menu"',
-		'[attr.data-state]': 'menu.visible() ? "open" : "closed"',
+		'[attr.data-state]': 'ariaDirective.visible() ? "open" : "closed"',
 		'[attr.data-disabled]': 'disabled() ? "true" : null',
 	},
 	hostDirectives: [
@@ -18,7 +18,7 @@ import { Menu } from '@angular/aria/menu';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HdlMenu {
-	readonly menu = inject(Menu);
+	readonly ariaDirective = inject(Menu);
 	readonly disabled = input(false);
 	readonly wrap = input(true);
 	readonly typeaheadDelay = input(1000);

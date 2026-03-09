@@ -107,14 +107,14 @@ export class HdlHoverCardTrigger implements OnDestroy {
 	};
 
 	private clearOpenTimeout(): void {
-		if (this.openTimeout) {
+		if (this.openTimeout !== null) {
 			this.doc.defaultView?.clearTimeout(this.openTimeout);
 			this.openTimeout = null;
 		}
 	}
 
 	private clearCloseTimeout(): void {
-		if (this.closeTimeout) {
+		if (this.closeTimeout !== null) {
 			this.doc.defaultView?.clearTimeout(this.closeTimeout);
 			this.closeTimeout = null;
 		}

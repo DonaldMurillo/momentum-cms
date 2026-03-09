@@ -931,7 +931,7 @@ type PrimitiveCoverage = {
 								</p>
 								<hdl-tree #contentTree="hdlTree" [(values)]="treeValues" data-testid="tree-demo">
 									<hdl-tree-item
-										[parent]="contentTree.tree"
+										[parent]="contentTree.ariaDirective"
 										value="content"
 										label="Content"
 										data-testid="tree-item-content"
@@ -953,7 +953,7 @@ type PrimitiveCoverage = {
 										</div>
 									</hdl-tree-item-group>
 									<hdl-tree-item
-										[parent]="contentTree.tree"
+										[parent]="contentTree.ariaDirective"
 										value="media"
 										label="Media"
 										data-testid="tree-item-media"
@@ -961,7 +961,7 @@ type PrimitiveCoverage = {
 										Media
 									</hdl-tree-item>
 									<hdl-tree-item
-										[parent]="contentTree.tree"
+										[parent]="contentTree.ariaDirective"
 										value="settings"
 										label="Settings"
 										data-testid="tree-item-settings"
@@ -1061,7 +1061,7 @@ type PrimitiveCoverage = {
 
 								<div class="space-y-3">
 									<hdl-menu-trigger
-										[menu]="overflowMenu.menu"
+										[menu]="overflowMenu.ariaDirective"
 										data-testid="menu-trigger"
 										class="inline-flex"
 									>

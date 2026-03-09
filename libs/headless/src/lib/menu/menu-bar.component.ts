@@ -18,7 +18,7 @@ import { MenuBar } from '@angular/aria/menu';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HdlMenuBar {
-	readonly menuBar = inject(MenuBar);
+	readonly ariaDirective = inject(MenuBar);
 	readonly disabled = input(false);
 	readonly wrap = input(true);
 	readonly typeaheadDelay = input(500);

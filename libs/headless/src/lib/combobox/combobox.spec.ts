@@ -84,7 +84,7 @@ describe('HdlCombobox', () => {
 			(de) => de.nativeElement.tagName === 'HDL-COMBOBOX',
 		);
 		const comp = comboboxDebug.componentInstance as HdlCombobox;
-		expect(comp.combobox).toBeTruthy();
+		expect(comp.ariaDirective).toBeTruthy();
 		expect(comp.disabled()).toBe(false);
 	});
 

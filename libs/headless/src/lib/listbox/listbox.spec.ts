@@ -49,7 +49,7 @@ describe('HdlListbox', () => {
 		const listboxComp = listboxDebug.componentInstance as HdlListbox;
 		const options: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('hdl-option'));
 
-		listboxComp.listbox.values.set(['opt1']);
+		listboxComp.ariaDirective.values.set(['opt1']);
 		fixture.detectChanges();
 		await fixture.whenStable();
 		fixture.detectChanges();
@@ -70,13 +70,13 @@ describe('HdlListbox', () => {
 		const listboxComp = listboxDebug.componentInstance as HdlListbox;
 		const options: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('hdl-option'));
 
-		listboxComp.listbox.values.set(['opt1']);
+		listboxComp.ariaDirective.values.set(['opt1']);
 		fixture.detectChanges();
 		await fixture.whenStable();
 		fixture.detectChanges();
 		expect(options[0].getAttribute('data-state')).toBe('selected');
 
-		listboxComp.listbox.values.set(['opt2']);
+		listboxComp.ariaDirective.values.set(['opt2']);
 		fixture.detectChanges();
 		await fixture.whenStable();
 		fixture.detectChanges();
@@ -98,7 +98,7 @@ describe('HdlListbox', () => {
 			(de) => de.nativeElement.tagName === 'HDL-LISTBOX',
 		);
 		const listboxComp = listboxDebug.componentInstance as HdlListbox;
-		expect(listboxComp.listbox).toBeTruthy();
+		expect(listboxComp.ariaDirective).toBeTruthy();
 		expect(listboxComp.orientation()).toBe('vertical');
 	});
 

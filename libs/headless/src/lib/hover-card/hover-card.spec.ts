@@ -21,18 +21,41 @@ class HoverCardHost {
 }
 
 describe('HdlHoverCardTrigger', () => {
-	it('should open on hover after the configured delay', async () => {
+	afterEach(() => {
+		vi.useRealTimers();
+		document.querySelector('.cdk-overlay-container')?.replaceChildren();
+	});
+
+	it('should open on hover after the configured delay', () => {
+		vi.useFakeTimers();
 		const fixture = TestBed.createComponent(HoverCardHost);
 		const overlayContainer = TestBed.inject(OverlayContainer);
 		fixture.detectChanges();
 
 		const trigger = fixture.nativeElement.querySelector('button');
 		trigger.dispatchEvent(new Event('mouseenter'));
-		await new Promise((resolve) => setTimeout(resolve, 170));
+		vi.advanceTimersByTime(160);
 
 		expect(
 			overlayContainer.getContainerElement().querySelector('.hdl-hover-card-panel'),
 		).toBeTruthy();
 		expect(overlayContainer.getContainerElement().textContent).toContain('Author details');
+	});
+
+	it('should clear pending open timer when mouse leaves before delay elapses', () => {
+		vi.useFakeTimers();
+		const fixture = TestBed.createComponent(HoverCardHost);
+		const overlayContainer = TestBed.inject(OverlayContainer);
+		fixture.detectChanges();
+
+		const trigger = fixture.nativeElement.querySelector('button');
+		trigger.dispatchEvent(new Event('mouseenter'));
+		vi.advanceTimersByTime(50);
+		trigger.dispatchEvent(new Event('mouseleave'));
+		vi.advanceTimersByTime(300);
+
+		expect(
+			overlayContainer.getContainerElement().querySelector('.hdl-hover-card-panel'),
+		).toBeFalsy();
 	});
 });

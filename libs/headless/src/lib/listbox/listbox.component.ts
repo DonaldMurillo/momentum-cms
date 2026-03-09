@@ -21,7 +21,7 @@ import { Listbox } from '@angular/aria/listbox';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HdlListbox {
-	readonly listbox = inject(Listbox);
+	readonly ariaDirective = inject(Listbox);
 	readonly multi = input(false);
 	readonly disabled = input(false);
 	readonly orientation = input<'horizontal' | 'vertical'>('vertical');

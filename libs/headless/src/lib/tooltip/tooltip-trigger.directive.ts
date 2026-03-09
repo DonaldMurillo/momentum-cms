@@ -96,14 +96,14 @@ export class HdlTooltipTrigger implements OnDestroy {
 	}
 
 	private cancelShow(): void {
-		if (this.showTimeout) {
+		if (this.showTimeout !== null) {
 			this.document.defaultView?.clearTimeout(this.showTimeout);
 			this.showTimeout = null;
 		}
 	}
 
 	private cancelHide(): void {
-		if (this.hideTimeout) {
+		if (this.hideTimeout !== null) {
 			this.document.defaultView?.clearTimeout(this.hideTimeout);
 			this.hideTimeout = null;
 		}

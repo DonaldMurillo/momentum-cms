@@ -218,6 +218,21 @@ describe('HdlDialogService', () => {
 		}
 	});
 
+	it('should emit afterClosed and remove from tracking when overlay detaches externally', () => {
+		const ref = service.open(TestOverlayDialog);
+		const closed = vi.fn();
+		ref.afterClosed.subscribe(() => closed());
+
+		expect(document.querySelectorAll('.cdk-overlay-pane')).toHaveLength(1);
+
+		// Access the overlayRef to simulate external disposal (e.g., Angular route teardown)
+		// This bypasses ref.close(), which is exactly the leak scenario
+		(ref as any).overlayRef.dispose();
+
+		// afterClosed should still fire so the service cleans up its tracking array
+		expect(closed).toHaveBeenCalled();
+	});
+
 	it('should close every open dialog when closeAll is called', () => {
 		const firstRef = service.open(TestOverlayDialog);
 		const secondRef = service.open(TestOverlayDialog);

@@ -161,3 +161,4 @@ export { HdlCommandEmpty } from './lib/command/command-empty.component';
 export { HdlCommandGroup } from './lib/command/command-group.component';
 export { HdlCommandSeparator } from './lib/command/command-separator.component';
 export { HdlCommandDialog } from './lib/command/command-dialog.component';
+export { HdlCommandDialogPanel } from './lib/command/command-dialog-panel.component';
