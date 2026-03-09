@@ -10,6 +10,7 @@ import { seoAdminRoutes } from '@momentumcms/plugins-seo/admin-routes';
 import { emailAdminRoutes } from '@momentumcms/plugins-email/admin-routes';
 import { queueAdminRoutes } from '@momentumcms/plugins-queue/admin-routes';
 import { cronAdminRoutes } from '@momentumcms/plugins-cron/admin-routes';
+import { otelAdminRoutes } from '@momentumcms/plugins-otel/admin-routes';
 
 export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 	collections: [
@@ -2436,5 +2437,6 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 		{ name: 'email', adminRoutes: emailAdminRoutes },
 		{ name: 'queue', adminRoutes: queueAdminRoutes },
 		{ name: 'cron', adminRoutes: cronAdminRoutes },
+		{ name: 'otel', adminRoutes: otelAdminRoutes },
 	],
 };

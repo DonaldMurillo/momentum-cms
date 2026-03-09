@@ -37,6 +37,17 @@ export interface PostgresAdapterOptions {
 	max?: number;
 }
 
+const PG_COMPARISON_OP_MAP: Record<string, string> = {
+	$gt: '>',
+	$gte: '>=',
+	$lt: '<',
+	$lte: '<=',
+};
+
+function hasComparisonOps(value: object): boolean {
+	return Object.keys(value).some((k) => k in PG_COMPARISON_OP_MAP);
+}
+
 /**
  * Maps field types to PostgreSQL column types.
  */
@@ -470,6 +481,15 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 						value['$ne'] === null
 					) {
 						whereClauses.push(`"${key}" IS NOT NULL`);
+					} else if (typeof value === 'object' && value !== null && hasComparisonOps(value)) {
+						const valObj = value as Record<string, unknown>;
+						for (const [op, sqlOp] of Object.entries(PG_COMPARISON_OP_MAP)) {
+							if (op in valObj) {
+								whereClauses.push(`"${key}" ${sqlOp} $${paramIndex}`);
+								whereValues.push(valObj[op]);
+								paramIndex++;
+							}
+						}
 					} else {
 						whereClauses.push(`"${key}" = $${paramIndex}`);
 						whereValues.push(value);

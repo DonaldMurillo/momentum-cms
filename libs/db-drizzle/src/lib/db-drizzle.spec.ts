@@ -245,4 +245,56 @@ describe('sqliteAdapter', () => {
 			expect(result).toBe(false);
 		});
 	});
+
+	describe('comparison operators', () => {
+		let adapter: ReturnType<typeof sqliteAdapter>;
+
+		beforeEach(async () => {
+			adapter = sqliteAdapter({ filename: TEST_DB_PATH });
+			await adapter.initialize?.([mockPostsCollection]);
+		});
+
+		it('should filter with $gte operator', async () => {
+			await adapter.create('posts', { title: 'Old Post' });
+			await adapter.create('posts', { title: 'New Post' });
+
+			const docs = await adapter.find('posts', { createdAt: { $gte: '2000-01-01T00:00:00.000Z' } });
+			expect(docs.length).toBeGreaterThanOrEqual(2);
+		});
+
+		it('should filter with $lte operator', async () => {
+			await adapter.create('posts', { title: 'Post A' });
+
+			const docs = await adapter.find('posts', { createdAt: { $lte: '2099-12-31T23:59:59.999Z' } });
+			expect(docs.length).toBeGreaterThanOrEqual(1);
+		});
+
+		it('should filter with $gt operator', async () => {
+			await adapter.create('posts', { title: 'Post B' });
+
+			const docs = await adapter.find('posts', { createdAt: { $gt: '2099-01-01T00:00:00.000Z' } });
+			expect(docs).toHaveLength(0);
+		});
+
+		it('should filter with $lt operator', async () => {
+			await adapter.create('posts', { title: 'Post C' });
+
+			const docs = await adapter.find('posts', { createdAt: { $lt: '2000-01-01T00:00:00.000Z' } });
+			expect(docs).toHaveLength(0);
+		});
+
+		it('should combine $gte and $lte for range queries', async () => {
+			await adapter.create('posts', { title: 'Range Post' });
+
+			const now = new Date();
+			const oneMinuteAgo = new Date(now.getTime() - 60_000).toISOString();
+			const oneMinuteFromNow = new Date(now.getTime() + 60_000).toISOString();
+
+			const docs = await adapter.find('posts', {
+				createdAt: { $gte: oneMinuteAgo, $lte: oneMinuteFromNow },
+			});
+			expect(docs.length).toBeGreaterThanOrEqual(1);
+			expect(docs.some((d) => d['title'] === 'Range Post')).toBe(true);
+		});
+	});
 });

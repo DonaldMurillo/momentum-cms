@@ -687,6 +687,108 @@ describe('MomentumAPI', () => {
 		});
 	});
 
+	describe('where clause comparison operators', () => {
+		it('should pass gte operator to the adapter as $gte', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { createdAt: { gte: '2024-01-01' } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ createdAt: { $gte: '2024-01-01' } }),
+			);
+		});
+
+		it('should pass lte operator to the adapter as $lte', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { createdAt: { lte: '2024-12-31' } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ createdAt: { $lte: '2024-12-31' } }),
+			);
+		});
+
+		it('should pass gt operator to the adapter as $gt', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { createdAt: { gt: '2024-01-01' } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ createdAt: { $gt: '2024-01-01' } }),
+			);
+		});
+
+		it('should pass lt operator to the adapter as $lt', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { createdAt: { lt: '2024-12-31' } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ createdAt: { $lt: '2024-12-31' } }),
+			);
+		});
+
+		it('should combine gte and lte into a single operator object', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { createdAt: { gte: '2024-01-01', lte: '2024-12-31' } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({
+					createdAt: { $gte: '2024-01-01', $lte: '2024-12-31' },
+				}),
+			);
+		});
+
+		it('should still handle equals operator', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { status: { equals: 'published' } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ status: 'published' }),
+			);
+		});
+
+		it('should handle plain value where clauses', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { status: 'published' },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ status: 'published' }),
+			);
+		});
+	});
+
 	describe('draft visibility in findById', () => {
 		const versionedCollection: CollectionConfig = {
 			slug: 'articles',
