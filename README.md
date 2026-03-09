@@ -47,6 +47,7 @@ Full documentation is available in the [docs/](docs/README.md) directory, coveri
 
 - **Collection-first** - Define your data model in TypeScript; the admin UI, API routes, and database schema are generated automatically
 - **Angular 21** - Server-side rendered with Express or Analog/Nitro
+- **Headless UI Primitives** - Unstyled, accessible Angular interaction primitives built on Angular CDK and Angular Aria
 - **Admin Dashboard** - Auto-generated CRUD interface with rich text editing, relationships, file uploads, and dark mode
 - **Drizzle ORM** - Type-safe database access with PostgreSQL and SQLite adapters
 - **Authentication** - Built-in auth via Better Auth with email/password, sessions, role-based access, admin tools (ban/impersonation), and organization multi-tenancy
@@ -92,6 +93,7 @@ export const Posts = defineCollection({
 | `@momentumcms/server-analog`        | `libs/server-analog`        | Nitro/h3 adapter for Analog.js                          |
 | `@momentumcms/admin`                | `libs/admin`                | Angular admin dashboard UI                              |
 | `@momentumcms/ui`                   | `libs/ui`                   | Base UI component library                               |
+| `@momentumcms/headless`             | `libs/headless`             | Unstyled Angular headless primitives                    |
 | `@momentumcms/storage`              | `libs/storage`              | File storage adapters (local, S3)                       |
 | `@momentumcms/migrations`           | `libs/migrations`           | Database migration system (generate, run, rollback)     |
 | `@momentumcms/logger`               | `libs/logger`               | Structured logging                                      |
@@ -217,6 +219,7 @@ This starts a local Verdaccio registry, publishes all packages, runs `create-mom
 
 ### Recently Shipped
 
+- **Headless UI component library** - Accessible, unstyled Angular primitives with a global styling contract and example harness
 - **NestJS Adapter** — Full-featured NestJS server adapter with complete API parity, DI container, and Angular SSR integration
 - **Form Builder** — Schema-driven form builder plugin with conditional fields, server-side validation, submission storage, rate limiting, and webhook forwarding
 - **Email Builder** — Visual email template editor with live preview, Handlebars templating, and pluggable transport
@@ -230,7 +233,6 @@ This starts a local Verdaccio registry, publishes all packages, runs `create-mom
 
 These are planned features and improvements, in no particular priority order.
 
-- **Headless UI component library** — Fully customizable, unstyled components built on Angular CDK + Angular Aria, usable anywhere (not just the admin)
 - **UX polish pass** — Improve interactions, transitions, and overall usability across the admin dashboard
 - **Better Auth plugin adapters** — Pre-built adapters for remaining Better Auth plugins (OAuth providers, magic links, passkeys); admin and organization plugins are shipped
 - **Resend adapter** — Email delivery via Resend for transactional emails and auth flows

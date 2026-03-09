@@ -206,6 +206,8 @@ export const exampleSeedingConfig: SeedingConfig = {
 					blockType: 'hero',
 					heading: 'Our Work',
 					subheading: 'See what we have built for our clients.',
+					ctaText: 'Open Headless Styling Lab',
+					ctaLink: '/headless-styling-lab',
 				},
 				{
 					blockType: 'testimonial',

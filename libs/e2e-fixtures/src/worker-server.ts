@@ -20,7 +20,7 @@ export interface WorkerServerConfig {
 	/** Whether to wait for seed completion via health endpoint */
 	waitForSeeds: boolean;
 	/** Admin user to create during setup */
-	adminUser: TestUserCredentials;
+	adminUser?: TestUserCredentials;
 	/** Additional test users to create via sign-up API */
 	additionalUsers?: TestUserCredentials[];
 	/** Whether to pass SMTP env vars for email testing */
@@ -86,7 +86,7 @@ async function waitForHealth(
 			lastError = err instanceof Error ? err.message : String(err);
 		}
 
-		 
+		// eslint-disable-next-line local/no-direct-browser-apis -- Node-side Playwright worker polling delay
 		await new Promise((r) => setTimeout(r, 1000));
 	}
 
@@ -168,7 +168,15 @@ async function setupUsers(
 	dbUrl: string,
 	config: WorkerServerConfig,
 ): Promise<void> {
-	const allUsers = [config.adminUser, ...(config.additionalUsers ?? [])];
+	const allUsers = [config.adminUser, ...(config.additionalUsers ?? [])].filter(
+		(user): user is TestUserCredentials => user != null,
+	);
+
+	if (allUsers.length === 0) {
+		console.log('[Setup] No worker users requested; skipping auth setup');
+		return;
+	}
+
 	const authUserIds = new Map<string, string>();
 
 	// Sign up all users via Better Auth API
@@ -181,7 +189,12 @@ async function setupUsers(
 	}
 
 	// Set correct roles on the Better Auth "user" table
-	const pool = new Pool({ connectionString: dbUrl });
+	const pool = new Pool({
+		connectionString: dbUrl,
+		max: 1,
+		idleTimeoutMillis: 1000,
+		allowExitOnIdle: true,
+	});
 	try {
 		for (const user of allUsers) {
 			await ensureMomentumUser(pool, user, authUserIds.get(user.email));
@@ -248,6 +261,8 @@ export function createWorkerFixture(config: WorkerServerConfig): ReturnType<type
 
 					// Allow localhost webhooks for E2E testing
 					env['MOMENTUM_ALLOW_PRIVATE_WEBHOOKS'] = 'true';
+					env['MOMENTUM_DISABLE_BACKGROUND_WORKERS'] = 'true';
+					env['MOMENTUM_DB_MAX_CLIENTS'] = process.env['MOMENTUM_DB_MAX_CLIENTS'] ?? '2';
 
 					serverProcess = spawn('node', [config.serverBinary], {
 						env,
@@ -301,7 +316,7 @@ export function createWorkerFixture(config: WorkerServerConfig): ReturnType<type
 						serverProcess.kill('SIGTERM');
 						// Wait for graceful shutdown
 						await new Promise<void>((resolve) => {
-							 
+							// eslint-disable-next-line local/no-direct-browser-apis -- Node-side graceful shutdown timeout
 							const timeout = setTimeout(() => {
 								serverProcess?.kill('SIGKILL');
 								resolve();

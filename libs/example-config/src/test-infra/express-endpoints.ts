@@ -24,6 +24,19 @@ export interface TestEndpointsOptions {
 }
 
 /**
+ * BigInt-safe JSON serialization helper.
+ * Drizzle ORM may return BigInt for certain PostgreSQL column types (e.g. serial IDs).
+ * JSON.stringify crashes on BigInt, so we convert them to Number.
+ */
+function safeSend(res: import('express').Response, data: unknown): void {
+	const json = JSON.stringify(data, (_key, value) =>
+		typeof value === 'bigint' ? Number(value) : value,
+	);
+	res.setHeader('Content-Type', 'application/json');
+	res.send(json);
+}
+
+/**
  * In-memory webhook receiver storage.
  * Stores received webhook payloads so tests can verify delivery.
  */
@@ -53,7 +66,7 @@ export function mountTestEndpoints(app: Router, options: TestEndpointsOptions): 
 	// --- Hook test endpoints ---
 	app.get('/api/test-hook-log', (_req, res) => {
 		const invocations = getHookLog();
-		res.json({ invocations, count: invocations.length });
+		safeSend(res, { invocations, count: invocations.length });
 	});
 
 	app.delete('/api/test-hook-log', (_req, res) => {
@@ -78,7 +91,7 @@ export function mountTestEndpoints(app: Router, options: TestEndpointsOptions): 
 	// --- Field hook test endpoints ---
 	app.get('/api/test-field-hook-log', (_req, res) => {
 		const invocations = getFieldHookLog();
-		res.json({ invocations, count: invocations.length });
+		safeSend(res, { invocations, count: invocations.length });
 	});
 
 	app.delete('/api/test-field-hook-log', (_req, res) => {
@@ -100,7 +113,7 @@ export function mountTestEndpoints(app: Router, options: TestEndpointsOptions): 
 	});
 
 	app.get('/api/test-webhook-receiver', (_req, res) => {
-		res.json({ webhooks: receivedWebhooks, count: receivedWebhooks.length });
+		safeSend(res, { webhooks: receivedWebhooks, count: receivedWebhooks.length });
 	});
 
 	app.delete('/api/test-webhook-receiver', (_req, res) => {
@@ -113,7 +126,7 @@ export function mountTestEndpoints(app: Router, options: TestEndpointsOptions): 
 	events.bus.on('*', (event) => eventBusLog.push(event));
 
 	app.get('/api/test-event-bus-log', (_req, res) => {
-		res.json({ events: eventBusLog, count: eventBusLog.length });
+		safeSend(res, { events: eventBusLog, count: eventBusLog.length });
 	});
 
 	app.delete('/api/test-event-bus-log', (_req, res) => {
@@ -126,7 +139,7 @@ export function mountTestEndpoints(app: Router, options: TestEndpointsOptions): 
 		// Flush pending events first so tests see them immediately
 		await analytics.eventStore.flush();
 		const result = await analyticsAdapter.query({ limit: 500 });
-		res.json(result);
+		safeSend(res, result);
 	});
 
 	app.delete('/api/test-analytics-events', (_req, res) => {

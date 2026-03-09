@@ -1,0 +1,26 @@
+import { ChangeDetectionStrategy, Component, inject, input, model } from '@angular/core';
+import { MenuBar } from '@angular/aria/menu';
+
+@Component({
+	selector: 'hdl-menu-bar',
+	host: {
+		'[attr.data-slot]': '"menu-bar"',
+		'[attr.data-disabled]': 'disabled() ? "true" : null',
+	},
+	hostDirectives: [
+		{
+			directive: MenuBar,
+			inputs: ['disabled', 'wrap', 'typeaheadDelay', 'values'],
+			outputs: ['valuesChange'],
+		},
+	],
+	template: `<ng-content />`,
+	changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class HdlMenuBar {
+	readonly ariaDirective = inject(MenuBar);
+	readonly disabled = input(false);
+	readonly wrap = input(true);
+	readonly typeaheadDelay = input(500);
+	readonly values = model<string[]>([]);
+}

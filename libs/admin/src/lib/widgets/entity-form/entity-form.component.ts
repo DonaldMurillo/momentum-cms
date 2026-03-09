@@ -598,6 +598,11 @@ export class EntityFormWidget<T extends Entity = Entity> {
 
 		try {
 			const entity = await this.api.collection<T>(slug).findById(id);
+			if (!entity) {
+				this.formError.set(`${this.collectionLabelSingular()} not found`);
+				this.feedback.entityNotFound(this.collectionLabelSingular());
+				return;
+			}
 			this.originalData.set(entity);
 			this.formModel.set({ ...entity });
 			const ef = this.entityForm();

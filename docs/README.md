@@ -54,6 +54,12 @@
 - [Theme](admin/theme.md) — Dark mode, CSS variables, `McmsThemeService`
 - [Tailwind Setup](admin/tailwind-setup.md) — Preset, content paths, theme variables
 
+## Headless UI
+
+- [Overview](headless/overview.md) — Exported primitive families, accessibility guarantees, and validation commands
+- [Usage](headless/usage.md) — Import, compose, style, and test headless primitives in Angular apps
+- [Styling](headless/styling.md) — Global-layer theming contract, slots, states, and overlay selectors
+
 ## Storage
 
 - [Overview](storage/overview.md) — Storage adapter interface
@@ -75,3 +81,7 @@
 ## Logger
 
 - [Overview](logger/overview.md) — Log levels, namespaces, formatters
+
+## Engineering Notes
+
+- [Agent Notes](agent-notes.md) — Durable implementation notes for follow-up maintenance

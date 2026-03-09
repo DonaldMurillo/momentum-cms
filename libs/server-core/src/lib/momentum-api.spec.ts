@@ -6,6 +6,7 @@ import {
 	resetMomentumAPI,
 	CollectionNotFoundError,
 	DocumentNotFoundError,
+	DraftNotVisibleError,
 	AccessDeniedError,
 	ValidationError,
 } from './momentum-api';
@@ -811,7 +812,7 @@ describe('MomentumAPI', () => {
 			};
 		});
 
-		it('should throw DocumentNotFoundError when user cannot read drafts and doc is draft', async () => {
+		it('should throw DraftNotVisibleError when user cannot read drafts and doc is draft', async () => {
 			const api = initializeMomentumAPI(draftConfig);
 			// Non-admin user → readDrafts returns false
 			const userApi = api.setContext({ user: { id: 'user-1', role: 'editor' } });
@@ -822,7 +823,7 @@ describe('MomentumAPI', () => {
 			});
 
 			await expect(userApi.collection('articles').findById('1')).rejects.toThrow(
-				DocumentNotFoundError,
+				DraftNotVisibleError,
 			);
 		});
 

@@ -29,6 +29,7 @@ import { exampleSeedingConfig } from '@momentumcms/example-config';
 const dbAdapter = postgresAdapter({
 	connectionString:
 		process.env['DATABASE_URL'] ?? 'postgresql://postgres:postgres@localhost:5432/momentum',
+	max: Number(process.env['MOMENTUM_DB_MAX_CLIENTS'] ?? 10),
 });
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- PostgresAdapter implements PostgresAdapterWithRaw
@@ -36,6 +37,7 @@ const pool = (dbAdapter as PostgresAdapterWithRaw).getPool();
 
 const authBaseURL =
 	process.env['BETTER_AUTH_URL'] || `http://localhost:${process.env['PORT'] || 4000}`;
+const disableBackgroundWorkers = process.env['MOMENTUM_DISABLE_BACKGROUND_WORKERS'] === 'true';
 
 /**
  * Email template management plugin.
@@ -89,7 +91,11 @@ export const redirects = redirectsPlugin({
  */
 export const queue = queuePlugin({
 	adapter: postgresQueueAdapter({ pool }),
-	workers: { default: { concurrency: 2 } },
+	workers: disableBackgroundWorkers
+		? { default: { enabled: false } }
+		: { default: { concurrency: 2 } },
+	stalledCheckInterval: disableBackgroundWorkers ? 24 * 60 * 60 * 1000 : 30000,
+	purgeInterval: disableBackgroundWorkers ? 0 : undefined,
 });
 
 /**
@@ -98,7 +104,7 @@ export const queue = queuePlugin({
 export const cron = cronPlugin({
 	queue,
 	schedules: [],
-	checkInterval: 60000,
+	checkInterval: disableBackgroundWorkers ? 24 * 60 * 60 * 1000 : 60000,
 });
 
 /**

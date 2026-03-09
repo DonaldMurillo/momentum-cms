@@ -536,6 +536,11 @@ export class EntityViewWidget<T extends Entity = Entity> {
 			const entity = await this.api
 				.collection<T>(slug)
 				.findById(id, { depth: 1, withDeleted: this.hasSoftDelete() });
+			if (!entity) {
+				this.loadError.set(`${this.collectionLabelSingular()} not found`);
+				this.feedback.entityNotFound(this.collectionLabelSingular());
+				return;
+			}
 			this.entity.set(entity);
 			this.resolveRelationships(entity);
 		} catch (err) {

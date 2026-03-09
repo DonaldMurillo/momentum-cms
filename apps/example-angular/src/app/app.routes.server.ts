@@ -12,6 +12,12 @@ export const serverRoutes: ServerRoute[] = [
 		path: 'admin/**',
 		renderMode: RenderMode.Client,
 	},
+	// The headless styling lab is a demo/test harness with many interactive primitives.
+	// Keep it client-rendered so the showcase cannot wedge SSR for the whole app.
+	{
+		path: 'headless-styling-lab',
+		renderMode: RenderMode.Client,
+	},
 	// Default to server rendering
 	{
 		path: '**',

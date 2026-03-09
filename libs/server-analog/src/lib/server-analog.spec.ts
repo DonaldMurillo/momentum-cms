@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createMomentumHandler, type H3Event } from './server-analog';
-import { createInMemoryAdapter } from '@momentumcms/server-core';
+import {
+	createMomentumHandler,
+	createComprehensiveMomentumHandler,
+	type H3Event,
+	type MomentumH3Utils,
+} from './server-analog';
+import { createInMemoryAdapter, resetMomentumAPI } from '@momentumcms/server-core';
 import type { CollectionConfig, DatabaseAdapter, MomentumConfig } from '@momentumcms/core';
 
 // Mock collections for testing
@@ -24,6 +29,7 @@ describe('createMomentumHandler', () => {
 	};
 
 	beforeEach(() => {
+		resetMomentumAPI();
 		adapter = createInMemoryAdapter();
 		config = {
 			db: { adapter },
@@ -148,5 +154,132 @@ describe('createMomentumHandler', () => {
 			expect(result.status).toBe(200);
 			expect(result.body.deleted).toBe(true);
 		});
+	});
+});
+
+describe('createComprehensiveMomentumHandler — versioning AccessDeniedError handling', () => {
+	const versionedCollection: CollectionConfig = {
+		slug: 'articles',
+		labels: { singular: 'Article', plural: 'Articles' },
+		fields: [{ name: 'title', type: 'text', required: true, label: 'Title' }],
+		versions: { drafts: true },
+		access: {
+			read: () => true,
+			create: () => true,
+			update: () => true,
+			delete: () => true,
+			publishVersions: () => false,
+			restoreVersions: () => false,
+		},
+	};
+
+	let comprehensiveHandler: ReturnType<typeof createComprehensiveMomentumHandler>;
+	let mockUtils: MomentumH3Utils;
+	let statusCapture: number;
+
+	beforeEach(() => {
+		resetMomentumAPI();
+		const adapter = createInMemoryAdapter();
+		const config: MomentumConfig = {
+			db: { adapter },
+			collections: [versionedCollection],
+		};
+		comprehensiveHandler = createComprehensiveMomentumHandler(config);
+		statusCapture = 200;
+		mockUtils = {
+			readBody: vi.fn().mockResolvedValue({}),
+			getQuery: vi.fn().mockReturnValue({}),
+			getRouterParams: vi.fn().mockReturnValue({ momentum: '' }),
+			setResponseStatus: vi.fn((_event: H3Event, status: number) => {
+				statusCapture = status;
+			}),
+			setResponseHeader: vi.fn(),
+			readMultipartFormData: vi.fn().mockResolvedValue(undefined),
+			send: vi.fn(),
+		};
+	});
+
+	function createMockEvent(method: string): H3Event {
+		return {
+			method,
+			path: '/api/articles',
+			context: { params: {} },
+		};
+	}
+
+	async function createArticle(): Promise<string> {
+		(mockUtils.readBody as ReturnType<typeof vi.fn>).mockResolvedValue({ title: 'Test Article' });
+		(mockUtils.getRouterParams as ReturnType<typeof vi.fn>).mockReturnValue({
+			momentum: 'articles',
+		});
+		statusCapture = 200;
+		const result = (await comprehensiveHandler(createMockEvent('POST'), mockUtils, {
+			user: { id: 'admin-1', email: 'admin@test.com', role: 'admin' },
+		})) as Record<string, unknown>;
+		// The comprehensive handler returns MomentumResponse directly (with doc property)
+		const doc = result['doc'] as Record<string, unknown> | undefined;
+		if (!doc) {
+			throw new Error(
+				`createArticle failed: status=${statusCapture}, result=${JSON.stringify(result)}`,
+			);
+		}
+		return doc['id'] as string;
+	}
+
+	it('should return 403 when publish throws AccessDeniedError', async () => {
+		const articleId = await createArticle();
+
+		(mockUtils.getRouterParams as ReturnType<typeof vi.fn>).mockReturnValue({
+			momentum: `articles/${articleId}/publish`,
+		});
+
+		// Editor user — publishVersions access returns false
+		const result = await comprehensiveHandler(createMockEvent('POST'), mockUtils, {
+			user: { id: 'editor-1', email: 'editor@test.com', role: 'editor' },
+		});
+
+		expect(statusCapture).toBe(403);
+		expect((result as Record<string, unknown>)['error']).toBe('Access denied');
+	});
+
+	it('should return 403 when unpublish throws AccessDeniedError', async () => {
+		const articleId = await createArticle();
+
+		// First publish as admin
+		(mockUtils.getRouterParams as ReturnType<typeof vi.fn>).mockReturnValue({
+			momentum: `articles/${articleId}/publish`,
+		});
+		await comprehensiveHandler(createMockEvent('POST'), mockUtils, {
+			user: { id: 'admin-1', email: 'admin@test.com', role: 'admin' },
+		});
+
+		// Then try to unpublish as editor
+		(mockUtils.getRouterParams as ReturnType<typeof vi.fn>).mockReturnValue({
+			momentum: `articles/${articleId}/unpublish`,
+		});
+		const result = await comprehensiveHandler(createMockEvent('POST'), mockUtils, {
+			user: { id: 'editor-1', email: 'editor@test.com', role: 'editor' },
+		});
+
+		expect(statusCapture).toBe(403);
+		expect((result as Record<string, unknown>)['error']).toBe('Access denied');
+	});
+
+	it('should return 403 when version restore throws AccessDeniedError', async () => {
+		const articleId = await createArticle();
+
+		(mockUtils.getRouterParams as ReturnType<typeof vi.fn>).mockReturnValue({
+			momentum: `articles/${articleId}/versions/restore`,
+		});
+		(mockUtils.readBody as ReturnType<typeof vi.fn>).mockResolvedValue({
+			versionId: 'fake-version-id',
+		});
+
+		const result = await comprehensiveHandler(createMockEvent('POST'), mockUtils, {
+			user: { id: 'editor-1', email: 'editor@test.com', role: 'editor' },
+		});
+
+		expect(statusCapture).toBe(403);
+		expect((result as Record<string, unknown>)['error']).toBe('Access denied');
 	});
 });

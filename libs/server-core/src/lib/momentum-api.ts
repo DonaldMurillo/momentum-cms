@@ -47,6 +47,7 @@ import { VersionOperationsImpl } from './version-operations';
 import {
 	CollectionNotFoundError,
 	DocumentNotFoundError,
+	DraftNotVisibleError,
 	AccessDeniedError,
 	GlobalNotFoundError,
 	ValidationError,
@@ -429,8 +430,10 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
 				const record = doc as Record<string, unknown>;
 				if (record['_status'] !== 'published') {
-					// Draft docs appear as "not found" to prevent information leakage
-					throw new DocumentNotFoundError(this.slug, id);
+					// Throw DraftNotVisibleError (→ 200 with doc: null) instead of
+					// DocumentNotFoundError (→ 404) so the API doesn't falsely claim
+					// the resource is missing while still hiding draft content.
+					throw new DraftNotVisibleError(this.slug, id);
 				}
 			}
 		}
@@ -1597,6 +1600,7 @@ export type {
 export {
 	CollectionNotFoundError,
 	DocumentNotFoundError,
+	DraftNotVisibleError,
 	AccessDeniedError,
 	GlobalNotFoundError,
 	ValidationError,

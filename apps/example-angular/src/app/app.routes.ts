@@ -46,6 +46,12 @@ export const appRoutes: Route[] = [
 				path: 'kitchen-sink',
 				component: KitchenSinkPage,
 			},
+			// Headless styling lab
+			{
+				path: 'headless-styling-lab',
+				loadComponent: () =>
+					import('./pages/headless-styling-lab.page').then((m) => m.HeadlessStylingLabPage),
+			},
 			// Dynamic page rendering by slug (catch-all for public pages)
 			{
 				path: ':slug',

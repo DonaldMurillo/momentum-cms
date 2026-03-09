@@ -5,6 +5,7 @@ import {
 	isMomentumAPIInitialized,
 	CollectionNotFoundError,
 	DocumentNotFoundError,
+	DraftNotVisibleError,
 	AccessDeniedError,
 	ReferentialIntegrityError,
 	ValidationError as MomentumValidationError,
@@ -52,7 +53,7 @@ export interface ValidationError {
 export interface MomentumResponse {
 	status?: number;
 	docs?: Record<string, unknown>[];
-	doc?: Record<string, unknown>;
+	doc?: Record<string, unknown> | null; // null when doc exists but is not visible (e.g. draft)
 	totalDocs?: number;
 	deleted?: boolean;
 	id?: string;
@@ -288,6 +289,11 @@ function handleError(error: unknown): MomentumResponse {
 	}
 	if (error instanceof DocumentNotFoundError) {
 		return { error: error.message, status: 404 };
+	}
+	if (error instanceof DraftNotVisibleError) {
+		// Document exists but is not visible (draft) — return 200 with null doc
+		// so the API doesn't falsely 404 while still hiding draft content
+		return { doc: null };
 	}
 	if (error instanceof AccessDeniedError) {
 		return { error: error.message, status: 403 };
