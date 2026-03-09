@@ -56,7 +56,8 @@
 
 ## Headless UI
 
-- [Overview](headless/overview.md) — Unstyled Angular primitives, accessibility guarantees, and validation commands
+- [Overview](headless/overview.md) — Exported primitive families, accessibility guarantees, and validation commands
+- [Usage](headless/usage.md) — Import, compose, style, and test headless primitives in Angular apps
 - [Styling](headless/styling.md) — Global-layer theming contract, slots, states, and overlay selectors
 
 ## Storage

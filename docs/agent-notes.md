@@ -98,3 +98,21 @@
 - Evidence: `libs/headless/src/lib/input/input.component.ts`, `libs/headless/src/lib/textarea/textarea.component.ts`, `libs/headless/src/lib/field/description.component.ts`, `libs/headless/src/lib/field/error.component.ts`, `node + playwright` load probe against `/headless-styling-lab`
 - Next time: If an effect calls a registration method that reads or writes signals on shared context, wrap the registration in `untracked` before you ship a self-licking ice cream cone.
 - Status: active
+
+## 2026-03-08 - Keep headless docs and Claude skills aligned
+
+- Scope: headless
+- Trigger: The public docs, root README, and Claude skill surface can drift separately, which is how you end up with agents treating shipped headless primitives like vaporware or consuming them without the global styling contract.
+- Approach: When the headless export surface changes, update `README.md`, `docs/headless/overview.md`, `docs/headless/usage.md`, and `docs/headless/styling.md` together, and keep the repo skill in `.claude/skills/headless-primitive/SKILL.md` plus the generated-app skill in `apps/create-momentum-app/templates/shared/.claude/skills/headless-ui/SKILL.md` in sync with that workflow.
+- Evidence: `README.md`, `docs/headless/overview.md`, `docs/headless/usage.md`, `.claude/skills/headless-primitive/SKILL.md`, `apps/create-momentum-app/templates/shared/.claude/skills/headless-ui/SKILL.md`
+- Next time: If a headless primitive ships and the docs or skills still talk like it does not exist, fix the words in the same change instead of letting the repo gaslight the next agent.
+- Status: active
+
+## 2026-03-08 - Drawer and list host display contracts matter
+
+- Scope: headless
+- Trigger: The styling lab showed `select` and `command` items collapsing into inline rows, and the new drawer rendered like a floating dialog card in the corner instead of occupying the drawer pane.
+- Approach: In the app-level global recipes, force custom-element list descendants like `select-item`, `command-item`, and `command-group` to `display: block` with `width: 100%`, and make the drawer host plus its focus-trap wrapper fill the overlay pane (`width: 100%`, `height: 100%`) with side-aware border radii.
+- Evidence: `apps/example-angular/src/styles.css`, `apps/example-angular/src/app/pages/headless-styling-lab.page.ts`, `libs/e2e-tests/src/specs/headless-styling.spec.ts`
+- Next time: If a custom-element surface looks horizontally cursed or an overlay component is not occupying its pane, inspect the host display contract before assuming the primitive logic is wrong.
+- Status: active

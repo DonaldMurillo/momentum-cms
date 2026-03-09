@@ -32,3 +32,4 @@ npx create-momentum-app my-app --flavor angular --database postgres
 - Drizzle ORM with PostgreSQL or SQLite
 - Docker Compose setup for PostgreSQL (when using postgres)
 - Tailwind CSS with the Momentum admin theme
+- Project-local Claude Code skills under `.claude/skills`, including `headless-ui` for custom app UI built on `@momentumcms/headless`
