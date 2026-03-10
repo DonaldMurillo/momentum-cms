@@ -1,6 +1,6 @@
 # CLI Stroll Test Issues
 
-Tested `npx create-momentum-app@0.5.5` and re-tested with `0.5.6` with Angular + Express + SQLite on 2026-03-10.
+Tested `npx create-momentum-app@0.5.5`, re-tested with `0.5.6`, and re-tested with `0.5.7` with Angular + Express + SQLite on 2026-03-10.
 
 ## Blocker Issues
 
@@ -28,7 +28,7 @@ Tested `npx create-momentum-app@0.5.5` and re-tested with `0.5.6` with Angular +
 **Affected**: `@momentumcms/plugins-form-builder`
 **Description**: `@momentumcms/plugins-form-builder` depends on `@momentumcms/form-builder@0.5.5` but only version 0.5.3 exists on npm. Installation fails with `ETARGET`.
 **Repro**: `npm install @momentumcms/plugins-form-builder` → `No matching version found for @momentumcms/form-builder@0.5.5`
-**Fix**: Nx Release skipped this Angular library during version bump (source stayed at 0.5.3 while all other packages went to 0.5.6). Manually published 0.5.6. **Root cause**: Need to investigate why `@nx/angular:package` libraries are skipped by `nx release`. **FIXED manually for 0.5.6.**
+**Fix**: Nx Release skipped this Angular library during version bump (source stayed at 0.5.3 while all other packages went to 0.5.6). Manually published 0.5.6. **Root cause**: The `form-builder` project.json had a project-level `manifestRootsToUpdate: ["dist/{projectRoot}"]` override that excluded the source `{projectRoot}`, so `nx release` only bumped the dist version (which gets overwritten by the build step). Removed the project-level override so it inherits the global config with both source and dist roots. Manually published 0.5.7. **FIXED in 0.5.7.**
 
 ## Major Issues
 
@@ -98,12 +98,14 @@ Tested `npx create-momentum-app@0.5.5` and re-tested with `0.5.6` with Angular +
 ### 11. Plugin config API mismatches vs docs/examples
 
 **Severity**: Minor
-**Affected**: `@momentumcms/plugins-analytics`, `@momentumcms/plugins-otel`
+**Affected**: `@momentumcms/plugins-analytics`, `@momentumcms/plugins-otel`, `@momentumcms/plugins-image`
 **Description**: The scaffolded config examples use property names that don't match the published TypeScript types:
 
+- Analytics: `collections: ['posts']` → not a valid property on `AnalyticsConfig` (requires `adapter` instead)
 - Analytics: `trackApiRequests` → should be `trackApi`
 - OTel: `metrics: true` → should be `metrics: { enabled: true }`
 - OTel: `dashboard: true` → not a valid top-level property, use `metrics: { adminDashboard: true }`
+- Image: `collections: ['posts']` → not a valid property on `ImagePluginConfig`
   **Impact**: TS compilation fails when users follow examples.
   **Fix**: Update CLI scaffolding templates or update the type interfaces to accept shorthand.
 
@@ -136,6 +138,22 @@ Tested `npx create-momentum-app@0.5.5` and re-tested with `0.5.6` with Angular +
 - First user automatically gets admin role
 - Cookie-based auth works correctly with Better Auth session tokens
 - Server starts with 7 plugins simultaneously without errors
+
+## 0.5.7 Re-test Results
+
+Scaffolded fresh project with `npx create-momentum-app@0.5.7`, added all 7 plugins + migration mode:
+
+- `npm install` — all plugins install cleanly (form-builder@0.5.7 now available)
+- `npm run generate` — admin config generates correctly
+- `npm run migrate:generate` — detects all 12 tables (posts + 5 auth + 6 plugin)
+- `npm run migrate:run` — applies cleanly
+- `npm run migrate:rollback` + `migrate:run` — rollback/re-apply cycle works
+- Server starts with 0 errors and all 10 collections accessible via API
+- First user signup gets `role: admin` automatically
+- SEO sitemap.xml and robots.txt generated correctly
+- All plugin CRUD operations work (posts, redirects, forms, email-templates, tracking-rules)
+
+**Remaining issues**: #8 (Vite SSR warnings, cosmetic), #11 (config API mismatches in scaffolding templates)
 
 ## Plugins Not Tested
 
