@@ -1,3 +1,7 @@
+## 0.5.8 (2026-03-10)
+
+This was a version bump only for server-core to align it with other projects, there were no code changes.
+
 ## 0.5.7 (2026-03-10)
 
 ### 🩹 Fixes

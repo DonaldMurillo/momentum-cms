@@ -1,3 +1,14 @@
+## 0.5.8 (2026-03-10)
+
+### 🚀 Features
+
+- add MemoryQueueAdapter for queue and cron plugin testing ([cc0867e2](https://github.com/DonaldMurillo/momentum-cms/commit/cc0867e2))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.5.7 (2026-03-10)
 
 This was a version bump only for queue to align it with other projects, there were no code changes.

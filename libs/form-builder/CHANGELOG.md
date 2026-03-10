@@ -1,3 +1,14 @@
+## 0.5.8 (2026-03-10)
+
+### 🩹 Fixes
+
+- form-builder release config missing source manifestRoot ([756e1633](https://github.com/DonaldMurillo/momentum-cms/commit/756e1633))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.5.7 (2026-03-10)
 
 ### 🩹 Fixes

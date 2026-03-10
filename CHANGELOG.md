@@ -1,3 +1,19 @@
+## 0.5.8 (2026-03-10)
+
+### 🚀 Features
+
+- add stroll-test skill for CLI published package validation ([6041e56f](https://github.com/DonaldMurillo/momentum-cms/commit/6041e56f))
+- add MemoryQueueAdapter for queue and cron plugin testing ([cc0867e2](https://github.com/DonaldMurillo/momentum-cms/commit/cc0867e2))
+
+### 🩹 Fixes
+
+- form-builder release config missing source manifestRoot ([756e1633](https://github.com/DonaldMurillo/momentum-cms/commit/756e1633))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.5.7 (2026-03-10)
 
 ### 🩹 Fixes
