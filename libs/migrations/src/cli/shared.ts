@@ -5,7 +5,7 @@
  * for the migration CLI commands (generate, run, status, rollback).
  */
 import { pathToFileURL } from 'node:url';
-import type { ResolvedMomentumConfig, DatabaseAdapter } from '@momentumcms/core';
+import type { ResolvedMomentumConfig, DatabaseAdapter, CollectionConfig } from '@momentumcms/core';
 import type { DatabaseDialect } from '../lib/schema/column-type-map';
 import type { TrackerQueryFn } from '../lib/tracking/migration-tracker';
 import type { MigrationContext } from '../lib/migration.types';
@@ -39,7 +39,11 @@ export async function loadMomentumConfig(configPath: string): Promise<ResolvedMo
 		throw new Error(`Config at ${configPath} is missing db.adapter`);
 	}
 
-	if (!raw.collections || raw.collections.length === 0) {
+	const hasExplicitCollections = raw.collections && raw.collections.length > 0;
+	const hasPluginCollections =
+		Array.isArray(raw.plugins) &&
+		raw.plugins.some((p) => Array.isArray(p.collections) && p.collections.length > 0);
+	if (!hasExplicitCollections && !hasPluginCollections) {
 		throw new Error(`Config at ${configPath} has no collections`);
 	}
 
@@ -65,7 +69,9 @@ export function resolveDialect(adapter: DatabaseAdapter): DatabaseDialect {
  */
 export function buildTrackerFromAdapter(adapter: DatabaseAdapter): TrackerQueryFn {
 	if (!adapter.queryRaw || !adapter.executeRaw) {
-		throw new Error('DatabaseAdapter must implement queryRaw and executeRaw for migration tracking');
+		throw new Error(
+			'DatabaseAdapter must implement queryRaw and executeRaw for migration tracking',
+		);
 	}
 
 	const queryRaw = adapter.queryRaw.bind(adapter);
@@ -99,10 +105,7 @@ export function buildContextFromAdapter(
 		async execute(sql: string, params?: unknown[]): Promise<number> {
 			return executeRaw(sql, params);
 		},
-		async query<T extends Record<string, unknown>>(
-			sql: string,
-			params?: unknown[],
-		): Promise<T[]> {
+		async query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> {
 			return queryRaw<T>(sql, params);
 		},
 	};
@@ -113,10 +116,7 @@ export function buildContextFromAdapter(
 		async sql(query: string, params?: unknown[]): Promise<void> {
 			await executeRaw(query, params);
 		},
-		async query<T extends Record<string, unknown>>(
-			sql: string,
-			params?: unknown[],
-		): Promise<T[]> {
+		async query<T extends Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]> {
 			return queryRaw<T>(sql, params);
 		},
 		data: helpers,
@@ -154,7 +154,9 @@ export function buildPushDbFromAdapter(adapter: DatabaseAdapter): PushRunnerDb {
  */
 export function buildCloneDbFromAdapter(adapter: DatabaseAdapter): CloneCapableDb {
 	if (!adapter.cloneDatabase || !adapter.dropClone) {
-		throw new Error('DatabaseAdapter must implement cloneDatabase and dropClone for clone-test-apply');
+		throw new Error(
+			'DatabaseAdapter must implement cloneDatabase and dropClone for clone-test-apply',
+		);
 	}
 
 	return {
@@ -233,4 +235,34 @@ export function parseMigrationArgs(args: string[]): MigrationCliArgs {
 		testOnly: args.includes('--test-only'),
 		skipCloneTest: args.includes('--skip-clone-test'),
 	};
+}
+
+/**
+ * Merge plugin-declared collections into the config collections array.
+ * Reads each plugin's static `collections` property and calls `modifyCollections()`
+ * to pick up field injections — all without running async `onInit`.
+ */
+export function mergePluginCollections(config: ResolvedMomentumConfig): CollectionConfig[] {
+	const collections = [...config.collections];
+	const plugins = config.plugins ?? [];
+	const slugs = new Set(collections.map((c) => c.slug));
+
+	for (const plugin of plugins) {
+		// Merge static plugin collections (deduplicate by slug)
+		if (plugin.collections) {
+			for (const col of plugin.collections) {
+				if (!slugs.has(col.slug)) {
+					collections.push(col);
+					slugs.add(col.slug);
+				}
+			}
+		}
+
+		// Apply synchronous field modifications (e.g., analytics block fields)
+		if (plugin.modifyCollections) {
+			plugin.modifyCollections(collections);
+		}
+	}
+
+	return collections;
 }

@@ -58,8 +58,15 @@ export interface DatabaseAdapter {
 	restore?(collection: string, id: string, field?: string): Promise<Record<string, unknown>>;
 
 	/**
+	 * Register collection metadata (e.g., slug → table name mappings).
+	 * Always called during server init, even when schema sync is disabled.
+	 * This ensures CRUD operations resolve the correct table names.
+	 */
+	registerCollections?(collections: CollectionConfig[]): void;
+
+	/**
 	 * Initialize database schema based on collections.
-	 * Called once when the server starts.
+	 * Called once when the server starts (only when schema sync is enabled).
 	 */
 	initialize?(collections: CollectionConfig[]): Promise<void>;
 

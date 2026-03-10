@@ -340,8 +340,35 @@ export function createMomentumAuth(
 		}
 	}
 
+	// First-user-gets-admin: check if user table is empty and promote to admin
+	const firstUserAdminHook = {
+		user: {
+			create: {
+				async before(user: Record<string, unknown>) {
+					try {
+						let count = 0;
+						if (dbConfig.type === 'sqlite') {
+							const row = dbConfig.database.prepare('SELECT COUNT(*) as cnt FROM "user"').get();
+							count = row && typeof row === 'object' && 'cnt' in row ? Number(row.cnt) : 0;
+						} else {
+							const result = await dbConfig.pool.query('SELECT COUNT(*) as cnt FROM "user"');
+							count = Number(result.rows[0]?.cnt ?? 0);
+						}
+						if (count === 0) {
+							return { data: { ...user, role: 'admin' } };
+						}
+					} catch {
+						// Table may not exist yet — fall through to default role
+					}
+					return { data: user };
+				},
+			},
+		},
+	};
+
 	return betterAuth({
 		database: databaseOption,
+		databaseHooks: firstUserAdminHook,
 		baseURL: baseURL ?? 'http://localhost:4000',
 		secret: secret ?? process.env['AUTH_SECRET'] ?? 'momentum-cms-dev-secret-change-in-production',
 		trustedOrigins: trustedOrigins ?? [baseURL ?? 'http://localhost:4000'],

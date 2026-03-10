@@ -985,6 +985,13 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 	const helpers = createHelpers(pool);
 	const methods = buildMethods(helpers);
 
+	function populateTableNameMap(collections: CollectionConfig[]): void {
+		for (const collection of collections) {
+			const tbl = getTableName(collection);
+			tableNameMap.set(collection.slug, tbl);
+		}
+	}
+
 	return {
 		dialect: 'postgresql' as const,
 
@@ -1024,15 +1031,16 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 			return helpers.execute(sql, params);
 		},
 
+		registerCollections(collections: CollectionConfig[]): void {
+			populateTableNameMap(collections);
+		},
+
 		async initialize(collections: CollectionConfig[]): Promise<void> {
 			// Ensure database exists (auto-create if needed)
 			await ensureDatabaseExists(options.connectionString);
 
 			// Build slug → tableName mapping for CRUD methods
-			for (const collection of collections) {
-				const tbl = getTableName(collection);
-				tableNameMap.set(collection.slug, tbl);
-			}
+			populateTableNameMap(collections);
 
 			// Create seed tracking table for idempotent seeding
 			await pool.query(SEED_TRACKING_TABLE_SQL);

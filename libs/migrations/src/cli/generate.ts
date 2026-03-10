@@ -23,6 +23,7 @@ import {
 	resolveDialect,
 	buildIntrospector,
 	parseMigrationArgs,
+	mergePluginCollections,
 } from './shared';
 
 async function main(): Promise<void> {
@@ -39,10 +40,13 @@ async function main(): Promise<void> {
 
 	const directory = resolve(migrationConfig.directory);
 
-	// 1. Build desired schema from collections
-	const desired = collectionsToSchema(config.collections, dialect);
+	// 1. Merge plugin-declared collections and apply field modifications
+	const allCollections = mergePluginCollections(config);
 
-	// 2. Get previous schema (snapshot or introspect or empty)
+	// 2. Build desired schema from collections
+	const desired = collectionsToSchema(allCollections, dialect);
+
+	// 3. Get previous schema (snapshot or introspect or empty)
 	let previous = readSnapshot(directory);
 	if (!previous) {
 		// First run: try introspecting the live DB
@@ -55,7 +59,7 @@ async function main(): Promise<void> {
 		}
 	}
 
-	// 3. Diff
+	// 4. Diff
 	const diff = diffSchemas(desired, previous, dialect);
 
 	if (diff.operations.length === 0) {
@@ -67,7 +71,7 @@ async function main(): Promise<void> {
 		return;
 	}
 
-	// 4. Danger detection
+	// 5. Danger detection
 	if (migrationConfig.dangerDetection) {
 		const dangers = detectDangers(diff.operations, dialect);
 		if (dangers.warnings.length > 0) {
@@ -87,7 +91,7 @@ async function main(): Promise<void> {
 		}
 	}
 
-	// 5. Generate migration file
+	// 6. Generate migration file
 	const migrationName = args.name ?? 'migration';
 	const timestampedName = generateMigrationName(migrationName);
 	const fileContent = generateMigrationFileContent(diff, {
@@ -104,15 +108,15 @@ async function main(): Promise<void> {
 		return;
 	}
 
-	// 6. Write migration file
+	// 7. Write migration file
 	mkdirSync(directory, { recursive: true });
 	const filePath = join(directory, `${timestampedName}.ts`);
 	writeFileSync(filePath, fileContent, 'utf-8');
 
-	// 7. Write updated snapshot
+	// 8. Write updated snapshot
 	writeSnapshot(directory, desired);
 
-	// 8. Print summary
+	// 9. Print summary
 	console.warn(`\nGenerated migration: ${filePath}`);
 	console.warn(`Operations: ${diff.operations.length}`);
 	console.warn(`Summary: ${diff.summary.join('; ')}`);

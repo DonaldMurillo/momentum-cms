@@ -691,6 +691,17 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 	}
 
 	// ============================================
+	// Helpers
+	// ============================================
+
+	function populateTableNameMap(collections: CollectionConfig[]): void {
+		for (const collection of collections) {
+			const tbl = getTableName(collection);
+			tableNameMap.set(collection.slug, tbl);
+		}
+	}
+
+	// ============================================
 	// Return adapter object
 	// ============================================
 
@@ -701,12 +712,13 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 			return sqlite;
 		},
 
+		registerCollections(collections: CollectionConfig[]): void {
+			populateTableNameMap(collections);
+		},
+
 		async initialize(collections: CollectionConfig[]): Promise<void> {
 			// Build slug → tableName mapping for CRUD methods
-			for (const collection of collections) {
-				const tbl = getTableName(collection);
-				tableNameMap.set(collection.slug, tbl);
-			}
+			populateTableNameMap(collections);
 
 			sqlite.exec(SEED_TRACKING_TABLE_SQL);
 			for (const collection of collections) {

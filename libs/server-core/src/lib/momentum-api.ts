@@ -1015,6 +1015,10 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		id?: string,
 		data?: Record<string, unknown>,
 	): Promise<void> {
+		if (this.context.overrideAccess) {
+			return;
+		}
+
 		const accessFn = this.collectionConfig.access?.[operation];
 		if (!accessFn) {
 			// No access function defined = allow all
