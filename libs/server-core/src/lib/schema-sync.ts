@@ -27,6 +27,12 @@ export async function syncDatabaseSchema(
 	config: MomentumConfig | ResolvedMomentumConfig,
 	log: SchemaLogger,
 ): Promise<void> {
+	// Always register collection metadata (slug → table name mappings)
+	// so CRUD operations resolve correctly even in migration mode.
+	if (config.db.adapter.registerCollections) {
+		config.db.adapter.registerCollections(config.collections);
+	}
+
 	if (shouldSyncSchema(config)) {
 		if (config.db.adapter.initialize) {
 			log.info('Initializing database schema...');

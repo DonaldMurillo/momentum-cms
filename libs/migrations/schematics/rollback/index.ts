@@ -10,7 +10,7 @@ import type { MigrationRollbackSchema } from './schema';
 export function migrationRollback(options: MigrationRollbackSchema): Rule {
 	return (_tree: Tree, context: SchematicContext) => {
 		const configPath = options.configPath || 'src/momentum.config.ts';
-		const args = ['tsx', 'node_modules/@momentumcms/migrations/cli/rollback.cjs', configPath];
+		const args = ['tsx', 'node_modules/@momentumcms/migrations/src/cli/rollback.cjs', configPath];
 
 		context.logger.info('Rolling back latest migration batch...');
 

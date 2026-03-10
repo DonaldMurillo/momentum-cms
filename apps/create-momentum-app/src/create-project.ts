@@ -198,6 +198,7 @@ const pool = (dbAdapter as PostgresAdapterWithRaw).getPool();`
 		defaultPort: '4200',
 		externalDependencies: [
 			database === 'postgres' ? '"pg", "pg-native"' : '"better-sqlite3"',
+			'"@napi-rs/image"',
 			...(flavor === 'nestjs'
 				? [
 						'"@nestjs/microservices"',

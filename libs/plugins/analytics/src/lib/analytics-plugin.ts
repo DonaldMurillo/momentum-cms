@@ -132,6 +132,7 @@ export function analyticsPlugin(config: AnalyticsConfig): AnalyticsPluginInstanc
 
 	return {
 		name: 'analytics',
+		collections: config.trackingRules !== false ? [TrackingRules] : [],
 		eventStore,
 		analyticsConfig: config,
 		adminRoutes,

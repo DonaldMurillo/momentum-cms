@@ -57,11 +57,11 @@ function buildComparisonClauses(
 	whereClauses: string[],
 	whereValues: unknown[],
 ): void {
+	const record = value as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions -- narrowed by hasComparisonOps guard
 	for (const [op, sqlOp] of Object.entries(COMPARISON_OP_MAP)) {
-		if (op in value) {
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Narrowed by runtime check
+		if (op in record) {
 			whereClauses.push(`"${key}" ${sqlOp} ?`);
-			whereValues.push((value as Record<string, unknown>)[op]);
+			whereValues.push(record[op]);
 		}
 	}
 }
@@ -691,6 +691,17 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 	}
 
 	// ============================================
+	// Helpers
+	// ============================================
+
+	function populateTableNameMap(collections: CollectionConfig[]): void {
+		for (const collection of collections) {
+			const tbl = getTableName(collection);
+			tableNameMap.set(collection.slug, tbl);
+		}
+	}
+
+	// ============================================
 	// Return adapter object
 	// ============================================
 
@@ -701,12 +712,13 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 			return sqlite;
 		},
 
+		registerCollections(collections: CollectionConfig[]): void {
+			populateTableNameMap(collections);
+		},
+
 		async initialize(collections: CollectionConfig[]): Promise<void> {
 			// Build slug → tableName mapping for CRUD methods
-			for (const collection of collections) {
-				const tbl = getTableName(collection);
-				tableNameMap.set(collection.slug, tbl);
-			}
+			populateTableNameMap(collections);
 
 			sqlite.exec(SEED_TRACKING_TABLE_SQL);
 			for (const collection of collections) {
@@ -905,6 +917,36 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 					throw error;
 				}
 			});
+		},
+
+		async queryRaw<T extends Record<string, unknown>>(
+			sql: string,
+			params: unknown[] = [],
+		): Promise<T[]> {
+			const stmt = sqlite.prepare(sql);
+			const rows = params.length > 0 ? stmt.all(...params) : stmt.all();
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- better-sqlite3 returns unknown[]
+			return rows as T[];
+		},
+
+		async executeRaw(sql: string, params: unknown[] = []): Promise<number> {
+			const stmt = sqlite.prepare(sql);
+			const result = params.length > 0 ? stmt.run(...params) : stmt.run();
+			return result.changes;
+		},
+
+		async introspect(): Promise<Record<string, unknown>> {
+			const rows = sqlite
+				.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`)
+				.all();
+			const schema: Record<string, unknown> = {};
+			for (const row of rows) {
+				if (!isRecord(row) || typeof row['name'] !== 'string') continue;
+				const tableName = row['name'];
+				const columns = sqlite.prepare(`PRAGMA table_info("${tableName}")`).all();
+				schema[tableName] = { columns };
+			}
+			return schema;
 		},
 	};
 }

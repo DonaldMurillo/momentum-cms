@@ -12,3 +12,6 @@ export type {
 
 // Collection
 export { QueueJobsCollection } from './lib/queue-jobs.collection';
+
+// Adapters (re-exported for convenience)
+export { MemoryQueueAdapter } from '@momentumcms/queue';

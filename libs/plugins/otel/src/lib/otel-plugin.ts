@@ -81,9 +81,7 @@ class OtelLogEnricher implements LogEnricher {
  * Uses variable-based import paths to prevent esbuild from following
  * the import at build time (same pattern as analytics plugin).
  */
-function resolveAdminRoutes(
-	dashboardConfig: boolean | undefined,
-): PluginAdminRouteDescriptor[] {
+function resolveAdminRoutes(dashboardConfig: boolean | undefined): PluginAdminRouteDescriptor[] {
 	if (dashboardConfig === false) return [];
 
 	const dashboardModule = './dashboard/otel-dashboard.page';
@@ -93,9 +91,7 @@ function resolveAdminRoutes(
 			label: 'Observability',
 			icon: 'heroSignal',
 			loadComponent: (): Promise<unknown> =>
-				import(dashboardModule).then(
-					(m: Record<string, unknown>) => m['OtelDashboardPage'],
-				),
+				import(dashboardModule).then((m: Record<string, unknown>) => m['OtelDashboardPage']),
 			group: 'Plugins',
 		},
 	];
@@ -142,6 +138,7 @@ export function otelPlugin(config: OtelPluginConfig = {}): MomentumPlugin {
 
 	return {
 		name: 'otel',
+		collections: metricsEnabled ? [OtelSnapshotsCollection] : [],
 		adminRoutes,
 
 		browserImports: metricsEnabled
@@ -200,7 +197,7 @@ export function otelPlugin(config: OtelPluginConfig = {}): MomentumPlugin {
 						// Register Prometheus scrape endpoint
 						const prometheusPath =
 							typeof metricsConfig?.prometheus === 'object'
-								? metricsConfig.prometheus.path ?? '/metrics'
+								? (metricsConfig.prometheus.path ?? '/metrics')
 								: '/metrics';
 
 						registerMiddleware({

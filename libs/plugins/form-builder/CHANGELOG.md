@@ -1,3 +1,19 @@
+## 0.5.9 (2026-03-10)
+
+This was a version bump only for plugins-form-builder to align it with other projects, there were no code changes.
+
+## 0.5.8 (2026-03-10)
+
+This was a version bump only for plugins-form-builder to align it with other projects, there were no code changes.
+
+## 0.5.7 (2026-03-10)
+
+This was a version bump only for plugins-form-builder to align it with other projects, there were no code changes.
+
+## 0.5.6 (2026-03-10)
+
+This was a version bump only for plugins-form-builder to align it with other projects, there were no code changes.
+
 ## 0.5.5 (2026-03-09)
 
 ### 🚀 Features
