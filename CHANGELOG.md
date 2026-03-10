@@ -1,3 +1,14 @@
+## 0.5.6 (2026-03-10)
+
+### 🩹 Fixes
+
+- migration schematics, db adapter raw queries, and plugin admin-routes d.ts ([2fd189a6](https://github.com/DonaldMurillo/momentum-cms/commit/2fd189a6))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.5.5 (2026-03-09)
 
 ### 🚀 Features
