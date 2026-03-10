@@ -33,7 +33,7 @@ Verify:
 - `npm run generate` runs during setup
 - Check `node_modules/@momentumcms/core/package.json` to confirm installed version
 
-## Step 2: Install All Plugins
+## Step 2: Install All Plugins + UI Packages
 
 ```bash
 cd /tmp/momentum-stroll/stroll-test
@@ -46,13 +46,17 @@ npm install \
   @momentumcms/plugins-image@<version> \
   @momentumcms/plugins-queue@<version> \
   @momentumcms/plugins-cron@<version> \
-  @momentumcms/queue@<version>
+  @momentumcms/queue@<version> \
+  @momentumcms/ui@<version> \
+  @momentumcms/headless@<version> \
+  @momentumcms/admin@<version>
 ```
 
 Verify:
 
 - All packages install without `ETARGET` or peer dependency errors
 - If `@momentumcms/form-builder` fails with version mismatch, that's a known release config issue
+- `@momentumcms/admin` is already used by the scaffolded app (via `momentumAdminRoutes`), but installing it explicitly verifies version consistency
 
 ## Step 3: Configure All Plugins + Migration Mode
 
@@ -273,6 +277,182 @@ curl -s http://localhost:4200/admin | head -3
 
 Should return `<!doctype html>`.
 
+### 7h. Test UI packages (ui, headless, admin)
+
+Create a test page at `src/app/pages/ui-test.ts` that imports components from `@momentumcms/ui` and `@momentumcms/headless`:
+
+```typescript
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
+
+// UI components
+import {
+	Badge,
+	Card,
+	CardHeader,
+	CardContent,
+	CardFooter,
+	Button,
+	Input,
+	Label,
+	Separator,
+} from '@momentumcms/ui';
+
+// Headless primitives
+import {
+	HdlAccordion,
+	HdlAccordionItem,
+	HdlAccordionTrigger,
+	HdlAccordionContent,
+	HdlTabs,
+	HdlTabList,
+	HdlTab,
+	HdlTabPanel,
+} from '@momentumcms/headless';
+
+@Component({
+	selector: 'app-ui-test',
+	imports: [
+		RouterLink,
+		Badge,
+		Card,
+		CardHeader,
+		CardContent,
+		CardFooter,
+		Button,
+		Input,
+		Label,
+		Separator,
+		HdlAccordion,
+		HdlAccordionItem,
+		HdlAccordionTrigger,
+		HdlAccordionContent,
+		HdlTabs,
+		HdlTabList,
+		HdlTab,
+		HdlTabPanel,
+	],
+	changeDetection: ChangeDetectionStrategy.OnPush,
+	host: { class: 'block min-h-screen bg-background text-foreground p-8' },
+	template: `
+		<div class="mx-auto max-w-4xl space-y-8">
+			<h1 class="text-3xl font-bold">UI Package Test</h1>
+
+			<!-- Badge variants -->
+			<section class="space-y-2">
+				<h2 class="text-xl font-semibold">Badges</h2>
+				<div class="flex gap-2">
+					<mcms-badge>Default</mcms-badge>
+					<mcms-badge variant="secondary">Secondary</mcms-badge>
+					<mcms-badge variant="destructive">Destructive</mcms-badge>
+					<mcms-badge variant="success">Success</mcms-badge>
+				</div>
+			</section>
+
+			<mcms-separator />
+
+			<!-- Card with Button -->
+			<section class="space-y-2">
+				<h2 class="text-xl font-semibold">Card</h2>
+				<mcms-card class="max-w-md">
+					<div mcmsCardHeader><h3 class="text-lg font-semibold">Card Title</h3></div>
+					<div mcmsCardContent><p>Card content from published UI package.</p></div>
+					<div mcmsCardFooter class="flex gap-2">
+						<button mcmsButton>Save</button>
+						<button mcmsButton variant="outline">Cancel</button>
+					</div>
+				</mcms-card>
+			</section>
+
+			<mcms-separator />
+
+			<!-- Form elements -->
+			<section class="space-y-2">
+				<h2 class="text-xl font-semibold">Form Elements</h2>
+				<div class="max-w-md space-y-4">
+					<div class="space-y-1">
+						<mcms-label for="test-name" [required]="true">Name</mcms-label>
+						<input mcmsInput id="test-name" placeholder="Enter your name" />
+					</div>
+				</div>
+			</section>
+
+			<mcms-separator />
+
+			<!-- Headless Accordion -->
+			<section class="space-y-2">
+				<h2 class="text-xl font-semibold">Headless Accordion</h2>
+				<hdl-accordion class="max-w-md border rounded-lg divide-y">
+					<hdl-accordion-item>
+						<hdl-accordion-trigger
+							panelId="p1"
+							class="block w-full p-4 text-left font-medium hover:bg-muted cursor-pointer"
+						>
+							What is Momentum CMS?
+						</hdl-accordion-trigger>
+						<hdl-accordion-content panelId="p1" class="block p-4 text-sm text-muted-foreground">
+							An Angular-based headless CMS.
+						</hdl-accordion-content>
+					</hdl-accordion-item>
+				</hdl-accordion>
+			</section>
+
+			<mcms-separator />
+
+			<!-- Headless Tabs -->
+			<section class="space-y-2">
+				<h2 class="text-xl font-semibold">Headless Tabs</h2>
+				<hdl-tabs class="max-w-md">
+					<hdl-tab-list class="flex border-b">
+						<hdl-tab value="overview" class="px-4 py-2 text-sm font-medium cursor-pointer"
+							>Overview</hdl-tab
+						>
+						<hdl-tab value="features" class="px-4 py-2 text-sm font-medium cursor-pointer"
+							>Features</hdl-tab
+						>
+					</hdl-tab-list>
+					<hdl-tab-panel value="overview" class="block p-4 text-sm"
+						>Overview content.</hdl-tab-panel
+					>
+					<hdl-tab-panel value="features" class="block p-4 text-sm"
+						>Features content.</hdl-tab-panel
+					>
+				</hdl-tabs>
+			</section>
+		</div>
+	`,
+})
+export class UiTestPage {}
+```
+
+**Important API notes:**
+
+- `hdl-tab` and `hdl-tab-panel` use `value` input (NOT `panelId`) — this comes from `@angular/aria` Tab directive
+- `hdl-accordion-trigger` and `hdl-accordion-content` use `panelId` input
+
+Add the route to `src/app/app.routes.ts`:
+
+```typescript
+{
+	path: 'ui-test',
+	loadComponent: () => import('./pages/ui-test').then((m) => m.UiTestPage),
+},
+```
+
+Verify the page compiles and renders via SSR:
+
+```bash
+# Check HTTP status
+curl -s -o /dev/null -w "%{http_code}" http://localhost:4200/ui-test
+# Should return 200
+
+# Verify all component selectors appear in SSR output
+curl -s http://localhost:4200/ui-test | grep -oE "(mcms-badge|mcms-card|mcms-separator|mcms-label|hdl-accordion|hdl-tabs|hdl-tab)" | sort -u
+# Should include: hdl-accordion, hdl-tab, hdl-tabs, mcms-badge, mcms-card, mcms-label, mcms-separator
+```
+
+The `@momentumcms/admin` package is already tested by the admin UI loading (step 7g) — it provides `momentumAdminRoutes()`, sidebar, dashboard, collection list/edit pages, and all plugin admin routes.
+
 ## Step 8: Cleanup
 
 ```bash
@@ -291,7 +471,7 @@ Create a summary table:
 | Check                          | Result    |
 | ------------------------------ | --------- |
 | Scaffold                       | PASS/FAIL |
-| Install plugins                | PASS/FAIL |
+| Install plugins + UI packages  | PASS/FAIL |
 | Generate types                 | PASS/FAIL |
 | Generate migration             | PASS/FAIL |
 | Run migration                  | PASS/FAIL |
@@ -302,6 +482,8 @@ Create a summary table:
 | CRUD on all plugin collections | PASS/FAIL |
 | SEO sitemap + robots           | PASS/FAIL |
 | Admin UI loads                 | PASS/FAIL |
+| UI components render (SSR)     | PASS/FAIL |
+| Headless primitives render     | PASS/FAIL |
 
 ## Known Issues to Watch For
 
@@ -310,6 +492,9 @@ Create a summary table:
 - **Vite SSR warnings**: "The above dynamic import cannot be analyzed by Vite" — cosmetic only, plugins work.
 - **Port 4200 in use**: Always kill before starting. The Angular CLI doesn't recover gracefully from port conflicts.
 
-## All Plugins Tested
+## All Packages Tested
 
-All 9 user-facing plugins are tested by this skill: SEO, Auth, Analytics, OTel, Email, Redirects, Form Builder, Image, Queue, and Cron.
+All 12 published packages are tested by this skill:
+
+- **Plugins (9)**: SEO, Auth, Analytics, OTel, Email, Redirects, Form Builder, Image, Queue, Cron
+- **UI packages (3)**: `@momentumcms/ui` (styled components), `@momentumcms/headless` (unstyled primitives), `@momentumcms/admin` (admin panel)

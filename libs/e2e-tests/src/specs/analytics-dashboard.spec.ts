@@ -71,7 +71,8 @@ test.describe('Plugin Admin Routes in Sidebar', { tag: ['@analytics', '@smoke'] 
 		const analyticsLink = sidebar.getByRole('link', { name: 'Analytics' });
 		await expect(analyticsLink).toBeVisible();
 		await expect(sidebar.getByRole('link', { name: 'Content Perf.' })).toBeVisible();
-		await expect(sidebar.getByRole('link', { name: 'Tracking Rules' })).toBeVisible();
+		// "Tracking Rules" appears in both Collections and Analytics sections — scope to the analytics plugin link
+		await expect(sidebar.locator('a[href="/admin/analytics/tracking-rules"]')).toBeVisible();
 	});
 
 	test('Analytics sidebar link navigates to analytics dashboard', async ({ authenticatedPage }) => {
@@ -111,8 +112,8 @@ test.describe(
 			await expect(analyticsLink).toBeVisible();
 			await expect(analyticsLink).not.toHaveClass(activeClass);
 
-			// "Tracking Rules" should NOT be highlighted
-			const trackingLink = sidebar.getByRole('link', { name: 'Tracking Rules' });
+			// "Tracking Rules" appears in both Collections and Analytics — scope to analytics plugin link
+			const trackingLink = sidebar.locator('a[href="/admin/analytics/tracking-rules"]');
 			await expect(trackingLink).toBeVisible();
 			await expect(trackingLink).not.toHaveClass(activeClass);
 		});
@@ -132,7 +133,7 @@ test.describe(
 			const contentLink = sidebar.getByRole('link', { name: 'Content Perf.' });
 			await expect(contentLink).not.toHaveClass(activeClass);
 
-			const trackingLink = sidebar.getByRole('link', { name: 'Tracking Rules' });
+			const trackingLink = sidebar.locator('a[href="/admin/analytics/tracking-rules"]');
 			await expect(trackingLink).not.toHaveClass(activeClass);
 		});
 
@@ -144,7 +145,7 @@ test.describe(
 
 			const sidebar = authenticatedPage.getByLabel('Main navigation');
 
-			const trackingLink = sidebar.getByRole('link', { name: 'Tracking Rules' });
+			const trackingLink = sidebar.locator('a[href="/admin/analytics/tracking-rules"]');
 			await expect(trackingLink).toBeVisible();
 			await expect(trackingLink).toHaveClass(activeClass);
 

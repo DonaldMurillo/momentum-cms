@@ -1,6 +1,6 @@
 # CLI Stroll Test Issues
 
-Tested `npx create-momentum-app@0.5.5`, re-tested with `0.5.6`, and re-tested with `0.5.7` with Angular + Express + SQLite on 2026-03-10.
+Tested `npx create-momentum-app@0.5.5`, re-tested with `0.5.6`, `0.5.7`, and `0.5.8` with Angular + Express + SQLite on 2026-03-10.
 
 ## Blocker Issues
 
@@ -109,6 +109,23 @@ Tested `npx create-momentum-app@0.5.5`, re-tested with `0.5.6`, and re-tested wi
   **Impact**: TS compilation fails when users follow examples.
   **Fix**: Update CLI scaffolding templates or update the type interfaces to accept shorthand.
 
+### 14. PostgreSQL adapter missing `cloneDatabase` and `dropClone`
+
+**Severity**: ~~Major~~ Fixed
+**Affected**: `@momentumcms/db-drizzle` (PostgreSQL adapter)
+**Description**: The migration runner's clone-test-apply pipeline requires `cloneDatabase()` and `dropClone()` methods on the DatabaseAdapter, but the PostgreSQL adapter didn't implement them. Migrations fail with `DatabaseAdapter must implement cloneDatabase and dropClone for clone-test-apply`.
+**Repro**: Configure PostgreSQL + `migrations.mode: 'migrate'` → `npm run migrate:run` → Error
+**Workaround**: Set `cloneTest: false` in migration config, or use `--skip-clone-test` flag
+**Fix**: Implemented `cloneDatabase()` using `CREATE DATABASE ... TEMPLATE ...` and `dropClone()` using `DROP DATABASE`. Both terminate existing connections before operating. **FIXED in this branch.**
+
+### 15. PostgreSQL auth config uses `pool` not `database`
+
+**Severity**: Minor
+**Affected**: `@momentumcms/auth`, CLI scaffolding templates
+**Description**: The auth plugin's `DatabaseConfig` type for PostgreSQL uses `{ type: 'postgres', pool: Pool }` but the SQLite equivalent uses `{ type: 'sqlite', database: Database }`. The property name difference (`pool` vs `database`) is confusing and the CLI scaffolding template for postgres may use the wrong property.
+**Impact**: Users may write `database: dbAdapter.getPool()` instead of `pool: dbAdapter.getPool()`, causing a TS error.
+**Fix**: Document clearly, or unify the property name.
+
 ### 12. First user gets `role: 'user'` — no admin bootstrap
 
 **Severity**: ~~Minor~~ Fixed
@@ -133,11 +150,13 @@ Tested `npx create-momentum-app@0.5.5`, re-tested with `0.5.6`, and re-tested wi
 - Form Builder plugin creates forms + form-submissions collections, CRUD works
 - Plugin admin routes are correctly grouped in sidebar (SEO, Analytics, System, Tools)
 - All plugin icons are correctly declared (heroChartBarSquare, heroSignal, etc.)
-- Collection CRUD works for all 10 collections (posts, redirects, forms, form-submissions, email-templates, tracking-rules, auth-user, auth-session, auth-api-keys, otel-snapshots)
+- Collection CRUD works for all 12 collections (posts, redirects, forms, form-submissions, email-templates, tracking-rules, auth-user, auth-session, auth-api-keys, otel-snapshots, queue-jobs, cron-schedules)
+- Queue plugin works with `MemoryQueueAdapter` (no PostgreSQL required)
+- Cron plugin works when passed a queue plugin instance
 - Auth sign-up/sign-in works correctly
 - First user automatically gets admin role
 - Cookie-based auth works correctly with Better Auth session tokens
-- Server starts with 7 plugins simultaneously without errors
+- Server starts with 9 plugins simultaneously without errors
 
 ## 0.5.7 Re-test Results
 
@@ -155,8 +174,69 @@ Scaffolded fresh project with `npx create-momentum-app@0.5.7`, added all 7 plugi
 
 **Remaining issues**: #8 (Vite SSR warnings, cosmetic), #11 (config API mismatches in scaffolding templates)
 
-## Plugins Not Tested
+## 0.5.8 Re-test Results
 
-- **Queue** — Requires adapter (no built-in memory adapter shipped)
-- **Cron** — Requires queue plugin instance
-- **PostgreSQL** — Pending test
+Added `MemoryQueueAdapter` so queue and cron plugins work out of the box without PostgreSQL. Scaffolded fresh project with `npx create-momentum-app@0.5.8`, added all 9 plugins (including queue + cron) + migration mode.
+
+| Check                          | Result |
+| ------------------------------ | ------ |
+| Scaffold                       | PASS   |
+| Install all 9 plugins          | PASS   |
+| Generate types                 | PASS   |
+| Generate migration             | PASS   |
+| Run migration                  | PASS   |
+| Rollback + re-apply            | PASS   |
+| Server starts (0 errors)       | PASS   |
+| First user gets admin          | PASS   |
+| All 12 collections accessible  | PASS   |
+| CRUD on all plugin collections | PASS   |
+| SEO sitemap + robots           | PASS   |
+| Admin UI loads                 | PASS   |
+
+Details:
+
+- `npm install` — all 9 plugins install cleanly including `@momentumcms/plugins-queue@0.5.8` and `@momentumcms/plugins-cron@0.5.8`
+- `npm run generate` — admin config generates correctly with queue and cron admin routes
+- `npm run migrate:generate` — detects all 14 tables (posts + 5 auth + 8 plugin including queue-jobs, cron-schedules)
+- `npm run migrate:run` — applies cleanly (batch 1, 0 failed)
+- `npm run migrate:rollback` + `migrate:run` — rollback/re-apply cycle works
+- Server starts with 0 errors and all 12 collections accessible via API (including queue-jobs, cron-schedules)
+- First user signup gets `role: admin` automatically
+- CRUD works on all plugin collections: posts, redirects, forms, email-templates, tracking-rules (all returned 201)
+- SEO sitemap.xml returns valid XML, robots.txt returns valid text
+- Admin UI loads (`<!doctype html>`)
+- Queue plugin configured with `MemoryQueueAdapter` + empty handlers
+- Cron plugin configured with queue plugin instance reference
+
+**All 9 user-facing plugins tested**: SEO, Auth, Analytics, OTel, Email, Redirects, Form Builder, Image, Queue, Cron.
+
+**Remaining issues**: #8 (Vite SSR warnings, cosmetic), #11 (config API mismatches in scaffolding templates)
+
+## 0.5.8 PostgreSQL Test Results
+
+Scaffolded fresh project, manually switched from SQLite to PostgreSQL adapter, installed all 9 plugins, patched local build of `@momentumcms/db-drizzle` with `cloneDatabase`/`dropClone` methods.
+
+| Check                            | Result |
+| -------------------------------- | ------ |
+| Scaffold + convert to PG         | PASS   |
+| Install all 9 plugins            | PASS   |
+| Generate types                   | PASS   |
+| Generate migration (14 tables)   | PASS   |
+| Run migration (clone-test-apply) | PASS   |
+| Rollback + re-apply              | PASS   |
+| Server starts (0 errors)         | PASS   |
+| First user gets admin            | PASS   |
+| All 12 collections accessible    | PASS   |
+| CRUD on all plugin collections   | PASS   |
+| SEO sitemap + robots             | PASS   |
+| Admin UI loads                   | PASS   |
+
+PostgreSQL-specific findings:
+
+- Migration generator shows PostgreSQL-specific **danger detection** warnings (index locking, FK constraints) — works correctly
+- Clone-test-apply pipeline works: creates `_mig_clone_*` database, tests migration, drops clone, then applies to real DB
+- Auth config requires `{ type: 'postgres', pool: dbAdapter.getPool() }` (not `database:`)
+- All 14 tables created correctly with PostgreSQL types (TIMESTAMPTZ, JSONB, VARCHAR)
+- All CRUD operations return status 201
+
+**Issues found**: #14 (cloneDatabase/dropClone missing — fixed), #15 (auth pool vs database naming)

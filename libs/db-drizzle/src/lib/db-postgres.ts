@@ -1209,6 +1209,77 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 			};
 		},
 
+		async cloneDatabase(targetName: string): Promise<string> {
+			const sourceDb = extractDatabaseName(options.connectionString);
+			if (!sourceDb) {
+				throw new Error('Cannot determine source database name from connection string');
+			}
+
+			// Connect to 'postgres' admin database to run CREATE DATABASE
+			let adminConnString: string;
+			try {
+				const url = new URL(options.connectionString);
+				url.pathname = '/postgres';
+				adminConnString = url.toString();
+			} catch {
+				adminConnString = options.connectionString.replace(`/${sourceDb}`, '/postgres');
+			}
+
+			// Terminate existing connections to the source database so TEMPLATE works
+			const adminClient = new Client({ connectionString: adminConnString });
+			await adminClient.connect();
+			try {
+				const safeName = targetName.replace(/"/g, '""');
+				const safeSource = sourceDb.replace(/"/g, '""');
+
+				// Disconnect other clients from the source DB (required for TEMPLATE)
+				await adminClient.query(
+					`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`,
+					[sourceDb],
+				);
+
+				await adminClient.query(`CREATE DATABASE "${safeName}" TEMPLATE "${safeSource}"`);
+			} finally {
+				await adminClient.end();
+			}
+
+			// Return connection string pointing to the clone
+			try {
+				const url = new URL(options.connectionString);
+				url.pathname = `/${targetName}`;
+				return url.toString();
+			} catch {
+				return options.connectionString.replace(`/${sourceDb}`, `/${targetName}`);
+			}
+		},
+
+		async dropClone(targetName: string): Promise<void> {
+			const sourceDb = extractDatabaseName(options.connectionString);
+
+			let adminConnString: string;
+			try {
+				const url = new URL(options.connectionString);
+				url.pathname = '/postgres';
+				adminConnString = url.toString();
+			} catch {
+				adminConnString = options.connectionString.replace(`/${sourceDb}`, '/postgres');
+			}
+
+			const adminClient = new Client({ connectionString: adminConnString });
+			await adminClient.connect();
+			try {
+				const safeName = targetName.replace(/"/g, '""');
+				// Terminate connections to the clone before dropping
+				await adminClient.query(
+					`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`,
+					[targetName],
+				);
+				await adminClient.query(`DROP DATABASE IF EXISTS "${safeName}"`);
+			} finally {
+				await adminClient.end();
+			}
+		},
+
 		async transaction<T>(callback: (txAdapter: DatabaseAdapter) => Promise<T>): Promise<T> {
 			const client = await pool.connect();
 			try {

@@ -164,14 +164,24 @@ throw new PluginFatalError('my-plugin', 'Required service unavailable');
 | Plugin                            | Description                                              |
 | --------------------------------- | -------------------------------------------------------- |
 | [Analytics](analytics.md)         | Tracking, content performance, block analytics           |
+| [Cron](cron.md)                   | Recurring job scheduling with cron expressions           |
+| [Email](email.md)                 | Visual email template builder with auth integration      |
+| [Form Builder](form-builder.md)   | Dynamic forms, submissions, webhooks, honeypot           |
 | [Image](image.md)                 | Image resizing, variant generation, focal point cropping |
-| [OpenTelemetry](opentelemetry.md) | Distributed tracing                                      |
+| [OpenTelemetry](opentelemetry.md) | System metrics, request tracking, admin dashboard        |
+| [Queue](queue.md)                 | Job queue with priority, retry, deduplication            |
+| [Redirects](redirects.md)         | URL redirect management with caching                     |
 | [SEO](seo.md)                     | Sitemap, robots.txt, meta tags, content analysis scoring |
 
 ## Related
 
 - [Writing a Plugin](writing-a-plugin.md) — Step-by-step guide
 - [Analytics Plugin](analytics.md) — Built-in analytics
+- [Cron Plugin](cron.md) — Recurring job scheduling
+- [Email Plugin](email.md) — Email template builder
+- [Form Builder Plugin](form-builder.md) — Dynamic forms
 - [Image Plugin](image.md) — Image processing and variants
-- [OpenTelemetry Plugin](opentelemetry.md) — Tracing integration
+- [OpenTelemetry Plugin](opentelemetry.md) — System metrics
+- [Queue Plugin](queue.md) — Job queue
+- [Redirects Plugin](redirects.md) — URL redirects
 - [SEO Plugin](seo.md) — Search engine optimization
