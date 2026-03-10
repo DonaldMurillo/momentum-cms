@@ -43,7 +43,10 @@ npm install \
   @momentumcms/plugins-email@<version> \
   @momentumcms/plugins-redirects@<version> \
   @momentumcms/plugins-form-builder@<version> \
-  @momentumcms/plugins-image@<version>
+  @momentumcms/plugins-image@<version> \
+  @momentumcms/plugins-queue@<version> \
+  @momentumcms/plugins-cron@<version> \
+  @momentumcms/queue@<version>
 ```
 
 Verify:
@@ -56,7 +59,7 @@ Verify:
 Replace `/tmp/momentum-stroll/stroll-test/src/momentum.config.ts` with a config that:
 
 1. **Enables migration mode**: `db: { adapter: dbAdapter, syncSchema: false }` and `migrations: { mode: 'migrate', directory: './migrations' }`
-2. **Adds all plugins**: seo, auth (already scaffolded), analytics, otel, email, redirects, form-builder, image
+2. **Adds all plugins**: seo, auth (already scaffolded), analytics, otel, email, redirects, form-builder, image, queue, cron
 
 **Important config notes** (Issue #11 — API mismatches):
 
@@ -64,6 +67,9 @@ Replace `/tmp/momentum-stroll/stroll-test/src/momentum.config.ts` with a config 
 - Analytics does NOT accept `collections` property
 - OTel metrics config: `metrics: { enabled: true, adminDashboard: true }` (not `metrics: true`)
 - Image does NOT accept `collections` property
+- Queue requires `adapter: new MemoryQueueAdapter()` — import `MemoryQueueAdapter` from `@momentumcms/plugins-queue` (or `@momentumcms/queue`)
+- Queue also requires `handlers: {}` (can be empty object for basic testing)
+- Cron requires `queue: queuePluginInstance` — pass the queue plugin instance, NOT the adapter
 
 Example config:
 
@@ -78,6 +84,8 @@ import { emailPlugin } from '@momentumcms/plugins-email';
 import { redirectsPlugin } from '@momentumcms/plugins-redirects';
 import { formBuilderPlugin } from '@momentumcms/plugins-form-builder';
 import { imagePlugin } from '@momentumcms/plugins-image';
+import { queuePlugin, MemoryQueueAdapter } from '@momentumcms/plugins-queue';
+import { cronPlugin } from '@momentumcms/plugins-cron';
 import { defineMomentumConfig } from '@momentumcms/core';
 import { join } from 'node:path';
 import { Posts } from './collections/posts.collection';
@@ -93,6 +101,11 @@ export const authPlugin = momentumAuth({
 	db: { type: 'sqlite', database: dbAdapter.getRawDatabase() },
 	baseURL: BASE_URL,
 	trustedOrigins: [BASE_URL],
+});
+
+const queue = queuePlugin({
+	adapter: new MemoryQueueAdapter(),
+	handlers: {},
 });
 
 const config = defineMomentumConfig({
@@ -135,6 +148,8 @@ const config = defineMomentumConfig({
 		redirectsPlugin({}),
 		formBuilderPlugin({}),
 		imagePlugin({}),
+		queue,
+		cronPlugin({ queue }),
 	],
 });
 
@@ -160,7 +175,7 @@ npm run migrate:status
 
 Verify:
 
-- Migration detects all expected tables (should be ~12: posts, user, session, account, verification, \_api_keys, tracking-rules, otel-snapshots, email-templates, redirects, forms, form-submissions)
+- Migration detects all expected tables (should be ~14: posts, user, session, account, verification, \_api_keys, tracking-rules, otel-snapshots, email-templates, redirects, forms, form-submissions, queue-jobs, cron-schedules)
 - Migration applies cleanly (batch 1, 0 failed)
 - Status shows all applied, 0 pending
 
@@ -223,7 +238,8 @@ Test each collection via GET `/api/<slug>`:
 
 ```
 posts, redirects, forms, form-submissions, email-templates,
-tracking-rules, auth-user, auth-session, auth-api-keys, otel-snapshots
+tracking-rules, auth-user, auth-session, auth-api-keys, otel-snapshots,
+queue-jobs, cron-schedules
 ```
 
 Each should return `{ totalDocs: <number>, ... }` (not 403 or 500).
@@ -282,7 +298,7 @@ Create a summary table:
 | Rollback + re-apply            | PASS/FAIL |
 | Server starts (0 errors)       | PASS/FAIL |
 | First user gets admin          | PASS/FAIL |
-| All 10 collections accessible  | PASS/FAIL |
+| All 12 collections accessible  | PASS/FAIL |
 | CRUD on all plugin collections | PASS/FAIL |
 | SEO sitemap + robots           | PASS/FAIL |
 | Admin UI loads                 | PASS/FAIL |
@@ -294,9 +310,6 @@ Create a summary table:
 - **Vite SSR warnings**: "The above dynamic import cannot be analyzed by Vite" — cosmetic only, plugins work.
 - **Port 4200 in use**: Always kill before starting. The Angular CLI doesn't recover gracefully from port conflicts.
 
-## Plugins NOT Tested by This Skill
+## All Plugins Tested
 
-- **Queue**: Requires an adapter that isn't shipped. No built-in memory adapter.
-- **Cron**: Requires a queue plugin instance.
-
-These need adapter infrastructure before they can be stroll-tested.
+All 9 user-facing plugins are tested by this skill: SEO, Auth, Analytics, OTel, Email, Redirects, Form Builder, Image, Queue, and Cron.
