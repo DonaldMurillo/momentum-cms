@@ -10,7 +10,7 @@ import type { MigrationStatusSchema } from './schema';
 export function migrationStatus(options: MigrationStatusSchema): Rule {
 	return (_tree: Tree, context: SchematicContext) => {
 		const configPath = options.configPath || 'src/momentum.config.ts';
-		const args = ['tsx', 'node_modules/@momentumcms/migrations/cli/status.cjs', configPath];
+		const args = ['tsx', 'node_modules/@momentumcms/migrations/src/cli/status.cjs', configPath];
 
 		context.logger.info('Checking migration status...');
 

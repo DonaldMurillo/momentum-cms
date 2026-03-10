@@ -11,7 +11,7 @@ import type { MigrationRunSchema } from './schema';
 export function migrationRun(options: MigrationRunSchema): Rule {
 	return (_tree: Tree, context: SchematicContext) => {
 		const configPath = options.configPath || 'src/momentum.config.ts';
-		const args = ['tsx', 'node_modules/@momentumcms/migrations/cli/run.cjs', configPath];
+		const args = ['tsx', 'node_modules/@momentumcms/migrations/src/cli/run.cjs', configPath];
 
 		if (options.testOnly) {
 			args.push('--test-only');

@@ -11,7 +11,7 @@ import type { MigrationGenerateSchema } from './schema';
 export function migrationGenerate(options: MigrationGenerateSchema): Rule {
 	return (_tree: Tree, context: SchematicContext) => {
 		const configPath = options.configPath || 'src/momentum.config.ts';
-		const args = ['tsx', 'node_modules/@momentumcms/migrations/cli/generate.cjs', configPath];
+		const args = ['tsx', 'node_modules/@momentumcms/migrations/src/cli/generate.cjs', configPath];
 
 		if (options.name) {
 			args.push('--name', options.name);

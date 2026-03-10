@@ -482,7 +482,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 					) {
 						whereClauses.push(`"${key}" IS NOT NULL`);
 					} else if (typeof value === 'object' && value !== null && hasComparisonOps(value)) {
-						const valObj = value as Record<string, unknown>;
+						const valObj = value as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions -- narrowed by hasComparisonOps guard
 						for (const [op, sqlOp] of Object.entries(PG_COMPARISON_OP_MAP)) {
 							if (op in valObj) {
 								whereClauses.push(`"${key}" ${sqlOp} $${paramIndex}`);
@@ -1012,6 +1012,17 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 
 		// Spread all CRUD + version methods
 		...methods,
+
+		async queryRaw<T extends Record<string, unknown>>(
+			sql: string,
+			params: unknown[] = [],
+		): Promise<T[]> {
+			return helpers.query<T>(sql, params);
+		},
+
+		async executeRaw(sql: string, params: unknown[] = []): Promise<number> {
+			return helpers.execute(sql, params);
+		},
 
 		async initialize(collections: CollectionConfig[]): Promise<void> {
 			// Ensure database exists (auto-create if needed)
