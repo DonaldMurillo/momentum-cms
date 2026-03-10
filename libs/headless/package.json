@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/headless",
-	"version": "0.5.8",
+	"version": "0.5.9",
 	"description": "Headless UI component library — unstyled, accessible components built on Angular CDK + Angular Aria",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
