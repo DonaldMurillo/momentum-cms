@@ -332,6 +332,21 @@ export interface UserNotes {
 	updatedAt: string;
 }
 
+export interface TrackingRules {
+	id: string;
+	name: string;
+	selector: string;
+	eventType: 'click' | 'submit' | 'scroll-into-view' | 'hover' | 'focus';
+	eventName: string;
+	urlPattern: string;
+	properties?: Record<string, unknown>;
+	extractProperties?: Record<string, unknown>;
+	active?: boolean;
+	rateLimit?: number;
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface Redirects {
 	id: string;
 	from: string;
@@ -706,6 +721,39 @@ export interface UserNotesWhereClause {
 	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
+export interface TrackingRulesWhereClause {
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	selector?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	eventType?:
+		| 'click'
+		| 'submit'
+		| 'scroll-into-view'
+		| 'hover'
+		| 'focus'
+		| {
+				equals?: 'click' | 'submit' | 'scroll-into-view' | 'hover' | 'focus';
+				not?: 'click' | 'submit' | 'scroll-into-view' | 'hover' | 'focus';
+				in?: ('click' | 'submit' | 'scroll-into-view' | 'hover' | 'focus')[];
+		  };
+	eventName?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	urlPattern?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	active?: boolean | { equals?: boolean };
+	rateLimit?:
+		| number
+		| {
+				equals?: number;
+				not?: number;
+				gt?: number;
+				gte?: number;
+				lt?: number;
+				lte?: number;
+				in?: number[];
+		  };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+}
+
 export interface RedirectsWhereClause {
 	id?: string | { equals?: string; not?: string; in?: string[] };
 	from?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
@@ -1002,6 +1050,7 @@ export type CollectionSlug =
 	| 'field-test-items'
 	| 'tags'
 	| 'user-notes'
+	| 'tracking-rules'
 	| 'redirects'
 	| 'email-templates'
 	| 'auth-user'
@@ -1028,6 +1077,7 @@ export interface MomentumCollections {
 	'field-test-items': FieldTestItems;
 	tags: Tags;
 	'user-notes': UserNotes;
+	'tracking-rules': TrackingRules;
 	redirects: Redirects;
 	'email-templates': EmailTemplates;
 	'auth-user': AuthUser;
@@ -1057,6 +1107,7 @@ export type TypedMomentumCollections = {
 	'field-test-items': { doc: FieldTestItems; where: FieldTestItemsWhereClause };
 	tags: { doc: Tags; where: TagsWhereClause };
 	'user-notes': { doc: UserNotes; where: UserNotesWhereClause };
+	'tracking-rules': { doc: TrackingRules; where: TrackingRulesWhereClause };
 	redirects: { doc: Redirects; where: RedirectsWhereClause };
 	'email-templates': { doc: EmailTemplates; where: EmailTemplatesWhereClause };
 	'auth-user': { doc: AuthUser; where: AuthUserWhereClause };

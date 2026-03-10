@@ -1650,6 +1650,108 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			timestamps: true,
 		},
 		{
+			slug: 'tracking-rules',
+			labels: {
+				singular: 'Tracking Rule',
+				plural: 'Tracking Rules',
+			},
+			fields: [
+				{
+					name: 'name',
+					type: 'text',
+					required: true,
+					label: 'Rule Name',
+				},
+				{
+					name: 'selector',
+					type: 'text',
+					required: true,
+					label: 'CSS Selector',
+					description:
+						'CSS selector to match elements (e.g., ".cta-button", "#signup-form"). Selectors targeting password, hidden, or credit card fields are blocked.',
+				},
+				{
+					name: 'eventType',
+					type: 'select',
+					required: true,
+					label: 'Event Type',
+					options: [
+						{
+							label: 'Click',
+							value: 'click',
+						},
+						{
+							label: 'Submit',
+							value: 'submit',
+						},
+						{
+							label: 'Scroll Into View',
+							value: 'scroll-into-view',
+						},
+						{
+							label: 'Hover',
+							value: 'hover',
+						},
+						{
+							label: 'Focus',
+							value: 'focus',
+						},
+					],
+					defaultValue: 'click',
+				},
+				{
+					name: 'eventName',
+					type: 'text',
+					required: true,
+					label: 'Event Name',
+					description: 'Analytics event name to fire (e.g., "cta_click", "form_submit")',
+				},
+				{
+					name: 'urlPattern',
+					type: 'text',
+					required: true,
+					label: 'URL Pattern',
+					description:
+						'URL pattern to match pages. Use * for wildcards (e.g., "/blog/*", "*" for all)',
+					defaultValue: '*',
+				},
+				{
+					name: 'properties',
+					type: 'json',
+					label: 'Static Properties',
+					description: 'Key-value pairs attached to every event',
+				},
+				{
+					name: 'extractProperties',
+					type: 'json',
+					label: 'Extract Properties',
+					description:
+						'Extract dynamic values from matched DOM elements. Extraction of "value", "password", and "autocomplete" attributes is blocked. Values are truncated to 200 characters.',
+				},
+				{
+					name: 'active',
+					type: 'checkbox',
+					label: 'Active',
+					defaultValue: true,
+				},
+				{
+					name: 'rateLimit',
+					type: 'number',
+					label: 'Rate Limit',
+					description: 'Max events per minute per visitor (leave empty for unlimited)',
+					admin: {
+						position: 'sidebar',
+					},
+				},
+			],
+			admin: {
+				useAsTitle: 'name',
+				group: 'Analytics',
+				defaultColumns: ['name', 'selector', 'eventType', 'urlPattern', 'active'],
+			},
+			timestamps: true,
+		},
+		{
 			slug: 'redirects',
 			labels: {
 				singular: 'Redirect',
