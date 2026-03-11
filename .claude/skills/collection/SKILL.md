@@ -41,6 +41,7 @@ export const <PascalName> = defineCollection({
     useAsTitle: 'title', // or 'name' - the field to display as title
     defaultColumns: ['title', 'createdAt'],
     group: 'Content', // Admin sidebar group
+    icon: 'heroNewspaper', // Sidebar icon (must be registered — see below)
   },
 
   access: {
@@ -88,6 +89,7 @@ Both example apps automatically pick up changes since they import from `@momentu
 ## Field Types Available
 
 ### Text Input Fields
+
 - `text(name, options)` - Short text with optional min/max length
 - `textarea(name, options)` - Multi-line text with optional rows
 - `richText(name, options)` - Rich text editor
@@ -95,18 +97,22 @@ Both example apps automatically pick up changes since they import from `@momentu
 - `password(name, options)` - Password input with optional min length
 
 ### Numeric & Date Fields
+
 - `number(name, options)` - Numeric value with optional min/max/step
 - `date(name, options)` - Date/datetime picker
 
 ### Boolean & Selection Fields
+
 - `checkbox(name, options)` - Boolean checkbox
 - `select(name, { options: [...] })` - Dropdown select (supports `hasMany`)
 - `radio(name, { options: [...] })` - Radio button group
 
 ### Media & Files
+
 - `upload(name, options)` - File upload with MIME type filtering
 
 ### Relationship & Data Fields
+
 - `relationship(name, { collection: () => Ref })` - Reference to another collection (supports `hasMany`, polymorphic)
 - `array(name, { fields: [...] })` - Array of nested fields
 - `group(name, { fields: [...] })` - Nested object grouping
@@ -116,6 +122,23 @@ Both example apps automatically pick up changes since they import from `@momentu
 - `slug(name, { from: 'fieldName' })` - Auto-generated slug from another field
 
 ### Layout Fields (non-data storing)
+
 - `tabs(tabs: [...])` - Tabbed sections for organization
 - `collapsible(label, { fields: [...] })` - Collapsible section
 - `row(fields: [...])` - Horizontal row layout
+
+## Sidebar Icon Registration (REQUIRED)
+
+Every collection with a custom `admin.icon` MUST have that icon registered in the admin sidebar component, or the sidebar will render a broken/empty icon. The E2E test suite enforces this.
+
+**File:** `libs/admin/src/lib/widgets/admin-sidebar/admin-sidebar.component.ts`
+
+1. Add the icon to the import from `@ng-icons/heroicons/outline`
+2. Add it to the `provideIcons({...})` call in the component's `providers`
+3. Add a mapping in the `collectionIcons` record (slug → icon name)
+
+The sidebar falls back through: `collection.admin.icon` → `collectionIcons[slug]` → `'heroFolder'` (default).
+
+Currently registered icons: `heroSquares2x2`, `heroNewspaper`, `heroUsers`, `heroPhoto`, `heroDocument`, `heroFolder`, `heroBolt`, `heroChevronUpDown`, `heroChartBarSquare`, `heroDocumentText`, `heroCog6Tooth`, `heroPuzzlePiece`, `heroMagnifyingGlass`, `heroMap`, `heroCursorArrowRays`, `heroEnvelopeOpen`, `heroQueueList`, `heroClock`, `heroSignal`.
+
+If the collection uses an icon NOT in this list, add it. Browse available icons at Heroicons. Naming convention: `hero` + PascalCase (e.g., `heroEnvelopeOpen` for `envelope-open`).

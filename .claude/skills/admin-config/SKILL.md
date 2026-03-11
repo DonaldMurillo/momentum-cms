@@ -46,6 +46,20 @@ The generator emits `admin.components` (global) and per-collection `admin.compon
 
 For swappable pages and layout slots, see `/admin-customize`.
 
+## Sidebar Icon Registration (REQUIRED for plugins and collections)
+
+Any icon referenced by a plugin's `adminRoutes[].icon` or a collection's `admin.icon` MUST be registered in the admin sidebar. The E2E test suite (`Admin Sidebar Icons`) enforces that every sidebar nav item renders a visible SVG — unregistered icons silently produce empty `ng-icon` elements.
+
+**File:** `libs/admin/src/lib/widgets/admin-sidebar/admin-sidebar.component.ts`
+
+1. Import the icon from `@ng-icons/heroicons/outline`
+2. Add it to the `provideIcons({...})` call in the component's `providers`
+3. For collections: optionally add a slug → icon mapping in `collectionIcons`
+
+Currently registered: `heroSquares2x2`, `heroNewspaper`, `heroUsers`, `heroPhoto`, `heroDocument`, `heroFolder`, `heroBolt`, `heroChevronUpDown`, `heroChartBarSquare`, `heroDocumentText`, `heroCog6Tooth`, `heroPuzzlePiece`, `heroMagnifyingGlass`, `heroMap`, `heroCursorArrowRays`, `heroEnvelopeOpen`, `heroQueueList`, `heroClock`, `heroSignal`.
+
+Naming convention: `hero` + PascalCase (e.g., `heroEnvelopeOpen` for the `envelope-open` Heroicon).
+
 ## Custom Field Renderers
 
 Field renderers are lazily loaded via `FieldRendererRegistry`. Built-in renderers are registered with `provideMomentumFieldRenderers()`.

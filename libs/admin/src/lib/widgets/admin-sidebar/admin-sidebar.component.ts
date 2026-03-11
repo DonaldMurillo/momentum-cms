@@ -31,6 +31,10 @@ import {
 	heroMagnifyingGlass,
 	heroMap,
 	heroCursorArrowRays,
+	heroEnvelopeOpen,
+	heroQueueList,
+	heroClock,
+	heroSignal,
 } from '@ng-icons/heroicons/outline';
 import type { AdminBranding, AdminUser } from '../widget.types';
 import { humanizeFieldName } from '@momentumcms/core';
@@ -104,6 +108,10 @@ interface PluginRouteGroup {
 			heroMagnifyingGlass,
 			heroMap,
 			heroCursorArrowRays,
+			heroEnvelopeOpen,
+			heroQueueList,
+			heroClock,
+			heroSignal,
 		}),
 	],
 	host: {

@@ -343,81 +343,59 @@ test.describe('Admin Sidebar Navigation', { tag: ['@admin', '@smoke'] }, () => {
 });
 
 test.describe('Admin Sidebar Icons', { tag: ['@admin', '@smoke'] }, () => {
-	test('every sidebar collection link has a rendered ng-icon', async ({ authenticatedPage }) => {
+	test('every sidebar nav item renders an SVG icon', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const sidebar = authenticatedPage.getByLabel('Main navigation');
 		await expect(sidebar).toBeVisible({ timeout: 10000 });
 
-		// Get all nav links in the sidebar (excluding Dashboard which is handled separately)
-		const navLinks = sidebar.locator('mcms-sidebar-nav-item a[routerlink]');
-		const count = await navLinks.count();
+		// Get all nav items (collections, globals, and plugin routes)
+		const navItems = sidebar.locator('mcms-sidebar-nav-item');
+		const count = await navItems.count();
+		expect(count).toBeGreaterThan(5);
 
-		// There should be at least a few collection links
-		expect(count).toBeGreaterThan(3);
-
-		// Every link must contain a rendered ng-icon with an SVG inside
+		// Every nav item must have an ng-icon that actually rendered an SVG
+		const missingIcons: string[] = [];
 		for (let i = 0; i < count; i++) {
-			const link = navLinks.nth(i);
-			const icon = link.locator('ng-icon');
-			const label = await link.locator('span').textContent();
-
-			// ng-icon element must exist and contain an SVG (proves the icon actually rendered)
-			await expect(icon, `Icon missing for sidebar link: "${label}"`).toBeVisible();
-			const svg = icon.locator('svg');
-			await expect(svg, `SVG not rendered inside ng-icon for: "${label}"`).toBeAttached();
-		}
-	});
-
-	test('sidebar icons are not all the same fallback icon', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin');
-		await authenticatedPage.waitForLoadState('domcontentloaded');
-
-		const sidebar = authenticatedPage.getByLabel('Main navigation');
-		await expect(sidebar).toBeVisible({ timeout: 10000 });
-
-		// Collect the ng-icon name attribute from each sidebar link
-		const icons = sidebar.locator('mcms-sidebar-nav-item ng-icon');
-		const count = await icons.count();
-		expect(count).toBeGreaterThan(3);
-
-		const iconNames = new Set<string>();
-		for (let i = 0; i < count; i++) {
-			const name = await icons.nth(i).getAttribute('name');
-			if (name) iconNames.add(name);
+			const item = navItems.nth(i);
+			const label = (await item.locator('span').first().textContent()) ?? `item-${i}`;
+			const svgCount = await item.locator('ng-icon svg').count();
+			if (svgCount === 0) {
+				missingIcons.push(label.trim());
+			}
 		}
 
-		// We expect at least 3 distinct icon names (not all heroFolder)
 		expect(
-			iconNames.size,
-			`Only ${iconNames.size} distinct icon(s) found: ${[...iconNames].join(', ')}. Expected variety.`,
-		).toBeGreaterThanOrEqual(3);
+			missingIcons,
+			`Sidebar items missing rendered SVG icons: ${missingIcons.join(', ')}`,
+		).toHaveLength(0);
 	});
 
-	test('known collections have their expected icons', async ({ authenticatedPage }) => {
+	test('sidebar icons show visual variety (not all the same fallback)', async ({
+		authenticatedPage,
+	}) => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const sidebar = authenticatedPage.getByLabel('Main navigation');
 		await expect(sidebar).toBeVisible({ timeout: 10000 });
 
-		// Map of visible sidebar labels → expected icon names
-		const expectedIcons: Record<string, string> = {
-			Articles: 'heroNewspaper',
-			Users: 'heroUsers',
-		};
+		// Collect distinct SVG innerHTML from rendered icons to detect variety
+		const svgs = sidebar.locator('mcms-sidebar-nav-item ng-icon svg');
+		const count = await svgs.count();
+		expect(count).toBeGreaterThan(5);
 
-		for (const [label, expectedIcon] of Object.entries(expectedIcons)) {
-			const link = sidebar.getByRole('link', { name: label, exact: true });
-			// Only test if this collection is visible in sidebar
-			if ((await link.count()) === 0) continue;
-
-			const icon = link.locator('ng-icon');
-			await expect(icon, `Icon for "${label}" should be ${expectedIcon}`).toHaveAttribute(
-				'name',
-				expectedIcon,
-			);
+		const distinctSvgs = new Set<string>();
+		for (let i = 0; i < count; i++) {
+			const html = await svgs.nth(i).innerHTML();
+			distinctSvgs.add(html);
 		}
+
+		// Expect at least 4 distinct icon shapes (not all heroFolder)
+		expect(
+			distinctSvgs.size,
+			`Only ${distinctSvgs.size} distinct icon shape(s) rendered. Expected visual variety.`,
+		).toBeGreaterThanOrEqual(4);
 	});
 });
