@@ -14,28 +14,7 @@ import {
 	DropdownLabel,
 	DropdownTrigger,
 } from '@momentumcms/ui';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-	heroSquares2x2,
-	heroNewspaper,
-	heroUsers,
-	heroPhoto,
-	heroDocument,
-	heroFolder,
-	heroBolt,
-	heroChevronUpDown,
-	heroChartBarSquare,
-	heroDocumentText,
-	heroCog6Tooth,
-	heroPuzzlePiece,
-	heroMagnifyingGlass,
-	heroMap,
-	heroCursorArrowRays,
-	heroEnvelopeOpen,
-	heroQueueList,
-	heroClock,
-	heroSignal,
-} from '@ng-icons/heroicons/outline';
+import { NgIcon } from '@ng-icons/core';
 import type { AdminBranding, AdminUser } from '../widget.types';
 import { humanizeFieldName } from '@momentumcms/core';
 import { McmsThemeService } from '../../ui/theme/theme.service';
@@ -91,29 +70,8 @@ interface PluginRouteGroup {
 		NgIcon,
 		AdminSlotOutlet,
 	],
-	providers: [
-		provideIcons({
-			heroSquares2x2,
-			heroNewspaper,
-			heroUsers,
-			heroPhoto,
-			heroDocument,
-			heroFolder,
-			heroBolt,
-			heroChevronUpDown,
-			heroChartBarSquare,
-			heroDocumentText,
-			heroCog6Tooth,
-			heroPuzzlePiece,
-			heroMagnifyingGlass,
-			heroMap,
-			heroCursorArrowRays,
-			heroEnvelopeOpen,
-			heroQueueList,
-			heroClock,
-			heroSignal,
-		}),
-	],
+	// Icons are provided at the admin route level via provideAdminIcons() —
+	// no per-component provideIcons() needed. Any heroicons/outline name works.
 	host: {
 		class: 'shrink-0',
 	},

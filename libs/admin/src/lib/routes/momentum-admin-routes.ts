@@ -33,6 +33,7 @@ import type {
 import { authGuard } from '../guards/auth.guard';
 import { guestGuard } from '../guards/guest.guard';
 import { setupGuard } from '../guards/setup.guard';
+import { provideAdminIcons } from '../icons/provide-admin-icons';
 import { collectionAccessGuard } from '../guards/collection-access.guard';
 import { unsavedChangesGuard } from '../guards/unsaved-changes.guard';
 
@@ -59,8 +60,9 @@ export interface AdminPluginRoute {
 	data?: Record<string, unknown>;
 	/** Sidebar display label */
 	label: string;
-	/** Icon name from ng-icons (e.g., 'heroChartBarSquare') */
-	icon: string;
+	/** Icon name from ng-icons (e.g., 'heroChartBarSquare').
+	 * All heroicons/outline names are available by default. */
+	icon: `hero${string}` | (string & {});
 	/** Sidebar section name. @default 'Plugins' */
 	group?: string;
 }
@@ -257,6 +259,7 @@ export function momentumAdminRoutes(
 		loadComponent: (): Promise<Type<unknown>> =>
 			import('../components/shell/admin-shell.component').then((m) => m.AdminShellComponent),
 		data: routeData,
+		providers: [provideAdminIcons()],
 		canActivate: [authGuard],
 		children: [
 			// Dashboard (default route) — swappable via AdminComponentRegistry

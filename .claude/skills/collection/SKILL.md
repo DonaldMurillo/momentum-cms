@@ -127,18 +127,10 @@ Both example apps automatically pick up changes since they import from `@momentu
 - `collapsible(label, { fields: [...] })` - Collapsible section
 - `row(fields: [...])` - Horizontal row layout
 
-## Sidebar Icon Registration (REQUIRED)
+## Sidebar Icons
 
-Every collection with a custom `admin.icon` MUST have that icon registered in the admin sidebar component, or the sidebar will render a broken/empty icon. The E2E test suite enforces this.
+All heroicons/outline (324 icons) are provided globally at the admin route level. Just set `admin.icon` to any `hero*` name — no manual registration needed.
 
-**File:** `libs/admin/src/lib/widgets/admin-sidebar/admin-sidebar.component.ts`
+The sidebar resolves icons via: `collection.admin.icon` → `collectionIcons[slug]` fallback map → `'heroFolder'` default. To add a slug-based fallback, update `collectionIcons` in `libs/admin/src/lib/widgets/admin-sidebar/admin-sidebar.component.ts`.
 
-1. Add the icon to the import from `@ng-icons/heroicons/outline`
-2. Add it to the `provideIcons({...})` call in the component's `providers`
-3. Add a mapping in the `collectionIcons` record (slug → icon name)
-
-The sidebar falls back through: `collection.admin.icon` → `collectionIcons[slug]` → `'heroFolder'` (default).
-
-Currently registered icons: `heroSquares2x2`, `heroNewspaper`, `heroUsers`, `heroPhoto`, `heroDocument`, `heroFolder`, `heroBolt`, `heroChevronUpDown`, `heroChartBarSquare`, `heroDocumentText`, `heroCog6Tooth`, `heroPuzzlePiece`, `heroMagnifyingGlass`, `heroMap`, `heroCursorArrowRays`, `heroEnvelopeOpen`, `heroQueueList`, `heroClock`, `heroSignal`.
-
-If the collection uses an icon NOT in this list, add it. Browse available icons at Heroicons. Naming convention: `hero` + PascalCase (e.g., `heroEnvelopeOpen` for `envelope-open`).
+Browse available icons at Heroicons. Naming: `hero` + PascalCase (e.g., `heroEnvelopeOpen` for `envelope-open`).

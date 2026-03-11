@@ -89,18 +89,11 @@ nx run example-angular:generate    # Regenerate types and admin config
 nx serve cms-admin                 # Restart dev server
 ```
 
-## Sidebar Icon Registration (REQUIRED)
+## Sidebar Icons
 
-When a plugin declares `adminRoutes` with an `icon` field, that icon MUST be registered in the admin sidebar component or it won't render. The E2E tests enforce this — every sidebar nav item must have a visible SVG icon.
+All heroicons/outline are provided globally at the admin route level (`provideAdminIcons()` in `libs/admin/src/lib/icons/provide-admin-icons.ts`). Plugins just set `icon: 'heroChartBarSquare'` (or any `hero*` name) in their admin route descriptor — no manual registration needed.
 
-**File:** `libs/admin/src/lib/widgets/admin-sidebar/admin-sidebar.component.ts`
-
-1. Import the icon from `@ng-icons/heroicons/outline`
-2. Add it to the `provideIcons({...})` call in the component's `providers`
-
-Currently registered icons: `heroSquares2x2`, `heroNewspaper`, `heroUsers`, `heroPhoto`, `heroDocument`, `heroFolder`, `heroBolt`, `heroChevronUpDown`, `heroChartBarSquare`, `heroDocumentText`, `heroCog6Tooth`, `heroPuzzlePiece`, `heroMagnifyingGlass`, `heroMap`, `heroCursorArrowRays`, `heroEnvelopeOpen`, `heroQueueList`, `heroClock`, `heroSignal`.
-
-If the plugin uses an icon NOT in this list, add it. Browse available icons at the Heroicons website. The naming convention is `hero` + PascalCase icon name (e.g., `heroEnvelopeOpen` for the `envelope-open` icon).
+The `icon` field type is `hero${string}` for autocomplete. Browse available names at Heroicons. Naming: `hero` + PascalCase (e.g., `heroEnvelopeOpen` for `envelope-open`).
 
 ## Creating a New Plugin
 
