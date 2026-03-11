@@ -98,20 +98,23 @@ test.describe('Theme editor', { tag: ['@headless', '@tools'] }, () => {
 
 		// Make a change by selecting a preset
 		await page.getByRole('button', { name: /ocean/i }).click();
-		// Ocean preset changes --primary to oklch(0.488 0.243 264.376)
+		// Source: THEME_PRESETS ocean.styles.light.primary in libs/theme-editor/src/lib/presets/index.ts
+		const oceanPrimary = 'oklch(0.488 0.243 264.376)';
 		await expect
 			.poll(() => styleEl.evaluate((el) => el.innerHTML), { timeout: 5000 })
-			.toContain('oklch(0.488 0.243 264.376)');
+			.toContain(oceanPrimary);
 
 		// Undo button should be enabled
 		const undoBtn = page.getByRole('button', { name: /undo/i });
 		await expect(undoBtn).toBeEnabled({ timeout: 5000 });
 		await undoBtn.click();
 
+		// Source: defaultLightStyles.primary in libs/theme-editor/src/lib/theme-defaults.ts
+		const defaultPrimary = 'oklch(0.205 0 0)';
 		// Verify the preview reverted — default primary should be back
 		await expect
 			.poll(() => styleEl.evaluate((el) => el.innerHTML), { timeout: 5000 })
-			.toContain('--primary: oklch(0.205 0 0)');
+			.toContain(`--primary: ${defaultPrimary}`);
 
 		// Redo should be enabled after undo
 		await expect(page.getByRole('button', { name: /redo/i })).toBeEnabled({
@@ -119,7 +122,10 @@ test.describe('Theme editor', { tag: ['@headless', '@tools'] }, () => {
 		});
 	});
 
-	test('copy CSS to clipboard', async ({ page }) => {
+	test('copy CSS to clipboard', async ({ page, context }) => {
+		// Grant clipboard permissions so readText() works in headless mode
+		await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
 		await page.goto('/theme-editor');
 		await page.waitForLoadState('domcontentloaded');
 
@@ -139,6 +145,11 @@ test.describe('Theme editor', { tag: ['@headless', '@tools'] }, () => {
 		await expect(page.getByText('Copied!')).toBeVisible({
 			timeout: 3000,
 		});
+
+		// Verify actual clipboard contents contain valid CSS
+		const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+		expect(clipboardText).toContain(':root');
+		expect(clipboardText).toContain('--primary');
 	});
 
 	test('headless components render in preview', async ({ page }) => {
