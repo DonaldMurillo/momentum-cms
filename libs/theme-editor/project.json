@@ -1,0 +1,46 @@
+{
+	"name": "theme-editor",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/theme-editor/src",
+	"prefix": "mcms",
+	"projectType": "library",
+	"tags": ["scope:lib", "env:browser"],
+	"targets": {
+		"build": {
+			"executor": "@nx/angular:package",
+			"outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+			"options": {
+				"project": "libs/theme-editor/ng-package.json",
+				"tsConfig": "libs/theme-editor/tsconfig.lib.json"
+			},
+			"configurations": {
+				"production": {
+					"tsConfig": "libs/theme-editor/tsconfig.lib.prod.json"
+				},
+				"development": {}
+			},
+			"defaultConfiguration": "production"
+		},
+		"copy-assets": {
+			"executor": "nx:run-commands",
+			"options": {
+				"commands": ["cp LICENSE dist/libs/theme-editor/"]
+			},
+			"dependsOn": ["build"]
+		},
+		"nx-release-publish": {
+			"dependsOn": ["copy-assets"],
+			"options": {
+				"packageRoot": "dist/{projectRoot}",
+				"access": "public"
+			}
+		},
+		"test": {
+			"executor": "@nx/angular:unit-test",
+			"options": {}
+		},
+		"lint": {
+			"executor": "@nx/eslint:lint"
+		}
+	}
+}

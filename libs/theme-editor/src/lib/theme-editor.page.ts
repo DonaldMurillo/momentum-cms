@@ -14,9 +14,7 @@ import { TypographyControlsComponent } from './controls/typography-controls.comp
 import { VisualControlsComponent } from './controls/visual-controls.component';
 import { ThemePreviewComponent } from './preview/theme-preview.component';
 import { CodePanelComponent } from './output/code-panel.component';
-import { HdlTabs } from '../tabs/tabs.component';
-import { HdlTabList } from '../tabs/tab-list.component';
-import { HdlTab } from '../tabs/tab.component';
+import { HdlTabs, HdlTabList, HdlTab } from '@momentumcms/headless';
 import type { ThemeStyleProps } from './theme-editor.types';
 
 @Component({

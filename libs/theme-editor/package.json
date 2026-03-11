@@ -1,0 +1,28 @@
+{
+	"name": "@momentumcms/theme-editor",
+	"version": "0.5.9",
+	"description": "Visual theme editor for Momentum CMS headless components — generate CSS custom properties with live preview",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/DonaldMurillo/momentum-cms.git",
+		"directory": "libs/theme-editor"
+	},
+	"homepage": "https://github.com/DonaldMurillo/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/DonaldMurillo/momentum-cms/issues"
+	},
+	"keywords": [
+		"theme-editor",
+		"css-generator",
+		"angular",
+		"headless",
+		"design-system"
+	],
+	"peerDependencies": {
+		"@angular/common": "^21.0.0",
+		"@angular/core": "^21.0.0"
+	},
+	"sideEffects": false
+}

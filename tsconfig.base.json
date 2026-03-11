@@ -28,18 +28,15 @@
 			"@momentumcms/auth/collections": ["libs/auth/src/lib/auth-collections.ts"],
 			"@momentumcms/ui": ["libs/ui/src/index.ts"],
 			"@momentumcms/headless": ["libs/headless/src/index.ts"],
+			"@momentumcms/theme-editor": ["libs/theme-editor/src/index.ts"],
 			"@momentumcms/storage": ["libs/storage/src/index.ts"],
 			"@momentumcms/e2e-fixtures": ["libs/e2e-fixtures/src/index.ts"],
 			"@momentumcms/logger": ["libs/logger/src/index.ts"],
 			"@momentumcms/plugins/core": ["libs/plugins/core/src/index.ts"],
 			"@momentumcms/plugins/analytics": ["libs/plugins/analytics/src/index.ts"],
 			"@momentumcms/plugins/otel": ["libs/plugins/otel/src/index.ts"],
-			"@momentumcms/plugins/otel/admin-routes": [
-				"libs/plugins/otel/src/lib/otel-admin-routes.ts"
-			],
-			"@momentumcms/plugins-otel/admin-routes": [
-				"libs/plugins/otel/src/lib/otel-admin-routes.ts"
-			],
+			"@momentumcms/plugins/otel/admin-routes": ["libs/plugins/otel/src/lib/otel-admin-routes.ts"],
+			"@momentumcms/plugins-otel/admin-routes": ["libs/plugins/otel/src/lib/otel-admin-routes.ts"],
 			"@momentumcms/plugins/seo": ["libs/plugins/seo/src/index.ts"],
 			"@momentumcms/plugins/seo/admin-routes": ["libs/plugins/seo/src/lib/seo-admin-routes.ts"],
 			"@momentumcms/plugins/seo/fields": ["libs/plugins/seo/src/lib/seo-field-injector.ts"],

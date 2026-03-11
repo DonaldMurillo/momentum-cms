@@ -1,11 +1,9 @@
 /**
- * Thin wrapper that re-exports ThemeEditorPage from headless.
+ * Thin wrapper that re-exports ThemeEditorPage from theme-editor.
  *
- * This separate file avoids an Nx module boundary conflict:
- * headless-styling-lab.page.ts statically imports @momentumcms/headless,
- * so a lazy route in app.routes.ts cannot also import from headless directly.
- * By isolating the lazy import in this file, both coexist.
+ * This separate file keeps the lazy route import isolated from
+ * headless-styling-lab.page.ts which statically imports @momentumcms/headless.
  */
-import { ThemeEditorPage } from '@momentumcms/headless';
+import { ThemeEditorPage } from '@momentumcms/theme-editor';
 
 export const ThemeEditorWrapperPage = ThemeEditorPage;

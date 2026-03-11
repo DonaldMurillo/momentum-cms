@@ -143,6 +143,12 @@ describe('ThemeEditorStore', () => {
 			expect(store.state().styles.light['letter-spacing']).toBe('0.05em');
 			expect(store.state().styles.dark['letter-spacing']).toBe('0.05em');
 		});
+
+		it('updates shadow-color in both modes (regression: must be a common key)', () => {
+			store.setStyleProp('shadow-color', 'oklch(0.3 0 0)');
+			expect(store.state().styles.light['shadow-color']).toBe('oklch(0.3 0 0)');
+			expect(store.state().styles.dark['shadow-color']).toBe('oklch(0.3 0 0)');
+		});
 	});
 
 	describe('applyPreset', () => {
@@ -270,6 +276,27 @@ describe('ThemeEditorStore', () => {
 			// Reset without modifying (preset stays as 'ocean')
 			store.reset();
 			expect(store.currentStyles().primary).toBe(oceanPrimary);
+		});
+	});
+
+	describe('undo/redo clears redo stack on new changes', () => {
+		it('clears redo stack even during debounced rapid changes', async () => {
+			// Make a change outside debounce window
+			store.setStyleProp('primary', 'oklch(0.1 0.1 100)');
+
+			// Wait for debounce to expire
+			await new Promise((r) => setTimeout(r, 600));
+
+			// Make another change (outside debounce)
+			store.setStyleProp('primary', 'oklch(0.2 0.2 200)');
+
+			// Undo — should now have redo available
+			store.undo();
+			expect(store.canRedo()).toBe(true);
+
+			// Make a rapid change within debounce window — redo should be cleared
+			store.setStyleProp('primary', 'oklch(0.3 0.3 300)');
+			expect(store.canRedo()).toBe(false);
 		});
 	});
 

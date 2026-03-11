@@ -171,7 +171,8 @@
 			"plugins-queue",
 			"plugins-cron",
 			"plugins-image",
-			"headless"
+			"headless",
+			"theme-editor"
 		],
 		"version": {
 			"preVersionCommand": "npx nx run-many -t build",

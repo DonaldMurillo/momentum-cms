@@ -82,6 +82,7 @@ export const COMMON_STYLE_KEYS: (keyof ThemeStyleProps)[] = [
 	'font-serif',
 	'font-mono',
 	'radius',
+	'shadow-color',
 	'shadow-opacity',
 	'shadow-blur',
 	'shadow-spread',

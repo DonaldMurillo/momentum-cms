@@ -613,6 +613,28 @@ describe('generateThemeCSS', () => {
 			expect(darkMatch[1]).not.toContain('{');
 		});
 
+		it('prevents nested pattern bypass via url() reconstruction', () => {
+			// After removing the inner "url(", the remaining chars reconstruct "url("
+			expect(sanitizeCSSValue('ururl(l(https://evil.com/exfil)')).not.toContain('url(');
+			expect(sanitizeCSSValue('ururl(l(https://evil.com/exfil)')).not.toMatch(/url\s*\(/i);
+		});
+
+		it('prevents nested pattern bypass via @import reconstruction', () => {
+			expect(sanitizeCSSValue('@im@importport')).not.toMatch(/@import/i);
+		});
+
+		it('prevents nested pattern bypass via expression() reconstruction', () => {
+			expect(sanitizeCSSValue('expressiexpression(on(alert(1))')).not.toMatch(/expression\s*\(/i);
+		});
+
+		it('prevents nested pattern bypass via javascript: reconstruction', () => {
+			expect(sanitizeCSSValue('jajavascript:vascript:alert(1)')).not.toMatch(/javascript\s*:/i);
+		});
+
+		it('prevents nested pattern bypass via var() reconstruction', () => {
+			expect(sanitizeCSSValue('vavar(r(--malicious)')).not.toMatch(/var\s*\(/i);
+		});
+
 		it('sanitizes CSS property key names too', () => {
 			// Keys come from ThemeStyleProps interface so this is type-enforced,
 			// but the generator should still sanitize when interpolating

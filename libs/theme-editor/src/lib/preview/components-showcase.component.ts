@@ -7,27 +7,29 @@
  */
 
 import { Component, ChangeDetectionStrategy } from '@angular/core';
-import { HdlAccordion } from '../../accordion/accordion.component';
-import { HdlAccordionItem } from '../../accordion/accordion-item.component';
-import { HdlAccordionTrigger } from '../../accordion/accordion-trigger.component';
-import { HdlAccordionContent } from '../../accordion/accordion-content.component';
-import { HdlTabs } from '../../tabs/tabs.component';
-import { HdlTabList } from '../../tabs/tab-list.component';
-import { HdlTab } from '../../tabs/tab.component';
-import { HdlTabPanel } from '../../tabs/tab-panel.component';
-import { HdlCheckbox } from '../../checkbox/checkbox.component';
-import { HdlSwitch } from '../../switch/switch.component';
-import { HdlInput } from '../../input/input.component';
-import { HdlTextarea } from '../../textarea/textarea.component';
-import { HdlSeparator } from '../../separator/separator.component';
-import { HdlProgress } from '../../progress/progress.component';
-import { HdlSpinner } from '../../spinner/spinner.component';
-import { HdlRadioGroup } from '../../radio-group/radio-group.component';
-import { HdlRadioItem } from '../../radio-group/radio-item.component';
-import { HdlToggle } from '../../toggle/toggle.component';
-import { HdlToggleGroup } from '../../toggle/toggle-group.component';
-import { HdlToggleItem } from '../../toggle/toggle-item.component';
-import { HdlSkeleton } from '../../skeleton/skeleton.component';
+import {
+	HdlAccordion,
+	HdlAccordionItem,
+	HdlAccordionTrigger,
+	HdlAccordionContent,
+	HdlTabs,
+	HdlTabList,
+	HdlTab,
+	HdlTabPanel,
+	HdlCheckbox,
+	HdlSwitch,
+	HdlInput,
+	HdlTextarea,
+	HdlSeparator,
+	HdlProgress,
+	HdlSpinner,
+	HdlRadioGroup,
+	HdlRadioItem,
+	HdlToggle,
+	HdlToggleGroup,
+	HdlToggleItem,
+	HdlSkeleton,
+} from '@momentumcms/headless';
 
 @Component({
 	selector: 'hdl-theme-components-showcase',

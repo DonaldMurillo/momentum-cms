@@ -154,8 +154,10 @@ export class ThemeEditorStore {
 		// Debounce rapid changes — overwrite last history entry if within threshold
 		if (now - this.lastChangeTime >= DEBOUNCE_MS) {
 			this.pushHistory(current);
-			this.futureStack.set([]);
 		}
+
+		// Always clear redo stack on any new change (debounced or not)
+		this.futureStack.set([]);
 
 		this.lastChangeTime = now;
 		this.state.set(newState);

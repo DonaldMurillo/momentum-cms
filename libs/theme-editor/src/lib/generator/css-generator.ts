@@ -44,9 +44,13 @@ const CSS_DANGEROUS_PATTERNS: RegExp[] = [
  */
 export function sanitizeCSSValue(value: string): string {
 	let sanitized = value;
-	for (const pattern of CSS_DANGEROUS_PATTERNS) {
-		sanitized = sanitized.replace(pattern, '');
-	}
+	let previous: string;
+	do {
+		previous = sanitized;
+		for (const pattern of CSS_DANGEROUS_PATTERNS) {
+			sanitized = sanitized.replace(pattern, '');
+		}
+	} while (sanitized !== previous);
 	return sanitized.trim();
 }
 
