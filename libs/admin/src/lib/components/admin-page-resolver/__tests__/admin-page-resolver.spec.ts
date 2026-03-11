@@ -308,8 +308,10 @@ describe('AdminPageResolver', () => {
 			// Set dirty = true via the NgComponentOutlet instance
 			const outlet = fixture.componentInstance['outlet']();
 			expect(outlet?.componentInstance).toBeTruthy();
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- validated by expect above
-			(outlet!.componentInstance as DirtyEditPage).dirty = true;
+			const instance = outlet?.componentInstance;
+			if (instance) {
+				(instance as DirtyEditPage).dirty = true;
+			}
 			expect(fixture.componentInstance.hasUnsavedChanges()).toBe(true);
 		});
 

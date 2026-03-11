@@ -7,6 +7,12 @@ import { adminConfig } from '../generated/momentum.config';
 export const appRoutes: Route[] = [
 	// Mount admin UI at /admin (own shell, no layout wrapper)
 	...momentumAdminRoutes(adminConfig),
+	// Headless theme editor (own shell, no layout wrapper)
+	{
+		path: 'theme-editor',
+		loadComponent: () =>
+			import('./pages/theme-editor-wrapper.page').then((m) => m.ThemeEditorWrapperPage),
+	},
 	// Public pages wrapped in app layout (header + footer)
 	{
 		path: '',

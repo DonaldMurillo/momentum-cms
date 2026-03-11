@@ -45,6 +45,8 @@ export default [
 						'@momentumcms/form-builder/validation',
 						'@momentumcms/plugins-form-builder/admin-routes',
 						'@momentumcms/plugins-form-builder/collections',
+						// Headless is browser-env and used both statically and via lazy-loaded routes
+						'@momentumcms/headless',
 						// Example config sub-paths (mixed lazy/static usage in apps)
 						'@momentumcms/example-config',
 						'@momentumcms/example-config/collections',

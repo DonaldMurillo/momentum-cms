@@ -162,3 +162,20 @@ export { HdlCommandGroup } from './lib/command/command-group.component';
 export { HdlCommandSeparator } from './lib/command/command-separator.component';
 export { HdlCommandDialog } from './lib/command/command-dialog.component';
 export { HdlCommandDialogPanel } from './lib/command/command-dialog-panel.component';
+
+// Theme Editor
+export { ThemeEditorPage } from './lib/theme-editor/theme-editor.page';
+export { generateThemeCSS, sanitizeCSSValue } from './lib/theme-editor/generator/css-generator';
+export type {
+	ThemeConfig,
+	ThemeStyleProps,
+	ThemeEditorState,
+	ThemePreset,
+} from './lib/theme-editor/theme-editor.types';
+export { isValidThemeEditorState } from './lib/theme-editor/theme-editor.types';
+export {
+	defaultLightStyles,
+	defaultDarkStyles,
+	defaultThemeState,
+} from './lib/theme-editor/theme-defaults';
+export { THEME_PRESETS, getPreset } from './lib/theme-editor/presets';

@@ -301,6 +301,9 @@ type PrimitiveCoverage = {
 					>
 						Toggle {{ themeMode() === 'light' ? 'dark' : 'light' }} mode
 					</button>
+					<a href="/theme-editor" class="lab-trigger" data-testid="lab-theme-editor-link">
+						Open Theme Editor
+					</a>
 					<p
 						class="text-sm leading-6"
 						style="color: var(--hdl-lab-text-muted);"
