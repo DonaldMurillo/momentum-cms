@@ -1,3 +1,14 @@
+## 0.5.10 (2026-03-13)
+
+### 🩹 Fixes
+
+- E2E stability, shadow token wiring, and email template access control ([d4bc2068](https://github.com/DonaldMurillo/momentum-cms/commit/d4bc2068))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.5.9 (2026-03-10)
 
 This was a version bump only for form-builder to align it with other projects, there were no code changes.

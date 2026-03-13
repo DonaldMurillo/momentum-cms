@@ -1,3 +1,15 @@
+## 0.5.10 (2026-03-13)
+
+### 🚀 Features
+
+- centralize admin icon provider — all heroicons available by default ([39a21e2c](https://github.com/DonaldMurillo/momentum-cms/commit/39a21e2c))
+- headless theme editor with CSS injection protection, validation, sidebar icons & E2E ([1fd7fb2d](https://github.com/DonaldMurillo/momentum-cms/commit/1fd7fb2d))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.5.9 (2026-03-10)
 
 This was a version bump only for core to align it with other projects, there were no code changes.
