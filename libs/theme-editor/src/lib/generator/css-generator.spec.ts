@@ -411,6 +411,26 @@ describe('generateThemeCSS', () => {
 			expect(css).toContain('--shadow-opacity: 0.25;');
 		});
 
+		it('component shadows use shadow opacity and x offset tokens', () => {
+			const config: ThemeConfig = {
+				light: {
+					...defaultLightStyles,
+					'shadow-opacity': '0.25',
+					'shadow-offset-x': '4px',
+				},
+				dark: {
+					...defaultDarkStyles,
+					'shadow-opacity': '0.25',
+					'shadow-offset-x': '4px',
+				},
+			};
+			const css = generateThemeCSS(config);
+			expect(css).toContain('--shadow-offset-x: 4px;');
+			expect(css).toContain(
+				'box-shadow: var(--shadow-offset-x) var(--shadow-offset-y) var(--shadow-blur) var(--shadow-spread) color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent);',
+			);
+		});
+
 		it('custom shadow-blur appears in :root variables', () => {
 			const config: ThemeConfig = {
 				light: { ...defaultLightStyles, 'shadow-blur': '10px' },

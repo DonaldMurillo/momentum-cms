@@ -119,6 +119,16 @@ function s(selector: string, scope?: string): string {
 	return scope ? `${scope} ${selector}` : selector;
 }
 
+function shadowValue(): string {
+	return [
+		'var(--shadow-offset-x)',
+		'var(--shadow-offset-y)',
+		'var(--shadow-blur)',
+		'var(--shadow-spread)',
+		'color-mix(in srgb, var(--shadow-color) calc(var(--shadow-opacity) * 100%), transparent)',
+	].join(' ');
+}
+
 /** Generate component styles using [data-slot] selectors */
 function generateComponentStyles(scope?: string): string {
 	const lines: string[] = ['/* === Component Styles === */'];
@@ -498,7 +508,7 @@ function generateComponentStyles(scope?: string): string {
 		'color: var(--popover-foreground);',
 		'border: 1px solid var(--border);',
 		'border-radius: var(--radius);',
-		`box-shadow: 0 var(--shadow-offset-y) var(--shadow-blur) var(--shadow-spread) var(--shadow-color);`,
+		`box-shadow: ${shadowValue()};`,
 		'padding: 0.25rem;',
 	);
 	rule(
@@ -610,7 +620,7 @@ function generateComponentStyles(scope?: string): string {
 		'color: var(--card-foreground);',
 		'border: 1px solid var(--border);',
 		'border-radius: var(--radius);',
-		`box-shadow: 0 var(--shadow-offset-y) var(--shadow-blur) var(--shadow-spread) var(--shadow-color);`,
+		`box-shadow: ${shadowValue()};`,
 		'padding: 1.5rem;',
 	);
 	rule(
@@ -643,7 +653,7 @@ function generateComponentStyles(scope?: string): string {
 		'color: var(--card-foreground);',
 		'border: 1px solid var(--border);',
 		'border-radius: var(--radius);',
-		`box-shadow: 0 var(--shadow-offset-y) var(--shadow-blur) var(--shadow-spread) var(--shadow-color);`,
+		`box-shadow: ${shadowValue()};`,
 		'padding: 1.5rem;',
 	);
 	rule(
@@ -698,7 +708,7 @@ function generateComponentStyles(scope?: string): string {
 		'background: var(--card);',
 		'color: var(--card-foreground);',
 		'border: 1px solid var(--border);',
-		`box-shadow: 0 var(--shadow-offset-y) var(--shadow-blur) var(--shadow-spread) var(--shadow-color);`,
+		`box-shadow: ${shadowValue()};`,
 		'padding: 1.5rem;',
 	);
 	rule(
@@ -737,7 +747,7 @@ function generateComponentStyles(scope?: string): string {
 		'color: var(--card-foreground);',
 		'border: 1px solid var(--border);',
 		'border-radius: var(--radius);',
-		`box-shadow: 0 var(--shadow-offset-y) var(--shadow-blur) var(--shadow-spread) var(--shadow-color);`,
+		`box-shadow: ${shadowValue()};`,
 		'padding: 1rem 1.5rem;',
 		'pointer-events: auto;',
 	);
@@ -933,7 +943,7 @@ function generateComponentStyles(scope?: string): string {
 		'color: var(--popover-foreground);',
 		'border: 1px solid var(--border);',
 		'border-radius: var(--radius);',
-		`box-shadow: 0 var(--shadow-offset-y) var(--shadow-blur) var(--shadow-spread) var(--shadow-color);`,
+		`box-shadow: ${shadowValue()};`,
 		'padding: 0.25rem;',
 		'min-width: 8rem;',
 	);
@@ -995,7 +1005,7 @@ function generateComponentStyles(scope?: string): string {
 		'color: var(--popover-foreground);',
 		'border: 1px solid var(--border);',
 		'border-radius: var(--radius);',
-		`box-shadow: 0 var(--shadow-offset-y) var(--shadow-blur) var(--shadow-spread) var(--shadow-color);`,
+		`box-shadow: ${shadowValue()};`,
 		'padding: 0.25rem;',
 		'min-width: 8rem;',
 	);
@@ -1067,7 +1077,7 @@ function generateComponentStyles(scope?: string): string {
 		'color: var(--popover-foreground);',
 		'border: 1px solid var(--border);',
 		'border-radius: var(--radius);',
-		`box-shadow: 0 var(--shadow-offset-y) var(--shadow-blur) var(--shadow-spread) var(--shadow-color);`,
+		`box-shadow: ${shadowValue()};`,
 		'padding: 0.25rem;',
 	);
 
@@ -1145,7 +1155,7 @@ function generateComponentStyles(scope?: string): string {
 		'color: var(--card-foreground);',
 		'border: 1px solid var(--border);',
 		'border-radius: var(--radius);',
-		`box-shadow: 0 var(--shadow-offset-y) var(--shadow-blur) var(--shadow-spread) var(--shadow-color);`,
+		`box-shadow: ${shadowValue()};`,
 		'overflow: hidden;',
 	);
 	rule('[data-slot="command-dialog-panel"]', 'overflow: hidden;');
@@ -1159,7 +1169,7 @@ function generateComponentStyles(scope?: string): string {
 		'color: var(--popover-foreground);',
 		'border: 1px solid var(--border);',
 		'border-radius: var(--radius);',
-		`box-shadow: 0 var(--shadow-offset-y) var(--shadow-blur) var(--shadow-spread) var(--shadow-color);`,
+		`box-shadow: ${shadowValue()};`,
 		'padding: 1rem;',
 	);
 
@@ -1174,7 +1184,7 @@ function generateComponentStyles(scope?: string): string {
 		'padding: 0.375rem 0.75rem;',
 		'font-family: var(--font-sans);',
 		'font-size: 0.75rem;',
-		`box-shadow: 0 var(--shadow-offset-y) var(--shadow-blur) var(--shadow-spread) var(--shadow-color);`,
+		`box-shadow: ${shadowValue()};`,
 	);
 
 	// Hover Card
@@ -1186,7 +1196,7 @@ function generateComponentStyles(scope?: string): string {
 		'color: var(--popover-foreground);',
 		'border: 1px solid var(--border);',
 		'border-radius: var(--radius);',
-		`box-shadow: 0 var(--shadow-offset-y) var(--shadow-blur) var(--shadow-spread) var(--shadow-color);`,
+		`box-shadow: ${shadowValue()};`,
 		'padding: 1rem;',
 	);
 

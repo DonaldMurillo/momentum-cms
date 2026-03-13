@@ -61,6 +61,9 @@ const auth = momentumAuth({
 ```
 
 This allows auth to look up templates by slug for password reset and verification emails.
+`createFindEmailTemplate()` performs those reads as a system operation with access override,
+so auth email delivery can use the seeded `email-templates` collection even though normal reads
+stay admin-only.
 
 ## Admin UI
 

@@ -21,6 +21,7 @@
 		"design-system"
 	],
 	"peerDependencies": {
+		"@momentumcms/headless": "^0.5.9",
 		"@angular/common": "^21.0.0",
 		"@angular/core": "^21.0.0"
 	},

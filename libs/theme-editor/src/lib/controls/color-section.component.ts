@@ -23,14 +23,14 @@ import { COLOR_PAIRS } from '../theme-editor.types';
 					<div class="grid gap-2" [class]="pair.fg ? 'grid-cols-2' : 'grid-cols-1'">
 						<hdl-theme-color-picker
 							[label]="'Background'"
-							[value]="styles()[pair.bg] ?? ''"
+							[value]="styles()[pair.bg]"
 							[testId]="pair.bg"
 							(valueChange)="onColorChange(pair.bg, $event)"
 						/>
 						@if (pair.fg) {
 							<hdl-theme-color-picker
 								[label]="'Foreground'"
-								[value]="styles()[pair.fg] ?? ''"
+								[value]="styles()[pair.fg]"
 								[testId]="pair.fg"
 								(valueChange)="onColorChange(pair.fg, $event)"
 							/>

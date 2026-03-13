@@ -3,6 +3,7 @@ import { nxE2EPreset } from '@nx/playwright/preset';
 import * as path from 'node:path';
 
 const E2E_TESTS_LIB = path.resolve(__dirname, '../../libs/e2e-tests/src');
+const defaultWorkers = process.env['CI'] ? 2 : 2;
 
 // Set flavor environment variables for the unified E2E library
 process.env['E2E_SERVER_FLAVOR'] = process.env['E2E_SERVER_FLAVOR'] ?? 'angular';
@@ -30,8 +31,8 @@ export default defineConfig({
 	// Run tests in parallel — each worker has its own isolated server + DB
 	fullyParallel: true,
 
-	// 4 concurrent workers for local development, 2 on CI for stability
-	workers: process.env['CI'] ? 2 : 4,
+	// Keep local defaults aligned with CI because each worker boots an isolated app + DB.
+	workers: Number(process.env['MOMENTUM_E2E_WORKERS'] ?? defaultWorkers),
 
 	// Reporter configuration
 	reporter: process.env['CI'] ? 'github' : 'html',
