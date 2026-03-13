@@ -88,6 +88,10 @@ export interface HooksConfig {
 // ============================================
 
 export interface AdminConfig {
+	/** Icon name for the admin sidebar (e.g. 'heroNewspaper', 'heroUsers').
+	 * All heroicons/outline names are available by default. */
+	icon?: `hero${string}` | (string & {});
+
 	/** Field to use as the document title in the admin UI */
 	useAsTitle?: string;
 

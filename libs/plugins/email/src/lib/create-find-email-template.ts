@@ -20,6 +20,22 @@ interface CollectionOps {
 	}): Promise<{ docs: Record<string, unknown>[] }>;
 }
 
+interface EmailPluginApi {
+	setContext(context: { overrideAccess: boolean }): EmailPluginApi;
+	collection(slug: string): CollectionOps;
+}
+
+function hasSystemApi(value: unknown): value is EmailPluginApi {
+	return (
+		typeof value === 'object' &&
+		value !== null &&
+		'setContext' in value &&
+		typeof value['setContext'] === 'function' &&
+		'collection' in value &&
+		typeof value['collection'] === 'function'
+	);
+}
+
 /**
  * Creates a `findEmailTemplate` callback for auth integration.
  *
@@ -48,11 +64,12 @@ export function createFindEmailTemplate(
 ): (slug: string) => Promise<DbEmailTemplate | null> {
 	return async (slug: string): Promise<DbEmailTemplate | null> => {
 		const api = emailPluginInstance.getApi();
-		if (!api) return null;
+		if (!hasSystemApi(api)) return null;
 
 		try {
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-			const ops = api.collection('email-templates') as CollectionOps;
+			// System email generation must bypass collection access rules.
+			// These templates are internal configuration, not user-facing reads.
+			const ops = api.setContext({ overrideAccess: true }).collection('email-templates');
 			const result = await ops.find({
 				where: { slug: { equals: slug } },
 				limit: 1,

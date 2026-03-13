@@ -41,6 +41,7 @@ export const <PascalName> = defineCollection({
     useAsTitle: 'title', // or 'name' - the field to display as title
     defaultColumns: ['title', 'createdAt'],
     group: 'Content', // Admin sidebar group
+    icon: 'heroNewspaper', // Sidebar icon (must be registered — see below)
   },
 
   access: {
@@ -88,6 +89,7 @@ Both example apps automatically pick up changes since they import from `@momentu
 ## Field Types Available
 
 ### Text Input Fields
+
 - `text(name, options)` - Short text with optional min/max length
 - `textarea(name, options)` - Multi-line text with optional rows
 - `richText(name, options)` - Rich text editor
@@ -95,18 +97,22 @@ Both example apps automatically pick up changes since they import from `@momentu
 - `password(name, options)` - Password input with optional min length
 
 ### Numeric & Date Fields
+
 - `number(name, options)` - Numeric value with optional min/max/step
 - `date(name, options)` - Date/datetime picker
 
 ### Boolean & Selection Fields
+
 - `checkbox(name, options)` - Boolean checkbox
 - `select(name, { options: [...] })` - Dropdown select (supports `hasMany`)
 - `radio(name, { options: [...] })` - Radio button group
 
 ### Media & Files
+
 - `upload(name, options)` - File upload with MIME type filtering
 
 ### Relationship & Data Fields
+
 - `relationship(name, { collection: () => Ref })` - Reference to another collection (supports `hasMany`, polymorphic)
 - `array(name, { fields: [...] })` - Array of nested fields
 - `group(name, { fields: [...] })` - Nested object grouping
@@ -116,6 +122,15 @@ Both example apps automatically pick up changes since they import from `@momentu
 - `slug(name, { from: 'fieldName' })` - Auto-generated slug from another field
 
 ### Layout Fields (non-data storing)
+
 - `tabs(tabs: [...])` - Tabbed sections for organization
 - `collapsible(label, { fields: [...] })` - Collapsible section
 - `row(fields: [...])` - Horizontal row layout
+
+## Sidebar Icons
+
+All heroicons/outline (324 icons) are provided globally at the admin route level. Just set `admin.icon` to any `hero*` name — no manual registration needed.
+
+The sidebar resolves icons via: `collection.admin.icon` → `collectionIcons[slug]` fallback map → `'heroFolder'` default. To add a slug-based fallback, update `collectionIcons` in `libs/admin/src/lib/widgets/admin-sidebar/admin-sidebar.component.ts`.
+
+Browse available icons at Heroicons. Naming: `hero` + PascalCase (e.g., `heroEnvelopeOpen` for `envelope-open`).

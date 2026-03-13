@@ -116,3 +116,30 @@
 - Evidence: `apps/example-angular/src/styles.css`, `apps/example-angular/src/app/pages/headless-styling-lab.page.ts`, `libs/e2e-tests/src/specs/headless-styling.spec.ts`
 - Next time: If a custom-element surface looks horizontally cursed or an overlay component is not occupying its pane, inspect the host display contract before assuming the primitive logic is wrong.
 - Status: active
+
+## 2026-03-12 - Theme editor publish and token wiring checks
+
+- Scope: theme-editor
+- Trigger: The extracted `@momentumcms/theme-editor` library built inside the monorepo while still missing its `@momentumcms/headless` peer, and the editor exposed shadow tokens that never affected emitted component CSS.
+- Approach: Keep transitive library imports mirrored in `libs/theme-editor/package.json`, and add generator assertions that check component rules consume tokens like `shadow-opacity` and `shadow-offset-x`, not just that `:root` declares them.
+- Evidence: `libs/theme-editor/package.json`, `libs/theme-editor/src/lib/generator/css-generator.ts`, `pnpm nx test theme-editor`, `pnpm nx build theme-editor`
+- Next time: Inspect the built package manifest and one real emitted component rule before calling an extracted library “done.”
+- Status: active
+
+## 2026-03-12 - Example app E2E stability depends on honoring worker env caps
+
+- Scope: e2e
+- Trigger: `example-nestjs` and `example-analog` ignored `MOMENTUM_DB_MAX_CLIENTS` and `MOMENTUM_DISABLE_BACKGROUND_WORKERS`, so Playwright workers exhausted Postgres while auth email rendering in Analog imported the wrong email entrypoint.
+- Approach: Mirror the Angular example by reading those env vars in both app configs, run `createFindEmailTemplate()` with `overrideAccess`, and import block-render helpers from `@momentumcms/email/server` in `libs/auth/src/lib/email-templates.ts` so DB-backed auth mail stays server-safe.
+- Evidence: `apps/example-nestjs/src/momentum.config.ts`, `apps/example-analog/src/momentum.config.ts`, `libs/plugins/email/src/lib/create-find-email-template.ts`, `libs/auth/src/lib/email-templates.ts`, `pnpm playwright test -c apps/example-nestjs-e2e/playwright.config.ts libs/e2e-tests/src/specs/theme-editor.spec.ts libs/e2e-tests/src/specs/relationship-depth.spec.ts`, `pnpm playwright test -c apps/example-analog-e2e/playwright.config.ts libs/e2e-tests/src/specs/theme-editor.spec.ts libs/e2e-tests/src/specs/email-verification.spec.ts libs/e2e-tests/src/specs/password-reset.spec.ts`
+- Next time: When E2E workers set a safety env var, verify every example app actually consumes it before blaming Postgres or Playwright.
+- Status: active
+
+## 2026-03-12 - Local E2E worker defaults should match the real stability budget
+
+- Scope: e2e
+- Trigger: Full local `test:all` runs were green in focused subsets but could still trip over API sign-in/setup races once the big app suites ran with 4 Playwright workers, because each worker boots its own server, database, and auth setup.
+- Approach: Default the main example-app Playwright configs to 2 workers locally as well, and keep an explicit `MOMENTUM_E2E_WORKERS` override for the rare case where someone wants to trade stability for speed on purpose.
+- Evidence: `apps/example-angular-e2e/playwright.config.ts`, `apps/example-analog-e2e/playwright.config.ts`, `apps/example-nestjs-e2e/playwright.config.ts`, `pnpm run test:all`
+- Next time: If a suite only flakes in the full run, look at the worker budget before touching the product code; sometimes the bug is just that the test harness is being a little too confident.
+- Status: active

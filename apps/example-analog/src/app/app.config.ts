@@ -58,6 +58,11 @@ injectSeoFields(adminCollections, { collections: ['categories', 'articles', 'pag
 // (Analog's file-based routing wraps components in loadChildren, which can interfere with param inheritance)
 const pageRoutes: Routes = [
 	{
+		path: 'theme-editor',
+		loadComponent: () =>
+			import('@momentumcms/example-config/pages').then((m) => m.ThemeEditorWrapperPage),
+	},
+	{
 		path: '',
 		loadComponent: () =>
 			import('@momentumcms/example-config/pages').then((m) => m.AppLayoutComponent),
@@ -88,6 +93,12 @@ const pageRoutes: Routes = [
 				path: 'experiments',
 				loadComponent: () =>
 					import('@momentumcms/example-config/pages').then((m) => m.ExperimentsPage),
+			},
+			// Headless styling lab entry page for non-Angular examples
+			{
+				path: 'headless-styling-lab',
+				loadComponent: () =>
+					import('@momentumcms/example-config/pages').then((m) => m.HeadlessStylingLabTeaserPage),
 			},
 			{
 				path: ':slug',

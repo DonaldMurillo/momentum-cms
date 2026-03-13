@@ -341,3 +341,61 @@ test.describe('Admin Sidebar Navigation', { tag: ['@admin', '@smoke'] }, () => {
 		await expect(authenticatedPage.getByText('admin@test.com')).toBeVisible();
 	});
 });
+
+test.describe('Admin Sidebar Icons', { tag: ['@admin', '@smoke'] }, () => {
+	test('every sidebar nav item renders an SVG icon', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		const sidebar = authenticatedPage.getByLabel('Main navigation');
+		await expect(sidebar).toBeVisible({ timeout: 10000 });
+
+		// Get all nav items (collections, globals, and plugin routes)
+		const navItems = sidebar.locator('mcms-sidebar-nav-item');
+		const count = await navItems.count();
+		expect(count).toBeGreaterThan(5);
+
+		// Every nav item must have an ng-icon that actually rendered an SVG
+		const missingIcons: string[] = [];
+		for (let i = 0; i < count; i++) {
+			const item = navItems.nth(i);
+			const label = (await item.locator('span').first().textContent()) ?? `item-${i}`;
+			const svgCount = await item.locator('ng-icon svg').count();
+			if (svgCount === 0) {
+				missingIcons.push(label.trim());
+			}
+		}
+
+		expect(
+			missingIcons,
+			`Sidebar items missing rendered SVG icons: ${missingIcons.join(', ')}`,
+		).toHaveLength(0);
+	});
+
+	test('sidebar icons show visual variety (not all the same fallback)', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		const sidebar = authenticatedPage.getByLabel('Main navigation');
+		await expect(sidebar).toBeVisible({ timeout: 10000 });
+
+		// Collect distinct SVG innerHTML from rendered icons to detect variety
+		const svgs = sidebar.locator('mcms-sidebar-nav-item ng-icon svg');
+		const count = await svgs.count();
+		expect(count).toBeGreaterThan(5);
+
+		const distinctSvgs = new Set<string>();
+		for (let i = 0; i < count; i++) {
+			const html = await svgs.nth(i).innerHTML();
+			distinctSvgs.add(html);
+		}
+
+		// Expect at least 4 distinct icon shapes (not all heroFolder)
+		expect(
+			distinctSvgs.size,
+			`Only ${distinctSvgs.size} distinct icon shape(s) rendered. Expected visual variety.`,
+		).toBeGreaterThanOrEqual(4);
+	});
+});

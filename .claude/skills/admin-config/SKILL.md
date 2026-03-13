@@ -46,6 +46,12 @@ The generator emits `admin.components` (global) and per-collection `admin.compon
 
 For swappable pages and layout slots, see `/admin-customize`.
 
+## Admin Icons
+
+All heroicons/outline (324 icons) are provided globally at the admin route level via `provideAdminIcons()` in `libs/admin/src/lib/icons/provide-admin-icons.ts`. This is wired into `momentumAdminRoutes()` automatically — no manual icon registration needed anywhere.
+
+Collections and plugins just set their `icon` field to any `hero*` name (e.g., `'heroEnvelopeOpen'`). The type is `hero${string}` for basic autocomplete. E2E tests enforce every sidebar item renders an SVG.
+
 ## Custom Field Renderers
 
 Field renderers are lazily loaded via `FieldRendererRegistry`. Built-in renderers are registered with `provideMomentumFieldRenderers()`.

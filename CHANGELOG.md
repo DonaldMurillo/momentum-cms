@@ -1,3 +1,21 @@
+## 0.5.10 (2026-03-13)
+
+### 🚀 Features
+
+- headless theme editor with CSS injection protection, validation, sidebar icons & E2E ([1fd7fb2d](https://github.com/DonaldMurillo/momentum-cms/commit/1fd7fb2d))
+- centralize admin icon provider — all heroicons available by default ([39a21e2c](https://github.com/DonaldMurillo/momentum-cms/commit/39a21e2c))
+
+### 🩹 Fixes
+
+- register missing plugin sidebar icons + update skills with icon checklist ([28e45b4b](https://github.com/DonaldMurillo/momentum-cms/commit/28e45b4b))
+- verify clipboard contents in E2E test and trace hardcoded values to source ([a28e9868](https://github.com/DonaldMurillo/momentum-cms/commit/a28e9868))
+- E2E stability, shadow token wiring, and email template access control ([d4bc2068](https://github.com/DonaldMurillo/momentum-cms/commit/d4bc2068))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.5.9 (2026-03-10)
 
 ### 🚀 Features

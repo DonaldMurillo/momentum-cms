@@ -51,7 +51,7 @@ async function renderFromDbTemplate(
 	}
 
 	const { renderEmailFromBlocks, replaceVariables, blocksToPlainText } = await import(
-		'@momentumcms/email'
+		'@momentumcms/email/server'
 	);
 
 	const subject = template.subject ? replaceVariables(template.subject, variables) : defaultSubject;

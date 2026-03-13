@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/email-builder",
-	"version": "0.5.9",
+	"version": "0.5.10",
 	"description": "Visual drag-and-drop email template builder for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",

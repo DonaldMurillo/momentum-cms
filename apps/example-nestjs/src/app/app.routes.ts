@@ -7,6 +7,12 @@ import { adminConfig } from '../generated/momentum.config';
 export const appRoutes: Route[] = [
 	// Mount admin UI at /admin (own shell, no layout wrapper)
 	...momentumAdminRoutes(adminConfig),
+	// Headless theme editor demo (own shell, no layout wrapper)
+	{
+		path: 'theme-editor',
+		loadComponent: () =>
+			import('@momentumcms/example-config/pages').then((m) => m.ThemeEditorWrapperPage),
+	},
 	// Public pages wrapped in app layout (header + footer)
 	{
 		path: '',
@@ -40,6 +46,12 @@ export const appRoutes: Route[] = [
 				path: 'experiments',
 				loadComponent: () =>
 					import('@momentumcms/example-config/pages').then((m) => m.ExperimentsPage),
+			},
+			// Headless styling lab entry page for non-Angular examples
+			{
+				path: 'headless-styling-lab',
+				loadComponent: () =>
+					import('@momentumcms/example-config/pages').then((m) => m.HeadlessStylingLabTeaserPage),
 			},
 			// Kitchen Sink - UI component showcase
 			{

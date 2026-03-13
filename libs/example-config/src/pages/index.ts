@@ -10,6 +10,8 @@ export { ExperimentsPage } from './experiments.page';
 export { AppLayoutComponent } from './app-layout.component';
 export { ArticlesPageComponent } from './articles-page.component';
 export { ArticleDetailComponent } from './article-detail.component';
+export { HeadlessStylingLabTeaserPage } from './headless-styling-lab-teaser.page';
+export { ThemeEditorWrapperPage } from './theme-editor-wrapper.page';
 export { HeroBlockComponent } from './blocks/hero-block.component';
 export { TextBlockComponent } from './blocks/text-block.component';
 export { FeatureBlockComponent } from './blocks/feature-block.component';

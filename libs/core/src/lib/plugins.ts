@@ -64,8 +64,9 @@ export interface PluginAdminRouteDescriptor {
 	data?: Record<string, unknown>;
 	/** Sidebar display label */
 	label: string;
-	/** Icon name from ng-icons (e.g., 'heroChartBarSquare') */
-	icon: string;
+	/** Icon name from ng-icons (e.g., 'heroChartBarSquare').
+	 * All heroicons/outline names are available by default. */
+	icon: `hero${string}` | (string & {});
 	/** Sidebar section name. @default 'Plugins' */
 	group?: string;
 }

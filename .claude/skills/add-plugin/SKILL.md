@@ -89,6 +89,12 @@ nx run example-angular:generate    # Regenerate types and admin config
 nx serve cms-admin                 # Restart dev server
 ```
 
+## Sidebar Icons
+
+All heroicons/outline are provided globally at the admin route level (`provideAdminIcons()` in `libs/admin/src/lib/icons/provide-admin-icons.ts`). Plugins just set `icon: 'heroChartBarSquare'` (or any `hero*` name) in their admin route descriptor — no manual registration needed.
+
+The `icon` field type is `hero${string}` for autocomplete. Browse available names at Heroicons. Naming: `hero` + PascalCase (e.g., `heroEnvelopeOpen` for `envelope-open`).
+
 ## Creating a New Plugin
 
 Create a new library under `libs/plugins/`:

@@ -14,24 +14,7 @@ import {
 	DropdownLabel,
 	DropdownTrigger,
 } from '@momentumcms/ui';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-	heroSquares2x2,
-	heroNewspaper,
-	heroUsers,
-	heroPhoto,
-	heroDocument,
-	heroFolder,
-	heroBolt,
-	heroChevronUpDown,
-	heroChartBarSquare,
-	heroDocumentText,
-	heroCog6Tooth,
-	heroPuzzlePiece,
-	heroMagnifyingGlass,
-	heroMap,
-	heroCursorArrowRays,
-} from '@ng-icons/heroicons/outline';
+import { NgIcon } from '@ng-icons/core';
 import type { AdminBranding, AdminUser } from '../widget.types';
 import { humanizeFieldName } from '@momentumcms/core';
 import { McmsThemeService } from '../../ui/theme/theme.service';
@@ -87,25 +70,8 @@ interface PluginRouteGroup {
 		NgIcon,
 		AdminSlotOutlet,
 	],
-	providers: [
-		provideIcons({
-			heroSquares2x2,
-			heroNewspaper,
-			heroUsers,
-			heroPhoto,
-			heroDocument,
-			heroFolder,
-			heroBolt,
-			heroChevronUpDown,
-			heroChartBarSquare,
-			heroDocumentText,
-			heroCog6Tooth,
-			heroPuzzlePiece,
-			heroMagnifyingGlass,
-			heroMap,
-			heroCursorArrowRays,
-		}),
-	],
+	// Icons are provided at the admin route level via provideAdminIcons() —
+	// no per-component provideIcons() needed. Any heroicons/outline name works.
 	host: {
 		class: 'shrink-0',
 	},
@@ -178,7 +144,7 @@ interface PluginRouteGroup {
 								<mcms-sidebar-nav-item
 									[label]="getGlobalLabel(global)"
 									[href]="basePath() + '/globals/' + global.slug"
-									icon="heroCog6Tooth"
+									[icon]="global.admin?.icon || 'heroCog6Tooth'"
 								/>
 							}
 						</mcms-sidebar-section>
@@ -330,10 +296,34 @@ export class AdminSidebarWidget {
 
 	/** Collection icon names by slug */
 	private readonly collectionIcons: Record<string, string> = {
+		// Content
 		posts: 'heroNewspaper',
-		users: 'heroUsers',
-		media: 'heroPhoto',
+		articles: 'heroNewspaper',
 		pages: 'heroDocument',
+		media: 'heroPhoto',
+		// People
+		users: 'heroUsers',
+		'auth-user': 'heroUsers',
+		'auth-session': 'heroBolt',
+		'auth-account': 'heroUsers',
+		'auth-api-keys': 'heroBolt',
+		'auth-verification': 'heroBolt',
+		// System
+		settings: 'heroCog6Tooth',
+		'site-settings': 'heroCog6Tooth',
+		categories: 'heroFolder',
+		tags: 'heroFolder',
+		// Plugins
+		products: 'heroChartBarSquare',
+		'email-templates': 'heroDocumentText',
+		forms: 'heroPuzzlePiece',
+		'form-submissions': 'heroDocumentText',
+		redirects: 'heroMap',
+		'tracking-rules': 'heroCursorArrowRays',
+		'queue-jobs': 'heroBolt',
+		'cron-schedules': 'heroBolt',
+		'otel-snapshots': 'heroChartBarSquare',
+		events: 'heroChartBarSquare',
 		default: 'heroFolder',
 	};
 
@@ -352,10 +342,14 @@ export class AdminSidebarWidget {
 	}
 
 	/**
-	 * Get icon name for a collection based on its slug.
+	 * Get icon name for a collection — checks admin.icon first, then slug mapping, then default.
 	 */
 	getCollectionIcon(collection: CollectionConfig): string {
-		return this.collectionIcons[collection.slug] || this.collectionIcons['default'];
+		return (
+			collection.admin?.icon ||
+			this.collectionIcons[collection.slug] ||
+			this.collectionIcons['default']
+		);
 	}
 
 	/**

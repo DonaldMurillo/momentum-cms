@@ -11,6 +11,7 @@
  * - Webhook hooks registration
  */
 
+import '@angular/compiler';
 import {
 	initializeMomentumAPI,
 	runSeeding,
