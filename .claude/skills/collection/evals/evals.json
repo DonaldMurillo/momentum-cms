@@ -1,0 +1,93 @@
+{
+	"skill": "collection",
+	"version": 1,
+	"test_cases": [
+		{
+			"name": "basic-collection",
+			"description": "Generate a products collection with basic field types",
+			"prompt": "Create a 'products' collection with these fields: title (required text), price (number), description (textarea), and isPublished (checkbox). It should be in the Content group with the heroShoppingBag icon.",
+			"assertions": [
+				{
+					"type": "file_exists",
+					"path": "libs/example-config/src/collections/products.collection.ts"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/example-config/src/collections/products.collection.ts",
+					"patterns": [
+						"defineCollection",
+						"slug: 'products'",
+						"text(",
+						"number(",
+						"textarea(",
+						"checkbox(",
+						"access:",
+						"@momentumcms/core"
+					]
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/example-config/src/collections/index.ts",
+					"patterns": ["Products", "products.collection"]
+				}
+			]
+		},
+		{
+			"name": "collection-with-relationship",
+			"description": "Generate an orders collection with relationship to products",
+			"prompt": "Create an 'orders' collection with fields: orderNumber (required text), status (select with options: pending, processing, shipped, delivered), totalAmount (number), and a relationship field to the products collection (hasMany). Put it in the Commerce group.",
+			"assertions": [
+				{
+					"type": "file_exists",
+					"path": "libs/example-config/src/collections/orders.collection.ts"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/example-config/src/collections/orders.collection.ts",
+					"patterns": [
+						"defineCollection",
+						"slug: 'orders'",
+						"relationship(",
+						"select(",
+						"hasMany",
+						"@momentumcms/core"
+					]
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/example-config/src/collections/index.ts",
+					"patterns": ["Orders"]
+				}
+			]
+		},
+		{
+			"name": "collection-with-hooks",
+			"description": "Generate a comments collection with a beforeChange validation hook",
+			"prompt": "Create a 'comments' collection with fields: author (required text), body (required richText), and rating (number, min 1 max 5). Add a beforeChange hook that validates the rating is between 1 and 5. It should be in the Content group.",
+			"assertions": [
+				{
+					"type": "file_exists",
+					"path": "libs/example-config/src/collections/comments.collection.ts"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/example-config/src/collections/comments.collection.ts",
+					"patterns": [
+						"defineCollection",
+						"slug: 'comments'",
+						"text(",
+						"richText(",
+						"number(",
+						"beforeChange",
+						"@momentumcms/core"
+					]
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/example-config/src/collections/index.ts",
+					"patterns": ["Comments"]
+				}
+			]
+		}
+	]
+}

@@ -13,12 +13,28 @@ Create an Angular component following Momentum CMS conventions.
 - First argument: Library path (e.g., "admin", "ui", "admin/components")
 - Second argument: Component name in kebab-case (e.g., "data-table", "field-renderer")
 
+## File Naming Convention
+
+Momentum CMS uses **short file names without the `.component` infix**. This is a deliberate project convention — do NOT follow the Angular CLI default of `.component.ts`.
+
+| File      | Name it          | NOT                            |
+| --------- | ---------------- | ------------------------------ |
+| Component | `<name>.ts`      | ~~`<name>.component.ts`~~      |
+| Template  | `<name>.html`    | ~~`<name>.component.html`~~    |
+| Tests     | `<name>.spec.ts` | ~~`<name>.component.spec.ts`~~ |
+
+For example, a component called `data-table` produces:
+
+- `data-table.ts`
+- `data-table.html` (only if template is complex)
+- `data-table.spec.ts`
+
 ## Steps
 
 1. Create component files in `libs/<library>/src/lib/<component>/`:
-   - `<component>.ts` (component class)
-   - `<component>.html` (template, if complex)
-   - `<component>.spec.ts` (tests)
+   - `<component>.ts` — the component class (NOT `<component>.component.ts`)
+   - `<component>.html` — template, only if complex (NOT `<component>.component.html`)
+   - `<component>.spec.ts` — tests (NOT `<component>.component.spec.ts`)
 
 2. Use this template for the component:
 
@@ -61,17 +77,20 @@ export class <PascalName>Component {
 export { <PascalName>Component } from './lib/<component>/<component>';
 ```
 
+Note: the import path ends with `/<component>` (the short filename), NOT `/<component>.component`.
+
 ## Key Conventions
 
 - **NO `standalone: true`** — default in Angular 21, redundant (ESLint enforced)
 - **NO `any` types** — use proper interfaces (ESLint enforced)
 - **NO `CommonModule` import** — unnecessary in Angular 21
-- Always use `ChangeDetectionStrategy.OnPush`
-- Use `input()` and `input.required()` for inputs
-- Use `output()` for outputs
+- **NO `.component.ts` suffix** — use plain `.ts` (project convention, see File Naming above)
+- Always set `changeDetection: ChangeDetectionStrategy.OnPush` — never use Default
+- Use `input()` and `input.required()` for inputs — never use `@Input()` decorator
+- Use `output()` for outputs — never use `@Output()` decorator
 - Use `signal()` for internal state, `computed()` for derived values
-- Use `inject()` for dependency injection
-- Use `@for`/`@if`/`@switch` control flow
+- Use `inject()` for dependency injection — never use constructor injection
+- Use `@for`/`@if`/`@switch` control flow — never use `*ngFor`/`*ngIf`/`[ngSwitch]`
 - Prefix selectors with `mcms-`
 
 ## UI Component Patterns

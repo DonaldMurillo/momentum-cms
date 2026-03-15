@@ -1,0 +1,65 @@
+{
+	"skill": "e2e-test",
+	"version": 1,
+	"test_cases": [
+		{
+			"name": "crud-spec-structure",
+			"description": "Generate a dashboard-first CRUD E2E spec for a collection",
+			"prompt": "Write E2E tests for the 'posts' collection. The collection has title (text), body (richText), and status (select: draft/published) fields. Write both UI tests (dashboard navigation, create, edit) and API tests (CRUD operations). Save the spec at libs/e2e-tests/src/specs/posts.spec.ts.",
+			"assertions": [
+				{
+					"type": "file_exists",
+					"path": "libs/e2e-tests/src/specs/posts.spec.ts"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/e2e-tests/src/specs/posts.spec.ts",
+					"patterns": [
+						"authenticatedPage",
+						"getByLabel('Main navigation')",
+						"goto('/admin')",
+						"waitForLoadState",
+						"test.describe",
+						"tag:"
+					]
+				},
+				{
+					"type": "file_not_contains",
+					"path": "libs/e2e-tests/src/specs/posts.spec.ts",
+					"patterns": [
+						"goto('/admin/collections/posts/new')",
+						"goto('/admin/collections/posts/')",
+						".catch(() =>",
+						"waitForTimeout("
+					]
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/e2e-tests/src/specs/posts.spec.ts",
+					"patterns": ["finally"]
+				}
+			]
+		},
+		{
+			"name": "api-spec-structure",
+			"description": "Generate API E2E tests with proper auth and assertions",
+			"prompt": "Write API-only E2E tests for the 'redirects' collection. Test CRUD operations and verify that redirect middleware works (301 status with correct Location header). Save at libs/e2e-tests/src/specs/redirects-api.spec.ts.",
+			"assertions": [
+				{
+					"type": "file_exists",
+					"path": "libs/e2e-tests/src/specs/redirects-api.spec.ts"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/e2e-tests/src/specs/redirects-api.spec.ts",
+					"patterns": ["beforeEach", "sign-in", "TEST_CREDENTIALS", "expect(", ".status()"]
+				},
+				{
+					"type": "file_not_contains",
+					"path": "libs/e2e-tests/src/specs/redirects-api.spec.ts",
+					"patterns": [".catch(() =>", ".ok() ||", "waitForTimeout("]
+				}
+			]
+		}
+	]
+}
