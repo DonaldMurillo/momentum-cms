@@ -790,6 +790,437 @@ describe('MomentumAPI', () => {
 		});
 	});
 
+	describe('extended where clause operators', () => {
+		it('should pass not_equals operator to the adapter as $ne', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { status: { not_equals: 'archived' } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ status: { $ne: 'archived' } }),
+			);
+		});
+
+		it('should pass like operator to the adapter as $like', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { title: { like: '%hello%' } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ title: { $like: '%hello%' } }),
+			);
+		});
+
+		it('should pass contains operator to the adapter as $contains', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { title: { contains: 'hello' } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ title: { $contains: 'hello' } }),
+			);
+		});
+
+		it('should pass in operator to the adapter as $in', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { status: { in: ['draft', 'published'] } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ status: { $in: ['draft', 'published'] } }),
+			);
+		});
+
+		it('should pass not_in operator to the adapter as $nin', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { status: { not_in: ['archived'] } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ status: { $nin: ['archived'] } }),
+			);
+		});
+
+		it('should pass exists: true operator to the adapter as $exists', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { category: { exists: true } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ category: { $exists: true } }),
+			);
+		});
+
+		it('should pass exists: false operator to the adapter as $exists', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { category: { exists: false } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ category: { $exists: false } }),
+			);
+		});
+
+		it('should merge multiple operators on the same field', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { price: { gte: 10, lte: 100, not_equals: 50 } },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({
+					price: { $gte: 10, $lte: 100, $ne: 50 },
+				}),
+			);
+		});
+
+		it('should pass or operator to adapter as $or with flattened conditions', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { or: [{ status: 'draft' }, { status: 'published' }] },
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({
+					$or: [{ status: 'draft' }, { status: 'published' }],
+				}),
+			);
+		});
+
+		it('should pass and operator to adapter as $and with flattened conditions', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: {
+					and: [{ title: { contains: 'hello' } }, { status: { not_equals: 'archived' } }],
+				},
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({
+					$and: [{ title: { $contains: 'hello' } }, { status: { $ne: 'archived' } }],
+				}),
+			);
+		});
+
+		it('should handle nested or inside and', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: {
+					and: [
+						{ or: [{ status: 'draft' }, { status: 'published' }] },
+						{ title: { contains: 'hello' } },
+					],
+				},
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({
+					$and: [
+						{ $or: [{ status: 'draft' }, { status: 'published' }] },
+						{ title: { $contains: 'hello' } },
+					],
+				}),
+			);
+		});
+
+		it('should combine or/and with top-level field conditions', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: {
+					title: { contains: 'hello' },
+					or: [{ status: 'draft' }, { status: 'published' }],
+				},
+			});
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({
+					title: { $contains: 'hello' },
+					$or: [{ status: 'draft' }, { status: 'published' }],
+				}),
+			);
+		});
+
+		it('should throw when or/and nesting exceeds 5 levels', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			// 6 levels deep
+			const deepWhere = {
+				or: [{ and: [{ or: [{ and: [{ or: [{ and: [{ title: 'x' }] }] }] }] }] }],
+			};
+
+			await expect(api.collection('posts').find({ where: deepWhere })).rejects.toThrow(
+				/nesting.*depth|too deeply nested/i,
+			);
+		});
+
+		it('should throw on unknown operator in where clause', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('posts').find({
+					where: { title: { bogus: 'hello' } },
+				}),
+			).rejects.toThrow(/Unknown operator.*bogus/);
+		});
+
+		it('should list valid operators in unknown operator error message', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('posts').find({
+					where: { title: { nope: 'x' } },
+				}),
+			).rejects.toThrow(/contains.*equals.*exists.*gt/);
+		});
+
+		it('should throw when where clause exceeds 20 field conditions', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			const bigWhere: Record<string, unknown> = {};
+			for (let i = 0; i < 21; i++) bigWhere[`field${i}`] = 'val';
+
+			await expect(api.collection('posts').find({ where: bigWhere })).rejects.toThrow(
+				/exceeds maximum of 20 conditions/,
+			);
+		});
+
+		it('should allow up to 20 field conditions', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			const where: Record<string, unknown> = {};
+			for (let i = 0; i < 20; i++) where[`field${i}`] = 'val';
+
+			await expect(api.collection('posts').find({ where })).resolves.toBeDefined();
+		});
+	});
+
+	describe('field access control in where clauses', () => {
+		const restrictedCollection: CollectionConfig = {
+			slug: 'secure-items',
+			labels: { singular: 'Secure Item', plural: 'Secure Items' },
+			fields: [
+				{ name: 'name', type: 'text', required: true },
+				{ name: 'email', type: 'email' },
+				{
+					name: 'secret',
+					type: 'text',
+					access: { read: () => false },
+				},
+				{
+					name: 'internal_token',
+					type: 'text',
+					access: { read: () => false },
+				},
+			],
+		};
+
+		let restrictedConfig: MomentumConfig;
+
+		beforeEach(() => {
+			resetMomentumAPI();
+			restrictedConfig = {
+				collections: [restrictedCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+		});
+
+		it('should throw when filtering by a field with access.read = false', async () => {
+			const api = initializeMomentumAPI(restrictedConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('secure-items').find({
+					where: { secret: { equals: 'password123' } },
+				}),
+			).rejects.toThrow(/cannot filter|access denied/i);
+		});
+
+		it('should allow filtering by fields without access restrictions', async () => {
+			const api = initializeMomentumAPI(restrictedConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('secure-items').find({
+					where: { name: { equals: 'test' } },
+				}),
+			).resolves.toBeDefined();
+		});
+
+		it('should throw when any field in mixed where has access.read = false', async () => {
+			const api = initializeMomentumAPI(restrictedConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('secure-items').find({
+					where: { name: { equals: 'test' }, internal_token: { exists: true } },
+				}),
+			).rejects.toThrow(/cannot filter|access denied/i);
+		});
+	});
+
+	describe('relationship where clause (JOIN queries)', () => {
+		const categoriesCollection: CollectionConfig = {
+			slug: 'categories',
+			labels: { singular: 'Category', plural: 'Categories' },
+			fields: [
+				{ name: 'name', type: 'text', required: true },
+				{ name: 'priority', type: 'number' },
+			],
+		};
+
+		const articlesWithRelCollection: CollectionConfig = {
+			slug: 'articles-rel',
+			labels: { singular: 'Article', plural: 'Articles' },
+			fields: [
+				{ name: 'title', type: 'text', required: true },
+				{
+					name: 'category',
+					type: 'relationship',
+					collection: () => categoriesCollection,
+				} as CollectionConfig['fields'][number],
+			],
+		};
+
+		let relConfig: MomentumConfig;
+
+		beforeEach(() => {
+			resetMomentumAPI();
+			relConfig = {
+				collections: [categoriesCollection, articlesWithRelCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+		});
+
+		it('should pass $joins to the adapter when filtering by relationship sub-fields', async () => {
+			const api = initializeMomentumAPI(relConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('articles-rel').find({
+				where: { category: { name: { contains: 'Tech' } } },
+			});
+
+			const findCall = vi.mocked(mockAdapter.find).mock.calls[0];
+			const query = findCall[1] as Record<string, unknown>;
+			expect(query['$joins']).toBeDefined();
+			expect(query['$joins']).toEqual([
+				{
+					targetTable: 'categories',
+					localField: 'category',
+					targetField: 'id',
+					conditions: { name: { $contains: 'Tech' } },
+				},
+			]);
+			// The relationship field should NOT appear as a direct where param
+			expect(query['category']).toBeUndefined();
+		});
+
+		it('should combine relationship JOIN with normal field conditions', async () => {
+			const api = initializeMomentumAPI(relConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('articles-rel').find({
+				where: {
+					title: { contains: 'hello' },
+					category: { name: { equals: 'News' } },
+				},
+			});
+
+			const findCall = vi.mocked(mockAdapter.find).mock.calls[0];
+			const query = findCall[1] as Record<string, unknown>;
+			// Normal field should be passed as usual
+			expect(query['title']).toEqual({ $contains: 'hello' });
+			// Relationship JOIN should be extracted
+			expect(query['$joins']).toEqual([
+				{
+					targetTable: 'categories',
+					localField: 'category',
+					targetField: 'id',
+					conditions: { name: 'News' },
+				},
+			]);
+		});
+
+		it('should still allow filtering by relationship ID directly (no JOIN needed)', async () => {
+			const api = initializeMomentumAPI(relConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('articles-rel').find({
+				where: { category: 'some-id' },
+			});
+
+			const findCall = vi.mocked(mockAdapter.find).mock.calls[0];
+			const query = findCall[1] as Record<string, unknown>;
+			// Direct ID value — no JOIN, just equality
+			expect(query['category']).toBe('some-id');
+			expect(query['$joins']).toBeUndefined();
+		});
+
+		it('should still allow filtering by relationship ID with operators (no JOIN needed)', async () => {
+			const api = initializeMomentumAPI(relConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('articles-rel').find({
+				where: { category: { in: ['id1', 'id2'] } },
+			});
+
+			const findCall = vi.mocked(mockAdapter.find).mock.calls[0];
+			const query = findCall[1] as Record<string, unknown>;
+			// Operator on relationship ID — no JOIN
+			expect(query['category']).toEqual({ $in: ['id1', 'id2'] });
+			expect(query['$joins']).toBeUndefined();
+		});
+	});
+
 	describe('draft visibility in findById', () => {
 		const versionedCollection: CollectionConfig = {
 			slug: 'articles',

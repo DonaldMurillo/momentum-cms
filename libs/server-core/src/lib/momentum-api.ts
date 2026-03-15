@@ -239,12 +239,79 @@ function stripTransientKeys(data: Record<string, unknown>): Record<string, unkno
 	return result;
 }
 
-const COMPARISON_OPS = ['gt', 'gte', 'lt', 'lte'] as const;
+/**
+ * Maps user-facing where clause operator names to `$`-prefixed internal names
+ * consumed by database adapters. The `equals` operator is handled separately
+ * (it unwraps to a direct value).
+ */
+const OPERATOR_MAP: Record<string, string> = {
+	gt: '$gt',
+	gte: '$gte',
+	lt: '$lt',
+	lte: '$lte',
+	not_equals: '$ne',
+	like: '$like',
+	contains: '$contains',
+	in: '$in',
+	not_in: '$nin',
+	exists: '$exists',
+};
+
+/** Maximum number of field conditions allowed in a single where clause. */
+const MAX_WHERE_CONDITIONS = 20;
+
+/** All valid user-facing operator names (including 'equals'). */
+const VALID_OPERATORS = new Set(['equals', ...Object.keys(OPERATOR_MAP)]);
 
 function flattenWhereClause(where: WhereClause | undefined): Record<string, unknown> {
 	if (!where) return {};
+
+	// Guard: limit total number of conditions to prevent expensive queries
+	const fieldCount = Object.keys(where).length;
+	if (fieldCount > MAX_WHERE_CONDITIONS) {
+		throw new ValidationError([
+			{
+				field: 'where',
+				message: `Where clause exceeds maximum of ${MAX_WHERE_CONDITIONS} conditions (got ${fieldCount}).`,
+			},
+		]);
+	}
+
+	return flattenWhereRecursive(where, 0);
+}
+
+/** Maximum nesting depth for and/or logical operators. */
+const MAX_WHERE_NESTING_DEPTH = 5;
+
+function flattenWhereRecursive(where: WhereClause, depth: number): Record<string, unknown> {
+	if (depth > MAX_WHERE_NESTING_DEPTH) {
+		throw new ValidationError([
+			{
+				field: 'where',
+				message: `Where clause nesting depth exceeds maximum of ${MAX_WHERE_NESTING_DEPTH} levels.`,
+			},
+		]);
+	}
+
 	const result: Record<string, unknown> = {};
 	for (const [field, condition] of Object.entries(where)) {
+		// Handle and/or logical operators
+		if (field === 'and' || field === 'or') {
+			if (!Array.isArray(condition)) {
+				throw new ValidationError([
+					{
+						field,
+						message: `The "${field}" operator requires an array of conditions.`,
+					},
+				]);
+			}
+			const internalKey = field === 'and' ? '$and' : '$or';
+			result[internalKey] = condition.map((sub: WhereClause) =>
+				flattenWhereRecursive(sub, depth + 1),
+			);
+			continue;
+		}
+
 		if (typeof condition !== 'object' || condition === null) {
 			result[field] = condition;
 			continue;
@@ -257,23 +324,171 @@ function flattenWhereClause(where: WhereClause | undefined): Record<string, unkn
 			continue;
 		}
 
-		// Convert comparison operators (gt/gte/lt/lte) to $-prefixed form for DB adapters
+		// Convert user-facing operators to $-prefixed form for DB adapters
 		const ops: Record<string, unknown> = {};
-		let hasComparisonOp = false;
-		for (const op of COMPARISON_OPS) {
-			if (op in condObj) {
-				ops[`$${op}`] = condObj[op];
-				hasComparisonOp = true;
+		let hasOp = false;
+		for (const [userOp, internalOp] of Object.entries(OPERATOR_MAP)) {
+			if (userOp in condObj) {
+				ops[internalOp] = condObj[userOp];
+				hasOp = true;
 			}
 		}
 
-		if (hasComparisonOp) {
+		// Reject unknown operators
+		for (const key of Object.keys(condObj)) {
+			if (!VALID_OPERATORS.has(key)) {
+				throw new ValidationError([
+					{
+						field,
+						message: `Unknown operator "${key}". Valid operators: ${[...VALID_OPERATORS].sort().join(', ')}`,
+					},
+				]);
+			}
+		}
+
+		if (hasOp) {
 			result[field] = ops;
 		} else {
 			result[field] = condition;
 		}
 	}
 	return result;
+}
+
+/** Represents a JOIN requirement extracted from a relationship where clause. */
+interface JoinSpec {
+	targetTable: string;
+	localField: string;
+	targetField: string;
+	conditions: Record<string, unknown>;
+}
+
+/**
+ * Extracts relationship sub-queries from a where clause, converting them into JOIN specs.
+ * Relationship sub-queries are detected when a relationship field's condition contains
+ * keys that are NOT valid operators (i.e., they reference fields on the related collection).
+ *
+ * Returns cleaned where clause (without relationship sub-queries) and join specs.
+ */
+function extractRelationshipJoins(
+	where: WhereClause | undefined,
+	fields: Field[],
+	allCollections: CollectionConfig[],
+): { cleanedWhere: WhereClause | undefined; joins: JoinSpec[] } {
+	if (!where) return { cleanedWhere: undefined, joins: [] };
+
+	const dataFields = flattenDataFields(fields);
+	const fieldMap = new Map(dataFields.map((f) => [f.name, f]));
+	const joins: JoinSpec[] = [];
+	const cleanedWhere: WhereClause = {};
+
+	for (const [key, condition] of Object.entries(where)) {
+		// Pass through and/or, non-object values, and non-relationship fields
+		if (key === 'and' || key === 'or') {
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- WhereClause passthrough
+			(cleanedWhere as Record<string, unknown>)[key] = condition;
+			continue;
+		}
+
+		const field = fieldMap.get(key);
+		if (
+			!field ||
+			field.type !== 'relationship' ||
+			typeof condition !== 'object' ||
+			condition === null
+		) {
+			cleanedWhere[key] = condition;
+			continue;
+		}
+
+		// Check if condition keys are sub-field references (not valid operators)
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- condition is already verified as object above
+		const condObj = condition as Record<string, unknown>;
+		const condKeys = Object.keys(condObj);
+		const hasNonOperatorKeys = condKeys.some((k) => !VALID_OPERATORS.has(k));
+
+		if (!hasNonOperatorKeys) {
+			// All keys are valid operators → this is an operator query on the ID column
+			cleanedWhere[key] = condition;
+			continue;
+		}
+
+		// This is a relationship sub-query → extract as a JOIN
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- relationship field
+		const relField = field as import('@momentumcms/core').RelationshipField;
+		let targetSlug: string | undefined;
+		try {
+			const targetConfig = relField.collection();
+			if (targetConfig && typeof targetConfig === 'object' && 'slug' in targetConfig) {
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- lazy ref returns unknown, guarded by 'slug' in check
+				targetSlug = (targetConfig as CollectionConfig).slug;
+			}
+		} catch {
+			// Ignore lazy reference errors
+		}
+
+		if (!targetSlug) {
+			throw new ValidationError([
+				{
+					field: key,
+					message: `Cannot resolve target collection for relationship field "${key}".`,
+				},
+			]);
+		}
+
+		// Verify target collection exists
+		const targetCollection = allCollections.find((c) => c.slug === targetSlug);
+		if (!targetCollection) {
+			throw new ValidationError([
+				{
+					field: key,
+					message: `Target collection "${targetSlug}" not found for relationship field "${key}".`,
+				},
+			]);
+		}
+
+		// Flatten the sub-conditions using the standard operator mapping
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- WhereClause sub-object
+		const subWhere = condition as WhereClause;
+		const flattenedConditions = flattenWhereClause(subWhere);
+
+		const targetTable = targetCollection.dbName ?? targetCollection.slug;
+		joins.push({
+			targetTable,
+			localField: key,
+			targetField: 'id',
+			conditions: flattenedConditions,
+		});
+	}
+
+	return {
+		cleanedWhere: Object.keys(cleanedWhere).length > 0 ? cleanedWhere : undefined,
+		joins,
+	};
+}
+
+/**
+ * Validate that the user has read access to all fields referenced in the where clause.
+ * Prevents information leakage by blocking queries on restricted fields.
+ */
+async function validateWhereFields(
+	where: WhereClause | undefined,
+	fields: Field[],
+	req: RequestContext,
+): Promise<void> {
+	if (!where) return;
+	const dataFields = flattenDataFields(fields);
+	const fieldMap = new Map(dataFields.map((f) => [f.name, f]));
+
+	for (const fieldName of Object.keys(where)) {
+		if (fieldName === 'and' || fieldName === 'or') continue;
+		const field = fieldMap.get(fieldName);
+		if (!field?.access?.read) continue;
+		const allowed = await Promise.resolve(field.access.read({ req }));
+		if (!allowed) {
+			throw new AccessDeniedError('read', fieldName);
+		}
+	}
 }
 
 // ============================================
@@ -300,6 +515,15 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Check read access
 		await this.checkAccess('read');
 
+		// Validate field-level access in where clause (prevent information leakage)
+		if (!this.context.overrideAccess) {
+			await validateWhereFields(
+				options.where,
+				this.collectionConfig.fields,
+				this.buildRequestContext(),
+			);
+		}
+
 		// Run beforeRead hooks
 		await this.runBeforeReadHooks();
 
@@ -307,7 +531,14 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		const limit = options.limit ?? 10;
 		const page = options.page ?? 1;
 		const { depth: _depth, where, withDeleted: _wd, onlyDeleted: _od, ...queryOptions } = options;
-		const whereParams = flattenWhereClause(where);
+
+		// Extract relationship sub-queries into JOIN specs before flattening
+		const { cleanedWhere, joins } = extractRelationshipJoins(
+			where,
+			this.collectionConfig.fields,
+			this.allCollections,
+		);
+		const whereParams = flattenWhereClause(cleanedWhere);
 
 		// Inject soft-delete filter
 		const softDeleteField = getSoftDeleteField(this.collectionConfig);
@@ -339,6 +570,11 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			limit,
 			page,
 		};
+
+		// Attach relationship JOIN specs for the adapter
+		if (joins.length > 0) {
+			query['$joins'] = joins;
+		}
 
 		// Execute query with pagination (adapter handles LIMIT/OFFSET)
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
@@ -373,6 +609,9 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Get total count for pagination metadata
 		// Use a separate count query without limit/offset/depth to get the true total
 		const countQuery: Record<string, unknown> = { ...queryOptions, ...whereParams };
+		if (joins.length > 0) {
+			countQuery['$joins'] = joins;
+		}
 		delete countQuery['limit'];
 		delete countQuery['page'];
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
@@ -865,9 +1104,19 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Check read access
 		await this.checkAccess('read');
 
+		// Validate field-level access in where clause
+		if (!this.context.overrideAccess) {
+			await validateWhereFields(where, this.collectionConfig.fields, this.buildRequestContext());
+		}
+
 		// Use find with where clause and count results
 		// Pass limit: 0 to signal we want all matching docs for counting
-		const whereParams = flattenWhereClause(where);
+		const { cleanedWhere, joins } = extractRelationshipJoins(
+			where,
+			this.collectionConfig.fields,
+			this.allCollections,
+		);
+		const whereParams = flattenWhereClause(cleanedWhere);
 
 		// Inject soft-delete filter
 		const softDeleteField = getSoftDeleteField(this.collectionConfig);
@@ -876,6 +1125,9 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		}
 
 		const query: Record<string, unknown> = { ...whereParams, limit: 0 };
+		if (joins.length > 0) {
+			query['$joins'] = joins;
+		}
 		const docs = await this.adapter.find(this.slug, query);
 		return docs.length;
 	}

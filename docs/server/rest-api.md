@@ -20,7 +20,84 @@ All auto-generated REST endpoints for collections. See also the [interactive Ope
 | `limit`   | number | Max results (default: 10)        |
 | `page`    | number | Page number (default: 1)         |
 | `sort`    | string | Sort field (prefix `-` for desc) |
-| `where`   | JSON   | Filter conditions                |
+| `where`   | JSON   | Filter conditions (see below)    |
+
+### Where Clause Operators
+
+The `where` parameter accepts a JSON object mapping field names to operator objects.
+Two URL formats are supported:
+
+- **JSON**: `?where={"title":{"contains":"hello"}}`
+- **Nested query string**: `?where[title][contains]=hello`
+
+#### Available Operators
+
+| Operator      | Description                        | Example                                   |
+| ------------- | ---------------------------------- | ----------------------------------------- |
+| `equals`      | Exact match                        | `{"status":{"equals":"published"}}`       |
+| _(shorthand)_ | Direct value = equals              | `{"status":"published"}`                  |
+| `not_equals`  | Not equal                          | `{"status":{"not_equals":"archived"}}`    |
+| `gt`          | Greater than                       | `{"price":{"gt":50}}`                     |
+| `gte`         | Greater than or equal              | `{"price":{"gte":50}}`                    |
+| `lt`          | Less than                          | `{"price":{"lt":100}}`                    |
+| `lte`         | Less than or equal                 | `{"price":{"lte":100}}`                   |
+| `like`        | SQL LIKE pattern (case-sensitive)  | `{"title":{"like":"%hello%"}}`            |
+| `contains`    | Substring match (case-insensitive) | `{"title":{"contains":"hello"}}`          |
+| `in`          | Match any value in array           | `{"status":{"in":["draft","published"]}}` |
+| `not_in`      | Exclude values in array            | `{"status":{"not_in":["archived"]}}`      |
+| `exists`      | Null check (true=IS NOT NULL)      | `{"category":{"exists":true}}`            |
+
+#### Combining Operators
+
+Multiple operators on the same field are ANDed together (range queries):
+
+```
+?where={"price":{"gte":10,"lte":100}}
+```
+
+Multiple fields are also ANDed:
+
+```
+?where={"price":{"gte":10},"name":{"contains":"widget"}}
+```
+
+#### OR / AND Logical Operators
+
+Use `or` and `and` arrays for complex boolean queries:
+
+```
+?where={"or":[{"name":{"equals":"A"}},{"name":{"equals":"B"}}]}
+```
+
+Nesting is supported up to 5 levels deep:
+
+```
+?where={"or":[{"and":[{"price":{"gt":10}},{"name":{"contains":"x"}}]},{"status":"published"}]}
+```
+
+#### Relationship Sub-Field Queries
+
+Filter by fields on related documents (generates EXISTS subquery):
+
+```
+?where={"category":{"name":{"contains":"Tech"}}}
+```
+
+Direct relationship ID filtering still works:
+
+```
+?where={"category":"some-id"}
+?where={"category":{"in":["id1","id2"]}}
+```
+
+#### Security Limits
+
+| Limit                                | Value | Description                    |
+| ------------------------------------ | ----- | ------------------------------ |
+| Max conditions per where clause      | 20    | Prevents expensive queries     |
+| Max `in`/`not_in` array size         | 500   | Prevents oversized IN clauses  |
+| Max `contains`/`like` pattern length | 1000  | Prevents regex/pattern abuse   |
+| Max nesting depth (or/and)           | 5     | Prevents deeply nested queries |
 
 ### Response Format (List)
 

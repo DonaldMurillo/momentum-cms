@@ -55,6 +55,13 @@ export interface MomentumResponse {
 	docs?: Record<string, unknown>[];
 	doc?: Record<string, unknown> | null; // null when doc exists but is not visible (e.g. draft)
 	totalDocs?: number;
+	totalPages?: number;
+	page?: number;
+	limit?: number;
+	hasNextPage?: boolean;
+	hasPrevPage?: boolean;
+	nextPage?: number;
+	prevPage?: number;
 	deleted?: boolean;
 	id?: string;
 	error?: string;
@@ -121,6 +128,13 @@ export function createMomentumHandlers(config: MomentumConfig): MomentumHandlers
 			return {
 				docs: result.docs,
 				totalDocs: result.totalDocs,
+				totalPages: result.totalPages,
+				page: result.page,
+				limit: result.limit,
+				hasNextPage: result.hasNextPage,
+				hasPrevPage: result.hasPrevPage,
+				nextPage: result.nextPage,
+				prevPage: result.prevPage,
 			};
 		} catch (error) {
 			return handleError(error);
@@ -242,6 +256,13 @@ export function createMomentumHandlers(config: MomentumConfig): MomentumHandlers
 			return {
 				docs: result.docs,
 				totalDocs: result.totalDocs,
+				totalPages: result.totalPages,
+				page: result.page,
+				limit: result.limit,
+				hasNextPage: result.hasNextPage,
+				hasPrevPage: result.hasPrevPage,
+				nextPage: result.nextPage,
+				prevPage: result.prevPage,
 			};
 		} catch (error) {
 			return handleError(error);

@@ -61,10 +61,64 @@ export interface FindOptions {
 }
 
 /**
- * Where clause for filtering documents.
- * Supports field-level operators like equals, contains, etc.
+ * Operators available on a single field in a where clause.
+ *
+ * @example
+ * ```typescript
+ * // Exact match
+ * { title: { equals: 'Hello' } }
+ * // or shorthand
+ * { title: 'Hello' }
+ *
+ * // Comparison
+ * { price: { gte: 10, lte: 100 } }
+ *
+ * // String matching
+ * { title: { contains: 'hello' } }  // case-insensitive substring match
+ * { title: { like: '%hello%' } }    // SQL LIKE pattern (case-sensitive)
+ *
+ * // Set membership
+ * { status: { in: ['draft', 'published'] } }
+ * { status: { not_in: ['archived'] } }
+ *
+ * // Existence / null checks
+ * { category: { exists: true } }   // IS NOT NULL
+ * { category: { exists: false } }  // IS NULL
+ *
+ * // Not equals
+ * { status: { not_equals: 'archived' } }
+ * ```
  */
-export type WhereClause = Record<string, unknown>;
+export interface WhereFieldOperators {
+	equals?: unknown;
+	not_equals?: unknown;
+	gt?: unknown;
+	gte?: unknown;
+	lt?: unknown;
+	lte?: unknown;
+	/** SQL LIKE pattern — caller provides wildcards (e.g. `'%hello%'`). Case-sensitive. */
+	like?: string;
+	/** Case-insensitive substring match (auto-wraps with `%`). */
+	contains?: string;
+	/** Match any value in the array. */
+	in?: unknown[];
+	/** Exclude values in the array. */
+	not_in?: unknown[];
+	/** `true` = IS NOT NULL, `false` = IS NULL. */
+	exists?: boolean;
+}
+
+/**
+ * Where clause for filtering documents.
+ * Each key is a field name mapped to either a direct value (shorthand for equals)
+ * or a {@link WhereFieldOperators} object.
+ *
+ * Supports `and`/`or` logical combinators for complex boolean queries.
+ */
+export type WhereClause = Record<string, WhereFieldOperators | unknown> & {
+	and?: WhereClause[];
+	or?: WhereClause[];
+};
 
 // ============================================
 // Results

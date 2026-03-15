@@ -40,29 +40,79 @@ function getStatusFromRow(row: Record<string, unknown>): DocumentStatus {
 	return 'draft'; // Default fallback
 }
 
-const COMPARISON_OP_MAP: Record<string, string> = {
-	$gt: '>',
-	$gte: '>=',
-	$lt: '<',
-	$lte: '<=',
-};
+import {
+	SIMPLE_OP_MAP,
+	hasOperatorKeys,
+	MAX_IN_ARRAY_SIZE,
+	MAX_PATTERN_LENGTH,
+} from './operator-constants';
 
-function hasComparisonOps(value: object): boolean {
-	return Object.keys(value).some((k) => k in COMPARISON_OP_MAP);
-}
-
-function buildComparisonClauses(
+function buildOperatorClauses(
 	key: string,
 	value: object,
 	whereClauses: string[],
 	whereValues: unknown[],
+	rawExpr = false,
 ): void {
-	const record = value as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions -- narrowed by hasComparisonOps guard
-	for (const [op, sqlOp] of Object.entries(COMPARISON_OP_MAP)) {
+	const record = value as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions -- narrowed by hasOperatorKeys guard
+	// When rawExpr is true, key is already a SQL expression (e.g., json_extract(...))
+	const col = rawExpr ? key : `"${key}"`;
+
+	// Simple operators: "column" OP ?
+	// Special case: $ne with null must use IS NOT NULL (SQL NULL semantics)
+	for (const [op, sqlOp] of Object.entries(SIMPLE_OP_MAP)) {
 		if (op in record) {
-			whereClauses.push(`"${key}" ${sqlOp} ?`);
-			whereValues.push(record[op]);
+			if (op === '$ne' && record[op] === null) {
+				whereClauses.push(`${col} IS NOT NULL`);
+			} else {
+				// Guard: limit pattern length for LIKE operator
+				if (op === '$like' && String(record[op]).length > MAX_PATTERN_LENGTH) {
+					throw new Error(
+						`Pattern value for $like exceeds maximum length of ${MAX_PATTERN_LENGTH} characters`,
+					);
+				}
+				whereClauses.push(`${col} ${sqlOp} ?`);
+				whereValues.push(record[op]);
+			}
 		}
+	}
+
+	// $contains: case-insensitive substring match via LIKE '%value%'
+	if ('$contains' in record) {
+		const val = String(record['$contains']);
+		if (val.length > MAX_PATTERN_LENGTH) {
+			throw new Error(
+				`Pattern value for $contains exceeds maximum length of ${MAX_PATTERN_LENGTH} characters`,
+			);
+		}
+		whereClauses.push(`${col} LIKE ?`);
+		whereValues.push(`%${val}%`);
+	}
+
+	// $in / $nin: "column" [NOT] IN (?, ?, ...)
+	for (const [op, sql] of [
+		['$in', 'IN'],
+		['$nin', 'NOT IN'],
+	] as const) {
+		if (op in record) {
+			const arr = record[op];
+			if (!Array.isArray(arr) || arr.length === 0) {
+				throw new Error(`Operator ${op} requires a non-empty array value`);
+			}
+			if (arr.length > MAX_IN_ARRAY_SIZE) {
+				throw new Error(
+					`Operator ${op} array exceeds maximum of ${MAX_IN_ARRAY_SIZE} elements (got ${arr.length})`,
+				);
+			}
+			const placeholders = arr.map(() => '?').join(', ');
+			whereClauses.push(`${col} ${sql} (${placeholders})`);
+			whereValues.push(...arr);
+		}
+	}
+
+	// $exists: IS [NOT] NULL (no parameter needed)
+	if ('$exists' in record) {
+		whereClauses.push(record['$exists'] ? `${col} IS NOT NULL` : `${col} IS NULL`);
 	}
 }
 
@@ -305,6 +355,87 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 	// Sync implementations shared by normal and transactional adapters
 	// ============================================
 
+	const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+	const reservedParams = new Set(['limit', 'page', 'sort', 'order', '$joins']);
+
+	/**
+	 * Recursively build WHERE clause fragments from a query params object.
+	 * Handles $or/$and by recursing and wrapping with parentheses.
+	 */
+	function buildWhereFragments(
+		params: Record<string, unknown>,
+		whereClauses: string[],
+		whereValues: unknown[],
+		skipReserved: boolean,
+	): void {
+		for (const [key, value] of Object.entries(params)) {
+			if (skipReserved && reservedParams.has(key)) continue;
+			if (value === undefined) continue;
+
+			// Handle $or / $and logical operators
+			if (key === '$or' || key === '$and') {
+				if (!Array.isArray(value)) continue;
+				const joiner = key === '$or' ? ' OR ' : ' AND ';
+				const subClauses: string[] = [];
+				for (const sub of value) {
+					if (typeof sub !== 'object' || sub === null) continue;
+					const innerClauses: string[] = [];
+					buildWhereFragments(
+						sub as Record<string, unknown>, // eslint-disable-line @typescript-eslint/consistent-type-assertions -- guarded by typeof check above
+						innerClauses,
+						whereValues,
+						false,
+					);
+					if (innerClauses.length > 0) {
+						subClauses.push(`(${innerClauses.join(' AND ')})`);
+					}
+				}
+				if (subClauses.length > 0) {
+					whereClauses.push(`(${subClauses.join(joiner)})`);
+				}
+				continue;
+			}
+
+			// Handle dot-notation for JSON field access (e.g., "metadata.color")
+			if (key.includes('.')) {
+				const dotIdx = key.indexOf('.');
+				const column = key.slice(0, dotIdx);
+				const jsonPath = key.slice(dotIdx + 1);
+				if (!validColumnName.test(column)) {
+					throw new Error(`Invalid column name: ${column}`);
+				}
+				// Validate each segment of JSON path
+				for (const seg of jsonPath.split('.')) {
+					if (!validColumnName.test(seg)) {
+						throw new Error(`Invalid JSON path segment: ${seg}`);
+					}
+				}
+				const jsonPathExpr = `json_extract("${column}", '$.${jsonPath}')`;
+				if (value === null) {
+					whereClauses.push(`${jsonPathExpr} IS NULL`);
+				} else if (typeof value === 'object' && value !== null && hasOperatorKeys(value)) {
+					buildOperatorClauses(jsonPathExpr, value, whereClauses, whereValues, true);
+				} else {
+					whereClauses.push(`${jsonPathExpr} = ?`);
+					whereValues.push(value);
+				}
+				continue;
+			}
+
+			if (!validColumnName.test(key)) {
+				throw new Error(`Invalid column name: ${key}`);
+			}
+			if (value === null) {
+				whereClauses.push(`"${key}" IS NULL`);
+			} else if (typeof value === 'object' && value !== null && hasOperatorKeys(value)) {
+				buildOperatorClauses(key, value, whereClauses, whereValues);
+			} else {
+				whereClauses.push(`"${key}" = ?`);
+				whereValues.push(value);
+			}
+		}
+	}
+
 	function findSync(collection: string, query: Record<string, unknown>): Record<string, unknown>[] {
 		validateCollectionSlug(collection);
 		const limitValue = typeof query['limit'] === 'number' ? query['limit'] : 100;
@@ -313,40 +444,55 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 
 		const whereClauses: string[] = [];
 		const whereValues: unknown[] = [];
-		const reservedParams = new Set(['limit', 'page', 'sort', 'order']);
-		const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
-		for (const [key, value] of Object.entries(query)) {
-			if (reservedParams.has(key)) continue;
-			if (value === undefined) continue;
-			if (!validColumnName.test(key)) {
-				throw new Error(`Invalid column name: ${key}`);
-			}
-			if (value === null) {
-				whereClauses.push(`"${key}" IS NULL`);
-			} else if (
-				typeof value === 'object' &&
-				value !== null &&
-				'$ne' in value &&
-				value['$ne'] === null
-			) {
-				whereClauses.push(`"${key}" IS NOT NULL`);
-			} else if (typeof value === 'object' && value !== null && hasComparisonOps(value)) {
-				buildComparisonClauses(key, value, whereClauses, whereValues);
-			} else {
-				whereClauses.push(`"${key}" = ?`);
-				whereValues.push(value);
+		buildWhereFragments(query, whereClauses, whereValues, true);
+
+		// Handle $joins — build EXISTS subqueries for relationship filtering
+		const joins = query['$joins'];
+		if (Array.isArray(joins)) {
+			for (const join of joins) {
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- $joins array elements are JoinSpec objects from momentum-api
+				const j = join as {
+					targetTable: string;
+					localField: string;
+					targetField: string;
+					conditions: Record<string, unknown>;
+				};
+				validateCollectionSlug(j.targetTable);
+				if (!validColumnName.test(j.localField)) {
+					throw new Error(`Invalid column name: ${j.localField}`);
+				}
+				const joinClauses: string[] = [];
+				buildWhereFragments(j.conditions, joinClauses, whereValues, false);
+				const joinWhere = joinClauses.length > 0 ? ` AND ${joinClauses.join(' AND ')}` : '';
+				const tableName = resolveTableName(j.targetTable);
+				whereClauses.push(
+					`EXISTS (SELECT 1 FROM "${tableName}" WHERE "${tableName}"."${j.targetField}" = "${resolveTableName(collection)}"."${j.localField}"${joinWhere})`,
+				);
 			}
 		}
 
 		const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+		// Build ORDER BY clause from sort param
+		let orderByClause = '';
+		const sortParam = query['sort'];
+		if (typeof sortParam === 'string' && sortParam.length > 0) {
+			const desc = sortParam.startsWith('-');
+			const sortField = desc ? sortParam.slice(1) : sortParam;
+			if (!validColumnName.test(sortField)) {
+				throw new Error(`Invalid sort column name: ${sortField}`);
+			}
+			orderByClause = `ORDER BY "${sortField}" ${desc ? 'DESC' : 'ASC'}`;
+		}
+
 		// limit: 0 means "no limit" (return all rows for count queries)
 		let rows: unknown[];
 		if (limitValue === 0) {
-			const sql = `SELECT * FROM "${resolveTableName(collection)}" ${whereClause}`;
+			const sql = `SELECT * FROM "${resolveTableName(collection)}" ${whereClause} ${orderByClause}`;
 			rows = sqlite.prepare(sql).all(...whereValues);
 		} else {
-			const sql = `SELECT * FROM "${resolveTableName(collection)}" ${whereClause} LIMIT ? OFFSET ?`;
+			const sql = `SELECT * FROM "${resolveTableName(collection)}" ${whereClause} ${orderByClause} LIMIT ? OFFSET ?`;
 			rows = sqlite.prepare(sql).all(...whereValues, limitValue, offset);
 		}
 		return rows.filter(
