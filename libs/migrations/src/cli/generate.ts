@@ -17,7 +17,11 @@ import {
 	generateMigrationName,
 } from '../lib/generator/migration-file-generator';
 import { createSchemaSnapshot } from '../lib/schema/schema-snapshot';
-import { readSnapshot, writeSnapshot } from '../lib/loader/snapshot-manager';
+import {
+	readSnapshot,
+	writeSnapshot,
+	writePerMigrationSnapshot,
+} from '../lib/loader/snapshot-manager';
 import {
 	loadMomentumConfig,
 	resolveDialect,
@@ -113,8 +117,8 @@ async function main(): Promise<void> {
 	const filePath = join(directory, `${timestampedName}.ts`);
 	writeFileSync(filePath, fileContent, 'utf-8');
 
-	// 8. Write updated snapshot
-	writeSnapshot(directory, desired);
+	// 8. Write per-migration snapshot (named after the migration)
+	writePerMigrationSnapshot(directory, timestampedName, desired);
 
 	// 9. Print summary
 	console.warn(`\nGenerated migration: ${filePath}`);
