@@ -1,0 +1,169 @@
+{
+	"skill": "migrations",
+	"version": 2,
+	"test_cases": [
+		{
+			"name": "add-collection-and-generate",
+			"description": "Add a new collection and run type/config generation",
+			"prompt": "Add a new 'reviews' collection to libs/example-config/src/collections/ with fields: title (text, required), body (richText), rating (number, min 1 max 5, required), and a relationship to the 'products' collection called 'product'. Export it from the collections barrel file (libs/example-config/src/collections/index.ts). Then run type generation so the generated types file reflects the new collection.",
+			"assertions": [
+				{
+					"type": "file_exists",
+					"path": "libs/example-config/src/collections/reviews.collection.ts",
+					"tier": "baseline"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/example-config/src/collections/reviews.collection.ts",
+					"patterns": ["defineCollection", "reviews", "text(", "relationship("],
+					"tier": "baseline",
+					"_comment": "Must use Momentum collection builder functions"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/example-config/src/collections/index.ts",
+					"patterns": ["reviews"],
+					"tier": "baseline",
+					"_comment": "Must be exported from barrel"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/example-config/src/collections/reviews.collection.ts",
+					"patterns": ["slug: 'reviews'"],
+					"tier": "convention",
+					"_comment": "Collection slug must match file name convention"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/example-config/src/collections/reviews.collection.ts",
+					"patterns": ["@momentumcms/core"],
+					"tier": "convention",
+					"_comment": "Must import field builders from @momentumcms/core"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/example-config/src/collections/reviews.collection.ts",
+					"patterns": ["richText(", "relationship("],
+					"tier": "convention",
+					"_comment": "Must use richText and relationship field builders, not raw objects"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/generated/momentum.types.ts",
+					"patterns": ["Reviews", "rating"],
+					"tier": "convention",
+					"_comment": "Generated types must include the new Reviews interface with rating field"
+				},
+				{
+					"type": "command_succeeds",
+					"command": "npx nx lint example-config",
+					"tier": "quality",
+					"timeout": 60000
+				}
+			]
+		},
+		{
+			"name": "migration-generate-workflow",
+			"description": "Generate a migration after adding a collection field",
+			"prompt": "Add a new 'featured' checkbox field and a 'publishedAt' date field to the existing articles collection at libs/example-config/src/collections/articles.collection.ts. Then run the full migration workflow: generate types (nx run example-angular:generate), then generate a migration (nx run example-angular:migrate:generate). Do NOT run the migration — just generate it.",
+			"assertions": [
+				{
+					"type": "file_contains",
+					"path": "libs/example-config/src/collections/articles.collection.ts",
+					"patterns": ["featured", "publishedAt"],
+					"tier": "baseline",
+					"_comment": "Fields must be added to the collection"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/example-config/src/collections/articles.collection.ts",
+					"patterns": ["checkbox(", "date("],
+					"tier": "baseline",
+					"_comment": "Must use typed field builders (checkbox for boolean, date) not raw objects"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/generated/momentum.types.ts",
+					"patterns": ["featured", "publishedAt"],
+					"tier": "convention",
+					"_comment": "Generated types must reflect the new fields"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/example-config/src/collections/articles.collection.ts",
+					"patterns": ["@momentumcms/core"],
+					"tier": "convention",
+					"_comment": "Must import field builders from core, not define raw field objects"
+				},
+				{
+					"type": "file_matches_glob",
+					"glob": "migrations/*.ts",
+					"min_count": 1,
+					"tier": "convention",
+					"_comment": "A migration file should have been generated in the project root migrations dir"
+				},
+				{
+					"type": "command_succeeds",
+					"command": "npx nx lint example-config",
+					"tier": "quality",
+					"timeout": 60000
+				}
+			]
+		},
+		{
+			"name": "check-migration-status",
+			"description": "Check migration status and explain the output",
+			"prompt": "Run the migration status command for the example-angular app (nx run example-angular:migrate:status) and create a markdown summary file at docs/migration-status.md that documents: 1) The current migration status output. 2) How many migrations are pending vs applied. 3) What the next step would be (run or generate). This is a documentation task — do NOT run any migrations, just check status and document it.",
+			"assertions": [
+				{
+					"type": "file_exists",
+					"path": "docs/migration-status.md",
+					"tier": "baseline"
+				},
+				{
+					"type": "file_contains",
+					"path": "docs/migration-status.md",
+					"patterns": ["migration", "status"],
+					"tier": "baseline",
+					"_comment": "Must reference migrations and status"
+				},
+				{
+					"type": "file_contains",
+					"path": "docs/migration-status.md",
+					"patterns": ["pending", "applied"],
+					"tier": "convention",
+					"_comment": "Must distinguish between pending and applied migrations"
+				},
+				{
+					"type": "file_contains",
+					"path": "docs/migration-status.md",
+					"patterns": ["nx run"],
+					"tier": "convention",
+					"_comment": "Must reference the correct Nx command format, not raw CLI"
+				}
+			]
+		}
+	],
+	"_changelog": [
+		{
+			"version": 1,
+			"date": "2026-03-15",
+			"changes": [
+				"Initial three-tier eval definitions for migrations skill",
+				"3 test cases: add collection + generate types, migration generate workflow, status check",
+				"Convention tier tests: @momentumcms/core imports, field builders, generated types, Nx commands",
+				"Quality tier: nx lint on modified projects"
+			]
+		},
+		{
+			"version": 2,
+			"date": "2026-03-15",
+			"changes": [
+				"Fixed eval_bug: boolean( -> checkbox( (the actual field builder name in @momentumcms/core)",
+				"Fixed eval_bug: migration glob apps/example-angular/migrations/*.ts -> migrations/*.ts (migrations go to project root)",
+				"Fixed prompt: 'boolean field' -> 'checkbox field' to match actual builder name",
+				"Removed spurious path_alt that pointed to the same file"
+			]
+		}
+	]
+}
