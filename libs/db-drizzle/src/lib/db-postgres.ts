@@ -488,13 +488,28 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 			let col: string;
 			let rawExpr = false;
 			if (key.includes('.')) {
-				const dotIdx = key.indexOf('.');
-				const colName = key.substring(0, dotIdx);
-				const jsonPath = key.substring(dotIdx + 1);
-				if (!pgValidColumnName.test(colName) || !pgValidColumnName.test(jsonPath)) {
-					throw new Error(`Invalid column name: ${key}`);
+				const segments = key.split('.');
+				const colName = segments[0];
+				const jsonSegments = segments.slice(1);
+				if (!pgValidColumnName.test(colName)) {
+					throw new Error(`Invalid column name: ${colName}`);
 				}
-				col = `"${colName}"->>'${jsonPath}'`;
+				for (const seg of jsonSegments) {
+					if (!pgValidColumnName.test(seg)) {
+						throw new Error(`Invalid JSON path segment: ${seg}`);
+					}
+				}
+				if (jsonSegments.length === 1) {
+					col = `"${colName}"->>'${jsonSegments[0]}'`;
+				} else {
+					// Multi-level: "col"->'seg1'->'seg2'->>'lastSeg'
+					const intermediate = jsonSegments
+						.slice(0, -1)
+						.map((s) => `'${s}'`)
+						.join('->');
+					const last = jsonSegments[jsonSegments.length - 1];
+					col = `"${colName}"->${intermediate}->>'${last}'`;
+				}
 				rawExpr = true;
 			} else {
 				if (!pgValidColumnName.test(key)) {

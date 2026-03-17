@@ -1040,6 +1040,56 @@ describe('MomentumAPI', () => {
 
 			await expect(api.collection('posts').find({ where })).resolves.toBeDefined();
 		});
+
+		it('should reject deeply nested where clause before stack overflow (DoS prevention)', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			// Build 200 levels deep — zero leaf conditions, so countWhereConditions
+			// would return 0 but recurse 200 times without a depth guard
+			let where: Record<string, unknown> = { title: 'leaf' };
+			for (let i = 0; i < 200; i++) {
+				where = { or: [where] };
+			}
+
+			await expect(api.collection('posts').find({ where })).rejects.toThrow(/nesting.*depth/i);
+		});
+
+		it('should handle null elements in and/or arrays gracefully', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: {
+					or: [{ title: { equals: 'hello' } }, null as unknown as Record<string, unknown>],
+				},
+			});
+
+			const findCall = vi.mocked(mockAdapter.find).mock.calls[0];
+			const query = findCall[1] as Record<string, unknown>;
+			// null should be filtered out, leaving only the valid condition
+			expect(query['$or']).toEqual([{ title: 'hello' }]);
+		});
+
+		it('should handle non-object elements in and/or arrays gracefully', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: {
+					and: [
+						{ title: { equals: 'test' } },
+						'garbage' as unknown as Record<string, unknown>,
+						42 as unknown as Record<string, unknown>,
+					],
+				},
+			});
+
+			const findCall = vi.mocked(mockAdapter.find).mock.calls[0];
+			const query = findCall[1] as Record<string, unknown>;
+			// Only the valid object condition should remain
+			expect(query['$and']).toEqual([{ title: 'test' }]);
+		});
 	});
 
 	describe('field access control in where clauses', () => {
@@ -1218,6 +1268,64 @@ describe('MomentumAPI', () => {
 			// Operator on relationship ID — no JOIN
 			expect(query['category']).toEqual({ $in: ['id1', 'id2'] });
 			expect(query['$joins']).toBeUndefined();
+		});
+
+		it('should reject relationship sub-query targeting access-restricted fields on the target collection', async () => {
+			const categoriesWithSecret: CollectionConfig = {
+				slug: 'categories',
+				labels: { singular: 'Category', plural: 'Categories' },
+				fields: [
+					{ name: 'name', type: 'text', required: true },
+					{ name: 'priority', type: 'number' },
+					{
+						name: 'internal_code',
+						type: 'text',
+						access: { read: () => false },
+					},
+				],
+			};
+
+			const articlesRel: CollectionConfig = {
+				slug: 'articles-rel',
+				labels: { singular: 'Article', plural: 'Articles' },
+				fields: [
+					{ name: 'title', type: 'text', required: true },
+					{
+						name: 'category',
+						type: 'relationship',
+						collection: () => categoriesWithSecret,
+					} as CollectionConfig['fields'][number],
+				],
+			};
+
+			resetMomentumAPI();
+			const restrictedRelConfig: MomentumConfig = {
+				collections: [categoriesWithSecret, articlesRel],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+
+			const api = initializeMomentumAPI(restrictedRelConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			// Attempt to filter by a restricted field on the target collection
+			await expect(
+				api.collection('articles-rel').find({
+					where: { category: { internal_code: { equals: 'SECRET-123' } } },
+				}),
+			).rejects.toThrow(/cannot filter|access denied/i);
+		});
+
+		it('should allow relationship sub-query on unrestricted fields of the target collection', async () => {
+			const api = initializeMomentumAPI(relConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			// 'name' and 'priority' have no access restrictions on categoriesCollection
+			await expect(
+				api.collection('articles-rel').find({
+					where: { category: { name: { contains: 'Tech' } } },
+				}),
+			).resolves.toBeDefined();
 		});
 	});
 

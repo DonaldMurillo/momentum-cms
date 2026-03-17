@@ -267,14 +267,23 @@ const VALID_OPERATORS = new Set(['equals', ...Object.keys(OPERATOR_MAP)]);
  * Recursively count all field conditions in a where clause tree,
  * including those nested inside and/or arrays.
  */
-function countWhereConditions(where: WhereClause): number {
+function countWhereConditions(where: WhereClause, depth = 0): number {
+	if (depth > MAX_WHERE_NESTING_DEPTH) {
+		throw new ValidationError([
+			{
+				field: 'where',
+				message: `Where clause nesting depth exceeds maximum of ${MAX_WHERE_NESTING_DEPTH} levels.`,
+			},
+		]);
+	}
+
 	let count = 0;
 	for (const [key, value] of Object.entries(where)) {
 		if ((key === 'and' || key === 'or') && Array.isArray(value)) {
 			for (const sub of value) {
 				if (typeof sub === 'object' && sub !== null) {
 					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- WhereClause sub-object
-					count += countWhereConditions(sub as WhereClause);
+					count += countWhereConditions(sub as WhereClause, depth + 1);
 				}
 			}
 		} else {
@@ -327,9 +336,9 @@ function flattenWhereRecursive(where: WhereClause, depth: number): Record<string
 				]);
 			}
 			const internalKey = field === 'and' ? '$and' : '$or';
-			result[internalKey] = condition.map((sub: WhereClause) =>
-				flattenWhereRecursive(sub, depth + 1),
-			);
+			result[internalKey] = condition
+				.filter((sub: unknown): sub is WhereClause => typeof sub === 'object' && sub !== null)
+				.map((sub: WhereClause) => flattenWhereRecursive(sub, depth + 1));
 			continue;
 		}
 
@@ -382,6 +391,8 @@ interface JoinSpec {
 	localField: string;
 	targetField: string;
 	conditions: Record<string, unknown>;
+	/** Raw sub-where clause (before flattening) for access control validation. */
+	rawWhere: WhereClause;
 }
 
 /**
@@ -479,6 +490,7 @@ function extractRelationshipJoins(
 			localField: key,
 			targetField: 'id',
 			conditions: flattenedConditions,
+			rawWhere: subWhere,
 		});
 	}
 
@@ -570,6 +582,19 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			this.collectionConfig.fields,
 			this.allCollections,
 		);
+
+		// Validate field-level access on target collections referenced by JOINs
+		if (!this.context.overrideAccess) {
+			for (const join of joins) {
+				const targetCol = this.allCollections.find(
+					(c) => (c.dbName ?? c.slug) === join.targetTable,
+				);
+				if (targetCol) {
+					await validateWhereFields(join.rawWhere, targetCol.fields, this.buildRequestContext());
+				}
+			}
+		}
+
 		const whereParams = flattenWhereClause(cleanedWhere);
 
 		// Inject soft-delete filter
@@ -603,9 +628,9 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			page,
 		};
 
-		// Attach relationship JOIN specs for the adapter
+		// Attach relationship JOIN specs for the adapter (strip rawWhere — only needed for access validation)
 		if (joins.length > 0) {
-			query['$joins'] = joins;
+			query['$joins'] = joins.map(({ rawWhere: _rw, ...rest }) => rest);
 		}
 
 		// Execute query with pagination (adapter handles LIMIT/OFFSET)
@@ -642,7 +667,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Use a separate count query without limit/offset/depth to get the true total
 		const countQuery: Record<string, unknown> = { ...queryOptions, ...whereParams };
 		if (joins.length > 0) {
-			countQuery['$joins'] = joins;
+			countQuery['$joins'] = joins.map(({ rawWhere: _rw, ...rest }) => rest);
 		}
 		delete countQuery['limit'];
 		delete countQuery['page'];
@@ -1158,7 +1183,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 
 		const query: Record<string, unknown> = { ...whereParams, limit: 0 };
 		if (joins.length > 0) {
-			query['$joins'] = joins;
+			query['$joins'] = joins.map(({ rawWhere: _rw, ...rest }) => rest);
 		}
 		const docs = await this.adapter.find(this.slug, query);
 		return docs.length;

@@ -622,6 +622,24 @@ describe('sqliteAdapter', () => {
 			const docs = await adapter.find('products', { 'metadata.color': 'green' });
 			expect(docs).toHaveLength(0);
 		});
+
+		it('should filter by multi-level dot notation (e.g. metadata.dimensions.width)', async () => {
+			// Create products with deeply nested JSON
+			await adapter.create('products', {
+				name: 'DeepWidget',
+				metadata: JSON.stringify({ dimensions: { width: 10, height: 20 } }),
+			});
+			await adapter.create('products', {
+				name: 'DeepGadget',
+				metadata: JSON.stringify({ dimensions: { width: 50, height: 5 } }),
+			});
+
+			const docs = await adapter.find('products', {
+				'metadata.dimensions.width': { $gt: 15 },
+			});
+			expect(docs).toHaveLength(1);
+			expect(docs[0]?.['name']).toBe('DeepGadget');
+		});
 	});
 
 	describe('relationship JOIN queries ($joins)', () => {
