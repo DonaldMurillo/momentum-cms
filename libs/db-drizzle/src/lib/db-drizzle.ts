@@ -85,8 +85,9 @@ function buildOperatorClauses(
 				`Pattern value for $contains exceeds maximum length of ${MAX_PATTERN_LENGTH} characters`,
 			);
 		}
-		whereClauses.push(`${col} LIKE ?`);
-		whereValues.push(`%${val}%`);
+		const escaped = val.replace(/[%_\\]/g, '\\$&');
+		whereClauses.push(`${col} LIKE ? ESCAPE '\\'`);
+		whereValues.push(`%${escaped}%`);
 	}
 
 	// $in / $nin: "column" [NOT] IN (?, ?, ...)
@@ -461,6 +462,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 				validateCollectionSlug(j.targetTable);
 				if (!validColumnName.test(j.localField)) {
 					throw new Error(`Invalid column name: ${j.localField}`);
+				}
+				if (!validColumnName.test(j.targetField)) {
+					throw new Error(`Invalid column name: ${j.targetField}`);
 				}
 				const joinClauses: string[] = [];
 				buildWhereFragments(j.conditions, joinClauses, whereValues, false);

@@ -719,5 +719,66 @@ describe('sqliteAdapter', () => {
 			});
 			expect(docs).toHaveLength(0);
 		});
+
+		it('should reject $joins with invalid targetField', async () => {
+			await expect(
+				adapter.find('articles', {
+					$joins: [
+						{
+							targetTable: 'categories',
+							localField: 'category',
+							targetField: 'id" OR 1=1) --',
+							conditions: {},
+						},
+					],
+				}),
+			).rejects.toThrow(/Invalid column name/);
+		});
+
+		it('should accept $joins with valid targetField', async () => {
+			const docs = await adapter.find('articles', {
+				$joins: [
+					{
+						targetTable: 'categories',
+						localField: 'category',
+						targetField: 'id',
+						conditions: { name: 'Technology' },
+					},
+				],
+			});
+			expect(docs.length).toBeGreaterThanOrEqual(1);
+		});
+	});
+
+	describe('$contains LIKE wildcard escaping', () => {
+		let adapter: ReturnType<typeof sqliteAdapter>;
+
+		beforeEach(async () => {
+			adapter = sqliteAdapter({ filename: TEST_DB_PATH });
+			await adapter.initialize?.([mockPostsCollection]);
+			await adapter.create('posts', { title: 'Normal Post' });
+			await adapter.create('posts', { title: '100% Discount' });
+			await adapter.create('posts', { title: 'Under_score Title' });
+		});
+
+		it('should match literal % character without matching everything', async () => {
+			const docs = await adapter.find('posts', { title: { $contains: '%' } });
+			// Should match only "100% Discount", not all rows
+			expect(docs).toHaveLength(1);
+			expect(docs[0]['title']).toBe('100% Discount');
+		});
+
+		it('should match literal _ character without matching single-char wildcard', async () => {
+			const docs = await adapter.find('posts', { title: { $contains: '_' } });
+			// Should match only "Under_score Title"
+			expect(docs).toHaveLength(1);
+			expect(docs[0]['title']).toBe('Under_score Title');
+		});
+
+		it('should still match normal substring without wildcards', async () => {
+			const docs = await adapter.find('posts', { title: { $contains: 'Normal' } });
+			expect(docs).toHaveLength(1);
+			expect(docs[0]['title']).toBe('Normal Post');
+		});
 	});
 });

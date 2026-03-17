@@ -535,8 +535,9 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 							`Pattern value for $contains exceeds maximum length of ${MAX_PATTERN_LENGTH} characters`,
 						);
 					}
+					const escaped = val.replace(/[%_\\]/g, '\\$&');
 					whereClauses.push(`${col} ILIKE $${paramIndex}`);
-					whereValues.push(`%${val}%`);
+					whereValues.push(`%${escaped}%`);
 					paramIndex++;
 				}
 
@@ -601,6 +602,9 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 						validateCollectionSlug(j.targetTable);
 						if (!pgValidColumnName.test(j.localField)) {
 							throw new Error(`Invalid column name: ${j.localField}`);
+						}
+						if (!pgValidColumnName.test(j.targetField)) {
+							throw new Error(`Invalid column name: ${j.targetField}`);
 						}
 						const joinClauses: string[] = [];
 						paramIndex = buildPgWhereFragments(

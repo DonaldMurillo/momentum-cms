@@ -1305,4 +1305,133 @@ describe('MomentumAPI', () => {
 			expect(result?.title).toBe('Draft Article');
 		});
 	});
+
+	describe('security: validateWhereFields recurses into and/or', () => {
+		const restrictedCollection: CollectionConfig = {
+			slug: 'secure-items',
+			labels: { singular: 'Secure Item', plural: 'Secure Items' },
+			fields: [
+				{ name: 'name', type: 'text', required: true },
+				{
+					name: 'secret',
+					type: 'text',
+					access: { read: () => false },
+				},
+			],
+		};
+
+		let restrictedConfig: MomentumConfig;
+
+		beforeEach(() => {
+			resetMomentumAPI();
+			restrictedConfig = {
+				collections: [restrictedCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+		});
+
+		it('should block restricted fields inside or conditions', async () => {
+			const api = initializeMomentumAPI(restrictedConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('secure-items').find({
+					where: { or: [{ secret: { equals: 'guessedValue' } }] },
+				}),
+			).rejects.toThrow(/cannot filter|access denied/i);
+		});
+
+		it('should block restricted fields inside and conditions', async () => {
+			const api = initializeMomentumAPI(restrictedConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('secure-items').find({
+					where: { and: [{ secret: { equals: 'password' } }] },
+				}),
+			).rejects.toThrow(/cannot filter|access denied/i);
+		});
+
+		it('should block restricted fields nested deeply in or/and', async () => {
+			const api = initializeMomentumAPI(restrictedConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('secure-items').find({
+					where: {
+						or: [{ and: [{ secret: { equals: 'deep-probe' } }] }],
+					},
+				}),
+			).rejects.toThrow(/cannot filter|access denied/i);
+		});
+
+		it('should allow unrestricted fields inside or/and', async () => {
+			const api = initializeMomentumAPI(restrictedConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('secure-items').find({
+					where: { or: [{ name: { equals: 'test' } }] },
+				}),
+			).resolves.toBeDefined();
+		});
+	});
+
+	describe('security: recursive condition counting in where clauses', () => {
+		it('should count conditions recursively inside or arrays', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			// 21 conditions inside a single or array — should exceed limit of 20
+			const conditions = Array.from({ length: 21 }, (_, i) => ({ [`field${i}`]: 'val' }));
+
+			await expect(api.collection('posts').find({ where: { or: conditions } })).rejects.toThrow(
+				/exceeds maximum of 20 conditions/,
+			);
+		});
+
+		it('should count conditions recursively inside and arrays', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			const conditions = Array.from({ length: 21 }, (_, i) => ({ [`field${i}`]: 'val' }));
+
+			await expect(api.collection('posts').find({ where: { and: conditions } })).rejects.toThrow(
+				/exceeds maximum of 20 conditions/,
+			);
+		});
+
+		it('should count across nested or/and levels', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			// 11 conditions at top + 11 inside or = 22 total
+			const topFields: Record<string, unknown> = {};
+			for (let i = 0; i < 11; i++) topFields[`top${i}`] = 'val';
+			const orConditions = Array.from({ length: 11 }, (_, i) => ({ [`or${i}`]: 'val' }));
+
+			await expect(
+				api.collection('posts').find({
+					where: { ...topFields, or: orConditions },
+				}),
+			).rejects.toThrow(/exceeds maximum of 20 conditions/);
+		});
+
+		it('should allow exactly 20 conditions split across or/and', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			// 10 top-level + 10 inside or = 20 total
+			const topFields: Record<string, unknown> = {};
+			for (let i = 0; i < 10; i++) topFields[`top${i}`] = 'val';
+			const orConditions = Array.from({ length: 10 }, (_, i) => ({ [`or${i}`]: 'val' }));
+
+			await expect(
+				api.collection('posts').find({
+					where: { ...topFields, or: orConditions },
+				}),
+			).resolves.toBeDefined();
+		});
+	});
 });

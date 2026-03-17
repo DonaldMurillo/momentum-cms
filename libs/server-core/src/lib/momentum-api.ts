@@ -263,11 +263,32 @@ const MAX_WHERE_CONDITIONS = 20;
 /** All valid user-facing operator names (including 'equals'). */
 const VALID_OPERATORS = new Set(['equals', ...Object.keys(OPERATOR_MAP)]);
 
+/**
+ * Recursively count all field conditions in a where clause tree,
+ * including those nested inside and/or arrays.
+ */
+function countWhereConditions(where: WhereClause): number {
+	let count = 0;
+	for (const [key, value] of Object.entries(where)) {
+		if ((key === 'and' || key === 'or') && Array.isArray(value)) {
+			for (const sub of value) {
+				if (typeof sub === 'object' && sub !== null) {
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- WhereClause sub-object
+					count += countWhereConditions(sub as WhereClause);
+				}
+			}
+		} else {
+			count++;
+		}
+	}
+	return count;
+}
+
 function flattenWhereClause(where: WhereClause | undefined): Record<string, unknown> {
 	if (!where) return {};
 
-	// Guard: limit total number of conditions to prevent expensive queries
-	const fieldCount = Object.keys(where).length;
+	// Guard: limit total number of conditions (counted recursively) to prevent expensive queries
+	const fieldCount = countWhereConditions(where);
 	if (fieldCount > MAX_WHERE_CONDITIONS) {
 		throw new ValidationError([
 			{
@@ -481,7 +502,18 @@ async function validateWhereFields(
 	const fieldMap = new Map(dataFields.map((f) => [f.name, f]));
 
 	for (const fieldName of Object.keys(where)) {
-		if (fieldName === 'and' || fieldName === 'or') continue;
+		if (fieldName === 'and' || fieldName === 'or') {
+			const subs = where[fieldName];
+			if (Array.isArray(subs)) {
+				for (const sub of subs) {
+					if (typeof sub === 'object' && sub !== null) {
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- WhereClause sub-object
+						await validateWhereFields(sub as WhereClause, fields, req);
+					}
+				}
+			}
+			continue;
+		}
 		const field = fieldMap.get(fieldName);
 		if (!field?.access?.read) continue;
 		const allowed = await Promise.resolve(field.access.read({ req }));
