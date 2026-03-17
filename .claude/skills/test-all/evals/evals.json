@@ -1,0 +1,114 @@
+{
+	"version": 1,
+	"skill": "test-all",
+	"test_cases": [
+		{
+			"name": "test-all-explicit",
+			"prompt": "run the test all script",
+			"assertions": [
+				{
+					"type": "command_contains",
+					"pattern": "npm run test:all",
+					"tier": "baseline",
+					"description": "Must run npm run test:all"
+				},
+				{
+					"type": "command_not_contains",
+					"pattern": "--skip",
+					"tier": "convention",
+					"description": "Must NOT skip any suite"
+				}
+			]
+		},
+		{
+			"name": "test-all-natural",
+			"prompt": "test everything",
+			"assertions": [
+				{
+					"type": "command_contains",
+					"pattern": "npm run test:all",
+					"tier": "baseline",
+					"description": "Must run npm run test:all"
+				},
+				{
+					"type": "command_not_contains",
+					"pattern": "--skip",
+					"tier": "convention",
+					"description": "Must NOT skip any suite"
+				}
+			]
+		},
+		{
+			"name": "test-all-casual",
+			"prompt": "run all tests",
+			"assertions": [
+				{
+					"type": "command_contains",
+					"pattern": "npm run test:all",
+					"tier": "baseline",
+					"description": "Must run npm run test:all"
+				},
+				{
+					"type": "command_not_contains",
+					"pattern": "--skip",
+					"tier": "convention",
+					"description": "Must NOT skip any suite"
+				}
+			]
+		},
+		{
+			"name": "test-all-typo",
+			"prompt": "run the test al script",
+			"assertions": [
+				{
+					"type": "command_contains",
+					"pattern": "npm run test:all",
+					"tier": "baseline",
+					"description": "Must run npm run test:all even with typo"
+				},
+				{
+					"type": "command_not_contains",
+					"pattern": "--skip",
+					"tier": "convention",
+					"description": "Must NOT skip any suite"
+				}
+			]
+		},
+		{
+			"name": "test-all-imperative",
+			"prompt": "make sure everything passes",
+			"assertions": [
+				{
+					"type": "command_contains",
+					"pattern": "npm run test:all",
+					"tier": "baseline",
+					"description": "Must run npm run test:all"
+				},
+				{
+					"type": "command_not_contains",
+					"pattern": "--skip",
+					"tier": "convention",
+					"description": "Must NOT skip any suite"
+				}
+			]
+		},
+		{
+			"name": "test-all-full-suite",
+			"prompt": "run the full test suite",
+			"assertions": [
+				{
+					"type": "command_contains",
+					"pattern": "npm run test:all",
+					"tier": "baseline",
+					"description": "Must run npm run test:all"
+				},
+				{
+					"type": "command_not_contains",
+					"pattern": "--skip",
+					"tier": "convention",
+					"description": "Must NOT skip any suite"
+				}
+			]
+		}
+	]
+}

@@ -1,12 +1,24 @@
 ---
 name: test-all
-description: Run the full Momentum CMS test suite (unit tests, all E2E suites, migration tests, CLI scaffold). Use when asked to "test all", "run all tests", "test-all script", "run the full suite", or any variation. NEVER skip any suite unless the user explicitly asks.
+description: Run the FULL Momentum CMS test suite — every single suite, no skips. Triggers on "test all", "test everything", "run all tests", "run the test all script", "test-all script", "run the full suite", "run every test", "test the whole thing", "make sure everything passes", "run test:all", or ANY variation asking to run all/every/full tests. Also triggers on typos like "test al", "tets all", "tes all". NEVER skip suites unless the user EXPLICITLY names suites to skip.
 argument-hint: [--suite <name>] [--skip <name>]
 ---
 
 # Full Test Suite Runner
 
 Runs **every** test suite in the Momentum CMS monorepo. **Do NOT skip any suite unless the user explicitly requests it.**
+
+## CRITICAL: Trigger Recognition
+
+This skill MUST activate when the user says ANY of these (including typos and variations):
+
+- "test all", "test everything", "run all tests", "run every test"
+- "test-all script", "run the test all script", "run test:all"
+- "run the full suite", "test the whole thing", "make sure everything passes"
+- "run the full test suite", "execute all tests", "test it all"
+- Typos: "test al", "tets all", "tes all", "test alll"
+
+**When triggered, run `npm run test:all` with ZERO --skip flags. Period.**
 
 ## Command
 
