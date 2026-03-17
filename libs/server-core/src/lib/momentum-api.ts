@@ -420,8 +420,8 @@ function extractRelationshipJoins(
 				const cleanedArray: WhereClause[] = [];
 				for (const sub of condition) {
 					if (typeof sub === 'object' && sub !== null) {
-						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- WhereClause sub-object
 						const { cleanedWhere: subCleaned, joins: subJoins } = extractRelationshipJoins(
+							// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- WhereClause sub-object
 							sub as WhereClause,
 							fields,
 							allCollections,
@@ -611,10 +611,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 
 		// Enforce global condition count (main where + all join sub-queries combined)
 		const mainCount = cleanedWhere ? countWhereConditions(cleanedWhere) : 0;
-		const joinCount = joins.reduce(
-			(sum, j) => sum + countWhereConditions(j.rawWhere),
-			0,
-		);
+		const joinCount = joins.reduce((sum, j) => sum + countWhereConditions(j.rawWhere), 0);
 		const totalConditions = mainCount + joinCount;
 		if (totalConditions > MAX_WHERE_CONDITIONS) {
 			throw new ValidationError([
