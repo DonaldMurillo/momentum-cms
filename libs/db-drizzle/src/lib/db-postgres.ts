@@ -527,6 +527,8 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 					if (op in valObj) {
 						if (op === '$ne' && valObj[op] === null) {
 							whereClauses.push(`${col} IS NOT NULL`);
+						} else if (op === '$eq' && valObj[op] === null) {
+							whereClauses.push(`${col} IS NULL`);
 						} else {
 							if (op === '$like' && String(valObj[op]).length > MAX_PATTERN_LENGTH) {
 								throw new Error(

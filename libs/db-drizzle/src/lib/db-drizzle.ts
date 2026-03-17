@@ -59,11 +59,13 @@ function buildOperatorClauses(
 	const col = rawExpr ? key : `"${key}"`;
 
 	// Simple operators: "column" OP ?
-	// Special case: $ne with null must use IS NOT NULL (SQL NULL semantics)
+	// Special cases: $ne null → IS NOT NULL, $eq null → IS NULL (SQL NULL semantics)
 	for (const [op, sqlOp] of Object.entries(SIMPLE_OP_MAP)) {
 		if (op in record) {
 			if (op === '$ne' && record[op] === null) {
 				whereClauses.push(`${col} IS NOT NULL`);
+			} else if (op === '$eq' && record[op] === null) {
+				whereClauses.push(`${col} IS NULL`);
 			} else {
 				// Guard: limit pattern length for LIKE operator
 				if (op === '$like' && String(record[op]).length > MAX_PATTERN_LENGTH) {

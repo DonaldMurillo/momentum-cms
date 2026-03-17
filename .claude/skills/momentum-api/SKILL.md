@@ -161,7 +161,10 @@ const result = await this.api.collection<Post>('posts').find({ limit: 10 });
 this.posts.set(result.docs);
 ```
 
-### Error Handling — always use typed error classes
+### Error Handling — use error name checks (browser-safe)
+
+> **Important:** Error classes live in `@momentumcms/server-core` (`env:server`).
+> Browser components MUST NOT import from server packages. Use `error.name` checks instead.
 
 ```typescript
 // DON'T — generic catch with no typed handling
@@ -171,23 +174,23 @@ try {
 	console.error(e);
 }
 
-// DO — import and check typed error classes from @momentumcms/server-core
-import {
-	CollectionNotFoundError,
-	DocumentNotFoundError,
-	AccessDeniedError,
-	ValidationError,
-} from '@momentumcms/server-core';
+// DON'T — import from @momentumcms/server-core in browser code (env boundary violation)
+// import { ValidationError } from '@momentumcms/server-core'; // ❌ server-only
+
+// DO — check error.name for browser-safe error handling
+interface MomentumError extends Error {
+	errors?: Array<{ field: string; message: string }>;
+}
 
 try {
 	await this.api.collection<Post>('posts').create(data);
 } catch (error) {
-	if (error instanceof ValidationError) {
-		// error.errors is FieldValidationError[] with { field, message }
-		this.validationErrors.set(error.errors);
-	} else if (error instanceof DocumentNotFoundError) {
+	const err = error as MomentumError;
+	if (err.name === 'ValidationError' && err.errors) {
+		this.validationErrors.set(err.errors);
+	} else if (err.name === 'DocumentNotFoundError') {
 		this.notFound.set(true);
-	} else if (error instanceof AccessDeniedError) {
+	} else if (err.name === 'AccessDeniedError') {
 		this.accessDenied.set(true);
 	}
 }
@@ -198,7 +201,10 @@ try {
 ```typescript
 import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { injectMomentumAPI } from '@momentumcms/admin';
-import { ValidationError, DocumentNotFoundError } from '@momentumcms/server-core';
+// Browser-safe error interface (do NOT import from @momentumcms/server-core in browser code)
+interface MomentumError extends Error {
+	errors?: Array<{ field: string; message: string }>;
+}
 import type { Post } from '../types/momentum.generated';
 
 @Component({
@@ -246,7 +252,8 @@ export class PostsComponent {
 			});
 			this.posts.set(result.docs);
 		} catch (error) {
-			if (error instanceof DocumentNotFoundError) {
+			const err = error as MomentumError;
+			if (err.name === 'DocumentNotFoundError') {
 				this.error.set('Posts collection not found.');
 			} else {
 				this.error.set('Failed to load posts.');
@@ -270,8 +277,9 @@ export class PostsComponent {
 			this.posts.update((posts) => [post, ...posts]);
 			input.value = '';
 		} catch (error) {
-			if (error instanceof ValidationError) {
-				console.error('Validation failed:', error.errors);
+			const err = error as MomentumError;
+			if (err.name === 'ValidationError' && err.errors) {
+				console.error('Validation failed:', err.errors);
 			}
 		}
 	}
@@ -285,29 +293,28 @@ export class PostsComponent {
 
 ## Error Handling
 
-Import typed error classes from `@momentumcms/server-core` and use `instanceof` to handle specific errors:
+Use `error.name` checks for browser-safe error handling (do NOT import from `@momentumcms/server-core` in browser code):
 
 ```typescript
-import {
-	CollectionNotFoundError,
-	DocumentNotFoundError,
-	AccessDeniedError,
-	ValidationError,
-} from '@momentumcms/server-core';
+// Browser-safe error interface
+interface MomentumError extends Error {
+	errors?: Array<{ field: string; message: string }>;
+}
 
 try {
 	await this.api.collection<Post>('posts').findById(id);
 } catch (error) {
-	if (error instanceof DocumentNotFoundError) {
+	const err = error as MomentumError;
+	if (err.name === 'DocumentNotFoundError') {
 		// Document with given ID does not exist
 		this.notFound.set(true);
-	} else if (error instanceof AccessDeniedError) {
+	} else if (err.name === 'AccessDeniedError') {
 		// Current user lacks permission
 		this.accessDenied.set(true);
-	} else if (error instanceof ValidationError) {
-		// error.errors: Array<{ field: string; message: string }>
-		this.validationErrors.set(error.errors);
-	} else if (error instanceof CollectionNotFoundError) {
+	} else if (err.name === 'ValidationError' && err.errors) {
+		// err.errors: Array<{ field: string; message: string }>
+		this.validationErrors.set(err.errors);
+	} else if (err.name === 'CollectionNotFoundError') {
 		// Collection slug is invalid
 		this.error.set('Invalid collection');
 	}

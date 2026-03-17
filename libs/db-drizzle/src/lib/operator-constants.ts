@@ -8,6 +8,7 @@
 
 /** Simple operators that map directly to `"column" OP placeholder` */
 export const SIMPLE_OP_MAP: Record<string, string> = {
+	$eq: '=',
 	$gt: '>',
 	$gte: '>=',
 	$lt: '<',

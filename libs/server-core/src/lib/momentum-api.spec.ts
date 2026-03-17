@@ -771,7 +771,7 @@ describe('MomentumAPI', () => {
 
 			expect(mockAdapter.find).toHaveBeenCalledWith(
 				'posts',
-				expect.objectContaining({ status: 'published' }),
+				expect.objectContaining({ status: { $eq: 'published' } }),
 			);
 		});
 
@@ -1068,7 +1068,7 @@ describe('MomentumAPI', () => {
 			const findCall = vi.mocked(mockAdapter.find).mock.calls[0];
 			const query = findCall[1] as Record<string, unknown>;
 			// null should be filtered out, leaving only the valid condition
-			expect(query['$or']).toEqual([{ title: 'hello' }]);
+			expect(query['$or']).toEqual([{ title: { $eq: 'hello' } }]);
 		});
 
 		it('should handle non-object elements in and/or arrays gracefully', async () => {
@@ -1088,7 +1088,7 @@ describe('MomentumAPI', () => {
 			const findCall = vi.mocked(mockAdapter.find).mock.calls[0];
 			const query = findCall[1] as Record<string, unknown>;
 			// Only the valid object condition should remain
-			expect(query['$and']).toEqual([{ title: 'test' }]);
+			expect(query['$and']).toEqual([{ title: { $eq: 'test' } }]);
 		});
 	});
 
@@ -1235,7 +1235,7 @@ describe('MomentumAPI', () => {
 					targetTable: 'categories',
 					localField: 'category',
 					targetField: 'id',
-					conditions: { name: 'News' },
+					conditions: { name: { $eq: 'News' } },
 				},
 			]);
 		});
@@ -1540,6 +1540,196 @@ describe('MomentumAPI', () => {
 					where: { ...topFields, or: orConditions },
 				}),
 			).resolves.toBeDefined();
+		});
+	});
+
+	describe('Issue #1: equals with sibling operators', () => {
+		it('should not drop sibling operators when equals is combined with other operators', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts').find({
+				where: { status: { equals: 'published', not_equals: 'archived' } },
+			});
+
+			const query = vi.mocked(mockAdapter.find).mock.calls[0]?.[1] as Record<string, unknown>;
+			// equals + not_equals should both be present — equals should NOT silently eat not_equals
+			expect(query['status']).toEqual({ $eq: 'published', $ne: 'archived' });
+		});
+
+		it('should reject or explicitly handle equals combined with range operators', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			// This should either throw a ValidationError (ambiguous) or include both operators
+			// Currently it silently drops gt — that's the bug
+			await api.collection('posts').find({
+				where: { createdAt: { equals: '2024-06-15', gt: '2024-01-01' } },
+			});
+
+			const query = vi.mocked(mockAdapter.find).mock.calls[0]?.[1] as Record<string, unknown>;
+			// If equals coexists with gt, both should be mapped
+			expect(query['createdAt']).toEqual({ $eq: '2024-06-15', $gt: '2024-01-01' });
+		});
+	});
+
+	describe('Issue #2: relationship sub-queries inside and/or', () => {
+		const categoriesCol: CollectionConfig = {
+			slug: 'categories',
+			labels: { singular: 'Category', plural: 'Categories' },
+			fields: [
+				{ name: 'name', type: 'text', required: true },
+				{ name: 'priority', type: 'number' },
+			],
+		};
+
+		const articlesRelCol: CollectionConfig = {
+			slug: 'articles-rel',
+			labels: { singular: 'Article', plural: 'Articles' },
+			fields: [
+				{ name: 'title', type: 'text', required: true },
+				{
+					name: 'category',
+					type: 'relationship',
+					collection: () => categoriesCol,
+				} as CollectionConfig['fields'][number],
+			],
+		};
+
+		it('should extract relationship JOINs from inside or arrays', async () => {
+			resetMomentumAPI();
+			const relCfg: MomentumConfig = {
+				collections: [categoriesCol, articlesRelCol],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(relCfg);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('articles-rel').find({
+				where: { or: [{ category: { name: { contains: 'Tech' } } }] },
+			});
+
+			const query = vi.mocked(mockAdapter.find).mock.calls[0]?.[1] as Record<string, unknown>;
+			// The relationship sub-query inside or should be extracted as a JOIN
+			expect(query).toHaveProperty('$joins');
+		});
+
+		it('should extract relationship JOINs from inside and arrays', async () => {
+			resetMomentumAPI();
+			const relCfg: MomentumConfig = {
+				collections: [categoriesCol, articlesRelCol],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(relCfg);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('articles-rel').find({
+				where: {
+					and: [
+						{ title: { contains: 'hello' } },
+						{ category: { name: { contains: 'Tech' } } },
+					],
+				},
+			});
+
+			const query = vi.mocked(mockAdapter.find).mock.calls[0]?.[1] as Record<string, unknown>;
+			expect(query).toHaveProperty('$joins');
+		});
+	});
+
+	describe('Issue #3: condition count bypass via relationship sub-queries', () => {
+		const categoriesCol: CollectionConfig = {
+			slug: 'categories',
+			labels: { singular: 'Category', plural: 'Categories' },
+			fields: [
+				{ name: 'name', type: 'text', required: true },
+				{ name: 'priority', type: 'number' },
+			],
+		};
+
+		const articlesRelCol: CollectionConfig = {
+			slug: 'articles-rel',
+			labels: { singular: 'Article', plural: 'Articles' },
+			fields: [
+				{ name: 'title', type: 'text', required: true },
+				{
+					name: 'category',
+					type: 'relationship',
+					collection: () => categoriesCol,
+				} as CollectionConfig['fields'][number],
+				{
+					name: 'category2',
+					type: 'relationship',
+					collection: () => categoriesCol,
+				} as CollectionConfig['fields'][number],
+			],
+		};
+
+		it('should enforce a global condition count across main query + all relationship sub-queries', async () => {
+			resetMomentumAPI();
+			const relCfg: MomentumConfig = {
+				collections: [categoriesCol, articlesRelCol],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(relCfg).setContext({ overrideAccess: true });
+
+			// 19 top-level conditions (title repeated doesn't help — use or to add bulk)
+			// + 1 relationship sub-query with 2 sub-conditions = 21 total > 20
+			// Use or array to create lots of conditions
+			const orConditions = Array.from({ length: 19 }, (_, i) => ({
+				[`title`]: `val${i}`,
+			}));
+
+			await expect(
+				api.collection('articles-rel').find({
+					where: {
+						or: orConditions,
+						category: { name: { contains: 'a' }, priority: { gt: 1 } },
+					},
+				}),
+			).rejects.toThrow(/exceeds maximum/i);
+		});
+
+		it('should limit the number of relationship joins', async () => {
+			resetMomentumAPI();
+
+			// Create a collection with many relationship fields
+			const manyRelFields: CollectionConfig['fields'] = [
+				{ name: 'title', type: 'text', required: true },
+			];
+			for (let i = 0; i < 10; i++) {
+				manyRelFields.push({
+					name: `rel${i}`,
+					type: 'relationship',
+					collection: () => categoriesCol,
+				} as CollectionConfig['fields'][number]);
+			}
+
+			const manyRelCol: CollectionConfig = {
+				slug: 'many-rels',
+				labels: { singular: 'ManyRel', plural: 'ManyRels' },
+				fields: manyRelFields,
+			};
+
+			const relCfg: MomentumConfig = {
+				collections: [categoriesCol, manyRelCol],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(relCfg);
+
+			// Build a where with 10 relationship sub-queries
+			const where: Record<string, unknown> = {};
+			for (let i = 0; i < 10; i++) {
+				where[`rel${i}`] = { name: { contains: 'test' } };
+			}
+
+			await expect(api.collection('many-rels').find({ where })).rejects.toThrow(
+				/joins|relationships|maximum/i,
+			);
 		});
 	});
 });

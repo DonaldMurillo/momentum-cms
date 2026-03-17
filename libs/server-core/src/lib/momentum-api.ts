@@ -245,6 +245,7 @@ function stripTransientKeys(data: Record<string, unknown>): Record<string, unkno
  * (it unwraps to a direct value).
  */
 const OPERATOR_MAP: Record<string, string> = {
+	equals: '$eq',
 	gt: '$gt',
 	gte: '$gte',
 	lt: '$lt',
@@ -257,11 +258,14 @@ const OPERATOR_MAP: Record<string, string> = {
 	exists: '$exists',
 };
 
-/** Maximum number of field conditions allowed in a single where clause. */
+/** Maximum number of field conditions allowed in a single where clause (counted globally across main + joins). */
 const MAX_WHERE_CONDITIONS = 20;
 
-/** All valid user-facing operator names (including 'equals'). */
-const VALID_OPERATORS = new Set(['equals', ...Object.keys(OPERATOR_MAP)]);
+/** Maximum number of relationship JOIN sub-queries allowed per request. */
+const MAX_JOINS = 5;
+
+/** All valid user-facing operator names. */
+const VALID_OPERATORS = new Set(Object.keys(OPERATOR_MAP));
 
 /**
  * Recursively count all field conditions in a where clause tree,
@@ -349,11 +353,6 @@ function flattenWhereRecursive(where: WhereClause, depth: number): Record<string
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Where clause operator object
 		const condObj = condition as Record<string, unknown>;
 
-		if ('equals' in condObj) {
-			result[field] = condObj['equals'];
-			continue;
-		}
-
 		// Convert user-facing operators to $-prefixed form for DB adapters
 		const ops: Record<string, unknown> = {};
 		let hasOp = false;
@@ -415,10 +414,27 @@ function extractRelationshipJoins(
 	const cleanedWhere: WhereClause = {};
 
 	for (const [key, condition] of Object.entries(where)) {
-		// Pass through and/or, non-object values, and non-relationship fields
+		// Recurse into and/or arrays to extract relationship JOINs from nested conditions
 		if (key === 'and' || key === 'or') {
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- WhereClause passthrough
-			(cleanedWhere as Record<string, unknown>)[key] = condition;
+			if (Array.isArray(condition)) {
+				const cleanedArray: WhereClause[] = [];
+				for (const sub of condition) {
+					if (typeof sub === 'object' && sub !== null) {
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- WhereClause sub-object
+						const { cleanedWhere: subCleaned, joins: subJoins } = extractRelationshipJoins(
+							sub as WhereClause,
+							fields,
+							allCollections,
+						);
+						if (subCleaned) cleanedArray.push(subCleaned);
+						joins.push(...subJoins);
+					}
+				}
+				if (cleanedArray.length > 0) {
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- WhereClause passthrough
+					(cleanedWhere as Record<string, unknown>)[key] = cleanedArray;
+				}
+			}
 			continue;
 		}
 
@@ -582,6 +598,32 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			this.collectionConfig.fields,
 			this.allCollections,
 		);
+
+		// Enforce join limit
+		if (joins.length > MAX_JOINS) {
+			throw new ValidationError([
+				{
+					field: 'where',
+					message: `Number of relationship joins (${joins.length}) exceeds maximum of ${MAX_JOINS}.`,
+				},
+			]);
+		}
+
+		// Enforce global condition count (main where + all join sub-queries combined)
+		const mainCount = cleanedWhere ? countWhereConditions(cleanedWhere) : 0;
+		const joinCount = joins.reduce(
+			(sum, j) => sum + countWhereConditions(j.rawWhere),
+			0,
+		);
+		const totalConditions = mainCount + joinCount;
+		if (totalConditions > MAX_WHERE_CONDITIONS) {
+			throw new ValidationError([
+				{
+					field: 'where',
+					message: `Where clause exceeds maximum of ${MAX_WHERE_CONDITIONS} conditions (got ${totalConditions} across main query and ${joins.length} join(s)).`,
+				},
+			]);
+		}
 
 		// Validate field-level access on target collections referenced by JOINs
 		if (!this.context.overrideAccess) {
