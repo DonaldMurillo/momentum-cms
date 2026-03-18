@@ -602,40 +602,7 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			this.allCollections,
 		);
 
-		// Enforce join limit
-		if (joins.length > MAX_JOINS) {
-			throw new ValidationError([
-				{
-					field: 'where',
-					message: `Number of relationship joins (${joins.length}) exceeds maximum of ${MAX_JOINS}.`,
-				},
-			]);
-		}
-
-		// Enforce global condition count (main where + all join sub-queries combined)
-		const mainCount = cleanedWhere ? countWhereConditions(cleanedWhere) : 0;
-		const joinCount = joins.reduce((sum, j) => sum + countWhereConditions(j.rawWhere), 0);
-		const totalConditions = mainCount + joinCount;
-		if (totalConditions > MAX_WHERE_CONDITIONS) {
-			throw new ValidationError([
-				{
-					field: 'where',
-					message: `Where clause exceeds maximum of ${MAX_WHERE_CONDITIONS} conditions (got ${totalConditions} across main query and ${joins.length} join(s)).`,
-				},
-			]);
-		}
-
-		// Validate field-level access on target collections referenced by JOINs
-		if (!this.context.overrideAccess) {
-			for (const join of joins) {
-				const targetCol = this.allCollections.find(
-					(c) => (c.dbName ?? c.slug) === join.targetTable,
-				);
-				if (targetCol) {
-					await validateWhereFields(join.rawWhere, targetCol.fields, this.buildRequestContext());
-				}
-			}
-		}
+		await this.enforceWhereLimits(cleanedWhere, joins);
 
 		const whereParams = flattenWhereClause(cleanedWhere);
 
@@ -1215,6 +1182,9 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			this.collectionConfig.fields,
 			this.allCollections,
 		);
+
+		await this.enforceWhereLimits(cleanedWhere, joins);
+
 		const whereParams = flattenWhereClause(cleanedWhere);
 
 		// Inject soft-delete filter
@@ -1412,6 +1382,43 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			return !!(await Promise.resolve(updateFn({ req: this.buildRequestContext() })));
 		} catch {
 			return false;
+		}
+	}
+
+	private async enforceWhereLimits(
+		cleanedWhere: WhereClause | undefined,
+		joins: JoinSpec[],
+	): Promise<void> {
+		if (joins.length > MAX_JOINS) {
+			throw new ValidationError([
+				{
+					field: 'where',
+					message: `Number of relationship joins (${joins.length}) exceeds maximum of ${MAX_JOINS}.`,
+				},
+			]);
+		}
+
+		const mainCount = cleanedWhere ? countWhereConditions(cleanedWhere) : 0;
+		const joinCount = joins.reduce((sum, j) => sum + countWhereConditions(j.rawWhere), 0);
+		const totalConditions = mainCount + joinCount;
+		if (totalConditions > MAX_WHERE_CONDITIONS) {
+			throw new ValidationError([
+				{
+					field: 'where',
+					message: `Where clause exceeds maximum of ${MAX_WHERE_CONDITIONS} conditions (got ${totalConditions} across main query and ${joins.length} join(s)).`,
+				},
+			]);
+		}
+
+		if (!this.context.overrideAccess) {
+			for (const join of joins) {
+				const targetCol = this.allCollections.find(
+					(c) => (c.dbName ?? c.slug) === join.targetTable,
+				);
+				if (targetCol) {
+					await validateWhereFields(join.rawWhere, targetCol.fields, this.buildRequestContext());
+				}
+			}
 		}
 	}
 

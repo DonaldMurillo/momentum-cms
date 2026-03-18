@@ -1775,4 +1775,110 @@ describe('MomentumAPI', () => {
 			);
 		});
 	});
+
+	describe('count() must enforce the same where-clause limits as find()', () => {
+		const categoriesCol: CollectionConfig = {
+			slug: 'categories',
+			labels: { singular: 'Category', plural: 'Categories' },
+			fields: [
+				{ name: 'name', type: 'text', required: true },
+				{ name: 'priority', type: 'number' },
+			],
+		};
+
+		const articlesRelCol: CollectionConfig = {
+			slug: 'articles-rel',
+			labels: { singular: 'Article', plural: 'Articles' },
+			fields: [
+				{ name: 'title', type: 'text', required: true },
+				{
+					name: 'category',
+					type: 'relationship',
+					collection: () => categoriesCol,
+				} as CollectionConfig['fields'][number],
+				{
+					name: 'category2',
+					type: 'relationship',
+					collection: () => categoriesCol,
+				} as CollectionConfig['fields'][number],
+			],
+		};
+
+		it('should enforce MAX_JOINS in count()', async () => {
+			resetMomentumAPI();
+
+			const manyRelFields: CollectionConfig['fields'] = [
+				{ name: 'title', type: 'text', required: true },
+			];
+			for (let i = 0; i < 10; i++) {
+				manyRelFields.push({
+					name: `rel${i}`,
+					type: 'relationship',
+					collection: () => categoriesCol,
+				} as CollectionConfig['fields'][number]);
+			}
+
+			const manyRelCol: CollectionConfig = {
+				slug: 'many-rels',
+				labels: { singular: 'ManyRel', plural: 'ManyRels' },
+				fields: manyRelFields,
+			};
+
+			const relCfg: MomentumConfig = {
+				collections: [categoriesCol, manyRelCol],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(relCfg).setContext({ overrideAccess: true });
+
+			const where: Record<string, unknown> = {};
+			for (let i = 0; i < 10; i++) {
+				where[`rel${i}`] = { name: { contains: 'test' } };
+			}
+
+			await expect(api.collection('many-rels').count(where)).rejects.toThrow(
+				/joins|relationships|maximum/i,
+			);
+		});
+
+		it('should enforce global condition count across main query + joins in count()', async () => {
+			resetMomentumAPI();
+			const relCfg: MomentumConfig = {
+				collections: [categoriesCol, articlesRelCol],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(relCfg).setContext({ overrideAccess: true });
+
+			// 19 top-level conditions + 1 relationship sub-query with 2 sub-conditions = 21 > 20
+			const orConditions = Array.from({ length: 19 }, (_, i) => ({
+				[`title`]: `val${i}`,
+			}));
+
+			await expect(
+				api.collection('articles-rel').count({
+					or: orConditions,
+					category: { name: { contains: 'a' }, priority: { gt: 1 } },
+				}),
+			).rejects.toThrow(/exceeds maximum/i);
+		});
+
+		it('should validate field-level access on join target collections in count()', async () => {
+			resetMomentumAPI();
+			const relCfg: MomentumConfig = {
+				collections: [categoriesCol, articlesRelCol],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			// NOT overriding access — field-level validation should fire
+			const api = initializeMomentumAPI(relCfg);
+
+			// Use a non-existent field on the join target to trigger validateWhereFields
+			await expect(
+				api.collection('articles-rel').count({
+					category: { nonExistentField: { equals: 'x' } },
+				}),
+			).rejects.toThrow(/not allowed|unknown|invalid/i);
+		});
+	});
 });
