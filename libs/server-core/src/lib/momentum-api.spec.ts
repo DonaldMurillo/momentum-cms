@@ -2613,4 +2613,23 @@ describe('MomentumAPI', () => {
 			}
 		});
 	});
+
+	describe('batch delete with invalid IDs', () => {
+		it('should throw DocumentNotFoundError for non-existent IDs like __proto__', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.findById).mockResolvedValue(null);
+
+			await expect(
+				api.collection('posts').batchDelete(['__proto__', 'constructor', 'prototype']),
+			).rejects.toThrow(DocumentNotFoundError);
+		});
+	});
+
+	describe('restore on non-soft-delete collection', () => {
+		it('should throw ValidationError for collections without soft delete', async () => {
+			const api = initializeMomentumAPI(config);
+
+			await expect(api.collection('posts').restore('some-id')).rejects.toThrow(ValidationError);
+		});
+	});
 });

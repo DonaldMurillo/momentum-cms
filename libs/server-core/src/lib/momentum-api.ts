@@ -1107,7 +1107,12 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 	async restore(id: string): Promise<T> {
 		const softDeleteField = getSoftDeleteField(this.collectionConfig);
 		if (!softDeleteField) {
-			throw new Error(`Collection "${this.slug}" does not have soft delete enabled`);
+			throw new ValidationError([
+				{
+					field: '_softDelete',
+					message: `Collection "${this.slug}" does not have soft delete enabled`,
+				},
+			]);
 		}
 
 		// Check restore access (fall back to update access)

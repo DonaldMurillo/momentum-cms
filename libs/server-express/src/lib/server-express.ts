@@ -269,7 +269,12 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			return;
 		}
 
-		const result = await executeGraphQL(graphqlSchema, { query: queryParam }, { user });
+		const result = await executeGraphQL(
+			graphqlSchema,
+			{ query: queryParam },
+			{ user },
+			{ readOnly: true },
+		);
 
 		res.status(result.status).json(result.body);
 	});
@@ -1107,7 +1112,12 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			}
 		} catch (error) {
 			const message = sanitizeErrorMessage(error, 'Batch operation failed');
-			const status = error instanceof Error && error.name === 'ValidationError' ? 400 : 500;
+			let status = 500;
+			if (error instanceof Error) {
+				if (error.name === 'ValidationError') status = 400;
+				else if (error.name === 'DocumentNotFoundError') status = 404;
+				else if (error.name === 'AccessDeniedError') status = 403;
+			}
 			res.status(status).json({ error: message });
 		}
 	});
