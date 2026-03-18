@@ -1327,6 +1327,31 @@ describe('MomentumAPI', () => {
 				}),
 			).resolves.toBeDefined();
 		});
+
+		it('should handle dot-notation relationship keys from Express qs (e.g. "category.name")', async () => {
+			const api = initializeMomentumAPI(relConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			// Express qs parses ?where[category.name][equals]=test as { "category.name": { equals: "test" } }
+			await api.collection('articles-rel').find({
+				where: { 'category.name': { equals: 'test' } },
+			});
+
+			const findCall = vi.mocked(mockAdapter.find).mock.calls[0];
+			const query = findCall[1] as Record<string, unknown>;
+			// Should be decomposed into a proper relationship JOIN, not passed as raw dot-notation
+			expect(query['$joins']).toBeDefined();
+			expect(query['$joins']).toEqual([
+				{
+					targetTable: 'categories',
+					localField: 'category',
+					targetField: 'id',
+					conditions: { name: { $eq: 'test' } },
+				},
+			]);
+			// Raw dot-notation key should NOT appear
+			expect(query['category.name']).toBeUndefined();
+		});
 	});
 
 	describe('draft visibility in findById', () => {
@@ -2622,6 +2647,65 @@ describe('MomentumAPI', () => {
 			await expect(
 				api.collection('posts').batchDelete(['__proto__', 'constructor', 'prototype']),
 			).rejects.toThrow(DocumentNotFoundError);
+		});
+	});
+
+	describe('search() must inject defaultWhere constraints', () => {
+		const scopedCollection: CollectionConfig = {
+			slug: 'notes',
+			fields: [
+				{ name: 'title', type: 'text', required: true },
+				{ name: 'ownerId', type: 'text' },
+			],
+			defaultWhere: (req) => (req.user ? { ownerId: req.user.id } : undefined),
+		};
+
+		let scopedConfig: MomentumConfig;
+
+		beforeEach(() => {
+			resetMomentumAPI();
+			scopedConfig = {
+				collections: [scopedCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+		});
+
+		it('should inject defaultWhere constraints into search adapter call', async () => {
+			const api = initializeMomentumAPI(scopedConfig);
+			const authApi = api.setContext({ user: { id: 'user-42' } });
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await authApi.collection('notes').search('hello');
+
+			// search falls back to adapter.find — should include defaultWhere constraint
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'notes',
+				expect.objectContaining({ ownerId: 'user-42' }),
+			);
+		});
+
+		it('should inject defaultWhere when adapter has search method', async () => {
+			const searchAdapter = {
+				...mockAdapter,
+				search: vi.fn().mockResolvedValue([
+					{ id: '1', title: 'owned note', ownerId: 'user-42' },
+					{ id: '2', title: 'other note', ownerId: 'user-99' },
+				]),
+			};
+			const searchConfig: MomentumConfig = {
+				collections: [scopedCollection],
+				db: { adapter: searchAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(searchConfig);
+			const authApi = api.setContext({ user: { id: 'user-42' } });
+
+			const result = await authApi.collection('notes').search('hello');
+
+			// Should filter out docs that don't match defaultWhere
+			expect(result.docs).toHaveLength(1);
+			expect(result.docs[0]).toHaveProperty('ownerId', 'user-42');
 		});
 	});
 

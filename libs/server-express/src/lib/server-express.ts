@@ -1202,7 +1202,13 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			}
 		} catch (error) {
 			const message = sanitizeErrorMessage(error, 'Export failed');
-			res.status(500).json({ error: message });
+			let status = 500;
+			if (error instanceof Error) {
+				if (error.name === 'AccessDeniedError') status = 403;
+				else if (error.name === 'ValidationError') status = 400;
+				else if (error.name === 'DocumentNotFoundError') status = 404;
+			}
+			res.status(status).json({ error: message });
 		}
 	});
 

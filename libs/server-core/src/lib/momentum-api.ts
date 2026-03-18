@@ -468,7 +468,45 @@ function extractRelationshipJoins(
 			continue;
 		}
 
-		const field = fieldMap.get(key);
+		let field = fieldMap.get(key);
+
+		// Handle dot-notation relationship keys like "category.name" from Express qs
+		// Split into field ("category") and sub-field path ("name"), then reconstruct
+		// as a nested relationship sub-query: { category: { name: condition } }
+		if (!field && key.includes('.')) {
+			const [rootKey, ...subPath] = key.split('.');
+			const rootField = fieldMap.get(rootKey);
+			if (
+				rootField &&
+				rootField.type === 'relationship' &&
+				subPath.length > 0 &&
+				condition !== null
+			) {
+				// Reconstruct as nested: { name: { equals: "test" } } → sub-query on the relationship
+				let nested: unknown = condition;
+				for (let i = subPath.length - 1; i >= 0; i--) {
+					nested = { [subPath[i]]: nested };
+				}
+				field = rootField;
+				// Replace key/condition with the root field and nested sub-query
+				// Re-process this entry as a relationship sub-query
+				const {
+					cleanedWhere: subCleaned,
+					joins: subJoins,
+					allJoins: subAllJoins,
+				} = extractRelationshipJoins(
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- reconstructed nested where
+					{ [rootKey]: nested } as WhereClause,
+					fields,
+					allCollections,
+				);
+				if (subCleaned) Object.assign(cleanedWhere, subCleaned);
+				joins.push(...subJoins);
+				allJoins.push(...subAllJoins);
+				continue;
+			}
+		}
+
 		if (
 			!field ||
 			field.type !== 'relationship' ||
@@ -1195,6 +1233,15 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			softDeleteFilter[softDeleteField] = null;
 		}
 
+		// Inject defaultWhere constraints (e.g., user-scoped filtering)
+		const defaultWhereFilter: Record<string, unknown> = {};
+		if (this.collectionConfig.defaultWhere) {
+			const constraints = this.collectionConfig.defaultWhere(this.buildRequestContext());
+			if (constraints) {
+				Object.assign(defaultWhereFilter, constraints);
+			}
+		}
+
 		// Use the adapter's search method if available, otherwise fall back to find
 		let docs: Record<string, unknown>[];
 		if (this.adapter.search) {
@@ -1203,9 +1250,25 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			if (softDeleteField) {
 				docs = docs.filter((doc) => !doc[softDeleteField]);
 			}
+			// Apply defaultWhere constraints in-memory for adapter search results
+			if (Object.keys(defaultWhereFilter).length > 0) {
+				docs = docs.filter((doc) => {
+					return Object.entries(defaultWhereFilter).every(([key, value]) => {
+						if (value && typeof value === 'object' && !Array.isArray(value)) {
+							return JSON.stringify(doc[key]) === JSON.stringify(value);
+						}
+						return doc[key] === value;
+					});
+				});
+			}
 		} else {
-			// Fallback: basic find with soft-delete filter
-			docs = await this.adapter.find(this.slug, { ...softDeleteFilter, limit, page });
+			// Fallback: basic find with soft-delete and defaultWhere filters
+			docs = await this.adapter.find(this.slug, {
+				...softDeleteFilter,
+				...defaultWhereFilter,
+				limit,
+				page,
+			});
 		}
 
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
