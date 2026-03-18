@@ -951,6 +951,9 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			},
 			findById: (slug, id) => txAdapter.findById(slug, id),
 			count: async (slug, where) => {
+				if (txAdapter.count) {
+					return txAdapter.count(slug, where ?? {});
+				}
 				const docs = await txAdapter.find(slug, where ?? {});
 				return docs.length;
 			},
@@ -1027,7 +1030,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 						collection,
 						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Express body is parsed JSON
 						body: req.body as Record<string, unknown> | undefined,
-						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Express query is parsed by qs
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Express query params
 						params: req.query as Record<string, unknown>,
 						query: buildQueryHelper(contextApi),
 					});

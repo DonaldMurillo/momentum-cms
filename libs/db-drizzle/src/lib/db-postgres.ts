@@ -635,8 +635,11 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				}
 
 				if ('$exists' in valObj) {
+					// Coerce string "true"/"false" to boolean (query-string origin)
 					let existsVal = valObj['$exists'];
-					if (typeof existsVal === 'string') existsVal = existsVal === 'true';
+					if (typeof existsVal === 'string') {
+						existsVal = existsVal === 'true';
+					}
 					whereClauses.push(existsVal ? `${col} IS NOT NULL` : `${col} IS NULL`);
 				}
 			} else {
