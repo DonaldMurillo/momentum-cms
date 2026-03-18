@@ -165,6 +165,65 @@ describe('momentumApiMiddleware', () => {
 
 			expect(res.headers['access-control-allow-origin']).toBe('*');
 		});
+
+		it('should reject non-matching origins when explicit origins are configured', async () => {
+			const corsAdapter = createInMemoryAdapter();
+			const corsConfig: MomentumConfig = {
+				collections: [mockPostsCollection],
+				db: { adapter: corsAdapter },
+				server: {
+					port: 4000,
+					cors: { origin: ['https://allowed.com'] },
+				},
+			};
+			const corsApp = express();
+			corsApp.use('/api', momentumApiMiddleware(corsConfig));
+
+			const res = await request(corsApp).get('/api/posts').set('Origin', 'https://evil.com');
+
+			// Non-matching origin should NOT get an Access-Control-Allow-Origin header
+			expect(res.headers['access-control-allow-origin']).toBeUndefined();
+		});
+
+		it('should allow matching origins', async () => {
+			const corsAdapter = createInMemoryAdapter();
+			const corsConfig: MomentumConfig = {
+				collections: [mockPostsCollection],
+				db: { adapter: corsAdapter },
+				server: {
+					port: 4000,
+					cors: { origin: ['https://allowed.com'] },
+				},
+			};
+			const corsApp = express();
+			corsApp.use('/api', momentumApiMiddleware(corsConfig));
+
+			const res = await request(corsApp).get('/api/posts').set('Origin', 'https://allowed.com');
+
+			expect(res.headers['access-control-allow-origin']).toBe('https://allowed.com');
+		});
+	});
+
+	describe('security headers', () => {
+		it('should include X-Content-Type-Options: nosniff', async () => {
+			const res = await request(app).get('/api/posts');
+			expect(res.headers['x-content-type-options']).toBe('nosniff');
+		});
+
+		it('should include X-Frame-Options: DENY', async () => {
+			const res = await request(app).get('/api/posts');
+			expect(res.headers['x-frame-options']).toBe('DENY');
+		});
+
+		it('should include Referrer-Policy', async () => {
+			const res = await request(app).get('/api/posts');
+			expect(res.headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+		});
+
+		it('should include X-Permitted-Cross-Domain-Policies: none', async () => {
+			const res = await request(app).get('/api/posts');
+			expect(res.headers['x-permitted-cross-domain-policies']).toBe('none');
+		});
 	});
 
 	describe('custom endpoint query.findById', () => {

@@ -121,6 +121,15 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	// Use Express's built-in JSON body parser
 	router.use(jsonParser());
 
+	// Security headers middleware
+	router.use((_req: Request, res: Response, next: NextFunction) => {
+		res.setHeader('X-Content-Type-Options', 'nosniff');
+		res.setHeader('X-Frame-Options', 'DENY');
+		res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+		res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+		next();
+	});
+
 	// CORS middleware
 	router.use((req: Request, res: Response, next: NextFunction) => {
 		const corsConfig = config.server?.cors ?? {};
@@ -130,22 +139,20 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				? [corsConfig.origin]
 				: [];
 
-		let allowOrigin: string;
 		if (origins.length === 0) {
-			allowOrigin = '*';
+			if (process.env['NODE_ENV'] === 'production') {
+				createLogger('CORS').warn(
+					'Origin is set to "*" in production. Configure explicit origins via config.server.cors.origin.',
+				);
+			}
+			res.setHeader('Access-Control-Allow-Origin', '*');
 		} else {
 			const requestOrigin = req.headers['origin'] ?? '';
-			allowOrigin = origins.includes(requestOrigin) ? requestOrigin : origins[0];
-		}
-
-		if (allowOrigin === '*' && process.env['NODE_ENV'] === 'production') {
-			createLogger('CORS').warn(
-				'Origin is set to "*" in production. Configure explicit origins via config.server.cors.origin.',
-			);
-		}
-		res.setHeader('Access-Control-Allow-Origin', allowOrigin);
-		if (allowOrigin !== '*') {
 			res.setHeader('Vary', 'Origin');
+			if (origins.includes(requestOrigin)) {
+				res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+			}
+			// Non-matching origins: omit Access-Control-Allow-Origin entirely (browser will block)
 		}
 		res.setHeader(
 			'Access-Control-Allow-Methods',
@@ -698,7 +705,9 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				if (error.name === 'AccessDeniedError') status = 403;
 				else if (error.name === 'DocumentNotFoundError') status = 404;
 			}
-			res.status(status).json({ error: status === 403 ? 'Access denied' : 'Failed to get status', message });
+			res
+				.status(status)
+				.json({ error: status === 403 ? 'Access denied' : 'Failed to get status', message });
 		}
 	});
 

@@ -64,7 +64,7 @@ export function s3StorageAdapter(options: S3StorageOptions): StorageAdapter {
 		baseUrl,
 		forcePathStyle = false,
 		acl = 'private',
-		presignedUrlExpiry = 3600,
+		presignedUrlExpiry = 900,
 	} = options;
 
 	// Lazy-initialized S3 client

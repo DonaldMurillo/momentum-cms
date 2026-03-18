@@ -18,7 +18,8 @@
 			"options": {
 				"outputPath": "dist/libs/db-drizzle",
 				"main": "libs/db-drizzle/src/index.ts",
-				"tsConfig": "libs/db-drizzle/tsconfig.lib.json"
+				"tsConfig": "libs/db-drizzle/tsconfig.lib.json",
+				"generatePackageJson": false
 			}
 		},
 		"nx-release-publish": {

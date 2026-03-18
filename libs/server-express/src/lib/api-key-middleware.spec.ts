@@ -69,40 +69,93 @@ describe('createApiKeyRoutes - role hierarchy privilege escalation', () => {
 
 		expect(res.status).toBe(403);
 		expect(res.body.error).toContain('Cannot create a key with higher privileges');
+		expect(store.create).not.toHaveBeenCalled();
 	});
 
 	it('should reject a user with an unknown role from creating any key', async () => {
-		// BUG: If user.role is not in ROLE_HIERARCHY, indexOf returns -1.
-		// No valid requestedRoleIndex is < -1, so the guard is bypassed.
-		// A user with role "corrupted" should NOT be able to create admin keys.
 		const app = createApp(store, { id: 'user-1', role: 'corrupted' });
 
 		const res = await request(app).post('/api-keys').send({ name: 'escalated-key', role: 'admin' });
 
-		// This SHOULD be 403, but the current code allows it (returns 201)
 		expect(res.status).toBe(403);
+		expect(store.create).not.toHaveBeenCalled();
 	});
 
 	it('should reject a user with undefined role from creating admin keys', async () => {
-		// When user.role is undefined, it falls back to 'viewer' via ?? 'viewer'
-		// This case should work correctly, but let's verify
 		const app = createApp(store, { id: 'user-1', role: undefined });
 
 		const res = await request(app).post('/api-keys').send({ name: 'escalated-key', role: 'admin' });
 
 		expect(res.status).toBe(403);
 		expect(res.body.error).toContain('Cannot create a key with higher privileges');
+		expect(store.create).not.toHaveBeenCalled();
 	});
 
 	it('should reject a user with empty string role from creating editor keys', async () => {
-		// Empty string is not in ROLE_HIERARCHY → indexOf returns -1
 		const app = createApp(store, { id: 'user-1', role: '' });
 
 		const res = await request(app)
 			.post('/api-keys')
 			.send({ name: 'escalated-key', role: 'editor' });
 
-		// This SHOULD be 403
 		expect(res.status).toBe(403);
+		expect(store.create).not.toHaveBeenCalled();
+	});
+});
+
+describe('createApiKeyRoutes - API key ID enumeration prevention', () => {
+	let store: ApiKeyStore;
+
+	beforeEach(() => {
+		store = createMockStore();
+	});
+
+	it('should return 404 (not 403) when non-admin tries to delete another users key', async () => {
+		// Key exists but belongs to user-A
+		vi.mocked(store.findById).mockResolvedValue({
+			id: 'key-123',
+			name: 'Other Key',
+			keyPrefix: 'mk_abc',
+			keyHash: 'hash',
+			role: 'editor',
+			createdBy: 'user-A',
+			createdAt: new Date(),
+			expiresAt: null,
+			lastUsedAt: null,
+		});
+
+		const app = createApp(store, { id: 'user-B', role: 'editor' });
+
+		const res = await request(app).delete('/api-keys/key-123');
+
+		// Should return 404, NOT 403 — to prevent enumeration
+		expect(res.status).toBe(404);
+		expect(res.body.error).toBe('API key not found');
+	});
+
+	it('should return identical response for non-existent key and another users key', async () => {
+		const app = createApp(store, { id: 'user-B', role: 'editor' });
+
+		// Case 1: key doesn't exist
+		vi.mocked(store.findById).mockResolvedValue(null);
+		const notFoundRes = await request(app).delete('/api-keys/nonexistent');
+
+		// Case 2: key exists but belongs to someone else
+		vi.mocked(store.findById).mockResolvedValue({
+			id: 'key-123',
+			name: 'Other Key',
+			keyPrefix: 'mk_abc',
+			keyHash: 'hash',
+			role: 'editor',
+			createdBy: 'user-A',
+			createdAt: new Date(),
+			expiresAt: null,
+			lastUsedAt: null,
+		});
+		const forbiddenRes = await request(app).delete('/api-keys/key-123');
+
+		// Both should return identical status and body
+		expect(notFoundRes.status).toBe(forbiddenRes.status);
+		expect(notFoundRes.body).toEqual(forbiddenRes.body);
 	});
 });

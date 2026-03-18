@@ -19,6 +19,7 @@
 				"outputPath": "dist/libs/email",
 				"main": "libs/email/src/index.ts",
 				"tsConfig": "libs/email/tsconfig.lib.json",
+				"generatePackageJson": false,
 				"additionalEntryPoints": [
 					"libs/email/src/types.ts",
 					"libs/email/src/lib/templates/default-templates.ts"

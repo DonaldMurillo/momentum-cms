@@ -43,6 +43,13 @@ import {
 	MAX_IN_ARRAY_SIZE,
 	MAX_PATTERN_LENGTH,
 } from './operator-constants';
+import {
+	validateCollectionSlug,
+	validateColumnName,
+	getTableName,
+	getStatusFromRow,
+	parseJsonToRecord,
+} from './db-shared';
 
 /**
  * Maps field types to PostgreSQL column types.
@@ -170,37 +177,7 @@ function createTableSql(collection: CollectionConfig): string {
 	return `CREATE TABLE IF NOT EXISTS "${tableName}" (${columns.join(', ')})`;
 }
 
-/**
- * Resolves the actual database table name for a collection.
- * Uses dbName if specified, falls back to slug.
- */
-function getTableName(collection: CollectionConfig): string {
-	return collection.dbName ?? collection.slug;
-}
-
-/**
- * Validates that a collection slug is safe for use in SQL.
- * Prevents potential SQL injection via table names.
- */
-function validateCollectionSlug(slug: string): void {
-	const validSlug = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
-	if (!validSlug.test(slug)) {
-		throw new Error(
-			`Invalid collection slug: "${slug}". Slugs must start with a letter or underscore and contain only alphanumeric characters, underscores, and hyphens.`,
-		);
-	}
-}
-
-/**
- * Validates that a column name is safe for use in SQL.
- * Prevents SQL injection via column name interpolation.
- */
-function validateColumnName(name: string): void {
-	const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
-	if (!validColumnName.test(name)) {
-		throw new Error(`Invalid column name: "${name}"`);
-	}
-}
+// validateCollectionSlug, validateColumnName, getTableName are now imported from ./db-shared
 
 /**
  * Creates the SQL for a collection's versions table.
@@ -229,36 +206,7 @@ function createVersionTableSql(collection: CollectionConfig): string | null {
 	`;
 }
 
-/**
- * Type guard for DocumentStatus.
- */
-function isDocumentStatus(value: unknown): value is DocumentStatus {
-	return value === 'draft' || value === 'published';
-}
-
-/**
- * Safely extract status from a database row.
- */
-function getStatusFromRow(row: Record<string, unknown>): DocumentStatus {
-	const status = row['_status'];
-	return isDocumentStatus(status) ? status : 'draft';
-}
-
-/**
- * Parse JSON string to Record, with error handling.
- */
-function parseJsonToRecord(jsonString: string): Record<string, unknown> {
-	try {
-		const parsed: unknown = JSON.parse(jsonString);
-		if (typeof parsed === 'object' && parsed !== null) {
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Safe after type check
-			return parsed as Record<string, unknown>;
-		}
-		return {};
-	} catch {
-		return {};
-	}
-}
+// isDocumentStatus, getStatusFromRow, parseJsonToRecord are now imported from ./db-shared
 
 // AUTH_TABLES_SQL removed — auth tables are now defined as managed collections
 // and created through the normal createTableSql() path via the auth plugin.

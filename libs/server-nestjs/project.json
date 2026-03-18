@@ -18,7 +18,8 @@
 			"options": {
 				"outputPath": "dist/libs/server-nestjs",
 				"main": "libs/server-nestjs/src/index.ts",
-				"tsConfig": "libs/server-nestjs/tsconfig.lib.json"
+				"tsConfig": "libs/server-nestjs/tsconfig.lib.json",
+				"generatePackageJson": false
 			}
 		},
 		"nx-release-publish": {

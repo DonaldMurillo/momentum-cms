@@ -59,6 +59,7 @@ export {
 	checkCollectionAdminAccess,
 	checkSingleCollectionAdminAccess,
 	getCollectionPermissions,
+	warnInsecureDefaults,
 	type CollectionAccess,
 	type CollectionPermissions,
 	type AccessResponse,

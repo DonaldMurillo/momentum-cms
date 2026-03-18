@@ -14,31 +14,14 @@ import type {
 	CreateVersionOptions,
 } from '@momentumcms/core';
 import { flattenDataFields, getSoftDeleteField, hasVersionDrafts } from '@momentumcms/core';
-
-/**
- * Type guard to check if a value is a record object.
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null;
-}
-
-/**
- * Type guard to check if a value is a valid DocumentStatus.
- */
-function isDocumentStatus(value: unknown): value is DocumentStatus {
-	return value === 'draft' || value === 'published';
-}
-
-/**
- * Safely get DocumentStatus from a row value.
- */
-function getStatusFromRow(row: Record<string, unknown>): DocumentStatus {
-	const status = row['_status'];
-	if (isDocumentStatus(status)) {
-		return status;
-	}
-	return 'draft'; // Default fallback
-}
+import {
+	validateCollectionSlug,
+	validateColumnName,
+	getTableName,
+	getStatusFromRow,
+	parseJsonToRecord,
+	isRecord,
+} from './db-shared';
 
 import {
 	SIMPLE_OP_MAP,
@@ -129,44 +112,8 @@ function buildOperatorClauses(
 	}
 }
 
-/**
- * Safely parse JSON to Record<string, unknown>.
- */
-function parseJsonToRecord(jsonString: string): Record<string, unknown> {
-	try {
-		const parsed: unknown = JSON.parse(jsonString);
-		if (isRecord(parsed)) {
-			return parsed;
-		}
-		return {};
-	} catch {
-		return {};
-	}
-}
-
-/**
- * Validates that a collection slug is safe for use in SQL.
- * Prevents potential SQL injection via table names.
- */
-function validateCollectionSlug(slug: string): void {
-	const validSlug = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
-	if (!validSlug.test(slug)) {
-		throw new Error(
-			`Invalid collection slug: "${slug}". Slugs must start with a letter or underscore and contain only alphanumeric characters, underscores, and hyphens.`,
-		);
-	}
-}
-
-/**
- * Validates that a column name is safe for use in SQL.
- * Prevents SQL injection via column name interpolation.
- */
-function validateColumnName(name: string): void {
-	const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
-	if (!validColumnName.test(name)) {
-		throw new Error(`Invalid column name: "${name}"`);
-	}
-}
+// validateCollectionSlug, validateColumnName, parseJsonToRecord, isRecord,
+// isDocumentStatus, getStatusFromRow are now imported from ./db-shared
 
 /**
  * Simple async queue to serialize database operations.
@@ -259,14 +206,6 @@ function createTableSql(collection: CollectionConfig): string {
 
 	const tableName = collection.dbName ?? collection.slug;
 	return `CREATE TABLE IF NOT EXISTS "${tableName}" (${columns.join(', ')})`;
-}
-
-/**
- * Resolves the actual database table name for a collection.
- * Uses dbName if specified, falls back to slug.
- */
-function getTableName(collection: CollectionConfig): string {
-	return collection.dbName ?? collection.slug;
 }
 
 /**

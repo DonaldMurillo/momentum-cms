@@ -18,7 +18,8 @@
 			"options": {
 				"outputPath": "dist/libs/server-core",
 				"main": "libs/server-core/src/index.ts",
-				"tsConfig": "libs/server-core/tsconfig.lib.json"
+				"tsConfig": "libs/server-core/tsconfig.lib.json",
+				"generatePackageJson": false
 			}
 		},
 		"nx-release-publish": {

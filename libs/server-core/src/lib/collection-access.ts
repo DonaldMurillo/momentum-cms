@@ -1,4 +1,5 @@
 import type { MomentumConfig, CollectionConfig, UserContext, AccessArgs } from '@momentumcms/core';
+import { createLogger } from '@momentumcms/logger';
 
 /**
  * Result of checking admin access for a single collection.
@@ -140,4 +141,37 @@ export async function getCollectionPermissions(
 	);
 
 	return results;
+}
+
+const ACCESS_OPS = ['read', 'create', 'update', 'delete'] as const;
+
+const ACCESS_DEFAULTS: Record<string, string> = {
+	read: 'public (anyone)',
+	create: 'any authenticated user',
+	update: 'any authenticated user',
+	delete: 'any authenticated user',
+};
+
+/**
+ * Warns about collections that rely on insecure default access.
+ * Returns the warning messages (useful for testing).
+ */
+export function warnInsecureDefaults(collections: CollectionConfig[]): string[] {
+	const logger = createLogger('Security');
+	const warnings: string[] = [];
+
+	for (const collection of collections) {
+		if (collection.managed) continue;
+
+		const missing = ACCESS_OPS.filter((op) => !collection.access?.[op]);
+
+		if (missing.length > 0) {
+			const details = missing.map((op) => `${op} (${ACCESS_DEFAULTS[op]})`).join(', ');
+			const msg = `Collection "${collection.slug}" has no explicit access control for: ${details}. Define access functions to restrict.`;
+			logger.warn(msg);
+			warnings.push(msg);
+		}
+	}
+
+	return warnings;
 }
