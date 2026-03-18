@@ -366,6 +366,16 @@ function flattenWhereRecursive(where: WhereClause, depth: number): Record<string
 				if (internalOp === '$exists' && typeof value === 'string') {
 					value = value === 'true';
 				}
+				// Strip null bytes from string values — they crash Postgres UTF-8 encoding
+				if (typeof value === 'string') {
+					value = value.replace(/\0/g, '');
+				}
+				// Strip null bytes from $in/$nin array string items
+				if (Array.isArray(value)) {
+					value = value.map((item: unknown) =>
+						typeof item === 'string' ? item.replace(/\0/g, '') : item,
+					);
+				}
 				ops[internalOp] = value;
 				hasOp = true;
 			}
@@ -629,13 +639,17 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Prepare query options (strip depth and where — they need special handling)
 		// Sanitize pagination: clamp to safe integer values to prevent NaN/Infinity/negative abuse
 		const MAX_PAGE_LIMIT = 1000;
+		const MAX_PAGE = 1_000_000; // Prevents offset overflow: page * limit must stay within safe integer range
 		const rawLimit = options.limit ?? 10;
 		const rawPage = options.page ?? 1;
 		const limit = Math.max(
 			1,
 			Math.min(Number.isFinite(rawLimit) ? Math.floor(rawLimit) : 10, MAX_PAGE_LIMIT),
 		);
-		const page = Math.max(1, Number.isFinite(rawPage) ? Math.floor(rawPage) : 1);
+		const page = Math.max(
+			1,
+			Math.min(Number.isFinite(rawPage) ? Math.floor(rawPage) : 1, MAX_PAGE),
+		);
 		const { depth: _depth, where, withDeleted: _wd, onlyDeleted: _od, ...queryOptions } = options;
 
 		// Extract relationship sub-queries into JOIN specs before flattening

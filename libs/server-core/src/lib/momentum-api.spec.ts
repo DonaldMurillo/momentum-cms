@@ -2545,4 +2545,72 @@ describe('MomentumAPI', () => {
 			).rejects.toThrow(/unknown field/i);
 		});
 	});
+
+	describe('pagination extreme values', () => {
+		it('should clamp page=1e308 to MAX_PAGE instead of crashing', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			const result = await api.collection('posts').find({ page: 1e308, limit: 10 });
+			expect(result).toBeDefined();
+			expect(result.docs).toEqual([]);
+
+			// page passed to adapter should be clamped, not 1e308
+			const query = vi.mocked(mockAdapter.find).mock.calls[0][1] as Record<string, unknown>;
+			expect(query['page']).toBeLessThanOrEqual(1_000_000);
+			expect(Number.isFinite(query['page'])).toBe(true);
+		});
+
+		it('should clamp page=Infinity to a safe value', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			const result = await api.collection('posts').find({ page: Infinity, limit: 10 });
+			expect(result).toBeDefined();
+
+			const query = vi.mocked(mockAdapter.find).mock.calls[0][1] as Record<string, unknown>;
+			expect(query['page']).toBeLessThanOrEqual(1_000_000);
+			expect(Number.isFinite(query['page'])).toBe(true);
+		});
+	});
+
+	describe('null byte sanitization in where values', () => {
+		it('should strip null bytes from string values in where clause', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			// Should not crash — null bytes stripped before reaching adapter
+			const result = await api.collection('posts').find({
+				where: { title: { equals: 'Tech\x00nology' } },
+			});
+			expect(result).toBeDefined();
+
+			const callArgs = vi.mocked(mockAdapter.find).mock.calls[0];
+			const whereArg = callArgs[1];
+			// The null byte should be stripped from the value
+			const titleClause = whereArg?.title ?? whereArg?.['title'];
+			if (titleClause && typeof titleClause === 'object') {
+				const eqVal = (titleClause as Record<string, unknown>)['$eq'];
+				expect(eqVal).not.toContain('\x00');
+			}
+		});
+
+		it('should strip null bytes from contains/like pattern values', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			const result = await api.collection('posts').find({
+				where: { title: { contains: 'test\x00inject' } },
+			});
+			expect(result).toBeDefined();
+
+			const callArgs = vi.mocked(mockAdapter.find).mock.calls[0];
+			const whereArg = callArgs[1];
+			const titleClause = whereArg?.title ?? whereArg?.['title'];
+			if (titleClause && typeof titleClause === 'object') {
+				const containsVal = (titleClause as Record<string, unknown>)['$contains'];
+				expect(containsVal).not.toContain('\x00');
+			}
+		});
+	});
 });

@@ -38,13 +38,12 @@ export const Categories = defineCollection({
 		{
 			path: 'count',
 			method: 'get',
-			/* eslint-disable @typescript-eslint/consistent-type-assertions -- params['where'] is parsed query string */
 			handler: async ({ query, params }) => {
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowing parsed query string params
 				const where = params?.['where'] as Record<string, unknown> | undefined;
 				const count = await query.count('categories', where);
 				return { status: 200, body: { count } };
 			},
-			/* eslint-enable @typescript-eslint/consistent-type-assertions */
 		},
 		{
 			path: 'slugs',
