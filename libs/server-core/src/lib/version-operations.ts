@@ -22,6 +22,7 @@ import type {
 	VersionFindOptions,
 } from './momentum-api.types';
 import { AccessDeniedError, DocumentNotFoundError } from './momentum-api.types';
+import { filterReadableFields, hasFieldAccessControl } from './field-access';
 
 /**
  * Type guard to check if a value is a record object.
@@ -96,6 +97,21 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 			}
 		}
 
+		// Filter restricted fields from version snapshots
+		if (!this.context.overrideAccess && hasFieldAccessControl(this.collectionConfig.fields)) {
+			for (let i = 0; i < docs.length; i++) {
+				const version = docs[i].version;
+				if (version && typeof version === 'object') {
+					const filtered = await filterReadableFields(
+						this.collectionConfig.fields,
+						version as unknown as Record<string, unknown>,
+						this.buildRequestContext(),
+					);
+					docs[i] = { ...docs[i], version: filtered as unknown as T };
+				}
+			}
+		}
+
 		// Get total count for pagination with the same filters applied
 		const countOptions = {
 			includeAutosave: options?.includeAutosave,
@@ -136,9 +152,24 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 			return null;
 		}
 
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Version data stored as T, may be filtered to Record
+		let filteredVersion: T = parsedVersion;
+
+		// Filter restricted fields from version snapshot
+		if (!this.context.overrideAccess && hasFieldAccessControl(this.collectionConfig.fields)) {
+			if (filteredVersion && typeof filteredVersion === 'object') {
+				const filtered = await filterReadableFields(
+					this.collectionConfig.fields,
+					filteredVersion as unknown as Record<string, unknown>,
+					this.buildRequestContext(),
+				);
+				filteredVersion = filtered as unknown as T;
+			}
+		}
+
 		return {
 			...version,
-			version: parsedVersion,
+			version: filteredVersion,
 		};
 	}
 

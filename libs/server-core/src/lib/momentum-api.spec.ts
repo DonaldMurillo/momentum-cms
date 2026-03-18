@@ -2709,6 +2709,129 @@ describe('MomentumAPI', () => {
 		});
 	});
 
+	describe('search() must filter restricted fields from results', () => {
+		const restrictedSearchCollection: CollectionConfig = {
+			slug: 'secure-items',
+			labels: { singular: 'Secure Item', plural: 'Secure Items' },
+			fields: [
+				{ name: 'title', type: 'text', required: true },
+				{
+					name: 'secret',
+					type: 'text',
+					access: { read: () => false },
+				},
+			],
+		};
+
+		let restrictedSearchConfig: MomentumConfig;
+
+		beforeEach(() => {
+			resetMomentumAPI();
+			restrictedSearchConfig = {
+				collections: [restrictedSearchCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+		});
+
+		it('should strip restricted fields from search results (adapter.find fallback)', async () => {
+			const api = initializeMomentumAPI(restrictedSearchConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([
+				{ id: '1', title: 'hello', secret: 'HIDDEN-VALUE' },
+			]);
+
+			const result = await api.collection('secure-items').search('hello');
+
+			expect(result.docs).toHaveLength(1);
+			expect(result.docs[0]).toHaveProperty('title', 'hello');
+			expect(result.docs[0]).not.toHaveProperty('secret');
+		});
+
+		it('should strip restricted fields from search results (adapter.search path)', async () => {
+			const searchAdapter = {
+				...mockAdapter,
+				search: vi.fn().mockResolvedValue([
+					{ id: '1', title: 'hello', secret: 'HIDDEN-VALUE' },
+				]),
+			};
+			const searchConfig: MomentumConfig = {
+				collections: [restrictedSearchCollection],
+				db: { adapter: searchAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(searchConfig);
+
+			const result = await api.collection('secure-items').search('hello');
+
+			expect(result.docs).toHaveLength(1);
+			expect(result.docs[0]).toHaveProperty('title', 'hello');
+			expect(result.docs[0]).not.toHaveProperty('secret');
+		});
+	});
+
+	describe('sort field validation against field-level read access', () => {
+		const restrictedSortCollection: CollectionConfig = {
+			slug: 'secure-items',
+			labels: { singular: 'Secure Item', plural: 'Secure Items' },
+			fields: [
+				{ name: 'title', type: 'text', required: true },
+				{
+					name: 'secret',
+					type: 'text',
+					access: { read: () => false },
+				},
+			],
+		};
+
+		let restrictedSortConfig: MomentumConfig;
+
+		beforeEach(() => {
+			resetMomentumAPI();
+			restrictedSortConfig = {
+				collections: [restrictedSortCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+		});
+
+		it('should throw when sorting by a field with access.read = false', async () => {
+			const api = initializeMomentumAPI(restrictedSortConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('secure-items').find({ sort: 'secret' }),
+			).rejects.toThrow(/access denied/i);
+		});
+
+		it('should throw when sorting descending by a restricted field', async () => {
+			const api = initializeMomentumAPI(restrictedSortConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('secure-items').find({ sort: '-secret' }),
+			).rejects.toThrow(/access denied/i);
+		});
+
+		it('should allow sorting by unrestricted fields', async () => {
+			const api = initializeMomentumAPI(restrictedSortConfig);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('secure-items').find({ sort: 'title' }),
+			).resolves.toBeDefined();
+		});
+
+		it('should skip sort validation when overrideAccess is true', async () => {
+			const api = initializeMomentumAPI(restrictedSortConfig);
+			const overrideApi = api.setContext({ overrideAccess: true });
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				overrideApi.collection('secure-items').find({ sort: 'secret' }),
+			).resolves.toBeDefined();
+		});
+	});
+
 	describe('restore on non-soft-delete collection', () => {
 		it('should throw ValidationError for collections without soft delete', async () => {
 			const api = initializeMomentumAPI(config);

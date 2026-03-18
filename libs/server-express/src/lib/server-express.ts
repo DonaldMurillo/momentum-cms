@@ -693,7 +693,12 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			res.json({ status });
 		} catch (error) {
 			const message = sanitizeErrorMessage(error, 'Unknown error');
-			res.status(500).json({ error: 'Failed to get status', message });
+			let status = 500;
+			if (error instanceof Error) {
+				if (error.name === 'AccessDeniedError') status = 403;
+				else if (error.name === 'DocumentNotFoundError') status = 404;
+			}
+			res.status(status).json({ error: status === 403 ? 'Access denied' : 'Failed to get status', message });
 		}
 	});
 
@@ -886,6 +891,13 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 	// Route: GET /media/file/:path(*) - Serve uploaded files
 	router.get('/media/file/*', async (req: Request, res: Response) => {
+		// Require authentication to access uploaded files
+		const user = extractUserFromRequest(req);
+		if (!user) {
+			res.status(401).json({ error: 'Authentication required to access files' });
+			return;
+		}
+
 		const uploadConfig = getUploadConfig(config);
 		if (!uploadConfig) {
 			res.status(500).json({ error: 'Storage not configured' });

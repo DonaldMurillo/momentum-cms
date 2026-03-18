@@ -638,6 +638,28 @@ async function validateWhereFields(
 	}
 }
 
+/**
+ * Validate that the user has read access to the field used for sorting.
+ * Prevents information inference through result ordering of restricted fields.
+ */
+async function validateSortField(
+	sort: string | undefined,
+	fields: Field[],
+	req: RequestContext,
+): Promise<void> {
+	if (!sort) return;
+	// Strip leading '-' for descending sort
+	const fieldName = sort.startsWith('-') ? sort.slice(1) : sort;
+	const baseName = fieldName.includes('.') ? fieldName.split('.')[0] : fieldName;
+	const dataFields = flattenDataFields(fields);
+	const field = dataFields.find((f) => f.name === baseName);
+	if (!field?.access?.read) return;
+	const allowed = await Promise.resolve(field.access.read({ req }));
+	if (!allowed) {
+		throw new AccessDeniedError('read', baseName);
+	}
+}
+
 // ============================================
 // Collection Operations Implementation
 // ============================================
@@ -662,10 +684,15 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Check read access
 		await this.checkAccess('read');
 
-		// Validate field-level access in where clause (prevent information leakage)
+		// Validate field-level access in where clause and sort field (prevent information leakage)
 		if (!this.context.overrideAccess) {
 			await validateWhereFields(
 				options.where,
+				this.collectionConfig.fields,
+				this.buildRequestContext(),
+			);
+			await validateSortField(
+				options.sort,
 				this.collectionConfig.fields,
 				this.buildRequestContext(),
 			);
@@ -1274,11 +1301,14 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
 		const resolvedDocs = docs as unknown as T[];
 
-		const totalDocs = resolvedDocs.length;
+		// Run afterRead hooks and field-level access filtering (same pipeline as find())
+		const afterHookDocs = await this.processAfterReadHooks(resolvedDocs);
+
+		const totalDocs = afterHookDocs.length;
 		const totalPages = Math.max(1, Math.ceil(totalDocs / limit));
 
 		return {
-			docs: resolvedDocs,
+			docs: afterHookDocs,
 			totalDocs,
 			totalPages,
 			page,
