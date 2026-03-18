@@ -102,12 +102,16 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 			for (let i = 0; i < docs.length; i++) {
 				const version = docs[i].version;
 				if (version && typeof version === 'object') {
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is a parsed JSON object, safe to treat as Record
+					const versionRecord = version as unknown as Record<string, unknown>;
 					const filtered = await filterReadableFields(
 						this.collectionConfig.fields,
-						version as unknown as Record<string, unknown>,
+						versionRecord,
 						this.buildRequestContext(),
 					);
-					docs[i] = { ...docs[i], version: filtered as unknown as T };
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Filtered record maps back to T
+					const filteredAsT = filtered as unknown as T;
+					docs[i] = { ...docs[i], version: filteredAsT };
 				}
 			}
 		}
@@ -152,17 +156,19 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 			return null;
 		}
 
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Version data stored as T, may be filtered to Record
 		let filteredVersion: T = parsedVersion;
 
 		// Filter restricted fields from version snapshot
 		if (!this.context.overrideAccess && hasFieldAccessControl(this.collectionConfig.fields)) {
 			if (filteredVersion && typeof filteredVersion === 'object') {
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is a parsed JSON object, safe to treat as Record
+				const versionRecord = filteredVersion as unknown as Record<string, unknown>;
 				const filtered = await filterReadableFields(
 					this.collectionConfig.fields,
-					filteredVersion as unknown as Record<string, unknown>,
+					versionRecord,
 					this.buildRequestContext(),
 				);
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Filtered record maps back to T
 				filteredVersion = filtered as unknown as T;
 			}
 		}
