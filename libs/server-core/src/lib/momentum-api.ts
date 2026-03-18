@@ -361,7 +361,13 @@ function flattenWhereRecursive(where: WhereClause, depth: number): Record<string
 		let hasOp = false;
 		for (const [userOp, internalOp] of Object.entries(OPERATOR_MAP)) {
 			if (userOp in condObj) {
-				ops[internalOp] = condObj[userOp];
+				let value = condObj[userOp];
+				// Coerce $exists: query strings send "true"/"false" as strings,
+				// but JS treats both as truthy — must convert to boolean
+				if (internalOp === '$exists' && typeof value === 'string') {
+					value = value === 'true';
+				}
+				ops[internalOp] = value;
 				hasOp = true;
 			}
 		}
@@ -622,8 +628,11 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		await this.runBeforeReadHooks();
 
 		// Prepare query options (strip depth and where — they need special handling)
-		const limit = options.limit ?? 10;
-		const page = options.page ?? 1;
+		// Sanitize pagination: clamp to safe values to prevent negative OFFSET/LIMIT SQL errors
+		const rawLimit = options.limit ?? 10;
+		const rawPage = options.page ?? 1;
+		const limit = Number.isFinite(rawLimit) && rawLimit >= 0 ? rawLimit : 10;
+		const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
 		const { depth: _depth, where, withDeleted: _wd, onlyDeleted: _od, ...queryOptions } = options;
 
 		// Extract relationship sub-queries into JOIN specs before flattening

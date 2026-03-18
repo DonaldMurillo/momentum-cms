@@ -950,8 +950,8 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				return { docs, totalDocs: docs.length };
 			},
 			findById: (slug, id) => txAdapter.findById(slug, id),
-			count: async (slug) => {
-				const docs = await txAdapter.find(slug, {});
+			count: async (slug, where) => {
+				const docs = await txAdapter.find(slug, where ?? {});
 				return docs.length;
 			},
 			create: (slug, data) => txAdapter.create(slug, data),
@@ -998,7 +998,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 								throw err;
 							}
 						},
-						count: (slug) => ctxApi.collection(slug).count(),
+						count: (slug, where) => ctxApi.collection(slug).count(where),
 						create: async (slug, data) => {
 							// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 							return (await ctxApi.collection(slug).create(data)) as Record<string, unknown>;
@@ -1027,6 +1027,8 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 						collection,
 						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Express body is parsed JSON
 						body: req.body as Record<string, unknown> | undefined,
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Express query is parsed by qs
+						params: req.query as Record<string, unknown>,
 						query: buildQueryHelper(contextApi),
 					});
 					res.status(result.status).json(result.body);

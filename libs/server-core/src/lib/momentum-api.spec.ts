@@ -2400,4 +2400,131 @@ describe('MomentumAPI', () => {
 			).resolves.toBeDefined();
 		});
 	});
+
+	// ============================================================
+	// BUG FIXES: attack-suite findings
+	// ============================================================
+
+	describe('pagination input sanitization', () => {
+		let api: ReturnType<typeof initializeMomentumAPI>;
+
+		beforeEach(() => {
+			resetMomentumAPI();
+			vi.mocked(mockAdapter.find).mockResolvedValue([
+				{ id: '1', title: 'A' },
+				{ id: '2', title: 'B' },
+				{ id: '3', title: 'C' },
+			]);
+			api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
+		});
+
+		it('should clamp page 0 to page 1', async () => {
+			const result = await api.collection('posts').find({ page: 0 });
+			expect(result.page).toBe(1);
+		});
+
+		it('should clamp negative page to page 1', async () => {
+			const result = await api.collection('posts').find({ page: -5 });
+			expect(result.page).toBe(1);
+		});
+
+		it('should clamp negative limit to 0', async () => {
+			const result = await api.collection('posts').find({ limit: -1 });
+			expect(result.limit).toBeGreaterThanOrEqual(0);
+		});
+
+		it('should handle NaN limit gracefully', async () => {
+			const result = await api.collection('posts').find({ limit: NaN });
+			expect(result.limit).toBeGreaterThanOrEqual(0);
+		});
+
+		it('should handle NaN page gracefully', async () => {
+			const result = await api.collection('posts').find({ page: NaN });
+			expect(result.page).toBe(1);
+		});
+	});
+
+	describe('exists operator string coercion', () => {
+		let api: ReturnType<typeof initializeMomentumAPI>;
+
+		beforeEach(() => {
+			resetMomentumAPI();
+			api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
+		});
+
+		it('should convert string "true" to boolean true for exists operator', async () => {
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+			await api.collection('posts').find({
+				where: { title: { exists: 'true' as unknown as boolean } },
+			});
+			const findCall = vi.mocked(mockAdapter.find).mock.calls[0];
+			const query = findCall[1];
+			// The $exists value passed to adapter should be boolean true, not string "true"
+			expect(query['title']).toEqual({ $exists: true });
+		});
+
+		it('should convert string "false" to boolean false for exists operator', async () => {
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+			await api.collection('posts').find({
+				where: { title: { exists: 'false' as unknown as boolean } },
+			});
+			const findCall = vi.mocked(mockAdapter.find).mock.calls[0];
+			const query = findCall[1];
+			// CRITICAL: string "false" is truthy in JS — must be coerced to boolean false
+			expect(query['title']).toEqual({ $exists: false });
+		});
+	});
+
+	describe('count() with where clause', () => {
+		let api: ReturnType<typeof initializeMomentumAPI>;
+
+		beforeEach(() => {
+			resetMomentumAPI();
+			api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
+		});
+
+		it('should pass where clause through to adapter.count()', async () => {
+			mockAdapter.count = vi.fn().mockResolvedValue(1);
+			await api.collection('posts').count({ title: { equals: 'A' } });
+			const countCall = vi.mocked(mockAdapter.count).mock.calls[0];
+			const query = countCall[1];
+			// The where clause should be flattened and present in the count query
+			expect(query['title']).toEqual({ $eq: 'A' });
+		});
+
+		it('should pass where clause through to adapter.find() fallback when no count()', async () => {
+			delete mockAdapter.count;
+			vi.mocked(mockAdapter.find).mockResolvedValue([{ id: '1' }]);
+			const result = await api.collection('posts').count({ title: { equals: 'A' } });
+			const findCall = vi.mocked(mockAdapter.find).mock.calls[0];
+			const query = findCall[1];
+			expect(query['title']).toEqual({ $eq: 'A' });
+			expect(result).toBe(1);
+		});
+	});
+
+	describe('__proto__ in where clause', () => {
+		let api: ReturnType<typeof initializeMomentumAPI>;
+
+		beforeEach(() => {
+			resetMomentumAPI();
+			api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
+		});
+
+		it('should reject __proto__ as a field name', async () => {
+			await expect(
+				api.collection('posts').find({
+					where: { __proto__: { equals: 'polluted' } },
+				}),
+			).rejects.toThrow();
+		});
+
+		it('should reject constructor as a field name', async () => {
+			await expect(
+				api.collection('posts').find({
+					where: { constructor: { equals: 'polluted' } },
+				}),
+			).rejects.toThrow();
+		});
+	});
 });

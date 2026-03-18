@@ -119,8 +119,11 @@ function buildOperatorClauses(
 	}
 
 	// $exists: IS [NOT] NULL (no parameter needed)
+	// Coerce string "true"/"false" to boolean — query strings arrive as strings
 	if ('$exists' in record) {
-		whereClauses.push(record['$exists'] ? `${col} IS NOT NULL` : `${col} IS NULL`);
+		let existsVal = record['$exists'];
+		if (typeof existsVal === 'string') existsVal = existsVal === 'true';
+		whereClauses.push(existsVal ? `${col} IS NOT NULL` : `${col} IS NULL`);
 	}
 }
 

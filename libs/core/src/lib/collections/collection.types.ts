@@ -423,6 +423,8 @@ export interface EndpointArgs {
 	collection: CollectionConfig;
 	/** Request body (for POST/PUT/PATCH endpoints) */
 	body?: Record<string, unknown>;
+	/** Query string parameters from the request URL */
+	params?: Record<string, unknown>;
 	/**
 	 * Async helper to query any collection.
 	 * Returns the raw API result (find returns { docs, totalDocs }, findById returns doc, etc.).
@@ -438,7 +440,7 @@ export interface EndpointQueryHelper {
 		options?: { limit?: number; page?: number },
 	) => Promise<{ docs: Record<string, unknown>[]; totalDocs: number }>;
 	findById: (slug: string, id: string) => Promise<Record<string, unknown> | null>;
-	count: (slug: string) => Promise<number>;
+	count: (slug: string, where?: Record<string, unknown>) => Promise<number>;
 	create: (slug: string, data: Record<string, unknown>) => Promise<Record<string, unknown>>;
 	update: (
 		slug: string,

@@ -838,4 +838,28 @@ describe('sqliteAdapter', () => {
 			expect(result).toBe(2);
 		});
 	});
+
+	describe('$exists string coercion', () => {
+		let adapter: ReturnType<typeof sqliteAdapter>;
+
+		beforeEach(async () => {
+			adapter = sqliteAdapter({ filename: TEST_DB_PATH });
+			await adapter.initialize?.([mockPostsCollection]);
+			await adapter.create('posts', { title: 'Has Content', content: 'Some text' });
+			await adapter.create('posts', { title: 'No Content' });
+		});
+
+		it('should treat string "true" as truthy for $exists (IS NOT NULL)', async () => {
+			const docs = await adapter.find('posts', { content: { $exists: 'true' as unknown } });
+			expect(docs.length).toBeGreaterThan(0);
+			expect(docs.every((d) => d['content'] != null)).toBe(true);
+		});
+
+		it('should treat string "false" as falsy for $exists (IS NULL)', async () => {
+			const docs = await adapter.find('posts', { content: { $exists: 'false' as unknown } });
+			// CRITICAL: string "false" is truthy in JS — adapter must coerce to boolean
+			expect(docs.length).toBeGreaterThan(0);
+			expect(docs.every((d) => d['content'] == null)).toBe(true);
+		});
+	});
 });
