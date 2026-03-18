@@ -367,6 +367,34 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 	const reservedParams = new Set(['limit', 'page', 'sort', 'order', '$joins']);
 
 	/**
+	 * Build an inline EXISTS subquery for a $join marker inside $or/$and.
+	 */
+	function buildInlineJoinClause(
+		joinSpec: unknown,
+		whereValues: unknown[],
+		mainTable: string,
+	): string | null {
+		if (typeof joinSpec !== 'object' || joinSpec === null) return null;
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- $join marker structure
+		const j = joinSpec as {
+			targetTable: string;
+			localField: string;
+			targetField: string;
+			conditions: Record<string, unknown>;
+		};
+		validateCollectionSlug(j.targetTable);
+		if (!validColumnName.test(j.localField))
+			throw new Error(`Invalid column name: ${j.localField}`);
+		if (!validColumnName.test(j.targetField))
+			throw new Error(`Invalid column name: ${j.targetField}`);
+		const joinClauses: string[] = [];
+		buildWhereFragments(j.conditions, joinClauses, whereValues, false, mainTable);
+		const joinWhere = joinClauses.length > 0 ? ` AND ${joinClauses.join(' AND ')}` : '';
+		const tableName = resolveTableName(j.targetTable);
+		return `EXISTS (SELECT 1 FROM "${tableName}" WHERE "${tableName}"."${j.targetField}" = "${mainTable}"."${j.localField}"${joinWhere})`;
+	}
+
+	/**
 	 * Recursively build WHERE clause fragments from a query params object.
 	 * Handles $or/$and by recursing and wrapping with parentheses.
 	 */
@@ -375,6 +403,7 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		whereClauses: string[],
 		whereValues: unknown[],
 		skipReserved: boolean,
+		mainTable?: string,
 	): void {
 		for (const [key, value] of Object.entries(params)) {
 			if (skipReserved && reservedParams.has(key)) continue;
@@ -387,13 +416,15 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 				const subClauses: string[] = [];
 				for (const sub of value) {
 					if (typeof sub !== 'object' || sub === null) continue;
+					const subObj = sub as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions -- guarded by typeof check above
+					// Handle inline $join markers (relationship joins inside or/and groups)
+					if ('$join' in subObj && mainTable) {
+						const clause = buildInlineJoinClause(subObj['$join'], whereValues, mainTable);
+						if (clause) subClauses.push(clause);
+						continue;
+					}
 					const innerClauses: string[] = [];
-					buildWhereFragments(
-						sub as Record<string, unknown>, // eslint-disable-line @typescript-eslint/consistent-type-assertions -- guarded by typeof check above
-						innerClauses,
-						whereValues,
-						false,
-					);
+					buildWhereFragments(subObj, innerClauses, whereValues, false, mainTable);
 					if (innerClauses.length > 0) {
 						subClauses.push(`(${innerClauses.join(' AND ')})`);
 					}
@@ -449,11 +480,12 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		const limitValue = typeof query['limit'] === 'number' ? query['limit'] : 100;
 		const pageValue = typeof query['page'] === 'number' ? query['page'] : 1;
 		const offset = (pageValue - 1) * limitValue;
+		const mainTableName = resolveTableName(collection);
 
 		const whereClauses: string[] = [];
 		const whereValues: unknown[] = [];
 
-		buildWhereFragments(query, whereClauses, whereValues, true);
+		buildWhereFragments(query, whereClauses, whereValues, true, mainTableName);
 
 		// Handle $joins — build EXISTS subqueries for relationship filtering
 		const joins = query['$joins'];
@@ -513,10 +545,11 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 
 	function countSync(collection: string, query: Record<string, unknown>): number {
 		validateCollectionSlug(collection);
+		const mainTableName = resolveTableName(collection);
 		const whereClauses: string[] = [];
 		const whereValues: unknown[] = [];
 
-		buildWhereFragments(query, whereClauses, whereValues, true);
+		buildWhereFragments(query, whereClauses, whereValues, true, mainTableName);
 
 		// Handle $joins — build EXISTS subqueries for relationship filtering
 		const joins = query['$joins'];

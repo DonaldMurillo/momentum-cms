@@ -1596,7 +1596,7 @@ describe('MomentumAPI', () => {
 			],
 		};
 
-		it('should extract relationship JOINs from inside or arrays', async () => {
+		it('should keep relationship JOINs inline within or arrays (not top-level $joins)', async () => {
 			resetMomentumAPI();
 			const relCfg: MomentumConfig = {
 				collections: [categoriesCol, articlesRelCol],
@@ -1611,11 +1611,14 @@ describe('MomentumAPI', () => {
 			});
 
 			const query = vi.mocked(mockAdapter.find).mock.calls[0]?.[1] as Record<string, unknown>;
-			// The relationship sub-query inside or should be extracted as a JOIN
-			expect(query).toHaveProperty('$joins');
+			// Relationship sub-query inside or should stay inline as $join marker, not top-level $joins
+			expect(query['$joins']).toBeUndefined();
+			expect(query['$or']).toBeDefined();
+			const orArray = query['$or'] as Record<string, unknown>[];
+			expect(orArray.some((c) => '$join' in c)).toBe(true);
 		});
 
-		it('should extract relationship JOINs from inside and arrays', async () => {
+		it('should keep relationship JOINs inline within and arrays (not top-level $joins)', async () => {
 			resetMomentumAPI();
 			const relCfg: MomentumConfig = {
 				collections: [categoriesCol, articlesRelCol],
@@ -1632,7 +1635,11 @@ describe('MomentumAPI', () => {
 			});
 
 			const query = vi.mocked(mockAdapter.find).mock.calls[0]?.[1] as Record<string, unknown>;
-			expect(query).toHaveProperty('$joins');
+			// Relationship sub-query inside and should stay inline as $join marker, not top-level $joins
+			expect(query['$joins']).toBeUndefined();
+			expect(query['$and']).toBeDefined();
+			const andArray = query['$and'] as Record<string, unknown>[];
+			expect(andArray.some((c) => '$join' in c)).toBe(true);
 		});
 	});
 
@@ -2139,6 +2146,258 @@ describe('MomentumAPI', () => {
 				'posts',
 				expect.objectContaining({ status: { $eq: 'published' } }),
 			);
+		});
+	});
+
+	// ============================================
+	// TDD: Bug fixes for review issues #1, #2, #3
+	// ============================================
+
+	describe('Issue #1: relationship joins inside or groups must preserve OR semantics', () => {
+		const tagsCollection: CollectionConfig = {
+			slug: 'tags',
+			labels: { singular: 'Tag', plural: 'Tags' },
+			fields: [{ name: 'label', type: 'text', required: true }],
+		};
+
+		const postsWithTagCollection: CollectionConfig = {
+			slug: 'posts-tagged',
+			labels: { singular: 'Post', plural: 'Posts' },
+			fields: [
+				{ name: 'title', type: 'text', required: true },
+				{
+					name: 'tag',
+					type: 'relationship',
+					collection: () => tagsCollection,
+				} as CollectionConfig['fields'][number],
+			],
+		};
+
+		it('should place relationship JOIN inside $or — not as a top-level AND', async () => {
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [tagsCollection, postsWithTagCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg).setContext({ overrideAccess: true });
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts-tagged').find({
+				where: { or: [{ title: { equals: 'Hello' } }, { tag: { label: { equals: 'news' } } }] },
+			});
+
+			const query = vi.mocked(mockAdapter.find).mock.calls[0]?.[1] as Record<string, unknown>;
+
+			// The $or should contain BOTH conditions — the title filter AND the relationship join
+			// The relationship join must NOT be extracted to a top-level $joins AND
+			expect(query['$or']).toBeDefined();
+			const orArray = query['$or'] as Record<string, unknown>[];
+			expect(orArray).toHaveLength(2);
+
+			// One sub-clause should be the title condition
+			const titleClause = orArray.find((c) => 'title' in c);
+			expect(titleClause).toBeDefined();
+
+			// The other should contain the relationship join (either inline or as a $joins marker)
+			// The key point: the join must NOT appear at top-level query['$joins']
+			// because that would make it AND instead of OR
+			expect(query['$joins']).toBeUndefined();
+		});
+
+		it('should preserve AND semantics when relationship join is inside and group', async () => {
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [tagsCollection, postsWithTagCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg).setContext({ overrideAccess: true });
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await api.collection('posts-tagged').find({
+				where: {
+					and: [{ title: { equals: 'Hello' } }, { tag: { label: { equals: 'news' } } }],
+				},
+			});
+
+			const query = vi.mocked(mockAdapter.find).mock.calls[0]?.[1] as Record<string, unknown>;
+
+			// For AND, top-level $joins is acceptable (AND is the default combinator),
+			// but only if the non-join conditions are preserved in $and
+			expect(query['$and']).toBeDefined();
+		});
+	});
+
+	describe('Issue #2: collection-level read access must be checked on JOIN targets', () => {
+		const secretCollection: CollectionConfig = {
+			slug: 'secrets',
+			labels: { singular: 'Secret', plural: 'Secrets' },
+			fields: [{ name: 'value', type: 'text', required: true }],
+			access: { read: () => false },
+		};
+
+		const itemsWithSecretCollection: CollectionConfig = {
+			slug: 'items-secret',
+			labels: { singular: 'Item', plural: 'Items' },
+			fields: [
+				{ name: 'name', type: 'text', required: true },
+				{
+					name: 'secret_ref',
+					type: 'relationship',
+					collection: () => secretCollection,
+				} as CollectionConfig['fields'][number],
+			],
+		};
+
+		it('should deny relationship join when user lacks read access on the target collection', async () => {
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [secretCollection, itemsWithSecretCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			// No overrideAccess — normal user context
+			const api = initializeMomentumAPI(cfg);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('items-secret').find({
+					where: { secret_ref: { value: { equals: 'classified' } } },
+				}),
+			).rejects.toThrow(/access denied|cannot filter/i);
+		});
+
+		it('should allow relationship join when user has read access on the target collection', async () => {
+			const openCollection: CollectionConfig = {
+				slug: 'open-tags',
+				labels: { singular: 'Tag', plural: 'Tags' },
+				fields: [{ name: 'label', type: 'text', required: true }],
+				// No access restriction
+			};
+
+			const itemsWithOpenCollection: CollectionConfig = {
+				slug: 'items-open',
+				labels: { singular: 'Item', plural: 'Items' },
+				fields: [
+					{ name: 'name', type: 'text', required: true },
+					{
+						name: 'tag_ref',
+						type: 'relationship',
+						collection: () => openCollection,
+					} as CollectionConfig['fields'][number],
+				],
+			};
+
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [openCollection, itemsWithOpenCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('items-open').find({
+					where: { tag_ref: { label: { equals: 'safe' } } },
+				}),
+			).resolves.toBeDefined();
+		});
+
+		it('should deny relationship join in count() when user lacks read access on target', async () => {
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [secretCollection, itemsWithSecretCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('items-secret').count({
+					secret_ref: { value: { equals: 'classified' } },
+				}),
+			).rejects.toThrow(/access denied|cannot filter/i);
+		});
+	});
+
+	describe('Issue #3: mixed operator + sub-field keys on relationship must error', () => {
+		const authorsCollection: CollectionConfig = {
+			slug: 'authors',
+			labels: { singular: 'Author', plural: 'Authors' },
+			fields: [
+				{ name: 'name', type: 'text', required: true },
+				{ name: 'email', type: 'email' },
+			],
+		};
+
+		const postsWithAuthorCollection: CollectionConfig = {
+			slug: 'posts-authored',
+			labels: { singular: 'Post', plural: 'Posts' },
+			fields: [
+				{ name: 'title', type: 'text', required: true },
+				{
+					name: 'author',
+					type: 'relationship',
+					collection: () => authorsCollection,
+				} as CollectionConfig['fields'][number],
+			],
+		};
+
+		it('should reject where clause that mixes operators and sub-field references', async () => {
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [authorsCollection, postsWithAuthorCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg).setContext({ overrideAccess: true });
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			// Mixing FK operator (equals) with sub-field reference (name) is ambiguous
+			await expect(
+				api.collection('posts-authored').find({
+					where: { author: { equals: 'author-id-1', name: 'John' } },
+				}),
+			).rejects.toThrow(/cannot mix|ambiguous/i);
+		});
+
+		it('should accept pure operator queries on relationship field', async () => {
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [authorsCollection, postsWithAuthorCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg).setContext({ overrideAccess: true });
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			// Pure operator query on FK column — should work fine
+			await expect(
+				api.collection('posts-authored').find({
+					where: { author: { equals: 'author-id-1' } },
+				}),
+			).resolves.toBeDefined();
+		});
+
+		it('should accept pure sub-field queries on relationship field', async () => {
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [authorsCollection, postsWithAuthorCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg).setContext({ overrideAccess: true });
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			// Pure sub-field reference — should produce a JOIN
+			await expect(
+				api.collection('posts-authored').find({
+					where: { author: { name: { equals: 'John' } } },
+				}),
+			).resolves.toBeDefined();
 		});
 	});
 });

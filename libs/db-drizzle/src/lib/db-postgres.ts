@@ -448,12 +448,53 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 	 * Handles $or/$and by recursing and wrapping with parentheses.
 	 * Returns updated paramIndex.
 	 */
+	/**
+	 * Build an inline EXISTS subquery for a $join marker inside $or/$and (PostgreSQL).
+	 */
+	function buildPgInlineJoinClause(
+		joinSpec: unknown,
+		whereClauses: string[],
+		whereValues: unknown[],
+		paramIndex: number,
+		mainTable: string,
+	): number {
+		if (typeof joinSpec !== 'object' || joinSpec === null) return paramIndex;
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- $join marker structure
+		const j = joinSpec as {
+			targetTable: string;
+			localField: string;
+			targetField: string;
+			conditions: Record<string, unknown>;
+		};
+		validateCollectionSlug(j.targetTable);
+		if (!pgValidColumnName.test(j.localField))
+			throw new Error(`Invalid column name: ${j.localField}`);
+		if (!pgValidColumnName.test(j.targetField))
+			throw new Error(`Invalid column name: ${j.targetField}`);
+		const joinClauses: string[] = [];
+		paramIndex = buildPgWhereFragments(
+			j.conditions,
+			joinClauses,
+			whereValues,
+			paramIndex,
+			false,
+			mainTable,
+		);
+		const joinWhere = joinClauses.length > 0 ? ` AND ${joinClauses.join(' AND ')}` : '';
+		const tableName = resolveTableName(j.targetTable);
+		whereClauses.push(
+			`EXISTS (SELECT 1 FROM "${tableName}" WHERE "${tableName}"."${j.targetField}" = "${mainTable}"."${j.localField}"${joinWhere})`,
+		);
+		return paramIndex;
+	}
+
 	function buildPgWhereFragments(
 		params: Record<string, unknown>,
 		whereClauses: string[],
 		whereValues: unknown[],
 		paramIndex: number,
 		skipReserved: boolean,
+		mainTable?: string,
 	): number {
 		for (const [key, value] of Object.entries(params)) {
 			if (skipReserved && pgReservedParams.has(key)) continue;
@@ -466,13 +507,26 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				const subClauses: string[] = [];
 				for (const sub of value) {
 					if (typeof sub !== 'object' || sub === null) continue;
+					const subObj = sub as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions -- guarded by typeof check above
+					// Handle inline $join markers (relationship joins inside or/and groups)
+					if ('$join' in subObj && mainTable) {
+						paramIndex = buildPgInlineJoinClause(
+							subObj['$join'],
+							subClauses,
+							whereValues,
+							paramIndex,
+							mainTable,
+						);
+						continue;
+					}
 					const innerClauses: string[] = [];
 					paramIndex = buildPgWhereFragments(
-						sub as Record<string, unknown>, // eslint-disable-line @typescript-eslint/consistent-type-assertions -- guarded by typeof check above
+						subObj,
 						innerClauses,
 						whereValues,
 						paramIndex,
 						false,
+						mainTable,
 					);
 					if (innerClauses.length > 0) {
 						subClauses.push(`(${innerClauses.join(' AND ')})`);
@@ -605,7 +659,14 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 
 				const whereClauses: string[] = [];
 				const whereValues: unknown[] = [];
-				let paramIndex = buildPgWhereFragments(queryParams, whereClauses, whereValues, 1, true);
+				let paramIndex = buildPgWhereFragments(
+					queryParams,
+					whereClauses,
+					whereValues,
+					1,
+					true,
+					resolveTableName(collection),
+				);
 
 				// Handle $joins — build EXISTS subqueries for relationship filtering
 				const joins = queryParams['$joins'];
@@ -673,7 +734,14 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				validateCollectionSlug(collection);
 				const whereClauses: string[] = [];
 				const whereValues: unknown[] = [];
-				let paramIndex = buildPgWhereFragments(queryParams, whereClauses, whereValues, 1, true);
+				let paramIndex = buildPgWhereFragments(
+					queryParams,
+					whereClauses,
+					whereValues,
+					1,
+					true,
+					resolveTableName(collection),
+				);
 
 				// Handle $joins — build EXISTS subqueries for relationship filtering
 				const joins = queryParams['$joins'];

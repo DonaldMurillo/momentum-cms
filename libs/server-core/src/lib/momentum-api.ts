@@ -241,8 +241,7 @@ function stripTransientKeys(data: Record<string, unknown>): Record<string, unkno
 
 /**
  * Maps user-facing where clause operator names to `$`-prefixed internal names
- * consumed by database adapters. The `equals` operator is handled separately
- * (it unwraps to a direct value).
+ * consumed by database adapters.
  */
 const OPERATOR_MAP: Record<string, string> = {
 	equals: '$eq',
@@ -342,7 +341,11 @@ function flattenWhereRecursive(where: WhereClause, depth: number): Record<string
 			const internalKey = field === 'and' ? '$and' : '$or';
 			result[internalKey] = condition
 				.filter((sub: unknown): sub is WhereClause => typeof sub === 'object' && sub !== null)
-				.map((sub: WhereClause) => flattenWhereRecursive(sub, depth + 1));
+				.map((sub: WhereClause) => {
+					// Pass through $join markers — they are inline relationship join specs
+					if ('$join' in sub) return sub;
+					return flattenWhereRecursive(sub, depth + 1);
+				});
 			continue;
 		}
 
@@ -405,29 +408,41 @@ function extractRelationshipJoins(
 	where: WhereClause | undefined,
 	fields: Field[],
 	allCollections: CollectionConfig[],
-): { cleanedWhere: WhereClause | undefined; joins: JoinSpec[] } {
-	if (!where) return { cleanedWhere: undefined, joins: [] };
+): { cleanedWhere: WhereClause | undefined; joins: JoinSpec[]; allJoins: JoinSpec[] } {
+	if (!where) return { cleanedWhere: undefined, joins: [], allJoins: [] };
 
 	const dataFields = flattenDataFields(fields);
 	const fieldMap = new Map(dataFields.map((f) => [f.name, f]));
-	const joins: JoinSpec[] = [];
+	const joins: JoinSpec[] = []; // top-level joins only (become $joins on the query)
+	const allJoins: JoinSpec[] = []; // all joins including inline (for limit enforcement + access validation)
 	const cleanedWhere: WhereClause = {};
 
 	for (const [key, condition] of Object.entries(where)) {
-		// Recurse into and/or arrays to extract relationship JOINs from nested conditions
+		// Recurse into and/or arrays — relationship JOINs stay inline to preserve logical context
 		if (key === 'and' || key === 'or') {
 			if (Array.isArray(condition)) {
 				const cleanedArray: WhereClause[] = [];
 				for (const sub of condition) {
 					if (typeof sub === 'object' && sub !== null) {
-						const { cleanedWhere: subCleaned, joins: subJoins } = extractRelationshipJoins(
+						const {
+							cleanedWhere: subCleaned,
+							joins: subTopJoins,
+							allJoins: subAllJoins,
+						} = extractRelationshipJoins(
 							// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- WhereClause sub-object
 							sub as WhereClause,
 							fields,
 							allCollections,
 						);
 						if (subCleaned) cleanedArray.push(subCleaned);
-						joins.push(...subJoins);
+						// Keep joins inline: inject $join markers into the sub-clause
+						// so they stay within the or/and group instead of being promoted to top-level AND
+						for (const join of subTopJoins) {
+							// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- $join marker is an internal format not representable by WhereClause
+							cleanedArray.push({ ['$join']: join } as unknown as WhereClause);
+						}
+						// Collect into allJoins for limit enforcement + access validation
+						allJoins.push(...subAllJoins);
 					}
 				}
 				if (cleanedArray.length > 0) {
@@ -453,7 +468,18 @@ function extractRelationshipJoins(
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- condition is already verified as object above
 		const condObj = condition as Record<string, unknown>;
 		const condKeys = Object.keys(condObj);
+		const hasOperatorKeys = condKeys.some((k) => VALID_OPERATORS.has(k));
 		const hasNonOperatorKeys = condKeys.some((k) => !VALID_OPERATORS.has(k));
+
+		if (hasOperatorKeys && hasNonOperatorKeys) {
+			// Ambiguous: mixing FK operators (e.g. equals) with sub-field references (e.g. name)
+			throw new ValidationError([
+				{
+					field: key,
+					message: `Cannot mix operators and sub-field references on relationship field "${key}". Use either operators (e.g. { equals: 'id' }) or sub-field queries (e.g. { name: { equals: 'value' } }), not both.`,
+				},
+			]);
+		}
 
 		if (!hasNonOperatorKeys) {
 			// All keys are valid operators → this is an operator query on the ID column
@@ -501,18 +527,21 @@ function extractRelationshipJoins(
 		const flattenedConditions = flattenWhereClause(subWhere);
 
 		const targetTable = targetCollection.dbName ?? targetCollection.slug;
-		joins.push({
+		const joinSpec: JoinSpec = {
 			targetTable,
 			localField: key,
 			targetField: 'id',
 			conditions: flattenedConditions,
 			rawWhere: subWhere,
-		});
+		};
+		joins.push(joinSpec);
+		allJoins.push(joinSpec);
 	}
 
 	return {
 		cleanedWhere: Object.keys(cleanedWhere).length > 0 ? cleanedWhere : undefined,
 		joins,
+		allJoins,
 	};
 }
 
@@ -598,13 +627,14 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		const { depth: _depth, where, withDeleted: _wd, onlyDeleted: _od, ...queryOptions } = options;
 
 		// Extract relationship sub-queries into JOIN specs before flattening
-		const { cleanedWhere, joins } = extractRelationshipJoins(
+		// `joins` = top-level only (for $joins), `allJoins` = includes inline (for validation/limits)
+		const { cleanedWhere, joins, allJoins } = extractRelationshipJoins(
 			where,
 			this.collectionConfig.fields,
 			this.allCollections,
 		);
 
-		await this.enforceWhereLimits(cleanedWhere, joins);
+		await this.enforceWhereLimits(cleanedWhere, allJoins);
 
 		const whereParams = flattenWhereClause(cleanedWhere);
 
@@ -682,12 +712,10 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		}
 		delete countQuery['limit'];
 		delete countQuery['page'];
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
-		const allDocs = (await this.adapter.find(this.slug, {
-			...countQuery,
-			limit: 0, // Signal to adapter: count-only (returns all if not supported)
-		})) as T[];
-		const totalDocs = allDocs.length;
+		const totalDocs = this.adapter.count
+			? await this.adapter.count(this.slug, countQuery)
+			: // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
+				((await this.adapter.find(this.slug, { ...countQuery, limit: 0 })) as T[]).length;
 		const totalPages = Math.ceil(totalDocs / limit) || 1;
 
 		return {
@@ -1178,14 +1206,13 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		}
 
 		// Use find with where clause and count results
-		// Pass limit: 0 to signal we want all matching docs for counting
-		const { cleanedWhere, joins } = extractRelationshipJoins(
+		const { cleanedWhere, joins, allJoins } = extractRelationshipJoins(
 			where,
 			this.collectionConfig.fields,
 			this.allCollections,
 		);
 
-		await this.enforceWhereLimits(cleanedWhere, joins);
+		await this.enforceWhereLimits(cleanedWhere, allJoins);
 
 		const whereParams = flattenWhereClause(cleanedWhere);
 
@@ -1440,6 +1467,18 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 					(c) => (c.dbName ?? c.slug) === join.targetTable,
 				);
 				if (targetCol) {
+					// Check collection-level read access on the join target
+					// Prevents information leakage through EXISTS subqueries on restricted collections
+					const collectionAccessFn = targetCol.access?.read;
+					if (collectionAccessFn) {
+						const allowed = await Promise.resolve(
+							collectionAccessFn({ req: this.buildRequestContext() }),
+						);
+						if (!allowed) {
+							throw new AccessDeniedError('read', targetCol.slug);
+						}
+					}
+					// Check field-level access on the join target's fields
 					await validateWhereFields(join.rawWhere, targetCol.fields, this.buildRequestContext());
 				}
 			}
