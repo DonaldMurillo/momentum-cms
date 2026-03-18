@@ -543,7 +543,10 @@ async function validateWhereFields(
 			continue;
 		}
 		const field = fieldMap.get(fieldName);
-		if (!field?.access?.read) continue;
+		if (!field) {
+			throw new ValidationError([{ field: fieldName, message: `Unknown field: ${fieldName}` }]);
+		}
+		if (!field.access?.read) continue;
 		const allowed = await Promise.resolve(field.access.read({ req }));
 		if (!allowed) {
 			throw new AccessDeniedError('read', fieldName);

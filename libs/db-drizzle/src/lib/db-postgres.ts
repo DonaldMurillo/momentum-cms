@@ -553,7 +553,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 						);
 					}
 					const escaped = val.replace(/[%_\\]/g, '\\$&');
-					whereClauses.push(`${col} ILIKE $${paramIndex}`);
+					whereClauses.push(`${col} ILIKE $${paramIndex} ESCAPE '\\'`);
 					whereValues.push(`%${escaped}%`);
 					paramIndex++;
 				}
@@ -694,7 +694,9 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				const tsqueryExpr = `plainto_tsquery('simple', $1)`;
 
 				// Rank by relevance, fall back to ILIKE for partial matches
-				const ilikeClauses = fields.map((f, i) => `"${f}"::text ILIKE $${i + 2}`).join(' OR ');
+				const ilikeClauses = fields
+					.map((f, i) => `"${f}"::text ILIKE $${i + 2} ESCAPE '\\'`)
+					.join(' OR ');
 				const escapedQuery = searchQuery.replace(/[%_\\]/g, '\\$&');
 				const ilikePattern = `%${escapedQuery}%`;
 				const ilikeParams = fields.map(() => ilikePattern);

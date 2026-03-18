@@ -690,7 +690,7 @@ describe('MomentumAPI', () => {
 
 	describe('where clause comparison operators', () => {
 		it('should pass gte operator to the adapter as $gte', async () => {
-			const api = initializeMomentumAPI(config);
+			const api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
 			vi.mocked(mockAdapter.find).mockResolvedValue([]);
 
 			await api.collection('posts').find({
@@ -704,7 +704,7 @@ describe('MomentumAPI', () => {
 		});
 
 		it('should pass lte operator to the adapter as $lte', async () => {
-			const api = initializeMomentumAPI(config);
+			const api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
 			vi.mocked(mockAdapter.find).mockResolvedValue([]);
 
 			await api.collection('posts').find({
@@ -718,7 +718,7 @@ describe('MomentumAPI', () => {
 		});
 
 		it('should pass gt operator to the adapter as $gt', async () => {
-			const api = initializeMomentumAPI(config);
+			const api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
 			vi.mocked(mockAdapter.find).mockResolvedValue([]);
 
 			await api.collection('posts').find({
@@ -732,7 +732,7 @@ describe('MomentumAPI', () => {
 		});
 
 		it('should pass lt operator to the adapter as $lt', async () => {
-			const api = initializeMomentumAPI(config);
+			const api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
 			vi.mocked(mockAdapter.find).mockResolvedValue([]);
 
 			await api.collection('posts').find({
@@ -746,7 +746,7 @@ describe('MomentumAPI', () => {
 		});
 
 		it('should combine gte and lte into a single operator object', async () => {
-			const api = initializeMomentumAPI(config);
+			const api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
 			vi.mocked(mockAdapter.find).mockResolvedValue([]);
 
 			await api.collection('posts').find({
@@ -862,7 +862,7 @@ describe('MomentumAPI', () => {
 		});
 
 		it('should pass exists: true operator to the adapter as $exists', async () => {
-			const api = initializeMomentumAPI(config);
+			const api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
 			vi.mocked(mockAdapter.find).mockResolvedValue([]);
 
 			await api.collection('posts').find({
@@ -876,7 +876,7 @@ describe('MomentumAPI', () => {
 		});
 
 		it('should pass exists: false operator to the adapter as $exists', async () => {
-			const api = initializeMomentumAPI(config);
+			const api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
 			vi.mocked(mockAdapter.find).mockResolvedValue([]);
 
 			await api.collection('posts').find({
@@ -890,7 +890,7 @@ describe('MomentumAPI', () => {
 		});
 
 		it('should merge multiple operators on the same field', async () => {
-			const api = initializeMomentumAPI(config);
+			const api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
 			vi.mocked(mockAdapter.find).mockResolvedValue([]);
 
 			await api.collection('posts').find({
@@ -1020,7 +1020,7 @@ describe('MomentumAPI', () => {
 		});
 
 		it('should throw when where clause exceeds 20 field conditions', async () => {
-			const api = initializeMomentumAPI(config);
+			const api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
 			vi.mocked(mockAdapter.find).mockResolvedValue([]);
 
 			const bigWhere: Record<string, unknown> = {};
@@ -1032,7 +1032,7 @@ describe('MomentumAPI', () => {
 		});
 
 		it('should allow up to 20 field conditions', async () => {
-			const api = initializeMomentumAPI(config);
+			const api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
 			vi.mocked(mockAdapter.find).mockResolvedValue([]);
 
 			const where: Record<string, unknown> = {};
@@ -1488,7 +1488,7 @@ describe('MomentumAPI', () => {
 
 	describe('security: recursive condition counting in where clauses', () => {
 		it('should count conditions recursively inside or arrays', async () => {
-			const api = initializeMomentumAPI(config);
+			const api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
 			vi.mocked(mockAdapter.find).mockResolvedValue([]);
 
 			// 21 conditions inside a single or array — should exceed limit of 20
@@ -1500,7 +1500,7 @@ describe('MomentumAPI', () => {
 		});
 
 		it('should count conditions recursively inside and arrays', async () => {
-			const api = initializeMomentumAPI(config);
+			const api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
 			vi.mocked(mockAdapter.find).mockResolvedValue([]);
 
 			const conditions = Array.from({ length: 21 }, (_, i) => ({ [`field${i}`]: 'val' }));
@@ -1511,7 +1511,7 @@ describe('MomentumAPI', () => {
 		});
 
 		it('should count across nested or/and levels', async () => {
-			const api = initializeMomentumAPI(config);
+			const api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
 			vi.mocked(mockAdapter.find).mockResolvedValue([]);
 
 			// 11 conditions at top + 11 inside or = 22 total
@@ -1527,7 +1527,7 @@ describe('MomentumAPI', () => {
 		});
 
 		it('should allow exactly 20 conditions split across or/and', async () => {
-			const api = initializeMomentumAPI(config);
+			const api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
 			vi.mocked(mockAdapter.find).mockResolvedValue([]);
 
 			// 10 top-level + 10 inside or = 20 total
@@ -1558,7 +1558,7 @@ describe('MomentumAPI', () => {
 		});
 
 		it('should reject or explicitly handle equals combined with range operators', async () => {
-			const api = initializeMomentumAPI(config);
+			const api = initializeMomentumAPI(config).setContext({ overrideAccess: true });
 			vi.mocked(mockAdapter.find).mockResolvedValue([]);
 
 			// This should either throw a ValidationError (ambiguous) or include both operators
@@ -1627,15 +1627,58 @@ describe('MomentumAPI', () => {
 
 			await api.collection('articles-rel').find({
 				where: {
-					and: [
-						{ title: { contains: 'hello' } },
-						{ category: { name: { contains: 'Tech' } } },
-					],
+					and: [{ title: { contains: 'hello' } }, { category: { name: { contains: 'Tech' } } }],
 				},
 			});
 
 			const query = vi.mocked(mockAdapter.find).mock.calls[0]?.[1] as Record<string, unknown>;
 			expect(query).toHaveProperty('$joins');
+		});
+	});
+
+	describe('Issue: reject undeclared fields in where clauses', () => {
+		it('should reject where clause fields that are not in the collection definition', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('posts').find({
+					where: { nonExistentField: { equals: 'test' } },
+				}),
+			).rejects.toThrow(/unknown field/i);
+		});
+
+		it('should reject undeclared fields nested inside or conditions', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('posts').find({
+					where: { or: [{ _status: { equals: 'draft' } }] },
+				}),
+			).rejects.toThrow(/unknown field/i);
+		});
+
+		it('should reject undeclared fields nested inside and conditions', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('posts').find({
+					where: { and: [{ deletedAt: { equals: null } }] },
+				}),
+			).rejects.toThrow(/unknown field/i);
+		});
+
+		it('should still allow declared fields without access control', async () => {
+			const api = initializeMomentumAPI(config);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('posts').find({
+					where: { title: { equals: 'valid' } },
+				}),
+			).resolves.toBeDefined();
 		});
 	});
 
