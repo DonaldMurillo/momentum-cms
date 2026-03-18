@@ -538,7 +538,9 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 							// For JSON path comparisons with numeric operators, cast to NUMERIC
 							const castSuffix =
 								rawExpr && ['>', '>=', '<', '<='].includes(sqlOp) ? '::NUMERIC' : '';
-							whereClauses.push(`${col}${castSuffix} ${sqlOp} $${paramIndex}`);
+							// Add ESCAPE clause for LIKE so backslash-escaped wildcards work consistently
+							const escapeSuffix = op === '$like' ? " ESCAPE '\\'" : '';
+							whereClauses.push(`${col}${castSuffix} ${sqlOp} $${paramIndex}${escapeSuffix}`);
 							whereValues.push(valObj[op]);
 							paramIndex++;
 						}
@@ -665,6 +667,61 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 					`SELECT * FROM "${resolveTableName(collection)}" ${whereClause} ${orderByClause} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
 					[...whereValues, limitValue, offset],
 				);
+			},
+
+			async count(collection: string, queryParams: Record<string, unknown>): Promise<number> {
+				validateCollectionSlug(collection);
+				const whereClauses: string[] = [];
+				const whereValues: unknown[] = [];
+				let paramIndex = buildPgWhereFragments(queryParams, whereClauses, whereValues, 1, true);
+
+				// Handle $joins — build EXISTS subqueries for relationship filtering
+				const joins = queryParams['$joins'];
+				if (Array.isArray(joins)) {
+					for (const join of joins) {
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- $joins array elements are JoinSpec objects from momentum-api
+						const j = join as {
+							targetTable: string;
+							localField: string;
+							targetField: string;
+							conditions: Record<string, unknown>;
+						};
+						validateCollectionSlug(j.targetTable);
+						if (!pgValidColumnName.test(j.localField)) {
+							throw new Error(`Invalid column name: ${j.localField}`);
+						}
+						if (!pgValidColumnName.test(j.targetField)) {
+							throw new Error(`Invalid column name: ${j.targetField}`);
+						}
+						const joinClauses: string[] = [];
+						paramIndex = buildPgWhereFragments(
+							j.conditions,
+							joinClauses,
+							whereValues,
+							paramIndex,
+							false,
+						);
+						const joinWhere = joinClauses.length > 0 ? ` AND ${joinClauses.join(' AND ')}` : '';
+						const tableName = resolveTableName(j.targetTable);
+						const mainTable = resolveTableName(collection);
+						whereClauses.push(
+							`EXISTS (SELECT 1 FROM "${tableName}" WHERE "${tableName}"."${j.targetField}" = "${mainTable}"."${j.localField}"${joinWhere})`,
+						);
+					}
+				}
+
+				const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+				const rows = await h.query(
+					`SELECT COUNT(*) as count FROM "${resolveTableName(collection)}" ${whereClause}`,
+					whereValues,
+				);
+				if (rows.length > 0 && typeof rows[0]['count'] === 'string') {
+					return parseInt(rows[0]['count'], 10);
+				}
+				if (rows.length > 0 && typeof rows[0]['count'] === 'number') {
+					return rows[0]['count'];
+				}
+				return 0;
 			},
 
 			async search(

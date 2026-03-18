@@ -799,4 +799,43 @@ describe('sqliteAdapter', () => {
 			expect(docs[0]['title']).toBe('Normal Post');
 		});
 	});
+
+	describe('count()', () => {
+		let adapter: Awaited<ReturnType<typeof sqliteAdapter>>;
+
+		beforeEach(async () => {
+			adapter = sqliteAdapter({ filename: ':memory:' });
+			await adapter.initialize?.([mockPostsCollection]);
+			await adapter.create('posts', { title: 'Post A', content: 'AAA' });
+			await adapter.create('posts', { title: 'Post B', content: 'BBB' });
+			await adapter.create('posts', { title: 'Post C', content: 'CCC' });
+		});
+
+		it('should return total count with no filter', async () => {
+			const result = await adapter.count?.('posts', {});
+			expect(result).toBe(3);
+		});
+
+		it('should return count matching a where clause', async () => {
+			const result = await adapter.count?.('posts', { title: 'Post A' });
+			expect(result).toBe(1);
+		});
+
+		it('should return 0 for no matches', async () => {
+			const result = await adapter.count?.('posts', { title: 'Nonexistent' });
+			expect(result).toBe(0);
+		});
+
+		it('should handle operator-based where clauses', async () => {
+			const result = await adapter.count?.('posts', { title: { $contains: 'Post' } });
+			expect(result).toBe(3);
+		});
+
+		it('should handle $or conditions', async () => {
+			const result = await adapter.count?.('posts', {
+				$or: [{ title: 'Post A' }, { title: 'Post B' }],
+			});
+			expect(result).toBe(2);
+		});
+	});
 });

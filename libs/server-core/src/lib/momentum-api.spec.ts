@@ -1881,4 +1881,264 @@ describe('MomentumAPI', () => {
 			).rejects.toThrow(/not allowed|unknown|invalid/i);
 		});
 	});
+
+	// ============================================
+	// Issue #4: dot-notation where clauses on JSON/group fields
+	// ============================================
+
+	describe('Issue #4: dot-notation where clauses on JSON/group fields', () => {
+		const jsonCollection: CollectionConfig = {
+			slug: 'products',
+			labels: { singular: 'Product', plural: 'Products' },
+			fields: [
+				{ name: 'title', type: 'text', required: true },
+				{ name: 'metadata', type: 'json', label: 'Metadata' },
+			],
+		};
+
+		const restrictedJsonCollection: CollectionConfig = {
+			slug: 'secrets',
+			labels: { singular: 'Secret', plural: 'Secrets' },
+			fields: [
+				{ name: 'label', type: 'text' },
+				{
+					name: 'data',
+					type: 'json',
+					label: 'Data',
+					access: { read: () => false },
+				},
+			],
+		};
+
+		it('should allow dot-notation where clause on json fields', async () => {
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [jsonCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('products').find({
+					where: { 'metadata.color': { equals: 'blue' } },
+				}),
+			).resolves.toBeDefined();
+		});
+
+		it('should allow multi-level dot-notation where clause', async () => {
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [jsonCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('products').find({
+					where: { 'metadata.dimensions.width': { gte: 10 } },
+				}),
+			).resolves.toBeDefined();
+		});
+
+		it('should reject dot-notation when the base field does not exist', async () => {
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [jsonCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('products').find({
+					where: { 'nonexistent.color': { equals: 'blue' } },
+				}),
+			).rejects.toThrow(/unknown field/i);
+		});
+
+		it('should enforce field-level access on dot-notation fields', async () => {
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [restrictedJsonCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg);
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await expect(
+				api.collection('secrets').find({
+					where: { 'data.key': { equals: 'value' } },
+				}),
+			).rejects.toThrow(/access denied/i);
+		});
+	});
+
+	// ============================================
+	// Issue #1: count() must inject defaultWhere + _status
+	// ============================================
+
+	describe('Issue #1: count() must inject defaultWhere and _status', () => {
+		const scopedCollection: CollectionConfig = {
+			slug: 'notes',
+			labels: { singular: 'Note', plural: 'Notes' },
+			fields: [
+				{ name: 'body', type: 'text' },
+				{ name: 'ownerId', type: 'text' },
+			],
+			defaultWhere: (req) => (req.user ? { ownerId: req.user.id } : undefined),
+		};
+
+		const versionedCollection: CollectionConfig = {
+			slug: 'docs',
+			labels: { singular: 'Doc', plural: 'Docs' },
+			fields: [{ name: 'title', type: 'text', required: true }],
+			versions: {
+				drafts: true,
+			},
+			access: {
+				readDrafts: ({ req }) => req.user?.role === 'admin',
+			},
+		};
+
+		it('should inject defaultWhere constraints into count queries', async () => {
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [scopedCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg);
+			const authApi = api.setContext({ user: { id: 'user-42' }, overrideAccess: true });
+			vi.mocked(mockAdapter.find).mockResolvedValue([{ id: '1' }]);
+
+			await authApi.collection('notes').count();
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'notes',
+				expect.objectContaining({ ownerId: 'user-42' }),
+			);
+		});
+
+		it('should inject _status=published in count for non-draft-readers', async () => {
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [versionedCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg);
+			const userApi = api.setContext({ user: { id: 'user-1', role: 'editor' } });
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await userApi.collection('docs').count();
+
+			expect(mockAdapter.find).toHaveBeenCalledWith(
+				'docs',
+				expect.objectContaining({ _status: 'published' }),
+			);
+		});
+
+		it('should NOT inject _status when user has readDrafts access', async () => {
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [versionedCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg);
+			const adminApi = api.setContext({ user: { id: 'admin-1', role: 'admin' } });
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await adminApi.collection('docs').count();
+
+			const callArgs = vi.mocked(mockAdapter.find).mock.calls[0][1];
+			expect(callArgs).not.toHaveProperty('_status');
+		});
+
+		it('should NOT inject _status when overrideAccess is true', async () => {
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [versionedCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg);
+			const sysApi = api.setContext({ overrideAccess: true });
+			vi.mocked(mockAdapter.find).mockResolvedValue([]);
+
+			await sysApi.collection('docs').count();
+
+			const callArgs = vi.mocked(mockAdapter.find).mock.calls[0][1];
+			expect(callArgs).not.toHaveProperty('_status');
+		});
+	});
+
+	// ============================================
+	// Issue #2: count() should use adapter.count() instead of loading all rows
+	// ============================================
+
+	describe('Issue #2: count() should use adapter.count()', () => {
+		it('should call adapter.count() when available', async () => {
+			resetMomentumAPI();
+			const adapterWithCount: DatabaseAdapter = {
+				...mockAdapter,
+				count: vi.fn().mockResolvedValue(42),
+			};
+			const cfg: MomentumConfig = {
+				collections: [mockPostsCollection],
+				db: { adapter: adapterWithCount },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg).setContext({ overrideAccess: true });
+
+			const result = await api.collection('posts').count();
+
+			expect(result).toBe(42);
+			expect(adapterWithCount.count).toHaveBeenCalledWith('posts', expect.any(Object));
+			expect(adapterWithCount.find).not.toHaveBeenCalled();
+		});
+
+		it('should fall back to adapter.find() when adapter.count() is not available', async () => {
+			resetMomentumAPI();
+			const cfg: MomentumConfig = {
+				collections: [mockPostsCollection],
+				db: { adapter: mockAdapter },
+				server: { port: 4000 },
+			};
+			vi.mocked(mockAdapter.find).mockResolvedValue([{ id: '1' }, { id: '2' }]);
+			const api = initializeMomentumAPI(cfg).setContext({ overrideAccess: true });
+
+			const result = await api.collection('posts').count();
+
+			expect(result).toBe(2);
+			expect(mockAdapter.find).toHaveBeenCalled();
+		});
+
+		it('should pass where params to adapter.count()', async () => {
+			resetMomentumAPI();
+			const adapterWithCount: DatabaseAdapter = {
+				...mockAdapter,
+				count: vi.fn().mockResolvedValue(5),
+			};
+			const cfg: MomentumConfig = {
+				collections: [mockPostsCollection],
+				db: { adapter: adapterWithCount },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(cfg).setContext({ overrideAccess: true });
+
+			await api.collection('posts').count({ status: { equals: 'published' } });
+
+			expect(adapterWithCount.count).toHaveBeenCalledWith(
+				'posts',
+				expect.objectContaining({ status: { $eq: 'published' } }),
+			);
+		});
+	});
 });

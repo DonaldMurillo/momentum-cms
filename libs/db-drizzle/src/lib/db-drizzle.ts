@@ -73,7 +73,12 @@ function buildOperatorClauses(
 						`Pattern value for $like exceeds maximum length of ${MAX_PATTERN_LENGTH} characters`,
 					);
 				}
-				whereClauses.push(`${col} ${sqlOp} ?`);
+				// Add ESCAPE clause for LIKE so backslash-escaped wildcards work consistently
+				if (op === '$like') {
+					whereClauses.push(`${col} ${sqlOp} ? ESCAPE '\\'`);
+				} else {
+					whereClauses.push(`${col} ${sqlOp} ?`);
+				}
 				whereValues.push(record[op]);
 			}
 		}
@@ -506,6 +511,48 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		);
 	}
 
+	function countSync(collection: string, query: Record<string, unknown>): number {
+		validateCollectionSlug(collection);
+		const whereClauses: string[] = [];
+		const whereValues: unknown[] = [];
+
+		buildWhereFragments(query, whereClauses, whereValues, true);
+
+		// Handle $joins — build EXISTS subqueries for relationship filtering
+		const joins = query['$joins'];
+		if (Array.isArray(joins)) {
+			for (const join of joins) {
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- $joins array elements are JoinSpec objects from momentum-api
+				const j = join as {
+					targetTable: string;
+					localField: string;
+					targetField: string;
+					conditions: Record<string, unknown>;
+				};
+				validateCollectionSlug(j.targetTable);
+				if (!validColumnName.test(j.localField)) {
+					throw new Error(`Invalid column name: ${j.localField}`);
+				}
+				if (!validColumnName.test(j.targetField)) {
+					throw new Error(`Invalid column name: ${j.targetField}`);
+				}
+				const joinClauses: string[] = [];
+				buildWhereFragments(j.conditions, joinClauses, whereValues, false);
+				const joinWhere = joinClauses.length > 0 ? ` AND ${joinClauses.join(' AND ')}` : '';
+				const tableName = resolveTableName(j.targetTable);
+				whereClauses.push(
+					`EXISTS (SELECT 1 FROM "${tableName}" WHERE "${tableName}"."${j.targetField}" = "${resolveTableName(collection)}"."${j.localField}"${joinWhere})`,
+				);
+			}
+		}
+
+		const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+		const sql = `SELECT COUNT(*) as count FROM "${resolveTableName(collection)}" ${whereClause}`;
+		const result = sqlite.prepare(sql).get(...whereValues);
+		if (isRecord(result) && typeof result['count'] === 'number') return result['count'];
+		return 0;
+	}
+
 	function findByIdSync(collection: string, id: string): Record<string, unknown> | null {
 		validateCollectionSlug(collection);
 		const row: unknown = sqlite
@@ -911,6 +958,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 
 		async find(collection, query) {
 			return findSync(collection, query);
+		},
+		async count(collection, query) {
+			return countSync(collection, query);
 		},
 		async findById(collection, id) {
 			return findByIdSync(collection, id);

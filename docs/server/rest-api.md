@@ -32,20 +32,20 @@ Two URL formats are supported:
 
 #### Available Operators
 
-| Operator      | Description                        | Example                                   |
-| ------------- | ---------------------------------- | ----------------------------------------- |
-| `equals`      | Exact match                        | `{"status":{"equals":"published"}}`       |
-| _(shorthand)_ | Direct value = equals              | `{"status":"published"}`                  |
-| `not_equals`  | Not equal                          | `{"status":{"not_equals":"archived"}}`    |
-| `gt`          | Greater than                       | `{"price":{"gt":50}}`                     |
-| `gte`         | Greater than or equal              | `{"price":{"gte":50}}`                    |
-| `lt`          | Less than                          | `{"price":{"lt":100}}`                    |
-| `lte`         | Less than or equal                 | `{"price":{"lte":100}}`                   |
-| `like`        | SQL LIKE pattern (case-sensitive)  | `{"title":{"like":"%hello%"}}`            |
-| `contains`    | Substring match (case-insensitive) | `{"title":{"contains":"hello"}}`          |
-| `in`          | Match any value in array           | `{"status":{"in":["draft","published"]}}` |
-| `not_in`      | Exclude values in array            | `{"status":{"not_in":["archived"]}}`      |
-| `exists`      | Null check (true=IS NOT NULL)      | `{"category":{"exists":true}}`            |
+| Operator      | Description                                                  | Example                                   |
+| ------------- | ------------------------------------------------------------ | ----------------------------------------- |
+| `equals`      | Exact match                                                  | `{"status":{"equals":"published"}}`       |
+| _(shorthand)_ | Direct value = equals                                        | `{"status":"published"}`                  |
+| `not_equals`  | Not equal                                                    | `{"status":{"not_equals":"archived"}}`    |
+| `gt`          | Greater than                                                 | `{"price":{"gt":50}}`                     |
+| `gte`         | Greater than or equal                                        | `{"price":{"gte":50}}`                    |
+| `lt`          | Less than                                                    | `{"price":{"lt":100}}`                    |
+| `lte`         | Less than or equal                                           | `{"price":{"lte":100}}`                   |
+| `like`        | SQL LIKE pattern (case-sensitive, caller provides wildcards) | `{"title":{"like":"%hello%"}}`            |
+| `contains`    | Substring match (case-insensitive)                           | `{"title":{"contains":"hello"}}`          |
+| `in`          | Match any value in array                                     | `{"status":{"in":["draft","published"]}}` |
+| `not_in`      | Exclude values in array                                      | `{"status":{"not_in":["archived"]}}`      |
+| `exists`      | Null check (true=IS NOT NULL)                                | `{"category":{"exists":true}}`            |
 
 #### Combining Operators
 

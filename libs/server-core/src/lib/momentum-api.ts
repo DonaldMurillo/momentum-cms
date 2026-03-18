@@ -542,14 +542,16 @@ async function validateWhereFields(
 			}
 			continue;
 		}
-		const field = fieldMap.get(fieldName);
+		// Support dot-notation: "metadata.color" → base field "metadata"
+		const baseName = fieldName.includes('.') ? fieldName.split('.')[0] : fieldName;
+		const field = fieldMap.get(baseName);
 		if (!field) {
-			throw new ValidationError([{ field: fieldName, message: `Unknown field: ${fieldName}` }]);
+			throw new ValidationError([{ field: fieldName, message: `Unknown field: ${baseName}` }]);
 		}
 		if (!field.access?.read) continue;
 		const allowed = await Promise.resolve(field.access.read({ req }));
 		if (!allowed) {
-			throw new AccessDeniedError('read', fieldName);
+			throw new AccessDeniedError('read', baseName);
 		}
 	}
 }
@@ -1193,11 +1195,33 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			whereParams[softDeleteField] = null;
 		}
 
-		const query: Record<string, unknown> = { ...whereParams, limit: 0 };
+		// Inject defaultWhere constraints (same as find())
+		if (this.collectionConfig.defaultWhere) {
+			const constraints = this.collectionConfig.defaultWhere(this.buildRequestContext());
+			if (constraints) {
+				Object.assign(whereParams, constraints);
+			}
+		}
+
+		// Draft visibility: only users with readDrafts access see drafts (same as find())
+		if (hasVersionDrafts(this.collectionConfig) && !this.context.overrideAccess) {
+			const canSeeDrafts = await this.canReadDrafts();
+			if (!canSeeDrafts) {
+				whereParams['_status'] = 'published';
+			}
+		}
+
+		const query: Record<string, unknown> = { ...whereParams };
 		if (joins.length > 0) {
 			query['$joins'] = joins.map(({ rawWhere: _rw, ...rest }) => rest);
 		}
-		const docs = await this.adapter.find(this.slug, query);
+
+		// Use adapter.count() if available (efficient SELECT COUNT(*)),
+		// otherwise fall back to loading all rows
+		if (this.adapter.count) {
+			return this.adapter.count(this.slug, query);
+		}
+		const docs = await this.adapter.find(this.slug, { ...query, limit: 0 });
 		return docs.length;
 	}
 
