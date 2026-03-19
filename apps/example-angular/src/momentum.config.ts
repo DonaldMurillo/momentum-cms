@@ -33,7 +33,7 @@ const dbAdapter = postgresAdapter({
 });
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- PostgresAdapter implements PostgresAdapterWithRaw
-const pool = (dbAdapter as PostgresAdapterWithRaw).getPool();
+export const pool = (dbAdapter as PostgresAdapterWithRaw).getPool();
 
 const authBaseURL =
 	process.env['BETTER_AUTH_URL'] || `http://localhost:${process.env['PORT'] || 4000}`;

@@ -1,0 +1,233 @@
+{
+	"skill": "component",
+	"version": 3,
+	"test_cases": [
+		{
+			"name": "basic-ui-component",
+			"description": "Generate a simple status-badge component in the UI library",
+			"prompt": "Create a status-badge component in libs/ui that displays a colored badge based on a status input. It should accept a status ('active' | 'inactive' | 'pending') and a label string. Use appropriate Tailwind classes for each status color (green for active, red for inactive, yellow for pending).",
+			"assertions": [
+				{
+					"type": "file_exists",
+					"path": "libs/ui/src/lib/status-badge/status-badge.ts",
+					"path_alt": "libs/ui/src/lib/status-badge/status-badge.component.ts",
+					"tier": "baseline"
+				},
+				{
+					"type": "file_exists",
+					"path": "libs/ui/src/lib/status-badge/status-badge.spec.ts",
+					"path_alt": "libs/ui/src/lib/status-badge/status-badge.component.spec.ts",
+					"tier": "baseline"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/ui/src/lib/status-badge/status-badge.ts",
+					"path_alt": "libs/ui/src/lib/status-badge/status-badge.component.ts",
+					"patterns": ["ChangeDetectionStrategy.OnPush", "input", "host:"],
+					"tier": "baseline"
+				},
+				{
+					"type": "file_not_contains",
+					"path": "libs/ui/src/lib/status-badge/status-badge.ts",
+					"path_alt": "libs/ui/src/lib/status-badge/status-badge.component.ts",
+					"patterns": ["standalone: true", "@Input()", "CommonModule", ": any"],
+					"tier": "baseline"
+				},
+				{
+					"type": "file_exists",
+					"path": "libs/ui/src/lib/status-badge/status-badge.ts",
+					"tier": "convention",
+					"_comment": "Strict: must use .ts not .component.ts"
+				},
+				{
+					"type": "file_exists",
+					"path": "libs/ui/src/lib/status-badge/status-badge.spec.ts",
+					"tier": "convention",
+					"_comment": "Strict: spec must also use .ts not .component.spec.ts"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/ui/src/lib/status-badge/status-badge.ts",
+					"path_alt": "libs/ui/src/lib/status-badge/status-badge.component.ts",
+					"patterns": ["mcms-status-badge"],
+					"tier": "convention",
+					"_comment": "Must use mcms- prefix on selector"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/ui/src/index.ts",
+					"patterns": ["status-badge"],
+					"tier": "convention",
+					"_comment": "Must export from barrel file"
+				},
+				{
+					"type": "command_succeeds",
+					"command": "npx nx lint ui",
+					"tier": "quality",
+					"timeout": 60000
+				}
+			]
+		},
+		{
+			"name": "admin-component-with-inject",
+			"description": "Generate a component in admin lib that uses inject() and McmsThemeService",
+			"prompt": "Create a user-avatar component in libs/admin that displays a user avatar with initials fallback. It should use McmsThemeService to adjust styling for dark mode. Accept inputs for imageUrl (optional string), name (required string), and size ('sm' | 'md' | 'lg'). Show initials when no imageUrl is provided.",
+			"assertions": [
+				{
+					"type": "file_exists",
+					"path": "libs/admin/src/lib/components/user-avatar/user-avatar.ts",
+					"path_alt": "libs/admin/src/lib/components/user-avatar/user-avatar.component.ts",
+					"tier": "baseline"
+				},
+				{
+					"type": "file_exists",
+					"path": "libs/admin/src/lib/components/user-avatar/user-avatar.spec.ts",
+					"path_alt": "libs/admin/src/lib/components/user-avatar/user-avatar.component.spec.ts",
+					"tier": "baseline"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/admin/src/lib/components/user-avatar/user-avatar.ts",
+					"path_alt": "libs/admin/src/lib/components/user-avatar/user-avatar.component.ts",
+					"patterns": [
+						"ChangeDetectionStrategy.OnPush",
+						"inject(",
+						"McmsThemeService",
+						"computed(",
+						"input"
+					],
+					"tier": "baseline"
+				},
+				{
+					"type": "file_not_contains",
+					"path": "libs/admin/src/lib/components/user-avatar/user-avatar.ts",
+					"path_alt": "libs/admin/src/lib/components/user-avatar/user-avatar.component.ts",
+					"patterns": ["standalone: true", "@Input()", ": any"],
+					"tier": "baseline"
+				},
+				{
+					"type": "file_exists",
+					"path": "libs/admin/src/lib/components/user-avatar/user-avatar.ts",
+					"tier": "convention",
+					"_comment": "Strict: must use .ts not .component.ts"
+				},
+				{
+					"type": "file_exists",
+					"path": "libs/admin/src/lib/components/user-avatar/user-avatar.spec.ts",
+					"tier": "convention",
+					"_comment": "Strict: spec must also use .ts"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/admin/src/lib/components/user-avatar/user-avatar.ts",
+					"path_alt": "libs/admin/src/lib/components/user-avatar/user-avatar.component.ts",
+					"patterns": ["mcms-user-avatar"],
+					"tier": "convention",
+					"_comment": "Must use mcms- prefix on selector"
+				},
+				{
+					"type": "command_succeeds",
+					"command": "npx nx lint admin",
+					"tier": "quality",
+					"timeout": 60000
+				}
+			]
+		},
+		{
+			"name": "component-with-variants",
+			"description": "Generate a component that combines base, variant, and consumer classes on the host element",
+			"prompt": "Create a chip component in libs/ui that supports variant styling. It should accept a variant input ('filled' | 'outlined' | 'soft') and a color input ('primary' | 'secondary' | 'success' | 'danger'). It should also accept a class input so consumers can add their own Tailwind classes. All classes (base styles, variant styles, color styles, and consumer classes) should be combined and applied to the host element using a computed signal bound to [class] in the host config.",
+			"assertions": [
+				{
+					"type": "file_exists",
+					"path": "libs/ui/src/lib/chip/chip.ts",
+					"path_alt": "libs/ui/src/lib/chip/chip.component.ts",
+					"tier": "baseline"
+				},
+				{
+					"type": "file_exists",
+					"path": "libs/ui/src/lib/chip/chip.spec.ts",
+					"path_alt": "libs/ui/src/lib/chip/chip.component.spec.ts",
+					"tier": "baseline"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/ui/src/lib/chip/chip.ts",
+					"path_alt": "libs/ui/src/lib/chip/chip.component.ts",
+					"patterns": [
+						"ChangeDetectionStrategy.OnPush",
+						"computed(",
+						"this.class()",
+						"this.variant()",
+						"host:"
+					],
+					"tier": "baseline"
+				},
+				{
+					"type": "file_not_contains",
+					"path": "libs/ui/src/lib/chip/chip.ts",
+					"path_alt": "libs/ui/src/lib/chip/chip.component.ts",
+					"patterns": ["standalone: true", "@Input()", ": any"],
+					"tier": "baseline"
+				},
+				{
+					"type": "file_exists",
+					"path": "libs/ui/src/lib/chip/chip.ts",
+					"tier": "convention",
+					"_comment": "Strict: must use .ts not .component.ts"
+				},
+				{
+					"type": "file_exists",
+					"path": "libs/ui/src/lib/chip/chip.spec.ts",
+					"tier": "convention",
+					"_comment": "Strict: spec must also use .ts"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/ui/src/lib/chip/chip.ts",
+					"path_alt": "libs/ui/src/lib/chip/chip.component.ts",
+					"patterns": ["mcms-chip"],
+					"tier": "convention",
+					"_comment": "Must use mcms- prefix on selector"
+				},
+				{
+					"type": "file_contains",
+					"path": "libs/ui/src/index.ts",
+					"patterns": ["chip"],
+					"tier": "convention",
+					"_comment": "Must export from barrel file"
+				},
+				{
+					"type": "command_succeeds",
+					"command": "npx nx lint ui",
+					"tier": "quality",
+					"timeout": 60000
+				}
+			]
+		}
+	],
+	"_changelog": [
+		{
+			"version": 2,
+			"date": "2026-03-15",
+			"changes": [
+				"Added path_alt to all file_exists/file_contains/file_not_contains assertions",
+				"Added spec file assertions to admin-component-with-inject and component-with-variants",
+				"Removed 'hostClasses' from component-with-variants file_contains (prompt_leak)",
+				"Rewrote component-with-variants prompt to describe behavior not pattern"
+			]
+		},
+		{
+			"version": 3,
+			"date": "2026-03-15",
+			"changes": [
+				"Introduced three-tier assertion system: baseline, convention, quality",
+				"Split file_exists assertions into baseline (with path_alt) + convention (strict, no path_alt)",
+				"Added command_succeeds assertions for nx lint (quality tier) on all test cases",
+				"Separated mcms- selector prefix checks into convention tier",
+				"Convention tier is now the primary differentiator between with-skill and without-skill",
+				"Total assertions: 9 + 8 + 9 = 26 (up from 14)"
+			]
+		}
+	]
+}

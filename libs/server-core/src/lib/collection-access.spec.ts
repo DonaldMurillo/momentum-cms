@@ -3,6 +3,7 @@ import {
 	checkCollectionAdminAccess,
 	checkSingleCollectionAdminAccess,
 	getCollectionPermissions,
+	warnInsecureDefaults,
 } from './collection-access';
 import type { CollectionConfig, MomentumConfig, UserContext } from '@momentumcms/core';
 
@@ -233,6 +234,80 @@ describe('collection-access', () => {
 			expect(articles?.canRead).toBe(true); // Public read
 			expect(articles?.canUpdate).toBe(false); // Requires auth
 			expect(articles?.canDelete).toBe(false); // Requires admin
+		});
+	});
+
+	describe('warnInsecureDefaults', () => {
+		it('should warn for collections missing access functions', () => {
+			const collections: CollectionConfig[] = [
+				{
+					slug: 'secrets',
+					fields: [{ name: 'value', type: 'text' }],
+					// No access defined
+				},
+			];
+
+			const warnings = warnInsecureDefaults(collections);
+
+			expect(warnings.length).toBeGreaterThan(0);
+			expect(warnings.some((w) => w.includes('secrets'))).toBe(true);
+			expect(warnings.some((w) => w.includes('read'))).toBe(true);
+		});
+
+		it('should not warn for collections with all access functions defined', () => {
+			const collections: CollectionConfig[] = [
+				{
+					slug: 'posts',
+					fields: [{ name: 'title', type: 'text' }],
+					access: {
+						read: () => true,
+						create: () => true,
+						update: () => true,
+						delete: () => true,
+					},
+				},
+			];
+
+			const warnings = warnInsecureDefaults(collections);
+
+			expect(warnings).toHaveLength(0);
+		});
+
+		it('should not warn for managed collections', () => {
+			const collections: CollectionConfig[] = [
+				{
+					slug: 'users',
+					fields: [{ name: 'email', type: 'email' }],
+					managed: true,
+				},
+			];
+
+			const warnings = warnInsecureDefaults(collections);
+
+			expect(warnings).toHaveLength(0);
+		});
+
+		it('should identify specific missing operations', () => {
+			const collections: CollectionConfig[] = [
+				{
+					slug: 'articles',
+					fields: [{ name: 'title', type: 'text' }],
+					access: {
+						read: () => true,
+						// create, update, delete missing
+					},
+				},
+			];
+
+			const warnings = warnInsecureDefaults(collections);
+
+			expect(warnings.length).toBeGreaterThan(0);
+			const msg = warnings[0];
+			expect(msg).toContain('create');
+			expect(msg).toContain('update');
+			expect(msg).toContain('delete');
+			// read IS defined, so it should not appear
+			expect(msg).not.toContain('read');
 		});
 	});
 });

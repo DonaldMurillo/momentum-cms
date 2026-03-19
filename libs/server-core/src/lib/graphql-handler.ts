@@ -83,6 +83,10 @@ export async function executeGraphQL(
 	context: {
 		user?: UserContext;
 	},
+	options?: {
+		/** When true, reject mutation operations (e.g. for GET requests). */
+		readOnly?: boolean;
+	},
 ): Promise<GraphQLResult> {
 	if (!requestBody.query) {
 		return {
@@ -100,6 +104,19 @@ export async function executeGraphQL(
 			status: 400,
 			body: { errors: [{ message: 'Query parsing failed' }] },
 		};
+	}
+
+	// Reject mutations on read-only requests (e.g. GET)
+	if (options?.readOnly) {
+		const hasMutation = document.definitions.some(
+			(def) => def.kind === 'OperationDefinition' && def.operation === 'mutation',
+		);
+		if (hasMutation) {
+			return {
+				status: 405,
+				body: { errors: [{ message: 'Mutations are not allowed via GET requests' }] },
+			};
+		}
 	}
 
 	const depthErrors = validate(schema, document, [depthLimitRule(MAX_QUERY_DEPTH)]);

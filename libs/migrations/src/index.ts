@@ -79,7 +79,13 @@ export type { DataHelperDb } from './lib/helpers/data-helpers';
 
 // Loader
 export { loadMigrationsFromDisk } from './lib/loader/migration-loader';
-export { readSnapshot, writeSnapshot, getSnapshotPath } from './lib/loader/snapshot-manager';
+export {
+	readSnapshot,
+	writeSnapshot,
+	writePerMigrationSnapshot,
+	findLatestPerMigrationSnapshot,
+	getSnapshotPath,
+} from './lib/loader/snapshot-manager';
 
 // CLI Shared (for programmatic use)
 export {

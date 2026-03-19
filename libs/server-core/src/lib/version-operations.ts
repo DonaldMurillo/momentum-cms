@@ -22,6 +22,7 @@ import type {
 	VersionFindOptions,
 } from './momentum-api.types';
 import { AccessDeniedError, DocumentNotFoundError } from './momentum-api.types';
+import { filterReadableFields, hasFieldAccessControl } from './field-access';
 
 /**
  * Type guard to check if a value is a record object.
@@ -96,6 +97,25 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 			}
 		}
 
+		// Filter restricted fields from version snapshots
+		if (!this.context.overrideAccess && hasFieldAccessControl(this.collectionConfig.fields)) {
+			for (let i = 0; i < docs.length; i++) {
+				const version = docs[i].version;
+				if (version && typeof version === 'object') {
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is a parsed JSON object, safe to treat as Record
+					const versionRecord = version as unknown as Record<string, unknown>;
+					const filtered = await filterReadableFields(
+						this.collectionConfig.fields,
+						versionRecord,
+						this.buildRequestContext(),
+					);
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Filtered record maps back to T
+					const filteredAsT = filtered as unknown as T;
+					docs[i] = { ...docs[i], version: filteredAsT };
+				}
+			}
+		}
+
 		// Get total count for pagination with the same filters applied
 		const countOptions = {
 			includeAutosave: options?.includeAutosave,
@@ -136,9 +156,26 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 			return null;
 		}
 
+		let filteredVersion: T = parsedVersion;
+
+		// Filter restricted fields from version snapshot
+		if (!this.context.overrideAccess && hasFieldAccessControl(this.collectionConfig.fields)) {
+			if (filteredVersion && typeof filteredVersion === 'object') {
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is a parsed JSON object, safe to treat as Record
+				const versionRecord = filteredVersion as unknown as Record<string, unknown>;
+				const filtered = await filterReadableFields(
+					this.collectionConfig.fields,
+					versionRecord,
+					this.buildRequestContext(),
+				);
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Filtered record maps back to T
+				filteredVersion = filtered as unknown as T;
+			}
+		}
+
 		return {
 			...version,
-			version: parsedVersion,
+			version: filteredVersion,
 		};
 	}
 

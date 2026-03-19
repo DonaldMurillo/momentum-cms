@@ -27,7 +27,7 @@ node_modules
 # misc
 /.sass-cache
 /connect.lock
-/coverage
+coverage
 /libpeerconnection.log
 npm-debug.log
 yarn-error.log
@@ -72,3 +72,6 @@ vitest.config.*.timestamp*
 
 # Doc-visual auth state (contains session tokens)
 docs/visuals/.auth-state.json
+
+# Skill eval workspace outputs (regenerable via /skill-eval)
+.claude/skill-evals/

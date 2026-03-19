@@ -155,9 +155,8 @@ export function createApiKeyRoutes(config: ApiKeyMiddlewareConfig): Router {
 		}
 
 		const role = body.role ?? 'user';
-		const validRoles = ['admin', 'editor', 'user', 'viewer'];
-		if (!validRoles.includes(role)) {
-			res.status(400).json({ error: `Invalid role. Must be one of: ${validRoles.join(', ')}` });
+		if (!ROLE_HIERARCHY.includes(role)) {
+			res.status(400).json({ error: `Invalid role. Must be one of: ${ROLE_HIERARCHY.join(', ')}` });
 			return;
 		}
 
@@ -241,7 +240,8 @@ export function createApiKeyRoutes(config: ApiKeyMiddlewareConfig): Router {
 					return;
 				}
 				if (existingKey.createdBy !== user.id) {
-					res.status(403).json({ error: 'You can only delete your own API keys' });
+					// Return 404 (not 403) to prevent API key ID enumeration
+					res.status(404).json({ error: 'API key not found' });
 					return;
 				}
 			}

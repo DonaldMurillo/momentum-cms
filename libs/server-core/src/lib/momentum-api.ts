@@ -52,6 +52,20 @@ import {
 	GlobalNotFoundError,
 	ValidationError,
 } from './momentum-api.types';
+import {
+	flattenWhereClause,
+	extractRelationshipJoins,
+	validateWhereFields,
+	validateSortField,
+	countWhereConditions,
+	MAX_WHERE_CONDITIONS,
+	MAX_JOINS,
+	MAX_PAGE_LIMIT,
+	MAX_PAGE,
+	type JoinSpec,
+} from './where-clause';
+import { deepEqual, stripTransientKeys } from './api-utils';
+import { warnInsecureDefaults } from './collection-access';
 
 // ============================================
 // Singleton Management
@@ -80,6 +94,7 @@ export function initializeMomentumAPI(config: MomentumConfig): MomentumAPI {
 		createLogger('API').warn('Already initialized, returning existing instance');
 		return momentumApiInstance;
 	}
+	warnInsecureDefaults(config.collections);
 	momentumApiInstance = new MomentumAPIImpl(config);
 	return momentumApiInstance;
 }
@@ -181,100 +196,8 @@ class MomentumAPIImpl implements MomentumAPI {
 	}
 }
 
-// ============================================
-// Deep Equality Helper
-// ============================================
-
-/**
- * Recursively compares two values for structural equality.
- * Used by matchesDefaultWhereConstraints to support non-primitive constraint values
- * (arrays, objects) that would fail with strict === reference equality.
- */
-function deepEqual(a: unknown, b: unknown): boolean {
-	if (a === b) return true;
-	if (a == null || b == null) return false;
-	if (typeof a !== 'object' || typeof b !== 'object') return false;
-
-	if (Array.isArray(a)) {
-		if (!Array.isArray(b) || a.length !== b.length) return false;
-		return a.every((item, i) => deepEqual(item, b[i]));
-	}
-
-	if (Array.isArray(b)) return false;
-
-	// Both a and b are non-null, non-array objects at this point
-	const aKeys = Object.keys(a);
-	const bKeys = Object.keys(b);
-	if (aKeys.length !== bKeys.length) return false;
-
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowed to non-null object, indexing by string key
-	const aRec = a as Record<string, unknown>;
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowed to non-null object, indexing by string key
-	const bRec = b as Record<string, unknown>;
-	return aKeys.every(
-		(key) => Object.prototype.hasOwnProperty.call(bRec, key) && deepEqual(aRec[key], bRec[key]),
-	);
-}
-
-// ============================================
-// Where Clause Helpers
-// ============================================
-
-/**
- * Flattens a structured WhereClause into simple key-value pairs for the adapter.
- * Converts { field: { equals: value } } to { field: value }.
- * Direct values like { field: value } are passed through unchanged.
- */
-/**
- * Strip transient keys (prefixed with _) from data before DB persistence.
- * Hooks use _-prefixed keys for inter-hook communication (e.g., _file for upload buffers).
- */
-function stripTransientKeys(data: Record<string, unknown>): Record<string, unknown> {
-	const result: Record<string, unknown> = {};
-	for (const [key, value] of Object.entries(data)) {
-		if (!key.startsWith('_')) {
-			result[key] = value;
-		}
-	}
-	return result;
-}
-
-const COMPARISON_OPS = ['gt', 'gte', 'lt', 'lte'] as const;
-
-function flattenWhereClause(where: WhereClause | undefined): Record<string, unknown> {
-	if (!where) return {};
-	const result: Record<string, unknown> = {};
-	for (const [field, condition] of Object.entries(where)) {
-		if (typeof condition !== 'object' || condition === null) {
-			result[field] = condition;
-			continue;
-		}
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Where clause operator object
-		const condObj = condition as Record<string, unknown>;
-
-		if ('equals' in condObj) {
-			result[field] = condObj['equals'];
-			continue;
-		}
-
-		// Convert comparison operators (gt/gte/lt/lte) to $-prefixed form for DB adapters
-		const ops: Record<string, unknown> = {};
-		let hasComparisonOp = false;
-		for (const op of COMPARISON_OPS) {
-			if (op in condObj) {
-				ops[`$${op}`] = condObj[op];
-				hasComparisonOp = true;
-			}
-		}
-
-		if (hasComparisonOp) {
-			result[field] = ops;
-		} else {
-			result[field] = condition;
-		}
-	}
-	return result;
-}
+// Where clause processing, deep equality, and transient key stripping
+// are now imported from ./where-clause and ./api-utils
 
 // ============================================
 // Collection Operations Implementation
@@ -300,14 +223,48 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Check read access
 		await this.checkAccess('read');
 
+		// Validate field-level access in where clause and sort field (prevent information leakage)
+		if (!this.context.overrideAccess) {
+			await validateWhereFields(
+				options.where,
+				this.collectionConfig.fields,
+				this.buildRequestContext(),
+			);
+			await validateSortField(
+				options.sort,
+				this.collectionConfig.fields,
+				this.buildRequestContext(),
+			);
+		}
+
 		// Run beforeRead hooks
 		await this.runBeforeReadHooks();
 
 		// Prepare query options (strip depth and where — they need special handling)
-		const limit = options.limit ?? 10;
-		const page = options.page ?? 1;
+		// Sanitize pagination: clamp to safe integer values to prevent NaN/Infinity/negative abuse
+		const rawLimit = options.limit ?? 10;
+		const rawPage = options.page ?? 1;
+		const limit = Math.max(
+			1,
+			Math.min(Number.isFinite(rawLimit) ? Math.floor(rawLimit) : 10, MAX_PAGE_LIMIT),
+		);
+		const page = Math.max(
+			1,
+			Math.min(Number.isFinite(rawPage) ? Math.floor(rawPage) : 1, MAX_PAGE),
+		);
 		const { depth: _depth, where, withDeleted: _wd, onlyDeleted: _od, ...queryOptions } = options;
-		const whereParams = flattenWhereClause(where);
+
+		// Extract relationship sub-queries into JOIN specs before flattening
+		// `joins` = top-level only (for $joins), `allJoins` = includes inline (for validation/limits)
+		const { cleanedWhere, joins, allJoins } = extractRelationshipJoins(
+			where,
+			this.collectionConfig.fields,
+			this.allCollections,
+		);
+
+		await this.enforceWhereLimits(cleanedWhere, allJoins);
+
+		const whereParams = flattenWhereClause(cleanedWhere);
 
 		// Inject soft-delete filter
 		const softDeleteField = getSoftDeleteField(this.collectionConfig);
@@ -339,6 +296,11 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			limit,
 			page,
 		};
+
+		// Attach relationship JOIN specs for the adapter (strip rawWhere — only needed for access validation)
+		if (joins.length > 0) {
+			query['$joins'] = joins.map(({ rawWhere: _rw, ...rest }) => rest);
+		}
 
 		// Execute query with pagination (adapter handles LIMIT/OFFSET)
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
@@ -373,14 +335,15 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Get total count for pagination metadata
 		// Use a separate count query without limit/offset/depth to get the true total
 		const countQuery: Record<string, unknown> = { ...queryOptions, ...whereParams };
+		if (joins.length > 0) {
+			countQuery['$joins'] = joins.map(({ rawWhere: _rw, ...rest }) => rest);
+		}
 		delete countQuery['limit'];
 		delete countQuery['page'];
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
-		const allDocs = (await this.adapter.find(this.slug, {
-			...countQuery,
-			limit: 0, // Signal to adapter: count-only (returns all if not supported)
-		})) as T[];
-		const totalDocs = allDocs.length;
+		const totalDocs = this.adapter.count
+			? await this.adapter.count(this.slug, countQuery)
+			: // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
+				((await this.adapter.find(this.slug, { ...countQuery, limit: 0 })) as T[]).length;
 		const totalPages = Math.ceil(totalDocs / limit) || 1;
 
 		return {
@@ -746,7 +709,12 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 	async restore(id: string): Promise<T> {
 		const softDeleteField = getSoftDeleteField(this.collectionConfig);
 		if (!softDeleteField) {
-			throw new Error(`Collection "${this.slug}" does not have soft delete enabled`);
+			throw new ValidationError([
+				{
+					field: '_softDelete',
+					message: `Collection "${this.slug}" does not have soft delete enabled`,
+				},
+			]);
 		}
 
 		// Check restore access (fall back to update access)
@@ -829,6 +797,15 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			softDeleteFilter[softDeleteField] = null;
 		}
 
+		// Inject defaultWhere constraints (e.g., user-scoped filtering)
+		const defaultWhereFilter: Record<string, unknown> = {};
+		if (this.collectionConfig.defaultWhere) {
+			const constraints = this.collectionConfig.defaultWhere(this.buildRequestContext());
+			if (constraints) {
+				Object.assign(defaultWhereFilter, constraints);
+			}
+		}
+
 		// Use the adapter's search method if available, otherwise fall back to find
 		let docs: Record<string, unknown>[];
 		if (this.adapter.search) {
@@ -837,19 +814,38 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			if (softDeleteField) {
 				docs = docs.filter((doc) => !doc[softDeleteField]);
 			}
+			// Apply defaultWhere constraints in-memory for adapter search results
+			if (Object.keys(defaultWhereFilter).length > 0) {
+				docs = docs.filter((doc) => {
+					return Object.entries(defaultWhereFilter).every(([key, value]) => {
+						if (value && typeof value === 'object' && !Array.isArray(value)) {
+							return JSON.stringify(doc[key]) === JSON.stringify(value);
+						}
+						return doc[key] === value;
+					});
+				});
+			}
 		} else {
-			// Fallback: basic find with soft-delete filter
-			docs = await this.adapter.find(this.slug, { ...softDeleteFilter, limit, page });
+			// Fallback: basic find with soft-delete and defaultWhere filters
+			docs = await this.adapter.find(this.slug, {
+				...softDeleteFilter,
+				...defaultWhereFilter,
+				limit,
+				page,
+			});
 		}
 
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
 		const resolvedDocs = docs as unknown as T[];
 
-		const totalDocs = resolvedDocs.length;
+		// Run afterRead hooks and field-level access filtering (same pipeline as find())
+		const afterHookDocs = await this.processAfterReadHooks(resolvedDocs);
+
+		const totalDocs = afterHookDocs.length;
 		const totalPages = Math.max(1, Math.ceil(totalDocs / limit));
 
 		return {
-			docs: resolvedDocs,
+			docs: afterHookDocs,
 			totalDocs,
 			totalPages,
 			page,
@@ -865,9 +861,21 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Check read access
 		await this.checkAccess('read');
 
+		// Validate field-level access in where clause
+		if (!this.context.overrideAccess) {
+			await validateWhereFields(where, this.collectionConfig.fields, this.buildRequestContext());
+		}
+
 		// Use find with where clause and count results
-		// Pass limit: 0 to signal we want all matching docs for counting
-		const whereParams = flattenWhereClause(where);
+		const { cleanedWhere, joins, allJoins } = extractRelationshipJoins(
+			where,
+			this.collectionConfig.fields,
+			this.allCollections,
+		);
+
+		await this.enforceWhereLimits(cleanedWhere, allJoins);
+
+		const whereParams = flattenWhereClause(cleanedWhere);
 
 		// Inject soft-delete filter
 		const softDeleteField = getSoftDeleteField(this.collectionConfig);
@@ -875,8 +883,33 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			whereParams[softDeleteField] = null;
 		}
 
-		const query: Record<string, unknown> = { ...whereParams, limit: 0 };
-		const docs = await this.adapter.find(this.slug, query);
+		// Inject defaultWhere constraints (same as find())
+		if (this.collectionConfig.defaultWhere) {
+			const constraints = this.collectionConfig.defaultWhere(this.buildRequestContext());
+			if (constraints) {
+				Object.assign(whereParams, constraints);
+			}
+		}
+
+		// Draft visibility: only users with readDrafts access see drafts (same as find())
+		if (hasVersionDrafts(this.collectionConfig) && !this.context.overrideAccess) {
+			const canSeeDrafts = await this.canReadDrafts();
+			if (!canSeeDrafts) {
+				whereParams['_status'] = 'published';
+			}
+		}
+
+		const query: Record<string, unknown> = { ...whereParams };
+		if (joins.length > 0) {
+			query['$joins'] = joins.map(({ rawWhere: _rw, ...rest }) => rest);
+		}
+
+		// Use adapter.count() if available (efficient SELECT COUNT(*)),
+		// otherwise fall back to loading all rows
+		if (this.adapter.count) {
+			return this.adapter.count(this.slug, query);
+		}
+		const docs = await this.adapter.find(this.slug, { ...query, limit: 0 });
 		return docs.length;
 	}
 
@@ -1061,6 +1094,55 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			return !!(await Promise.resolve(updateFn({ req: this.buildRequestContext() })));
 		} catch {
 			return false;
+		}
+	}
+
+	private async enforceWhereLimits(
+		cleanedWhere: WhereClause | undefined,
+		joins: JoinSpec[],
+	): Promise<void> {
+		if (joins.length > MAX_JOINS) {
+			throw new ValidationError([
+				{
+					field: 'where',
+					message: `Number of relationship joins (${joins.length}) exceeds maximum of ${MAX_JOINS}.`,
+				},
+			]);
+		}
+
+		const mainCount = cleanedWhere ? countWhereConditions(cleanedWhere) : 0;
+		const joinCount = joins.reduce((sum, j) => sum + countWhereConditions(j.rawWhere), 0);
+		const totalConditions = mainCount + joinCount;
+		if (totalConditions > MAX_WHERE_CONDITIONS) {
+			throw new ValidationError([
+				{
+					field: 'where',
+					message: `Where clause exceeds maximum of ${MAX_WHERE_CONDITIONS} conditions (got ${totalConditions} across main query and ${joins.length} join(s)).`,
+				},
+			]);
+		}
+
+		if (!this.context.overrideAccess) {
+			for (const join of joins) {
+				const targetCol = this.allCollections.find(
+					(c) => (c.dbName ?? c.slug) === join.targetTable,
+				);
+				if (targetCol) {
+					// Check collection-level read access on the join target
+					// Prevents information leakage through EXISTS subqueries on restricted collections
+					const collectionAccessFn = targetCol.access?.read;
+					if (collectionAccessFn) {
+						const allowed = await Promise.resolve(
+							collectionAccessFn({ req: this.buildRequestContext() }),
+						);
+						if (!allowed) {
+							throw new AccessDeniedError('read', targetCol.slug);
+						}
+					}
+					// Check field-level access on the join target's fields
+					await validateWhereFields(join.rawWhere, targetCol.fields, this.buildRequestContext());
+				}
+			}
 		}
 	}
 

@@ -31,6 +31,12 @@ export interface DatabaseAdapter {
 	dialect?: 'postgresql' | 'sqlite';
 
 	find(collection: string, query: Record<string, unknown>): Promise<Record<string, unknown>[]>;
+	/**
+	 * Count documents matching a query using SELECT COUNT(*).
+	 * More efficient than find() + .length for large collections.
+	 * Optional — if not implemented, the API layer falls back to find().
+	 */
+	count?(collection: string, query: Record<string, unknown>): Promise<number>;
 	findById(collection: string, id: string): Promise<Record<string, unknown> | null>;
 	create(collection: string, data: Record<string, unknown>): Promise<Record<string, unknown>>;
 	update(

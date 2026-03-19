@@ -5,7 +5,7 @@
  * Uses temp dirs for migration files so tests are fully isolated.
  * Tests both PostgreSQL and SQLite.
  */
-import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, rmSync, existsSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -19,6 +19,7 @@ import {
 	generateMigrationName,
 	readSnapshot,
 	writeSnapshot,
+	writePerMigrationSnapshot,
 	loadMigrationsFromDisk,
 	runMigrations,
 	rollbackBatch,
@@ -44,6 +45,8 @@ import {
 	dropTestSqliteDb,
 } from '../../../migration-tests/src/helpers/test-db';
 import { introspectPostgres, introspectSqlite } from '@momentumcms/migrations';
+
+const pgAvailable = await isPgAvailable();
 
 // ============================================
 // Test collections: "before" and "after" states
@@ -78,18 +81,12 @@ const Authors = defineCollection({
 // PostgreSQL Tests
 // ============================================
 
-describe('generate-and-run (PostgreSQL)', () => {
+describe.skipIf(!pgAvailable)('generate-and-run (PostgreSQL)', () => {
 	let pool: Pool;
 	let dbName: string;
 	let migrationDir: string;
 
-	beforeAll(async () => {
-		if (!(await isPgAvailable())) return;
-	});
-
 	beforeEach(async () => {
-		if (!(await isPgAvailable())) return;
-
 		const testDb = await createTestPgDb();
 		dbName = testDb.dbName;
 		pool = new Pool({ connectionString: testDb.connectionString, max: 5 });
@@ -110,8 +107,6 @@ describe('generate-and-run (PostgreSQL)', () => {
 	});
 
 	it('should generate initial migration from empty DB', async () => {
-		if (!(await isPgAvailable())) return;
-
 		const desired = collectionsToSchema([BlogV1], 'postgresql');
 		const previous = createSchemaSnapshot('postgresql', []);
 
@@ -122,7 +117,7 @@ describe('generate-and-run (PostgreSQL)', () => {
 		const content = generateMigrationFileContent(diff, { name, dialect: 'postgresql' });
 
 		writeFileSync(join(migrationDir, `${name}.ts`), content, 'utf-8');
-		writeSnapshot(migrationDir, desired);
+		writePerMigrationSnapshot(migrationDir, name, desired);
 
 		// Verify file was written
 		const files = readdirSync(migrationDir).filter((f) => f.endsWith('.ts'));
@@ -132,13 +127,11 @@ describe('generate-and-run (PostgreSQL)', () => {
 		// Verify snapshot was written
 		const snapshot = readSnapshot(migrationDir);
 		expect(snapshot).not.toBeNull();
-		 
+
 		expect(snapshot?.tables.length).toBeGreaterThan(0);
 	});
 
 	it('should load generated migration from disk', async () => {
-		if (!(await isPgAvailable())) return;
-
 		const desired = collectionsToSchema([BlogV1], 'postgresql');
 		const previous = createSchemaSnapshot('postgresql', []);
 		const diff = diffSchemas(desired, previous, 'postgresql');
@@ -155,8 +148,6 @@ describe('generate-and-run (PostgreSQL)', () => {
 	});
 
 	it('should run generated migration and create tables', async () => {
-		if (!(await isPgAvailable())) return;
-
 		// Generate
 		const desired = collectionsToSchema([BlogV1], 'postgresql');
 		const previous = createSchemaSnapshot('postgresql', []);
@@ -189,21 +180,17 @@ describe('generate-and-run (PostgreSQL)', () => {
 	});
 
 	it('should report "no changes" when schema is up to date', async () => {
-		if (!(await isPgAvailable())) return;
-
 		const desired = collectionsToSchema([BlogV1], 'postgresql');
 		writeSnapshot(migrationDir, desired);
 
 		// Diff against same snapshot → no changes
-		 
+
 		const previous = readSnapshot(migrationDir);
 		const diff = diffSchemas(desired, previous, 'postgresql');
 		expect(diff.operations).toHaveLength(0);
 	});
 
 	it('should generate incremental migration when adding a field', async () => {
-		if (!(await isPgAvailable())) return;
-
 		// Initial migration
 		const desiredV1 = collectionsToSchema([BlogV1], 'postgresql');
 		const previous = createSchemaSnapshot('postgresql', []);
@@ -214,7 +201,7 @@ describe('generate-and-run (PostgreSQL)', () => {
 			generateMigrationFileContent(diff1, { name: name1, dialect: 'postgresql' }),
 			'utf-8',
 		);
-		writeSnapshot(migrationDir, desiredV1);
+		writePerMigrationSnapshot(migrationDir, name1, desiredV1);
 
 		// Run initial
 		let migrations = await loadMigrationsFromDisk(migrationDir);
@@ -227,7 +214,7 @@ describe('generate-and-run (PostgreSQL)', () => {
 
 		// Generate V2 migration (adds status + slug columns)
 		const desiredV2 = collectionsToSchema([BlogV2], 'postgresql');
-		 
+
 		const snapshotV1 = readSnapshot(migrationDir);
 		const diff2 = diffSchemas(desiredV2, snapshotV1, 'postgresql');
 		expect(diff2.operations.length).toBeGreaterThan(0);
@@ -238,7 +225,7 @@ describe('generate-and-run (PostgreSQL)', () => {
 			generateMigrationFileContent(diff2, { name: name2, dialect: 'postgresql' }),
 			'utf-8',
 		);
-		writeSnapshot(migrationDir, desiredV2);
+		writePerMigrationSnapshot(migrationDir, name2, desiredV2);
 
 		// Run V2
 		migrations = await loadMigrationsFromDisk(migrationDir);
@@ -263,8 +250,6 @@ describe('generate-and-run (PostgreSQL)', () => {
 	});
 
 	it('should show correct status after migrations', async () => {
-		if (!(await isPgAvailable())) return;
-
 		// Generate + run two migrations
 		const desiredV1 = collectionsToSchema([BlogV1], 'postgresql');
 		const diff1 = diffSchemas(desiredV1, createSchemaSnapshot('postgresql', []), 'postgresql');
@@ -274,7 +259,7 @@ describe('generate-and-run (PostgreSQL)', () => {
 			generateMigrationFileContent(diff1, { name: name1, dialect: 'postgresql' }),
 			'utf-8',
 		);
-		writeSnapshot(migrationDir, desiredV1);
+		writePerMigrationSnapshot(migrationDir, name1, desiredV1);
 
 		let migrations = await loadMigrationsFromDisk(migrationDir);
 		await runMigrations({
@@ -285,7 +270,7 @@ describe('generate-and-run (PostgreSQL)', () => {
 		});
 
 		const desiredV2 = collectionsToSchema([BlogV2], 'postgresql');
-		 
+
 		const diff2 = diffSchemas(desiredV2, readSnapshot(migrationDir), 'postgresql');
 		const name2 = generateMigrationName('add_fields', new Date('2024-02-01T12:00:00Z'));
 		writeFileSync(
@@ -293,7 +278,7 @@ describe('generate-and-run (PostgreSQL)', () => {
 			generateMigrationFileContent(diff2, { name: name2, dialect: 'postgresql' }),
 			'utf-8',
 		);
-		writeSnapshot(migrationDir, desiredV2);
+		writePerMigrationSnapshot(migrationDir, name2, desiredV2);
 
 		migrations = await loadMigrationsFromDisk(migrationDir);
 		await runMigrations({
@@ -313,8 +298,6 @@ describe('generate-and-run (PostgreSQL)', () => {
 	});
 
 	it('should rollback latest batch', async () => {
-		if (!(await isPgAvailable())) return;
-
 		// Generate + run two migrations
 		const desiredV1 = collectionsToSchema([BlogV1], 'postgresql');
 		const diff1 = diffSchemas(desiredV1, createSchemaSnapshot('postgresql', []), 'postgresql');
@@ -324,7 +307,7 @@ describe('generate-and-run (PostgreSQL)', () => {
 			generateMigrationFileContent(diff1, { name: name1, dialect: 'postgresql' }),
 			'utf-8',
 		);
-		writeSnapshot(migrationDir, desiredV1);
+		writePerMigrationSnapshot(migrationDir, name1, desiredV1);
 
 		let migrations = await loadMigrationsFromDisk(migrationDir);
 		await runMigrations({
@@ -335,7 +318,7 @@ describe('generate-and-run (PostgreSQL)', () => {
 		});
 
 		const desiredV2 = collectionsToSchema([BlogV2], 'postgresql');
-		 
+
 		const diff2 = diffSchemas(desiredV2, readSnapshot(migrationDir), 'postgresql');
 		const name2 = generateMigrationName('add_fields', new Date('2024-02-01T12:00:00Z'));
 		writeFileSync(
@@ -343,7 +326,7 @@ describe('generate-and-run (PostgreSQL)', () => {
 			generateMigrationFileContent(diff2, { name: name2, dialect: 'postgresql' }),
 			'utf-8',
 		);
-		writeSnapshot(migrationDir, desiredV2);
+		writePerMigrationSnapshot(migrationDir, name2, desiredV2);
 
 		migrations = await loadMigrationsFromDisk(migrationDir);
 		await runMigrations({
@@ -371,8 +354,6 @@ describe('generate-and-run (PostgreSQL)', () => {
 	});
 
 	it('should re-run after rollback', async () => {
-		if (!(await isPgAvailable())) return;
-
 		// Setup: generate + run 2 migrations, rollback batch 2
 		const desiredV1 = collectionsToSchema([BlogV1], 'postgresql');
 		const diff1 = diffSchemas(desiredV1, createSchemaSnapshot('postgresql', []), 'postgresql');
@@ -382,7 +363,7 @@ describe('generate-and-run (PostgreSQL)', () => {
 			generateMigrationFileContent(diff1, { name: name1, dialect: 'postgresql' }),
 			'utf-8',
 		);
-		writeSnapshot(migrationDir, desiredV1);
+		writePerMigrationSnapshot(migrationDir, name1, desiredV1);
 
 		let migrations = await loadMigrationsFromDisk(migrationDir);
 		await runMigrations({
@@ -393,7 +374,7 @@ describe('generate-and-run (PostgreSQL)', () => {
 		});
 
 		const desiredV2 = collectionsToSchema([BlogV2], 'postgresql');
-		 
+
 		const diff2 = diffSchemas(desiredV2, readSnapshot(migrationDir), 'postgresql');
 		const name2 = generateMigrationName('add_fields', new Date('2024-02-01T12:00:00Z'));
 		writeFileSync(
@@ -401,7 +382,7 @@ describe('generate-and-run (PostgreSQL)', () => {
 			generateMigrationFileContent(diff2, { name: name2, dialect: 'postgresql' }),
 			'utf-8',
 		);
-		writeSnapshot(migrationDir, desiredV2);
+		writePerMigrationSnapshot(migrationDir, name2, desiredV2);
 
 		migrations = await loadMigrationsFromDisk(migrationDir);
 		await runMigrations({
@@ -435,8 +416,6 @@ describe('generate-and-run (PostgreSQL)', () => {
 	});
 
 	it('should handle multiple collections in a single migration', async () => {
-		if (!(await isPgAvailable())) return;
-
 		const desired = collectionsToSchema([BlogV1, Authors], 'postgresql');
 		const diff = diffSchemas(desired, createSchemaSnapshot('postgresql', []), 'postgresql');
 		const name = generateMigrationName('multi', new Date('2024-03-01T12:00:00Z'));
@@ -464,8 +443,6 @@ describe('generate-and-run (PostgreSQL)', () => {
 	});
 
 	it('should produce snapshot matching introspected DB state', async () => {
-		if (!(await isPgAvailable())) return;
-
 		const desired = collectionsToSchema([BlogV1, Authors], 'postgresql');
 		const diff = diffSchemas(desired, createSchemaSnapshot('postgresql', []), 'postgresql');
 		const name = generateMigrationName('initial', new Date('2024-01-15T12:00:00Z'));
@@ -474,7 +451,7 @@ describe('generate-and-run (PostgreSQL)', () => {
 			generateMigrationFileContent(diff, { name, dialect: 'postgresql' }),
 			'utf-8',
 		);
-		writeSnapshot(migrationDir, desired);
+		writePerMigrationSnapshot(migrationDir, name, desired);
 
 		const migrations = await loadMigrationsFromDisk(migrationDir);
 		await runMigrations({
@@ -486,7 +463,7 @@ describe('generate-and-run (PostgreSQL)', () => {
 
 		// Introspect and compare
 		const introspected = await introspectPostgres(pgQueryFn(pool));
-		 
+
 		const snapshot = readSnapshot(migrationDir);
 
 		// Both should have the same user tables (snapshot has all, introspected filters internal)
@@ -569,7 +546,7 @@ describe('generate-and-run (SQLite)', () => {
 			generateMigrationFileContent(diff1, { name: name1, dialect: 'sqlite' }),
 			'utf-8',
 		);
-		writeSnapshot(migrationDir, desiredV1);
+		writePerMigrationSnapshot(migrationDir, name1, desiredV1);
 
 		let migrations = await loadMigrationsFromDisk(migrationDir);
 		await runMigrations({
@@ -581,7 +558,7 @@ describe('generate-and-run (SQLite)', () => {
 
 		// V2
 		const desiredV2 = collectionsToSchema([BlogV2], 'sqlite');
-		 
+
 		const diff2 = diffSchemas(desiredV2, readSnapshot(migrationDir), 'sqlite');
 		expect(diff2.operations.length).toBeGreaterThan(0);
 
@@ -660,7 +637,7 @@ describe('generate-and-run (SQLite)', () => {
 			generateMigrationFileContent(diff, { name, dialect: 'sqlite' }),
 			'utf-8',
 		);
-		writeSnapshot(migrationDir, desired);
+		writePerMigrationSnapshot(migrationDir, name, desired);
 
 		const migrations = await loadMigrationsFromDisk(migrationDir);
 		await runMigrations({
@@ -671,7 +648,7 @@ describe('generate-and-run (SQLite)', () => {
 		});
 
 		const introspected = await introspectSqlite(sqliteQueryFn(db));
-		 
+
 		const snapshot = readSnapshot(migrationDir);
 
 		const snapshotTableNames = snapshot.tables.map((t) => t.name).sort();

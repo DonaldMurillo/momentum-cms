@@ -16,7 +16,13 @@ import { fileURLToPath } from 'node:url';
 import { createMomentumServer } from '@momentumcms/server-express';
 import { provideMomentumAPI } from '@momentumcms/admin';
 import { mountTestEndpoints } from '@momentumcms/example-config';
-import momentumConfig, { authPlugin, analytics, analyticsAdapter, events } from './momentum.config';
+import momentumConfig, {
+	authPlugin,
+	analytics,
+	analyticsAdapter,
+	events,
+	pool,
+} from './momentum.config';
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
@@ -31,7 +37,7 @@ const angularApp = new AngularNodeAppEngine({
  */
 const app = express();
 app.use(express.json());
-mountTestEndpoints(app, { analytics, analyticsAdapter, events });
+mountTestEndpoints(app, { analytics, analyticsAdapter, events, pool });
 
 /**
  * Create the Momentum CMS server with a single call.

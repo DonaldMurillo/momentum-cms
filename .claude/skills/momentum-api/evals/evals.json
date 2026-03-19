@@ -1,0 +1,233 @@
+{
+	"skill": "momentum-api",
+	"version": 2,
+	"test_cases": [
+		{
+			"name": "data-page-isolated-context",
+			"description": "Create a data-driven page in app/pages where no Momentum API patterns exist nearby",
+			"prompt": "Create a new Angular page component at apps/example-angular/src/app/pages/tags/tags-page.component.ts that displays a list of tags from the 'tags' collection. It should load tags sorted alphabetically by name with a limit of 50. Include a loading state. Display each tag's name in a simple list. Use the CMS data layer for data access — this app uses a headless CMS with an API client.",
+			"assertions": [
+				{
+					"type": "file_exists",
+					"path": "apps/example-angular/src/app/pages/tags/tags-page.component.ts",
+					"tier": "baseline"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/tags/tags-page.component.ts",
+					"patterns": ["ChangeDetectionStrategy.OnPush", "signal", "tags"],
+					"tier": "baseline",
+					"_comment": "Basic Angular patterns — signals, OnPush"
+				},
+				{
+					"type": "file_not_contains",
+					"path": "apps/example-angular/src/app/pages/tags/tags-page.component.ts",
+					"patterns": ["HttpClient", "fetch("],
+					"tier": "baseline",
+					"_comment": "Should NOT use raw HTTP"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/tags/tags-page.component.ts",
+					"patterns": ["injectMomentumAPI"],
+					"tier": "convention",
+					"_comment": "Must discover and use injectMomentumAPI — not obvious without the skill since no nearby files use it"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/tags/tags-page.component.ts",
+					"patterns": ["@momentumcms/admin"],
+					"tier": "convention",
+					"_comment": "Must import from the correct package"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/tags/tags-page.component.ts",
+					"patterns": [".collection(", "'tags'"],
+					"tier": "convention",
+					"_comment": "Must use the typed collection() accessor"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/tags/tags-page.component.ts",
+					"patterns": [".find("],
+					"tier": "convention",
+					"_comment": "Must use .find() method, not custom HTTP"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/tags/tags-page.component.ts",
+					"patterns": ["sort:", "limit:"],
+					"tier": "convention",
+					"_comment": "Must pass sort and limit as FindOptions"
+				},
+				{
+					"type": "command_succeeds",
+					"command": "npx nx lint example-angular",
+					"tier": "quality",
+					"timeout": 60000
+				}
+			]
+		},
+		{
+			"name": "signal-based-data-binding",
+			"description": "Create a component using signal-based reactive data binding with the Momentum API",
+			"prompt": "Create an Angular component at apps/example-angular/src/app/pages/categories/category-browser.component.ts that displays categories from the 'categories' collection. Requirements: 1) Use a signal-based approach to hold the data (not subscribe/unsubscribe). 2) Support pagination — show 10 items per page with next/prev buttons. 3) When the user clicks a category, fetch its child articles using a where clause. 4) Display the articles inline below the selected category. Use the CMS data layer for all data operations.",
+			"assertions": [
+				{
+					"type": "file_exists",
+					"path": "apps/example-angular/src/app/pages/categories/category-browser.component.ts",
+					"tier": "baseline"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/categories/category-browser.component.ts",
+					"patterns": ["ChangeDetectionStrategy.OnPush", "signal"],
+					"tier": "baseline",
+					"_comment": "Must use signals and OnPush"
+				},
+				{
+					"type": "file_not_contains",
+					"path": "apps/example-angular/src/app/pages/categories/category-browser.component.ts",
+					"patterns": ["HttpClient", "subscribe("],
+					"tier": "convention",
+					"_comment": "Must NOT use subscribe — skill teaches promise-based or signal-based patterns"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/categories/category-browser.component.ts",
+					"patterns": ["injectMomentumAPI"],
+					"tier": "convention",
+					"_comment": "Must use injectMomentumAPI"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/categories/category-browser.component.ts",
+					"patterns": ["@momentumcms/admin"],
+					"tier": "convention",
+					"_comment": "Must import from correct package"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/categories/category-browser.component.ts",
+					"patterns": [".collection("],
+					"tier": "convention",
+					"_comment": "Must use .collection() accessor"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/categories/category-browser.component.ts",
+					"patterns": ["page:"],
+					"tier": "convention",
+					"_comment": "Must use FindOptions page parameter for pagination"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/categories/category-browser.component.ts",
+					"patterns": ["where:"],
+					"tier": "convention",
+					"_comment": "Must use where clause to filter articles by category"
+				},
+				{
+					"type": "command_succeeds",
+					"command": "npx nx lint example-angular",
+					"tier": "quality",
+					"timeout": 60000
+				}
+			]
+		},
+		{
+			"name": "error-handling-component",
+			"description": "Create a component that demonstrates proper Momentum API error handling",
+			"prompt": "Create an Angular component at apps/example-angular/src/app/pages/products/product-editor.component.ts for editing a product. It should: 1) Load a product by ID from route params using the 'products' collection. 2) Display a form with the product's name, description, and price fields. 3) On form submit, update the product via the CMS data layer. 4) Handle errors properly — distinguish between validation errors and not-found errors, showing appropriate messages for each. 5) Show a loading state while saving. Use the CMS data layer for all data operations.",
+			"assertions": [
+				{
+					"type": "file_exists",
+					"path": "apps/example-angular/src/app/pages/products/product-editor.component.ts",
+					"tier": "baseline"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/products/product-editor.component.ts",
+					"patterns": ["ChangeDetectionStrategy.OnPush", "signal", ".update("],
+					"tier": "baseline",
+					"_comment": "Must use signals, OnPush, and API update"
+				},
+				{
+					"type": "file_not_contains",
+					"path": "apps/example-angular/src/app/pages/products/product-editor.component.ts",
+					"patterns": ["HttpClient"],
+					"tier": "baseline",
+					"_comment": "Must not use raw HTTP"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/products/product-editor.component.ts",
+					"patterns": ["injectMomentumAPI"],
+					"tier": "convention",
+					"_comment": "Must use injectMomentumAPI"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/products/product-editor.component.ts",
+					"patterns": ["@momentumcms/admin"],
+					"tier": "convention",
+					"_comment": "Must import from correct package"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/products/product-editor.component.ts",
+					"patterns": ["findById("],
+					"tier": "convention",
+					"_comment": "Must use findById for single-document lookup"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/products/product-editor.component.ts",
+					"patterns": ["ValidationError"],
+					"tier": "convention",
+					"_comment": "Must use typed error classes from @momentumcms/server-core — the skill teaches this"
+				},
+				{
+					"type": "file_contains",
+					"path": "apps/example-angular/src/app/pages/products/product-editor.component.ts",
+					"patterns": ["catch"],
+					"tier": "baseline",
+					"_comment": "Must have error handling"
+				},
+				{
+					"type": "command_succeeds",
+					"command": "npx nx lint example-angular",
+					"tier": "quality",
+					"timeout": 60000
+				}
+			]
+		}
+	],
+	"_changelog": [
+		{
+			"version": 1,
+			"date": "2026-03-15",
+			"changes": [
+				"Initial three-tier eval definitions for momentum-api skill",
+				"3 test cases: list+filter, CRUD, resolver+SSR",
+				"Convention tier tests: injectMomentumAPI usage, @momentumcms/admin import, .collection() pattern",
+				"Quality tier: nx lint example-config"
+			]
+		},
+		{
+			"version": 2,
+			"date": "2026-03-15",
+			"changes": [
+				"COMPLETE REWRITE to fix outgrowth: moved all test cases from libs/example-config/src/pages/ (where existing files demonstrate the patterns) to apps/example-angular/src/app/pages/ (where no Momentum API usage exists nearby)",
+				"Replaced test cases with harder scenarios: data-page-isolated-context, signal-based-data-binding, error-handling-component",
+				"Prompts now say 'CMS data layer' instead of 'Momentum API' — testing if the skill teaches the correct API name",
+				"Added subscribe() to file_not_contains (skill teaches promise-based patterns)",
+				"Added ValidationError convention assertion (skill teaches typed error handling)",
+				"Added findById convention assertion (skill teaches single-document lookup)",
+				"Added page: and where: convention assertions for advanced FindOptions",
+				"Quality tier now lints example-angular (the target project)"
+			]
+		}
+	]
+}

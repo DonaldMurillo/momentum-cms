@@ -18,7 +18,8 @@
 			"options": {
 				"outputPath": "dist/libs/logger",
 				"main": "libs/logger/src/index.ts",
-				"tsConfig": "libs/logger/tsconfig.lib.json"
+				"tsConfig": "libs/logger/tsconfig.lib.json",
+				"generatePackageJson": false
 			}
 		},
 		"nx-release-publish": {

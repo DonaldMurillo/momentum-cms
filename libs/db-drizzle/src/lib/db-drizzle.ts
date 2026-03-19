@@ -14,96 +14,106 @@ import type {
 	CreateVersionOptions,
 } from '@momentumcms/core';
 import { flattenDataFields, getSoftDeleteField, hasVersionDrafts } from '@momentumcms/core';
+import {
+	validateCollectionSlug,
+	validateColumnName,
+	getTableName,
+	getStatusFromRow,
+	parseJsonToRecord,
+	isRecord,
+} from './db-shared';
 
-/**
- * Type guard to check if a value is a record object.
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null;
-}
+import {
+	SIMPLE_OP_MAP,
+	hasOperatorKeys,
+	MAX_IN_ARRAY_SIZE,
+	MAX_PATTERN_LENGTH,
+} from './operator-constants';
 
-/**
- * Type guard to check if a value is a valid DocumentStatus.
- */
-function isDocumentStatus(value: unknown): value is DocumentStatus {
-	return value === 'draft' || value === 'published';
-}
-
-/**
- * Safely get DocumentStatus from a row value.
- */
-function getStatusFromRow(row: Record<string, unknown>): DocumentStatus {
-	const status = row['_status'];
-	if (isDocumentStatus(status)) {
-		return status;
-	}
-	return 'draft'; // Default fallback
-}
-
-const COMPARISON_OP_MAP: Record<string, string> = {
-	$gt: '>',
-	$gte: '>=',
-	$lt: '<',
-	$lte: '<=',
-};
-
-function hasComparisonOps(value: object): boolean {
-	return Object.keys(value).some((k) => k in COMPARISON_OP_MAP);
-}
-
-function buildComparisonClauses(
+function buildOperatorClauses(
 	key: string,
 	value: object,
 	whereClauses: string[],
 	whereValues: unknown[],
+	rawExpr = false,
 ): void {
-	const record = value as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions -- narrowed by hasComparisonOps guard
-	for (const [op, sqlOp] of Object.entries(COMPARISON_OP_MAP)) {
+	const record = value as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions -- narrowed by hasOperatorKeys guard
+	// When rawExpr is true, key is already a SQL expression (e.g., json_extract(...))
+	const col = rawExpr ? key : `"${key}"`;
+
+	// Simple operators: "column" OP ?
+	// Special cases: $ne null → IS NOT NULL, $eq null → IS NULL (SQL NULL semantics)
+	for (const [op, sqlOp] of Object.entries(SIMPLE_OP_MAP)) {
 		if (op in record) {
-			whereClauses.push(`"${key}" ${sqlOp} ?`);
-			whereValues.push(record[op]);
+			if (op === '$ne' && record[op] === null) {
+				whereClauses.push(`${col} IS NOT NULL`);
+			} else if (op === '$eq' && record[op] === null) {
+				whereClauses.push(`${col} IS NULL`);
+			} else {
+				// Guard: limit pattern length for LIKE operator
+				if (op === '$like' && String(record[op]).length > MAX_PATTERN_LENGTH) {
+					throw new Error(
+						`Pattern value for $like exceeds maximum length of ${MAX_PATTERN_LENGTH} characters`,
+					);
+				}
+				// Add ESCAPE clause for LIKE so backslash-escaped wildcards work consistently
+				if (op === '$like') {
+					whereClauses.push(`${col} ${sqlOp} ? ESCAPE '\\'`);
+				} else {
+					whereClauses.push(`${col} ${sqlOp} ?`);
+				}
+				whereValues.push(record[op]);
+			}
 		}
 	}
-}
 
-/**
- * Safely parse JSON to Record<string, unknown>.
- */
-function parseJsonToRecord(jsonString: string): Record<string, unknown> {
-	try {
-		const parsed: unknown = JSON.parse(jsonString);
-		if (isRecord(parsed)) {
-			return parsed;
+	// $contains: case-insensitive substring match via LIKE '%value%'
+	if ('$contains' in record) {
+		const val = String(record['$contains']);
+		if (val.length > MAX_PATTERN_LENGTH) {
+			throw new Error(
+				`Pattern value for $contains exceeds maximum length of ${MAX_PATTERN_LENGTH} characters`,
+			);
 		}
-		return {};
-	} catch {
-		return {};
+		const escaped = val.replace(/[%_\\]/g, '\\$&');
+		whereClauses.push(`${col} LIKE ? ESCAPE '\\'`);
+		whereValues.push(`%${escaped}%`);
+	}
+
+	// $in / $nin: "column" [NOT] IN (?, ?, ...)
+	for (const [op, sql] of [
+		['$in', 'IN'],
+		['$nin', 'NOT IN'],
+	] as const) {
+		if (op in record) {
+			const arr = record[op];
+			if (!Array.isArray(arr) || arr.length === 0) {
+				throw new Error(`Operator ${op} requires a non-empty array value`);
+			}
+			if (arr.length > MAX_IN_ARRAY_SIZE) {
+				throw new Error(
+					`Operator ${op} array exceeds maximum of ${MAX_IN_ARRAY_SIZE} elements (got ${arr.length})`,
+				);
+			}
+			const placeholders = arr.map(() => '?').join(', ');
+			whereClauses.push(`${col} ${sql} (${placeholders})`);
+			whereValues.push(...arr);
+		}
+	}
+
+	// $exists: IS [NOT] NULL (no parameter needed)
+	if ('$exists' in record) {
+		// Coerce string "true"/"false" to boolean (query-string origin)
+		let existsVal = record['$exists'];
+		if (typeof existsVal === 'string') {
+			existsVal = existsVal === 'true';
+		}
+		whereClauses.push(existsVal ? `${col} IS NOT NULL` : `${col} IS NULL`);
 	}
 }
 
-/**
- * Validates that a collection slug is safe for use in SQL.
- * Prevents potential SQL injection via table names.
- */
-function validateCollectionSlug(slug: string): void {
-	const validSlug = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
-	if (!validSlug.test(slug)) {
-		throw new Error(
-			`Invalid collection slug: "${slug}". Slugs must start with a letter or underscore and contain only alphanumeric characters, underscores, and hyphens.`,
-		);
-	}
-}
-
-/**
- * Validates that a column name is safe for use in SQL.
- * Prevents SQL injection via column name interpolation.
- */
-function validateColumnName(name: string): void {
-	const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
-	if (!validColumnName.test(name)) {
-		throw new Error(`Invalid column name: "${name}"`);
-	}
-}
+// validateCollectionSlug, validateColumnName, parseJsonToRecord, isRecord,
+// isDocumentStatus, getStatusFromRow are now imported from ./db-shared
 
 /**
  * Simple async queue to serialize database operations.
@@ -196,14 +206,6 @@ function createTableSql(collection: CollectionConfig): string {
 
 	const tableName = collection.dbName ?? collection.slug;
 	return `CREATE TABLE IF NOT EXISTS "${tableName}" (${columns.join(', ')})`;
-}
-
-/**
- * Resolves the actual database table name for a collection.
- * Uses dbName if specified, falls back to slug.
- */
-function getTableName(collection: CollectionConfig): string {
-	return collection.dbName ?? collection.slug;
 }
 
 /**
@@ -305,53 +307,227 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 	// Sync implementations shared by normal and transactional adapters
 	// ============================================
 
-	function findSync(collection: string, query: Record<string, unknown>): Record<string, unknown>[] {
-		validateCollectionSlug(collection);
-		const limitValue = typeof query['limit'] === 'number' ? query['limit'] : 100;
-		const pageValue = typeof query['page'] === 'number' ? query['page'] : 1;
-		const offset = (pageValue - 1) * limitValue;
+	const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+	const reservedParams = new Set(['limit', 'page', 'sort', 'order', '$joins']);
 
-		const whereClauses: string[] = [];
-		const whereValues: unknown[] = [];
-		const reservedParams = new Set(['limit', 'page', 'sort', 'order']);
-		const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+	/**
+	 * Build an inline EXISTS subquery for a $join marker inside $or/$and.
+	 */
+	function buildInlineJoinClause(
+		joinSpec: unknown,
+		whereValues: unknown[],
+		mainTable: string,
+	): string | null {
+		if (typeof joinSpec !== 'object' || joinSpec === null) return null;
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- $join marker structure
+		const j = joinSpec as {
+			targetTable: string;
+			localField: string;
+			targetField: string;
+			conditions: Record<string, unknown>;
+		};
+		validateCollectionSlug(j.targetTable);
+		if (!validColumnName.test(j.localField))
+			throw new Error(`Invalid column name: ${j.localField}`);
+		if (!validColumnName.test(j.targetField))
+			throw new Error(`Invalid column name: ${j.targetField}`);
+		const joinClauses: string[] = [];
+		buildWhereFragments(j.conditions, joinClauses, whereValues, false, mainTable);
+		const joinWhere = joinClauses.length > 0 ? ` AND ${joinClauses.join(' AND ')}` : '';
+		const tableName = resolveTableName(j.targetTable);
+		return `EXISTS (SELECT 1 FROM "${tableName}" WHERE "${tableName}"."${j.targetField}" = "${mainTable}"."${j.localField}"${joinWhere})`;
+	}
 
-		for (const [key, value] of Object.entries(query)) {
-			if (reservedParams.has(key)) continue;
+	/**
+	 * Recursively build WHERE clause fragments from a query params object.
+	 * Handles $or/$and by recursing and wrapping with parentheses.
+	 */
+	function buildWhereFragments(
+		params: Record<string, unknown>,
+		whereClauses: string[],
+		whereValues: unknown[],
+		skipReserved: boolean,
+		mainTable?: string,
+	): void {
+		for (const [key, value] of Object.entries(params)) {
+			if (skipReserved && reservedParams.has(key)) continue;
 			if (value === undefined) continue;
+
+			// Handle $or / $and logical operators
+			if (key === '$or' || key === '$and') {
+				if (!Array.isArray(value)) continue;
+				const joiner = key === '$or' ? ' OR ' : ' AND ';
+				const subClauses: string[] = [];
+				for (const sub of value) {
+					if (typeof sub !== 'object' || sub === null) continue;
+					const subObj = sub as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions -- guarded by typeof check above
+					// Handle inline $join markers (relationship joins inside or/and groups)
+					if ('$join' in subObj && mainTable) {
+						const clause = buildInlineJoinClause(subObj['$join'], whereValues, mainTable);
+						if (clause) subClauses.push(clause);
+						continue;
+					}
+					const innerClauses: string[] = [];
+					buildWhereFragments(subObj, innerClauses, whereValues, false, mainTable);
+					if (innerClauses.length > 0) {
+						subClauses.push(`(${innerClauses.join(' AND ')})`);
+					}
+				}
+				if (subClauses.length > 0) {
+					whereClauses.push(`(${subClauses.join(joiner)})`);
+				}
+				continue;
+			}
+
+			// Handle dot-notation for JSON field access (e.g., "metadata.color")
+			if (key.includes('.')) {
+				const dotIdx = key.indexOf('.');
+				const column = key.slice(0, dotIdx);
+				const jsonPath = key.slice(dotIdx + 1);
+				if (!validColumnName.test(column)) {
+					throw new Error(`Invalid column name: ${column}`);
+				}
+				// Validate each segment of JSON path
+				for (const seg of jsonPath.split('.')) {
+					if (!validColumnName.test(seg)) {
+						throw new Error(`Invalid JSON path segment: ${seg}`);
+					}
+				}
+				const jsonPathExpr = `json_extract("${column}", '$.${jsonPath}')`;
+				if (value === null) {
+					whereClauses.push(`${jsonPathExpr} IS NULL`);
+				} else if (typeof value === 'object' && value !== null && hasOperatorKeys(value)) {
+					buildOperatorClauses(jsonPathExpr, value, whereClauses, whereValues, true);
+				} else {
+					whereClauses.push(`${jsonPathExpr} = ?`);
+					whereValues.push(value);
+				}
+				continue;
+			}
+
 			if (!validColumnName.test(key)) {
 				throw new Error(`Invalid column name: ${key}`);
 			}
 			if (value === null) {
 				whereClauses.push(`"${key}" IS NULL`);
-			} else if (
-				typeof value === 'object' &&
-				value !== null &&
-				'$ne' in value &&
-				value['$ne'] === null
-			) {
-				whereClauses.push(`"${key}" IS NOT NULL`);
-			} else if (typeof value === 'object' && value !== null && hasComparisonOps(value)) {
-				buildComparisonClauses(key, value, whereClauses, whereValues);
+			} else if (typeof value === 'object' && value !== null && hasOperatorKeys(value)) {
+				buildOperatorClauses(key, value, whereClauses, whereValues);
 			} else {
 				whereClauses.push(`"${key}" = ?`);
 				whereValues.push(value);
 			}
 		}
+	}
+
+	function findSync(collection: string, query: Record<string, unknown>): Record<string, unknown>[] {
+		validateCollectionSlug(collection);
+		const limitValue = typeof query['limit'] === 'number' ? query['limit'] : 100;
+		const pageValue = typeof query['page'] === 'number' ? query['page'] : 1;
+		const offset = (pageValue - 1) * limitValue;
+		const mainTableName = resolveTableName(collection);
+
+		const whereClauses: string[] = [];
+		const whereValues: unknown[] = [];
+
+		buildWhereFragments(query, whereClauses, whereValues, true, mainTableName);
+
+		// Handle $joins — build EXISTS subqueries for relationship filtering
+		const joins = query['$joins'];
+		if (Array.isArray(joins)) {
+			for (const join of joins) {
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- $joins array elements are JoinSpec objects from momentum-api
+				const j = join as {
+					targetTable: string;
+					localField: string;
+					targetField: string;
+					conditions: Record<string, unknown>;
+				};
+				validateCollectionSlug(j.targetTable);
+				if (!validColumnName.test(j.localField)) {
+					throw new Error(`Invalid column name: ${j.localField}`);
+				}
+				if (!validColumnName.test(j.targetField)) {
+					throw new Error(`Invalid column name: ${j.targetField}`);
+				}
+				const joinClauses: string[] = [];
+				buildWhereFragments(j.conditions, joinClauses, whereValues, false);
+				const joinWhere = joinClauses.length > 0 ? ` AND ${joinClauses.join(' AND ')}` : '';
+				const tableName = resolveTableName(j.targetTable);
+				whereClauses.push(
+					`EXISTS (SELECT 1 FROM "${tableName}" WHERE "${tableName}"."${j.targetField}" = "${resolveTableName(collection)}"."${j.localField}"${joinWhere})`,
+				);
+			}
+		}
 
 		const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+		// Build ORDER BY clause from sort param
+		let orderByClause = '';
+		const sortParam = query['sort'];
+		if (typeof sortParam === 'string' && sortParam.length > 0) {
+			const desc = sortParam.startsWith('-');
+			const sortField = desc ? sortParam.slice(1) : sortParam;
+			if (!validColumnName.test(sortField)) {
+				throw new Error(`Invalid sort column name: ${sortField}`);
+			}
+			orderByClause = `ORDER BY "${sortField}" ${desc ? 'DESC' : 'ASC'}`;
+		}
+
 		// limit: 0 means "no limit" (return all rows for count queries)
 		let rows: unknown[];
 		if (limitValue === 0) {
-			const sql = `SELECT * FROM "${resolveTableName(collection)}" ${whereClause}`;
+			const sql = `SELECT * FROM "${resolveTableName(collection)}" ${whereClause} ${orderByClause}`;
 			rows = sqlite.prepare(sql).all(...whereValues);
 		} else {
-			const sql = `SELECT * FROM "${resolveTableName(collection)}" ${whereClause} LIMIT ? OFFSET ?`;
+			const sql = `SELECT * FROM "${resolveTableName(collection)}" ${whereClause} ${orderByClause} LIMIT ? OFFSET ?`;
 			rows = sqlite.prepare(sql).all(...whereValues, limitValue, offset);
 		}
 		return rows.filter(
 			(row): row is Record<string, unknown> => typeof row === 'object' && row !== null,
 		);
+	}
+
+	function countSync(collection: string, query: Record<string, unknown>): number {
+		validateCollectionSlug(collection);
+		const mainTableName = resolveTableName(collection);
+		const whereClauses: string[] = [];
+		const whereValues: unknown[] = [];
+
+		buildWhereFragments(query, whereClauses, whereValues, true, mainTableName);
+
+		// Handle $joins — build EXISTS subqueries for relationship filtering
+		const joins = query['$joins'];
+		if (Array.isArray(joins)) {
+			for (const join of joins) {
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- $joins array elements are JoinSpec objects from momentum-api
+				const j = join as {
+					targetTable: string;
+					localField: string;
+					targetField: string;
+					conditions: Record<string, unknown>;
+				};
+				validateCollectionSlug(j.targetTable);
+				if (!validColumnName.test(j.localField)) {
+					throw new Error(`Invalid column name: ${j.localField}`);
+				}
+				if (!validColumnName.test(j.targetField)) {
+					throw new Error(`Invalid column name: ${j.targetField}`);
+				}
+				const joinClauses: string[] = [];
+				buildWhereFragments(j.conditions, joinClauses, whereValues, false);
+				const joinWhere = joinClauses.length > 0 ? ` AND ${joinClauses.join(' AND ')}` : '';
+				const tableName = resolveTableName(j.targetTable);
+				whereClauses.push(
+					`EXISTS (SELECT 1 FROM "${tableName}" WHERE "${tableName}"."${j.targetField}" = "${resolveTableName(collection)}"."${j.localField}"${joinWhere})`,
+				);
+			}
+		}
+
+		const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+		const sql = `SELECT COUNT(*) as count FROM "${resolveTableName(collection)}" ${whereClause}`;
+		const result = sqlite.prepare(sql).get(...whereValues);
+		if (isRecord(result) && typeof result['count'] === 'number') return result['count'];
+		return 0;
 	}
 
 	function findByIdSync(collection: string, id: string): Record<string, unknown> | null {
@@ -759,6 +935,9 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 
 		async find(collection, query) {
 			return findSync(collection, query);
+		},
+		async count(collection, query) {
+			return countSync(collection, query);
 		},
 		async findById(collection, id) {
 			return findByIdSync(collection, id);

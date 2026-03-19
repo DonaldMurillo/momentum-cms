@@ -223,6 +223,9 @@ export function createSetupMiddleware(
 	const { auth } = config;
 	const router = createRouter();
 
+	// In-process mutex to prevent TOCTOU race on concurrent create-admin requests
+	let setupInProgress = false;
+
 	/**
 	 * GET /setup/status
 	 *
@@ -253,6 +256,15 @@ export function createSetupMiddleware(
 	 * Only works when no users exist. The created user gets admin role.
 	 */
 	router.post('/setup/create-admin', async (req: Request, res: Response): Promise<void> => {
+		// Mutex: reject concurrent setup attempts to prevent TOCTOU race
+		if (setupInProgress) {
+			res.status(409).json({
+				error: { message: 'Setup is already in progress.' },
+			});
+			return;
+		}
+
+		setupInProgress = true;
 		try {
 			// Verify no users exist yet
 			let hasUsers: boolean;
@@ -350,9 +362,11 @@ export function createSetupMiddleware(
 					updatedAt: userRow.updatedAt,
 				},
 			});
-		} catch (error) {
-			const message = error instanceof Error ? error.message : 'Failed to create admin user';
-			res.status(500).json({ error: { message } });
+		} catch {
+			// Always return a generic error — never leak auth/DB internals from the setup endpoint
+			res.status(500).json({ error: { message: 'Failed to create admin user' } });
+		} finally {
+			setupInProgress = false;
 		}
 	});
 

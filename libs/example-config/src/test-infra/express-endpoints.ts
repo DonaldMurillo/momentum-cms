@@ -21,6 +21,8 @@ export interface TestEndpointsOptions {
 	analyticsAdapter: MemoryAnalyticsAdapter;
 	/** Event bus plugin instance */
 	events: EventBusPlugin;
+	/** Optional database pool for test SQL operations (e.g., role assignment) */
+	pool?: { query: (sql: string, params?: unknown[]) => Promise<unknown> };
 }
 
 /**
@@ -146,4 +148,24 @@ export function mountTestEndpoints(app: Router, options: TestEndpointsOptions): 
 		analyticsAdapter.events.length = 0;
 		res.json({ cleared: true });
 	});
+
+	// --- Role assignment endpoint (test only) ---
+	if (options.pool) {
+		const testPool = options.pool;
+		app.post('/api/test-set-role', async (req, res) => {
+			const { email, role } = req.body ?? {};
+			if (!email || !role) {
+				res.status(400).json({ error: 'email and role are required' });
+				return;
+			}
+			try {
+				await testPool.query('UPDATE "user" SET role = $1 WHERE email = $2', [role, email]);
+				res.json({ updated: true, email, role });
+			} catch (err) {
+				res.status(500).json({
+					error: err instanceof Error ? err.message : 'Role update failed',
+				});
+			}
+		});
+	}
 }

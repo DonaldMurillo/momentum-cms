@@ -37,16 +37,19 @@ export interface PostgresAdapterOptions {
 	max?: number;
 }
 
-const PG_COMPARISON_OP_MAP: Record<string, string> = {
-	$gt: '>',
-	$gte: '>=',
-	$lt: '<',
-	$lte: '<=',
-};
-
-function hasComparisonOps(value: object): boolean {
-	return Object.keys(value).some((k) => k in PG_COMPARISON_OP_MAP);
-}
+import {
+	SIMPLE_OP_MAP,
+	hasOperatorKeys,
+	MAX_IN_ARRAY_SIZE,
+	MAX_PATTERN_LENGTH,
+} from './operator-constants';
+import {
+	validateCollectionSlug,
+	validateColumnName,
+	getTableName,
+	getStatusFromRow,
+	parseJsonToRecord,
+} from './db-shared';
 
 /**
  * Maps field types to PostgreSQL column types.
@@ -174,37 +177,7 @@ function createTableSql(collection: CollectionConfig): string {
 	return `CREATE TABLE IF NOT EXISTS "${tableName}" (${columns.join(', ')})`;
 }
 
-/**
- * Resolves the actual database table name for a collection.
- * Uses dbName if specified, falls back to slug.
- */
-function getTableName(collection: CollectionConfig): string {
-	return collection.dbName ?? collection.slug;
-}
-
-/**
- * Validates that a collection slug is safe for use in SQL.
- * Prevents potential SQL injection via table names.
- */
-function validateCollectionSlug(slug: string): void {
-	const validSlug = /^[a-zA-Z_][a-zA-Z0-9_-]*$/;
-	if (!validSlug.test(slug)) {
-		throw new Error(
-			`Invalid collection slug: "${slug}". Slugs must start with a letter or underscore and contain only alphanumeric characters, underscores, and hyphens.`,
-		);
-	}
-}
-
-/**
- * Validates that a column name is safe for use in SQL.
- * Prevents SQL injection via column name interpolation.
- */
-function validateColumnName(name: string): void {
-	const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
-	if (!validColumnName.test(name)) {
-		throw new Error(`Invalid column name: "${name}"`);
-	}
-}
+// validateCollectionSlug, validateColumnName, getTableName are now imported from ./db-shared
 
 /**
  * Creates the SQL for a collection's versions table.
@@ -233,36 +206,7 @@ function createVersionTableSql(collection: CollectionConfig): string | null {
 	`;
 }
 
-/**
- * Type guard for DocumentStatus.
- */
-function isDocumentStatus(value: unknown): value is DocumentStatus {
-	return value === 'draft' || value === 'published';
-}
-
-/**
- * Safely extract status from a database row.
- */
-function getStatusFromRow(row: Record<string, unknown>): DocumentStatus {
-	const status = row['_status'];
-	return isDocumentStatus(status) ? status : 'draft';
-}
-
-/**
- * Parse JSON string to Record, with error handling.
- */
-function parseJsonToRecord(jsonString: string): Record<string, unknown> {
-	try {
-		const parsed: unknown = JSON.parse(jsonString);
-		if (typeof parsed === 'object' && parsed !== null) {
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Safe after type check
-			return parsed as Record<string, unknown>;
-		}
-		return {};
-	} catch {
-		return {};
-	}
-}
+// isDocumentStatus, getStatusFromRow, parseJsonToRecord are now imported from ./db-shared
 
 // AUTH_TABLES_SQL removed — auth tables are now defined as managed collections
 // and created through the normal createTableSql() path via the auth plugin.
@@ -443,6 +387,218 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 	 * This allows the same method implementations to be used for both
 	 * pool-level and transaction-level (client-level) operations.
 	 */
+
+	const pgValidColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+	const pgReservedParams = new Set(['limit', 'page', 'sort', 'order', '$joins']);
+
+	/**
+	 * Recursively build WHERE clause fragments from query params (PostgreSQL).
+	 * Handles $or/$and by recursing and wrapping with parentheses.
+	 * Returns updated paramIndex.
+	 */
+	/**
+	 * Build an inline EXISTS subquery for a $join marker inside $or/$and (PostgreSQL).
+	 */
+	function buildPgInlineJoinClause(
+		joinSpec: unknown,
+		whereClauses: string[],
+		whereValues: unknown[],
+		paramIndex: number,
+		mainTable: string,
+	): number {
+		if (typeof joinSpec !== 'object' || joinSpec === null) return paramIndex;
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- $join marker structure
+		const j = joinSpec as {
+			targetTable: string;
+			localField: string;
+			targetField: string;
+			conditions: Record<string, unknown>;
+		};
+		validateCollectionSlug(j.targetTable);
+		if (!pgValidColumnName.test(j.localField))
+			throw new Error(`Invalid column name: ${j.localField}`);
+		if (!pgValidColumnName.test(j.targetField))
+			throw new Error(`Invalid column name: ${j.targetField}`);
+		const joinClauses: string[] = [];
+		paramIndex = buildPgWhereFragments(
+			j.conditions,
+			joinClauses,
+			whereValues,
+			paramIndex,
+			false,
+			mainTable,
+		);
+		const joinWhere = joinClauses.length > 0 ? ` AND ${joinClauses.join(' AND ')}` : '';
+		const tableName = resolveTableName(j.targetTable);
+		whereClauses.push(
+			`EXISTS (SELECT 1 FROM "${tableName}" WHERE "${tableName}"."${j.targetField}" = "${mainTable}"."${j.localField}"${joinWhere})`,
+		);
+		return paramIndex;
+	}
+
+	function buildPgWhereFragments(
+		params: Record<string, unknown>,
+		whereClauses: string[],
+		whereValues: unknown[],
+		paramIndex: number,
+		skipReserved: boolean,
+		mainTable?: string,
+	): number {
+		for (const [key, value] of Object.entries(params)) {
+			if (skipReserved && pgReservedParams.has(key)) continue;
+			if (value === undefined) continue;
+
+			// Handle $or / $and logical operators
+			if (key === '$or' || key === '$and') {
+				if (!Array.isArray(value)) continue;
+				const joiner = key === '$or' ? ' OR ' : ' AND ';
+				const subClauses: string[] = [];
+				for (const sub of value) {
+					if (typeof sub !== 'object' || sub === null) continue;
+					const subObj = sub as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions -- guarded by typeof check above
+					// Handle inline $join markers (relationship joins inside or/and groups)
+					if ('$join' in subObj && mainTable) {
+						paramIndex = buildPgInlineJoinClause(
+							subObj['$join'],
+							subClauses,
+							whereValues,
+							paramIndex,
+							mainTable,
+						);
+						continue;
+					}
+					const innerClauses: string[] = [];
+					paramIndex = buildPgWhereFragments(
+						subObj,
+						innerClauses,
+						whereValues,
+						paramIndex,
+						false,
+						mainTable,
+					);
+					if (innerClauses.length > 0) {
+						subClauses.push(`(${innerClauses.join(' AND ')})`);
+					}
+				}
+				if (subClauses.length > 0) {
+					whereClauses.push(`(${subClauses.join(joiner)})`);
+				}
+				continue;
+			}
+
+			// Handle dot-notation for JSON/group field queries (e.g. "metadata.color")
+			let col: string;
+			let rawExpr = false;
+			if (key.includes('.')) {
+				const segments = key.split('.');
+				const colName = segments[0];
+				const jsonSegments = segments.slice(1);
+				if (!pgValidColumnName.test(colName)) {
+					throw new Error(`Invalid column name: ${colName}`);
+				}
+				for (const seg of jsonSegments) {
+					if (!pgValidColumnName.test(seg)) {
+						throw new Error(`Invalid JSON path segment: ${seg}`);
+					}
+				}
+				if (jsonSegments.length === 1) {
+					col = `"${colName}"->>'${jsonSegments[0]}'`;
+				} else {
+					// Multi-level: "col"->'seg1'->'seg2'->>'lastSeg'
+					const intermediate = jsonSegments
+						.slice(0, -1)
+						.map((s) => `'${s}'`)
+						.join('->');
+					const last = jsonSegments[jsonSegments.length - 1];
+					col = `"${colName}"->${intermediate}->>'${last}'`;
+				}
+				rawExpr = true;
+			} else {
+				if (!pgValidColumnName.test(key)) {
+					throw new Error(`Invalid column name: ${key}`);
+				}
+				col = `"${key}"`;
+			}
+
+			if (value === null) {
+				whereClauses.push(`${col} IS NULL`);
+			} else if (typeof value === 'object' && value !== null && hasOperatorKeys(value)) {
+				const valObj = value as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions
+
+				for (const [op, sqlOp] of Object.entries(SIMPLE_OP_MAP)) {
+					if (op in valObj) {
+						if (op === '$ne' && valObj[op] === null) {
+							whereClauses.push(`${col} IS NOT NULL`);
+						} else if (op === '$eq' && valObj[op] === null) {
+							whereClauses.push(`${col} IS NULL`);
+						} else {
+							if (op === '$like' && String(valObj[op]).length > MAX_PATTERN_LENGTH) {
+								throw new Error(
+									`Pattern value for $like exceeds maximum length of ${MAX_PATTERN_LENGTH} characters`,
+								);
+							}
+							// For JSON path comparisons with numeric operators, cast to NUMERIC
+							const castSuffix =
+								rawExpr && ['>', '>=', '<', '<='].includes(sqlOp) ? '::NUMERIC' : '';
+							// Add ESCAPE clause for LIKE so backslash-escaped wildcards work consistently
+							const escapeSuffix = op === '$like' ? " ESCAPE '\\'" : '';
+							whereClauses.push(`${col}${castSuffix} ${sqlOp} $${paramIndex}${escapeSuffix}`);
+							whereValues.push(valObj[op]);
+							paramIndex++;
+						}
+					}
+				}
+
+				if ('$contains' in valObj) {
+					const val = String(valObj['$contains']);
+					if (val.length > MAX_PATTERN_LENGTH) {
+						throw new Error(
+							`Pattern value for $contains exceeds maximum length of ${MAX_PATTERN_LENGTH} characters`,
+						);
+					}
+					const escaped = val.replace(/[%_\\]/g, '\\$&');
+					whereClauses.push(`${col} ILIKE $${paramIndex} ESCAPE '\\'`);
+					whereValues.push(`%${escaped}%`);
+					paramIndex++;
+				}
+
+				for (const [op, sql] of [
+					['$in', 'IN'],
+					['$nin', 'NOT IN'],
+				] as const) {
+					if (op in valObj) {
+						const arr = valObj[op];
+						if (!Array.isArray(arr) || arr.length === 0) {
+							throw new Error(`Operator ${op} requires a non-empty array value`);
+						}
+						if (arr.length > MAX_IN_ARRAY_SIZE) {
+							throw new Error(
+								`Operator ${op} array exceeds maximum of ${MAX_IN_ARRAY_SIZE} elements (got ${arr.length})`,
+							);
+						}
+						const placeholders = arr.map(() => `$${paramIndex++}`).join(', ');
+						whereClauses.push(`${col} ${sql} (${placeholders})`);
+						whereValues.push(...arr);
+					}
+				}
+
+				if ('$exists' in valObj) {
+					// Coerce string "true"/"false" to boolean (query-string origin)
+					let existsVal = valObj['$exists'];
+					if (typeof existsVal === 'string') {
+						existsVal = existsVal === 'true';
+					}
+					whereClauses.push(existsVal ? `${col} IS NOT NULL` : `${col} IS NULL`);
+				}
+			} else {
+				whereClauses.push(`${col} = $${paramIndex}`);
+				whereValues.push(value);
+				paramIndex++;
+			}
+		}
+		return paramIndex;
+	}
+
 	function buildMethods(h: QueryHelpers): Omit<DatabaseAdapter, 'initialize' | 'transaction'> {
 		return {
 			async find(
@@ -454,62 +610,139 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				const pageValue = typeof queryParams['page'] === 'number' ? queryParams['page'] : 1;
 				const offset = (pageValue - 1) * limitValue;
 
-				// Build WHERE clause from query parameters (excluding pagination params)
 				const whereClauses: string[] = [];
 				const whereValues: unknown[] = [];
-				const reservedParams = new Set(['limit', 'page', 'sort', 'order']);
-				let paramIndex = 1;
+				let paramIndex = buildPgWhereFragments(
+					queryParams,
+					whereClauses,
+					whereValues,
+					1,
+					true,
+					resolveTableName(collection),
+				);
 
-				// Regex to validate column names (alphanumeric and underscore only, must start with letter or underscore)
-				const validColumnName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
-
-				for (const [key, value] of Object.entries(queryParams)) {
-					if (reservedParams.has(key)) {
-						continue;
-					}
-					if (value === undefined) continue;
-					// Validate column name to prevent SQL injection
-					if (!validColumnName.test(key)) {
-						throw new Error(`Invalid column name: ${key}`);
-					}
-					if (value === null) {
-						whereClauses.push(`"${key}" IS NULL`);
-					} else if (
-						typeof value === 'object' &&
-						value !== null &&
-						'$ne' in value &&
-						value['$ne'] === null
-					) {
-						whereClauses.push(`"${key}" IS NOT NULL`);
-					} else if (typeof value === 'object' && value !== null && hasComparisonOps(value)) {
-						const valObj = value as Record<string, unknown>; // eslint-disable-line @typescript-eslint/consistent-type-assertions -- narrowed by hasComparisonOps guard
-						for (const [op, sqlOp] of Object.entries(PG_COMPARISON_OP_MAP)) {
-							if (op in valObj) {
-								whereClauses.push(`"${key}" ${sqlOp} $${paramIndex}`);
-								whereValues.push(valObj[op]);
-								paramIndex++;
-							}
+				// Handle $joins — build EXISTS subqueries for relationship filtering
+				const joins = queryParams['$joins'];
+				if (Array.isArray(joins)) {
+					for (const join of joins) {
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- $joins array elements are JoinSpec objects from momentum-api
+						const j = join as {
+							targetTable: string;
+							localField: string;
+							targetField: string;
+							conditions: Record<string, unknown>;
+						};
+						validateCollectionSlug(j.targetTable);
+						if (!pgValidColumnName.test(j.localField)) {
+							throw new Error(`Invalid column name: ${j.localField}`);
 						}
-					} else {
-						whereClauses.push(`"${key}" = $${paramIndex}`);
-						whereValues.push(value);
-						paramIndex++;
+						if (!pgValidColumnName.test(j.targetField)) {
+							throw new Error(`Invalid column name: ${j.targetField}`);
+						}
+						const joinClauses: string[] = [];
+						paramIndex = buildPgWhereFragments(
+							j.conditions,
+							joinClauses,
+							whereValues,
+							paramIndex,
+							false,
+						);
+						const joinWhere = joinClauses.length > 0 ? ` AND ${joinClauses.join(' AND ')}` : '';
+						const tableName = resolveTableName(j.targetTable);
+						const mainTable = resolveTableName(collection);
+						whereClauses.push(
+							`EXISTS (SELECT 1 FROM "${tableName}" WHERE "${tableName}"."${j.targetField}" = "${mainTable}"."${j.localField}"${joinWhere})`,
+						);
 					}
 				}
 
 				const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
+				// Build ORDER BY clause from sort param
+				let orderByClause = '';
+				const sortParam = queryParams['sort'];
+				if (typeof sortParam === 'string' && sortParam.length > 0) {
+					const desc = sortParam.startsWith('-');
+					const sortField = desc ? sortParam.slice(1) : sortParam;
+					if (!pgValidColumnName.test(sortField)) {
+						throw new Error(`Invalid sort column name: ${sortField}`);
+					}
+					orderByClause = `ORDER BY "${sortField}" ${desc ? 'DESC' : 'ASC'}`;
+				}
+
 				// limit: 0 means "no limit" (return all rows for count queries)
 				if (limitValue === 0) {
 					return h.query(
-						`SELECT * FROM "${resolveTableName(collection)}" ${whereClause}`,
+						`SELECT * FROM "${resolveTableName(collection)}" ${whereClause} ${orderByClause}`,
 						whereValues,
 					);
 				}
 				return h.query(
-					`SELECT * FROM "${resolveTableName(collection)}" ${whereClause} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+					`SELECT * FROM "${resolveTableName(collection)}" ${whereClause} ${orderByClause} LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
 					[...whereValues, limitValue, offset],
 				);
+			},
+
+			async count(collection: string, queryParams: Record<string, unknown>): Promise<number> {
+				validateCollectionSlug(collection);
+				const whereClauses: string[] = [];
+				const whereValues: unknown[] = [];
+				let paramIndex = buildPgWhereFragments(
+					queryParams,
+					whereClauses,
+					whereValues,
+					1,
+					true,
+					resolveTableName(collection),
+				);
+
+				// Handle $joins — build EXISTS subqueries for relationship filtering
+				const joins = queryParams['$joins'];
+				if (Array.isArray(joins)) {
+					for (const join of joins) {
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- $joins array elements are JoinSpec objects from momentum-api
+						const j = join as {
+							targetTable: string;
+							localField: string;
+							targetField: string;
+							conditions: Record<string, unknown>;
+						};
+						validateCollectionSlug(j.targetTable);
+						if (!pgValidColumnName.test(j.localField)) {
+							throw new Error(`Invalid column name: ${j.localField}`);
+						}
+						if (!pgValidColumnName.test(j.targetField)) {
+							throw new Error(`Invalid column name: ${j.targetField}`);
+						}
+						const joinClauses: string[] = [];
+						paramIndex = buildPgWhereFragments(
+							j.conditions,
+							joinClauses,
+							whereValues,
+							paramIndex,
+							false,
+						);
+						const joinWhere = joinClauses.length > 0 ? ` AND ${joinClauses.join(' AND ')}` : '';
+						const tableName = resolveTableName(j.targetTable);
+						const mainTable = resolveTableName(collection);
+						whereClauses.push(
+							`EXISTS (SELECT 1 FROM "${tableName}" WHERE "${tableName}"."${j.targetField}" = "${mainTable}"."${j.localField}"${joinWhere})`,
+						);
+					}
+				}
+
+				const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+				const rows = await h.query(
+					`SELECT COUNT(*) as count FROM "${resolveTableName(collection)}" ${whereClause}`,
+					whereValues,
+				);
+				if (rows.length > 0 && typeof rows[0]['count'] === 'string') {
+					return parseInt(rows[0]['count'], 10);
+				}
+				if (rows.length > 0 && typeof rows[0]['count'] === 'number') {
+					return rows[0]['count'];
+				}
+				return 0;
 			},
 
 			async search(
@@ -539,7 +772,9 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				const tsqueryExpr = `plainto_tsquery('simple', $1)`;
 
 				// Rank by relevance, fall back to ILIKE for partial matches
-				const ilikeClauses = fields.map((f, i) => `"${f}"::text ILIKE $${i + 2}`).join(' OR ');
+				const ilikeClauses = fields
+					.map((f, i) => `"${f}"::text ILIKE $${i + 2} ESCAPE '\\'`)
+					.join(' OR ');
 				const escapedQuery = searchQuery.replace(/[%_\\]/g, '\\$&');
 				const ilikePattern = `%${escapedQuery}%`;
 				const ilikeParams = fields.map(() => ilikePattern);

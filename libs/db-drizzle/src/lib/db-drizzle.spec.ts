@@ -16,6 +16,22 @@ const mockPostsCollection: CollectionConfig = {
 	],
 };
 
+const mockProductsCollection: CollectionConfig = {
+	slug: 'products',
+	labels: { singular: 'Product', plural: 'Products' },
+	fields: [
+		{ name: 'name', type: 'text', required: true },
+		{
+			name: 'metadata',
+			type: 'group',
+			fields: [
+				{ name: 'color', type: 'text' },
+				{ name: 'size', type: 'number' },
+			],
+		},
+	],
+};
+
 describe('sqliteAdapter', () => {
 	beforeEach(() => {
 		// Ensure test directory exists
@@ -295,6 +311,558 @@ describe('sqliteAdapter', () => {
 			});
 			expect(docs.length).toBeGreaterThanOrEqual(1);
 			expect(docs.some((d) => d['title'] === 'Range Post')).toBe(true);
+		});
+	});
+
+	describe('extended operators', () => {
+		let adapter: ReturnType<typeof sqliteAdapter>;
+
+		beforeEach(async () => {
+			adapter = sqliteAdapter({ filename: TEST_DB_PATH });
+			await adapter.initialize?.([mockPostsCollection]);
+		});
+
+		it('should filter with $ne operator (not equals)', async () => {
+			await adapter.create('posts', { title: 'Keep Me' });
+			await adapter.create('posts', { title: 'Exclude Me' });
+
+			const docs = await adapter.find('posts', { title: { $ne: 'Exclude Me' } });
+			expect(docs.every((d) => d['title'] !== 'Exclude Me')).toBe(true);
+			expect(docs.some((d) => d['title'] === 'Keep Me')).toBe(true);
+		});
+
+		it('should still handle $ne with null as IS NOT NULL', async () => {
+			await adapter.create('posts', { title: 'Has Title' });
+			await adapter.create('posts', { title: 'Also Has Title' });
+
+			const docs = await adapter.find('posts', { title: { $ne: null } });
+			expect(docs.length).toBeGreaterThanOrEqual(2);
+		});
+
+		it('should filter with $like operator', async () => {
+			await adapter.create('posts', { title: 'Hello World' });
+			await adapter.create('posts', { title: 'Goodbye World' });
+			await adapter.create('posts', { title: 'Nothing Here' });
+
+			const docs = await adapter.find('posts', { title: { $like: '%World' } });
+			expect(docs).toHaveLength(2);
+			expect(docs.every((d) => String(d['title']).endsWith('World'))).toBe(true);
+		});
+
+		it('should filter with $contains operator (auto-wraps with %)', async () => {
+			await adapter.create('posts', { title: 'First Alpha Post' });
+			await adapter.create('posts', { title: 'Second Beta Post' });
+			await adapter.create('posts', { title: 'Third Alpha Post' });
+
+			const docs = await adapter.find('posts', { title: { $contains: 'Alpha' } });
+			expect(docs).toHaveLength(2);
+			expect(docs.every((d) => String(d['title']).includes('Alpha'))).toBe(true);
+		});
+
+		it('should filter with $in operator', async () => {
+			await adapter.create('posts', { title: 'Apple' });
+			await adapter.create('posts', { title: 'Banana' });
+			await adapter.create('posts', { title: 'Cherry' });
+
+			const docs = await adapter.find('posts', { title: { $in: ['Apple', 'Cherry'] } });
+			expect(docs).toHaveLength(2);
+			expect(docs.map((d) => d['title']).sort()).toEqual(['Apple', 'Cherry']);
+		});
+
+		it('should filter with $nin operator (not in)', async () => {
+			await adapter.create('posts', { title: 'Dog' });
+			await adapter.create('posts', { title: 'Cat' });
+			await adapter.create('posts', { title: 'Bird' });
+
+			const docs = await adapter.find('posts', { title: { $nin: ['Dog', 'Cat'] } });
+			expect(docs.every((d) => d['title'] !== 'Dog' && d['title'] !== 'Cat')).toBe(true);
+			expect(docs.some((d) => d['title'] === 'Bird')).toBe(true);
+		});
+
+		it('should filter with $exists: true (IS NOT NULL)', async () => {
+			await adapter.create('posts', { title: 'Has Content', content: 'Some text' });
+			await adapter.create('posts', { title: 'No Content' });
+
+			const docs = await adapter.find('posts', { content: { $exists: true } });
+			expect(docs.length).toBeGreaterThanOrEqual(1);
+			expect(docs.every((d) => d['content'] != null)).toBe(true);
+			expect(docs.some((d) => d['title'] === 'Has Content')).toBe(true);
+			expect(docs.every((d) => d['title'] !== 'No Content')).toBe(true);
+		});
+
+		it('should filter with $exists: false (IS NULL)', async () => {
+			await adapter.create('posts', { title: 'Has Content', content: 'Some text' });
+			await adapter.create('posts', { title: 'No Content' });
+
+			const docs = await adapter.find('posts', { content: { $exists: false } });
+			expect(docs.length).toBeGreaterThanOrEqual(1);
+			expect(docs.every((d) => d['content'] == null)).toBe(true);
+			expect(docs.some((d) => d['title'] === 'No Content')).toBe(true);
+		});
+
+		it('should throw for $in with empty array', async () => {
+			await expect(adapter.find('posts', { title: { $in: [] } })).rejects.toThrow(
+				'non-empty array',
+			);
+		});
+
+		it('should throw for $nin with empty array', async () => {
+			await expect(adapter.find('posts', { title: { $nin: [] } })).rejects.toThrow(
+				'non-empty array',
+			);
+		});
+
+		it('should combine extended operators with comparison operators', async () => {
+			await adapter.create('posts', { title: 'Alpha' });
+			await adapter.create('posts', { title: 'Beta' });
+			await adapter.create('posts', { title: 'Gamma' });
+
+			// $ne combined with another operator on different fields
+			const now = new Date();
+			const oneMinuteFromNow = new Date(now.getTime() + 60_000).toISOString();
+			const docs = await adapter.find('posts', {
+				title: { $ne: 'Gamma' },
+				createdAt: { $lte: oneMinuteFromNow },
+			});
+			expect(docs.every((d) => d['title'] !== 'Gamma')).toBe(true);
+			expect(docs.length).toBeGreaterThanOrEqual(2);
+		});
+
+		it('should throw when $in array exceeds 500 elements', async () => {
+			const bigArray = Array.from({ length: 501 }, (_, i) => `val${i}`);
+			await expect(adapter.find('posts', { title: { $in: bigArray } })).rejects.toThrow(
+				/exceeds.*maximum.*500/i,
+			);
+		});
+
+		it('should allow $in array up to 500 elements', async () => {
+			const arr = Array.from({ length: 500 }, (_, i) => `val${i}`);
+			// Should not throw (returns 0 results since none match)
+			const docs = await adapter.find('posts', { title: { $in: arr } });
+			expect(docs).toBeDefined();
+		});
+
+		it('should throw when $nin array exceeds 500 elements', async () => {
+			const bigArray = Array.from({ length: 501 }, (_, i) => `val${i}`);
+			await expect(adapter.find('posts', { title: { $nin: bigArray } })).rejects.toThrow(
+				/exceeds.*maximum.*500/i,
+			);
+		});
+
+		it('should throw when $contains value exceeds 1000 characters', async () => {
+			const longStr = 'a'.repeat(1001);
+			await expect(adapter.find('posts', { title: { $contains: longStr } })).rejects.toThrow(
+				/exceeds.*maximum.*length|pattern.*too long/i,
+			);
+		});
+
+		it('should throw when $like value exceeds 1000 characters', async () => {
+			const longStr = 'a'.repeat(1001);
+			await expect(adapter.find('posts', { title: { $like: longStr } })).rejects.toThrow(
+				/exceeds.*maximum.*length|pattern.*too long/i,
+			);
+		});
+
+		it('should allow $contains value up to 1000 characters', async () => {
+			const str = 'a'.repeat(1000);
+			const docs = await adapter.find('posts', { title: { $contains: str } });
+			expect(docs).toBeDefined();
+		});
+	});
+
+	describe('sort support', () => {
+		let adapter: ReturnType<typeof sqliteAdapter>;
+
+		beforeEach(async () => {
+			adapter = sqliteAdapter({ filename: TEST_DB_PATH });
+			await adapter.initialize?.([mockPostsCollection]);
+			await adapter.create('posts', { title: 'Charlie' });
+			await adapter.create('posts', { title: 'Alpha' });
+			await adapter.create('posts', { title: 'Bravo' });
+		});
+
+		it('should sort ascending by field name', async () => {
+			const docs = await adapter.find('posts', { sort: 'title' });
+			const titles = docs.map((d) => d['title']);
+			expect(titles).toEqual(['Alpha', 'Bravo', 'Charlie']);
+		});
+
+		it('should sort descending with - prefix', async () => {
+			const docs = await adapter.find('posts', { sort: '-title' });
+			const titles = docs.map((d) => d['title']);
+			expect(titles).toEqual(['Charlie', 'Bravo', 'Alpha']);
+		});
+
+		it('should sort with limit', async () => {
+			const docs = await adapter.find('posts', { sort: 'title', limit: 2 });
+			const titles = docs.map((d) => d['title']);
+			expect(titles).toEqual(['Alpha', 'Bravo']);
+		});
+
+		it('should sort by createdAt by default', async () => {
+			const docs = await adapter.find('posts', {});
+			const titles = docs.map((d) => d['title']);
+			// Default insertion order
+			expect(titles).toEqual(['Charlie', 'Alpha', 'Bravo']);
+		});
+	});
+
+	describe('OR/AND logical operators', () => {
+		let adapter: ReturnType<typeof sqliteAdapter>;
+
+		beforeEach(async () => {
+			adapter = sqliteAdapter({ filename: TEST_DB_PATH });
+			await adapter.initialize?.([mockPostsCollection]);
+			await adapter.create('posts', { title: 'Alpha', content: 'First' });
+			await adapter.create('posts', { title: 'Beta', content: 'Second' });
+			await adapter.create('posts', { title: 'Gamma', content: 'Third' });
+		});
+
+		it('should handle $or — match any condition', async () => {
+			const docs = await adapter.find('posts', {
+				$or: [{ title: 'Alpha' }, { title: 'Gamma' }],
+			});
+			const titles = docs.map((d) => d['title']).sort();
+			expect(titles).toEqual(['Alpha', 'Gamma']);
+		});
+
+		it('should handle $and — match all conditions', async () => {
+			const docs = await adapter.find('posts', {
+				$and: [{ title: 'Alpha' }, { content: 'First' }],
+			});
+			expect(docs).toHaveLength(1);
+			expect(docs[0]['title']).toBe('Alpha');
+		});
+
+		it('should handle nested $or inside $and', async () => {
+			const docs = await adapter.find('posts', {
+				$and: [
+					{ $or: [{ title: 'Alpha' }, { title: 'Beta' }] },
+					{ content: { $contains: 'irst' } },
+				],
+			});
+			expect(docs).toHaveLength(1);
+			expect(docs[0]['title']).toBe('Alpha');
+		});
+
+		it('should combine $or with top-level field conditions', async () => {
+			const docs = await adapter.find('posts', {
+				content: { $ne: 'Third' },
+				$or: [{ title: 'Alpha' }, { title: 'Beta' }],
+			});
+			const titles = docs.map((d) => d['title']).sort();
+			expect(titles).toEqual(['Alpha', 'Beta']);
+		});
+
+		it('should return empty when $and conditions are contradictory', async () => {
+			const docs = await adapter.find('posts', {
+				$and: [{ title: 'Alpha' }, { title: 'Beta' }],
+			});
+			expect(docs).toHaveLength(0);
+		});
+	});
+
+	describe('contains case-insensitivity', () => {
+		let adapter: ReturnType<typeof sqliteAdapter>;
+
+		beforeEach(async () => {
+			adapter = sqliteAdapter({ filename: TEST_DB_PATH });
+			await adapter.initialize?.([mockPostsCollection]);
+			await adapter.create('posts', { title: 'Hello World' });
+			await adapter.create('posts', { title: 'HELLO WORLD' });
+			await adapter.create('posts', { title: 'hello world' });
+		});
+
+		it('should match $contains case-insensitively', async () => {
+			const docs = await adapter.find('posts', { title: { $contains: 'hello' } });
+			expect(docs).toHaveLength(3);
+		});
+
+		it('should match $contains case-insensitively with uppercase query', async () => {
+			const docs = await adapter.find('posts', { title: { $contains: 'HELLO' } });
+			expect(docs).toHaveLength(3);
+		});
+	});
+
+	describe('nested/dot-notation field queries', () => {
+		let adapter: ReturnType<typeof sqliteAdapter>;
+
+		beforeEach(async () => {
+			adapter = sqliteAdapter({ filename: TEST_DB_PATH });
+			await adapter.initialize?.([mockProductsCollection]);
+			await adapter.create('products', {
+				name: 'Widget',
+				metadata: JSON.stringify({ color: 'blue', size: 10 }),
+			});
+			await adapter.create('products', {
+				name: 'Gadget',
+				metadata: JSON.stringify({ color: 'red', size: 20 }),
+			});
+			await adapter.create('products', {
+				name: 'Doohickey',
+				metadata: JSON.stringify({ color: 'blue', size: 30 }),
+			});
+		});
+
+		it('should filter by nested field using dot notation', async () => {
+			const docs = await adapter.find('products', { 'metadata.color': 'blue' });
+			expect(docs).toHaveLength(2);
+			expect(docs.map((d) => d['name']).sort()).toEqual(['Doohickey', 'Widget']);
+		});
+
+		it('should filter by nested field with operator', async () => {
+			const docs = await adapter.find('products', {
+				'metadata.size': { $gt: 15 },
+			});
+			expect(docs).toHaveLength(2);
+			expect(docs.map((d) => d['name']).sort()).toEqual(['Doohickey', 'Gadget']);
+		});
+
+		it('should return empty for non-matching nested value', async () => {
+			const docs = await adapter.find('products', { 'metadata.color': 'green' });
+			expect(docs).toHaveLength(0);
+		});
+
+		it('should filter by multi-level dot notation (e.g. metadata.dimensions.width)', async () => {
+			// Create products with deeply nested JSON
+			await adapter.create('products', {
+				name: 'DeepWidget',
+				metadata: JSON.stringify({ dimensions: { width: 10, height: 20 } }),
+			});
+			await adapter.create('products', {
+				name: 'DeepGadget',
+				metadata: JSON.stringify({ dimensions: { width: 50, height: 5 } }),
+			});
+
+			const docs = await adapter.find('products', {
+				'metadata.dimensions.width': { $gt: 15 },
+			});
+			expect(docs).toHaveLength(1);
+			expect(docs[0]?.['name']).toBe('DeepGadget');
+		});
+	});
+
+	describe('relationship JOIN queries ($joins)', () => {
+		const categoriesCollection: CollectionConfig = {
+			slug: 'categories',
+			labels: { singular: 'Category', plural: 'Categories' },
+			fields: [
+				{ name: 'name', type: 'text', required: true },
+				{ name: 'priority', type: 'number' },
+			],
+		};
+
+		const articlesCollection: CollectionConfig = {
+			slug: 'articles',
+			labels: { singular: 'Article', plural: 'Articles' },
+			fields: [
+				{ name: 'title', type: 'text', required: true },
+				{ name: 'category', type: 'text' }, // stores category ID
+			],
+		};
+
+		let adapter: ReturnType<typeof sqliteAdapter>;
+
+		beforeEach(async () => {
+			adapter = sqliteAdapter({ filename: TEST_DB_PATH });
+			await adapter.initialize?.([categoriesCollection, articlesCollection]);
+
+			// Create categories and capture generated IDs
+			const cat1 = await adapter.create('categories', { name: 'Technology', priority: 1 });
+			const cat2 = await adapter.create('categories', { name: 'Science', priority: 2 });
+			await adapter.create('categories', { name: 'Art', priority: 3 });
+
+			// Create articles linked to categories via real IDs
+			await adapter.create('articles', { title: 'AI Revolution', category: cat1['id'] });
+			await adapter.create('articles', { title: 'Quantum Physics', category: cat2['id'] });
+			await adapter.create('articles', { title: 'Tech Trends', category: cat1['id'] });
+		});
+
+		it('should filter by related collection field using $joins', async () => {
+			const docs = await adapter.find('articles', {
+				$joins: [
+					{
+						targetTable: 'categories',
+						localField: 'category',
+						targetField: 'id',
+						conditions: { name: 'Technology' },
+					},
+				],
+			});
+			expect(docs).toHaveLength(2);
+			expect(docs.map((d) => d['title']).sort()).toEqual(['AI Revolution', 'Tech Trends']);
+		});
+
+		it('should filter by related field with operator in $joins', async () => {
+			const docs = await adapter.find('articles', {
+				$joins: [
+					{
+						targetTable: 'categories',
+						localField: 'category',
+						targetField: 'id',
+						conditions: { name: { $contains: 'sci' } },
+					},
+				],
+			});
+			expect(docs).toHaveLength(1);
+			expect(docs[0]['title']).toBe('Quantum Physics');
+		});
+
+		it('should combine $joins with normal where conditions', async () => {
+			const docs = await adapter.find('articles', {
+				title: { $contains: 'revolution' },
+				$joins: [
+					{
+						targetTable: 'categories',
+						localField: 'category',
+						targetField: 'id',
+						conditions: { name: 'Technology' },
+					},
+				],
+			});
+			expect(docs).toHaveLength(1);
+			expect(docs[0]['title']).toBe('AI Revolution');
+		});
+
+		it('should return empty when JOIN conditions match no related docs', async () => {
+			const docs = await adapter.find('articles', {
+				$joins: [
+					{
+						targetTable: 'categories',
+						localField: 'category',
+						targetField: 'id',
+						conditions: { name: 'Nonexistent' },
+					},
+				],
+			});
+			expect(docs).toHaveLength(0);
+		});
+
+		it('should reject $joins with invalid targetField', async () => {
+			await expect(
+				adapter.find('articles', {
+					$joins: [
+						{
+							targetTable: 'categories',
+							localField: 'category',
+							targetField: 'id" OR 1=1) --',
+							conditions: {},
+						},
+					],
+				}),
+			).rejects.toThrow(/Invalid column name/);
+		});
+
+		it('should accept $joins with valid targetField', async () => {
+			const docs = await adapter.find('articles', {
+				$joins: [
+					{
+						targetTable: 'categories',
+						localField: 'category',
+						targetField: 'id',
+						conditions: { name: 'Technology' },
+					},
+				],
+			});
+			expect(docs.length).toBeGreaterThanOrEqual(1);
+		});
+	});
+
+	describe('$contains LIKE wildcard escaping', () => {
+		let adapter: ReturnType<typeof sqliteAdapter>;
+
+		beforeEach(async () => {
+			adapter = sqliteAdapter({ filename: TEST_DB_PATH });
+			await adapter.initialize?.([mockPostsCollection]);
+			await adapter.create('posts', { title: 'Normal Post' });
+			await adapter.create('posts', { title: '100% Discount' });
+			await adapter.create('posts', { title: 'Under_score Title' });
+		});
+
+		it('should match literal % character without matching everything', async () => {
+			const docs = await adapter.find('posts', { title: { $contains: '%' } });
+			// Should match only "100% Discount", not all rows
+			expect(docs).toHaveLength(1);
+			expect(docs[0]['title']).toBe('100% Discount');
+		});
+
+		it('should match literal _ character without matching single-char wildcard', async () => {
+			const docs = await adapter.find('posts', { title: { $contains: '_' } });
+			// Should match only "Under_score Title"
+			expect(docs).toHaveLength(1);
+			expect(docs[0]['title']).toBe('Under_score Title');
+		});
+
+		it('should still match normal substring without wildcards', async () => {
+			const docs = await adapter.find('posts', { title: { $contains: 'Normal' } });
+			expect(docs).toHaveLength(1);
+			expect(docs[0]['title']).toBe('Normal Post');
+		});
+	});
+
+	describe('$exists string coercion', () => {
+		let adapter: ReturnType<typeof sqliteAdapter>;
+
+		beforeEach(async () => {
+			adapter = sqliteAdapter({ filename: TEST_DB_PATH });
+			await adapter.initialize?.([mockPostsCollection]);
+			await adapter.create('posts', { title: 'Has Content', content: 'Some text' });
+			await adapter.create('posts', { title: 'No Content' });
+		});
+
+		it('should coerce string "true" to boolean for $exists operator', async () => {
+			const docs = await adapter.find('posts', {
+				content: { $exists: 'true' as unknown as boolean },
+			});
+			expect(docs.length).toBeGreaterThanOrEqual(1);
+			expect(docs.every((d) => d['content'] != null)).toBe(true);
+		});
+
+		it('should coerce string "false" to boolean for $exists operator', async () => {
+			const docs = await adapter.find('posts', {
+				content: { $exists: 'false' as unknown as boolean },
+			});
+			expect(docs.length).toBeGreaterThanOrEqual(1);
+			expect(docs.every((d) => d['content'] == null)).toBe(true);
+		});
+	});
+
+	describe('count()', () => {
+		let adapter: Awaited<ReturnType<typeof sqliteAdapter>>;
+
+		beforeEach(async () => {
+			adapter = sqliteAdapter({ filename: ':memory:' });
+			await adapter.initialize?.([mockPostsCollection]);
+			await adapter.create('posts', { title: 'Post A', content: 'AAA' });
+			await adapter.create('posts', { title: 'Post B', content: 'BBB' });
+			await adapter.create('posts', { title: 'Post C', content: 'CCC' });
+		});
+
+		it('should return total count with no filter', async () => {
+			const result = await adapter.count?.('posts', {});
+			expect(result).toBe(3);
+		});
+
+		it('should return count matching a where clause', async () => {
+			const result = await adapter.count?.('posts', { title: 'Post A' });
+			expect(result).toBe(1);
+		});
+
+		it('should return 0 for no matches', async () => {
+			const result = await adapter.count?.('posts', { title: 'Nonexistent' });
+			expect(result).toBe(0);
+		});
+
+		it('should handle operator-based where clauses', async () => {
+			const result = await adapter.count?.('posts', { title: { $contains: 'Post' } });
+			expect(result).toBe(3);
+		});
+
+		it('should handle $or conditions', async () => {
+			const result = await adapter.count?.('posts', {
+				$or: [{ title: 'Post A' }, { title: 'Post B' }],
+			});
+			expect(result).toBe(2);
 		});
 	});
 });

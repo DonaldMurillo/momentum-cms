@@ -121,6 +121,15 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	// Use Express's built-in JSON body parser
 	router.use(jsonParser());
 
+	// Security headers middleware
+	router.use((_req: Request, res: Response, next: NextFunction) => {
+		res.setHeader('X-Content-Type-Options', 'nosniff');
+		res.setHeader('X-Frame-Options', 'DENY');
+		res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+		res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+		next();
+	});
+
 	// CORS middleware
 	router.use((req: Request, res: Response, next: NextFunction) => {
 		const corsConfig = config.server?.cors ?? {};
@@ -130,22 +139,20 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				? [corsConfig.origin]
 				: [];
 
-		let allowOrigin: string;
 		if (origins.length === 0) {
-			allowOrigin = '*';
+			if (process.env['NODE_ENV'] === 'production') {
+				createLogger('CORS').warn(
+					'Origin is set to "*" in production. Configure explicit origins via config.server.cors.origin.',
+				);
+			}
+			res.setHeader('Access-Control-Allow-Origin', '*');
 		} else {
 			const requestOrigin = req.headers['origin'] ?? '';
-			allowOrigin = origins.includes(requestOrigin) ? requestOrigin : origins[0];
-		}
-
-		if (allowOrigin === '*' && process.env['NODE_ENV'] === 'production') {
-			createLogger('CORS').warn(
-				'Origin is set to "*" in production. Configure explicit origins via config.server.cors.origin.',
-			);
-		}
-		res.setHeader('Access-Control-Allow-Origin', allowOrigin);
-		if (allowOrigin !== '*') {
 			res.setHeader('Vary', 'Origin');
+			if (origins.includes(requestOrigin)) {
+				res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+			}
+			// Non-matching origins: omit Access-Control-Allow-Origin entirely (browser will block)
 		}
 		res.setHeader(
 			'Access-Control-Allow-Methods',
@@ -269,7 +276,12 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			return;
 		}
 
-		const result = await executeGraphQL(graphqlSchema, { query: queryParam }, { user });
+		const result = await executeGraphQL(
+			graphqlSchema,
+			{ query: queryParam },
+			{ user },
+			{ readOnly: true },
+		);
 
 		res.status(result.status).json(result.body);
 	});
@@ -688,7 +700,14 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			res.json({ status });
 		} catch (error) {
 			const message = sanitizeErrorMessage(error, 'Unknown error');
-			res.status(500).json({ error: 'Failed to get status', message });
+			let status = 500;
+			if (error instanceof Error) {
+				if (error.name === 'AccessDeniedError') status = 403;
+				else if (error.name === 'DocumentNotFoundError') status = 404;
+			}
+			res
+				.status(status)
+				.json({ error: status === 403 ? 'Access denied' : 'Failed to get status', message });
 		}
 	});
 
@@ -881,6 +900,13 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 	// Route: GET /media/file/:path(*) - Serve uploaded files
 	router.get('/media/file/*', async (req: Request, res: Response) => {
+		// Require authentication to access uploaded files
+		const user = extractUserFromRequest(req);
+		if (!user) {
+			res.status(401).json({ error: 'Authentication required to access files' });
+			return;
+		}
+
 		const uploadConfig = getUploadConfig(config);
 		if (!uploadConfig) {
 			res.status(500).json({ error: 'Storage not configured' });
@@ -950,8 +976,11 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				return { docs, totalDocs: docs.length };
 			},
 			findById: (slug, id) => txAdapter.findById(slug, id),
-			count: async (slug) => {
-				const docs = await txAdapter.find(slug, {});
+			count: async (slug, where) => {
+				if (txAdapter.count) {
+					return txAdapter.count(slug, where ?? {});
+				}
+				const docs = await txAdapter.find(slug, where ?? {});
 				return docs.length;
 			},
 			create: (slug, data) => txAdapter.create(slug, data),
@@ -998,7 +1027,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 								throw err;
 							}
 						},
-						count: (slug) => ctxApi.collection(slug).count(),
+						count: (slug, where) => ctxApi.collection(slug).count(where),
 						create: async (slug, data) => {
 							// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 							return (await ctxApi.collection(slug).create(data)) as Record<string, unknown>;
@@ -1027,6 +1056,8 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 						collection,
 						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Express body is parsed JSON
 						body: req.body as Record<string, unknown> | undefined,
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Express query params
+						params: req.query as Record<string, unknown>,
 						query: buildQueryHelper(contextApi),
 					});
 					res.status(result.status).json(result.body);
@@ -1102,7 +1133,12 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			}
 		} catch (error) {
 			const message = sanitizeErrorMessage(error, 'Batch operation failed');
-			const status = error instanceof Error && error.name === 'ValidationError' ? 400 : 500;
+			let status = 500;
+			if (error instanceof Error) {
+				if (error.name === 'ValidationError') status = 400;
+				else if (error.name === 'DocumentNotFoundError') status = 404;
+				else if (error.name === 'AccessDeniedError') status = 403;
+			}
 			res.status(status).json({ error: message });
 		}
 	});
@@ -1187,7 +1223,13 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			}
 		} catch (error) {
 			const message = sanitizeErrorMessage(error, 'Export failed');
-			res.status(500).json({ error: message });
+			let status = 500;
+			if (error instanceof Error) {
+				if (error.name === 'AccessDeniedError') status = 403;
+				else if (error.name === 'ValidationError') status = 400;
+				else if (error.name === 'DocumentNotFoundError') status = 404;
+			}
+			res.status(status).json({ error: message });
 		}
 	});
 
