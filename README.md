@@ -45,21 +45,27 @@ Full documentation is available in the [docs/](docs/README.md) directory, coveri
 
 ## Features
 
-- **Collection-first** - Define your data model in TypeScript; the admin UI, API routes, and database schema are generated automatically
-- **Angular 21** - Server-side rendered with Express or Analog/Nitro
-- **Headless UI Primitives** - Unstyled, accessible Angular interaction primitives built on Angular CDK and Angular Aria
-- **Admin Dashboard** - Auto-generated CRUD interface with rich text editing, relationships, file uploads, and dark mode
-- **Drizzle ORM** - Type-safe database access with PostgreSQL and SQLite adapters
-- **Authentication** - Built-in auth via Better Auth with email/password, sessions, role-based access, admin tools (ban/impersonation), and organization multi-tenancy
-- **File Storage** - Local filesystem and S3-compatible storage adapters
-- **Plugin System** - Event bus architecture with analytics and OpenTelemetry plugins
-- **Soft Deletes** - Built-in trash/restore with configurable retention
-- **Redirects** - Collection-based URL redirect management with server middleware, supporting 301/302/307/308 status codes
-- **Form Builder** - Schema-driven dynamic forms with conditional fields, server-side validation, submission storage, and webhook forwarding
-- **Email Builder** - Visual email template editor with live preview, Handlebars templating, and pluggable transport (SMTP, Resend)
-- **Queue & Cron** - Background job processing with configurable concurrency, retry policies, and scheduled task execution
-- **Image Processing** - Automatic image variant generation with focal point cropping, powered by `@napi-rs/image` (no Sharp dependency)
-- **Swappable Admin** - Replace built-in admin pages with custom components and inject content into layout slots, with per-collection overrides
+- **Collection-first** — Define your data model in TypeScript with 20 field types; the admin UI, API routes, and database schema are generated automatically
+- **Angular 21** — Server-side rendered with Express, NestJS, or Analog/Nitro
+- **REST + GraphQL** — Auto-generated REST API with filtering, sorting, pagination, and depth population. Auto-generated GraphQL schema with queries and mutations.
+- **Full-text Search** — Built-in search via PostgreSQL `tsvector`/`tsquery`
+- **Headless UI Primitives** — 32 unstyled, accessible Angular interaction primitives built on Angular CDK and Angular Aria
+- **Admin Dashboard** — Auto-generated CRUD interface with rich text editing, visual block editor, bulk operations, relationships, file uploads, and dark mode
+- **Versioning & Drafts** — Document version history, draft/publish workflow, autosave, and scheduled publishing
+- **Drizzle ORM** — Type-safe database access with PostgreSQL and SQLite adapters, full migration system with schema diffing
+- **Authentication** — Built-in auth via Better Auth with email/password, OAuth providers, sessions, role-based access, API keys, admin tools (ban/impersonation), and organization multi-tenancy
+- **Webhooks** — Per-collection webhooks with HMAC-SHA256 signature verification, retries, and custom headers
+- **File Storage** — Local filesystem and S3-compatible storage adapters with image variant generation and focal point cropping
+- **Plugin System** — Event bus architecture with SEO, analytics, OpenTelemetry, form builder, email builder, image processing, redirects, queue, and cron plugins
+- **SEO** — Meta tags, Open Graph, Twitter cards, sitemap.xml, robots.txt generation, and content analysis with scoring
+- **Soft Deletes** — Built-in trash/restore with configurable retention
+- **Form Builder** — Schema-driven dynamic forms with conditional fields, server-side validation, submission storage, and webhook forwarding
+- **Email Builder** — Visual email template editor with live preview, Handlebars templating, and pluggable transport (SMTP, Resend)
+- **Queue & Cron** — Background job processing with configurable concurrency, retry policies, and scheduled task execution
+- **Image Processing** — Automatic image variant generation with focal point cropping, powered by `@napi-rs/image` (no Sharp dependency)
+- **Swappable Admin** — Replace built-in admin pages with custom components and inject content into layout slots, with per-collection overrides
+- **Globals** — Singleton documents with fields, access control, hooks, and versioning
+- **Theme Editor** — Visual CSS variable editor with presets, light/dark mode, and live preview
 
 ## Define a Collection
 
@@ -217,9 +223,11 @@ This starts a local Verdaccio registry, publishes all packages, runs `create-mom
 
 ## Roadmap
 
+See [ROADMAP.md](ROADMAP.md) for the full detailed roadmap including current feature inventory, design decisions, and what's explicitly not planned.
+
 ### Recently Shipped
 
-- **Headless UI component library** - Accessible, unstyled Angular primitives with a global styling contract and example harness
+- **Headless UI component library** — 32 accessible, unstyled Angular primitives with a global styling contract and example harness
 - **NestJS Adapter** — Full-featured NestJS server adapter with complete API parity, DI container, and Angular SSR integration
 - **Form Builder** — Schema-driven form builder plugin with conditional fields, server-side validation, submission storage, rate limiting, and webhook forwarding
 - **Email Builder** — Visual email template editor with live preview, Handlebars templating, and pluggable transport
@@ -231,13 +239,30 @@ This starts a local Verdaccio registry, publishes all packages, runs `create-mom
 
 ### Planned
 
-These are planned features and improvements, in no particular priority order.
+**High priority:**
 
-- **UX polish pass** — Improve interactions, transitions, and overall usability across the admin dashboard
-- **Better Auth plugin adapters** — Pre-built adapters for remaining Better Auth plugins (OAuth providers, magic links, passkeys); admin and organization plugins are shipped
-- **Resend adapter** — Email delivery via Resend for transactional emails and auth flows
-- **Docker deployment guide** — Fully tested Docker setup for deploying to a standard VPS with PostgreSQL, reverse proxy, and persistent storage
-- **Momentum website** — Build the official Momentum CMS website using Momentum itself
+- **Live Preview** — In-memory Angular rendering of content previews directly in the admin (no iframes)
+- **Version Diff UI** — Side-by-side visual comparison of document versions
+- **Frontend SDK** — Standalone `@momentumcms/client` package for non-Angular consumers
+
+**Medium priority:**
+
+- Media library enhancements (folders, tags, bulk upload)
+- Import/export UI (CSV/JSON)
+- API response caching layer
+- AI/MCP integration
+
+**Low priority:**
+
+- Review workflows (multi-stage approval)
+- Multi-tenancy plugin
+
+**Ongoing:**
+
+- UX polish pass across the admin dashboard
+- Better Auth plugin adapters (magic links, passkeys)
+- Docker deployment guide
+- Momentum website (built with Momentum)
 
 ## Contributing
 
