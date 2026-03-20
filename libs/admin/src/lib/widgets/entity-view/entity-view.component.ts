@@ -662,7 +662,7 @@ export class EntityViewWidget<T extends Entity = Entity> {
 		if (e) {
 			this.edit.emit(e);
 			if (!this.suppressNavigation()) {
-				this.router.navigate([`${this.collectionListPath()}/${e.id}/edit`]);
+				this.router.navigate([this.basePath(), this.collection().slug, e.id, 'edit']);
 			}
 		}
 	}
@@ -742,7 +742,7 @@ export class EntityViewWidget<T extends Entity = Entity> {
 	 */
 	navigateBack(): void {
 		if (!this.suppressNavigation()) {
-			this.router.navigate([this.collectionListPath()]);
+			this.router.navigate([this.basePath(), this.collection().slug]);
 		}
 	}
 

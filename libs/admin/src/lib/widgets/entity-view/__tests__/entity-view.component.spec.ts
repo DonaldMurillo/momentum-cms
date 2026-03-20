@@ -488,7 +488,12 @@ describe('EntityViewWidget', () => {
 			component.onEditClick();
 
 			expect(emitted).toHaveLength(1);
-			expect(router.navigate).toHaveBeenCalledWith(['/admin/collections/posts/doc-1/edit']);
+			expect(router.navigate).toHaveBeenCalledWith([
+				'/admin/collections',
+				'posts',
+				'doc-1',
+				'edit',
+			]);
 		});
 
 		it('should not navigate when suppressNavigation', () => {
@@ -545,7 +550,7 @@ describe('EntityViewWidget', () => {
 	describe('navigateBack', () => {
 		it('should navigate to collection list', () => {
 			component.navigateBack();
-			expect(router.navigate).toHaveBeenCalledWith(['/admin/collections/posts']);
+			expect(router.navigate).toHaveBeenCalledWith(['/admin/collections', 'posts']);
 		});
 
 		it('should not navigate when suppressNavigation', () => {

@@ -45,8 +45,9 @@ export default defineEventHandler(async (event) => {
 			return { error: 'API key not found' };
 		}
 		if (existingKey.createdBy !== user.id) {
-			setResponseStatus(event, 403);
-			return { error: 'You can only delete your own API keys' };
+			// Return 404 (not 403) to prevent API key ID enumeration
+			setResponseStatus(event, 404);
+			return { error: 'API key not found' };
 		}
 	}
 

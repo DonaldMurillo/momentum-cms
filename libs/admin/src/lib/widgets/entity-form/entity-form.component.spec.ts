@@ -189,7 +189,7 @@ describe('EntityFormWidget', () => {
 			await submitPromise;
 
 			expect(savedSpy).toHaveBeenCalled();
-			expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections/posts']);
+			expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections', 'posts']);
 		});
 
 		it('should show form error when submitting with invalid data', async () => {
@@ -283,7 +283,7 @@ describe('EntityFormWidget', () => {
 
 			await submitPromise;
 
-			expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections/posts']);
+			expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections', 'posts']);
 		});
 
 		it('should handle entity not found', async () => {
@@ -367,7 +367,7 @@ describe('EntityFormWidget', () => {
 			component.onCancel();
 
 			expect(cancelledSpy).toHaveBeenCalled();
-			expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections/posts']);
+			expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections', 'posts']);
 		});
 
 		it('should use custom basePath', async () => {
@@ -379,7 +379,7 @@ describe('EntityFormWidget', () => {
 
 			component.onCancel();
 
-			expect(navigateSpy).toHaveBeenCalledWith(['/dashboard/content/posts']);
+			expect(navigateSpy).toHaveBeenCalledWith(['/dashboard/content', 'posts']);
 		});
 	});
 

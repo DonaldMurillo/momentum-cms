@@ -191,7 +191,7 @@ describe('EntityListWidget', () => {
 		const entity = mockPosts[0];
 		component.onRowClick(entity);
 
-		expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections/posts/1']);
+		expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections', 'posts', '1']);
 	});
 
 	it('should emit entityClick on row click', async () => {
@@ -224,7 +224,7 @@ describe('EntityListWidget', () => {
 		const entity = mockPosts[0];
 		component.onRowClick(entity);
 
-		expect(navigateSpy).toHaveBeenCalledWith(['/dashboard/content/posts/1']);
+		expect(navigateSpy).toHaveBeenCalledWith(['/dashboard/content', 'posts', '1']);
 	});
 
 	it('should emit entityAction when row action is triggered', async () => {

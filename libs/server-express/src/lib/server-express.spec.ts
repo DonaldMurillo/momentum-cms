@@ -210,9 +210,9 @@ describe('momentumApiMiddleware', () => {
 			expect(res.headers['x-content-type-options']).toBe('nosniff');
 		});
 
-		it('should include X-Frame-Options: DENY', async () => {
+		it('should include X-Frame-Options: SAMEORIGIN', async () => {
 			const res = await request(app).get('/api/posts');
-			expect(res.headers['x-frame-options']).toBe('DENY');
+			expect(res.headers['x-frame-options']).toBe('SAMEORIGIN');
 		});
 
 		it('should include Referrer-Policy', async () => {
