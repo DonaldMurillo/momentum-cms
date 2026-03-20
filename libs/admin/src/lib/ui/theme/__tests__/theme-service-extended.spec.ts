@@ -8,6 +8,7 @@
  */
 import { TestBed } from '@angular/core/testing';
 import { PLATFORM_ID } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { vi, type Mock } from 'vitest';
 import { McmsThemeService } from '../theme.service';
 
@@ -18,12 +19,56 @@ interface MockMediaQueryList {
 }
 
 /**
+ * Creates a mock document that proxies to the real document but provides
+ * a Map-backed localStorage on defaultView.
+ */
+function createBrowserDocument(): { doc: Document; storage: Map<string, string> } {
+	const storage = new Map<string, string>();
+	const mockLocalStorage = {
+		getItem: (key: string): string | null => storage.get(key) ?? null,
+		setItem: (key: string, value: string): void => {
+			storage.set(key, String(value));
+		},
+		removeItem: (key: string): void => {
+			storage.delete(key);
+		},
+		clear: (): void => {
+			storage.clear();
+		},
+		get length(): number {
+			return storage.size;
+		},
+		key: (index: number): string | null => [...storage.keys()][index] ?? null,
+	};
+
+	const doc = new Proxy(document, {
+		get(target, prop, receiver) {
+			if (prop === 'defaultView') {
+				return new Proxy(window, {
+					get(wTarget, wProp, wReceiver) {
+						if (wProp === 'localStorage') return mockLocalStorage;
+						const val = Reflect.get(wTarget, wProp, wReceiver);
+						return typeof val === 'function' ? val.bind(wTarget) : val;
+					},
+				});
+			}
+			const val = Reflect.get(target, prop, receiver);
+			return typeof val === 'function' ? val.bind(target) : val;
+		},
+	});
+
+	return { doc, storage };
+}
+
+/**
  * Helper: set up matchMedia mock and configure TestBed for browser context.
  * Returns the mock media query object and a cleanup function.
  */
 function setupBrowserTestBed(mediaQueryOverrides?: Partial<MockMediaQueryList>): {
 	mockMediaQuery: MockMediaQueryList;
 	originalMatchMedia: typeof window.matchMedia;
+	mockDoc: Document;
+	mockStorage: Map<string, string>;
 } {
 	const mockMediaQuery: MockMediaQueryList = {
 		matches: false,
@@ -37,11 +82,16 @@ function setupBrowserTestBed(mediaQueryOverrides?: Partial<MockMediaQueryList>):
 		.fn()
 		.mockReturnValue(mockMediaQuery) as unknown as typeof window.matchMedia;
 
+	const { doc, storage } = createBrowserDocument();
+
 	TestBed.configureTestingModule({
-		providers: [{ provide: PLATFORM_ID, useValue: 'browser' }],
+		providers: [
+			{ provide: PLATFORM_ID, useValue: 'browser' },
+			{ provide: DOCUMENT, useValue: doc },
+		],
 	});
 
-	return { mockMediaQuery, originalMatchMedia };
+	return { mockMediaQuery, originalMatchMedia, mockDoc: doc, mockStorage: storage };
 }
 
 describe('McmsThemeService - extended coverage', () => {
@@ -61,9 +111,9 @@ describe('McmsThemeService - extended coverage', () => {
 		let originalMatchMedia: typeof window.matchMedia;
 		let changeHandler: (() => void) | null = null;
 		let mockMediaQuery: MockMediaQueryList;
+		let mockStorage: Map<string, string>;
 
 		beforeEach(() => {
-			localStorage.removeItem('mcms-theme');
 			document.documentElement.classList.remove('dark');
 
 			changeHandler = null;
@@ -78,11 +128,12 @@ describe('McmsThemeService - extended coverage', () => {
 
 			mockMediaQuery = result.mockMediaQuery;
 			originalMatchMedia = result.originalMatchMedia;
+			mockStorage = result.mockStorage;
 			service = TestBed.inject(McmsThemeService);
 		});
 
 		afterEach(() => {
-			localStorage.removeItem('mcms-theme');
+			mockStorage.clear();
 			document.documentElement.classList.remove('dark');
 			window.matchMedia = originalMatchMedia;
 		});
@@ -156,21 +207,27 @@ describe('McmsThemeService - extended coverage', () => {
 
 	describe('listenForSystemPreferenceChanges - matchMedia returns undefined', () => {
 		let originalMatchMedia: typeof window.matchMedia;
+		let mockStorage: Map<string, string>;
 
 		beforeEach(() => {
-			localStorage.removeItem('mcms-theme');
 			document.documentElement.classList.remove('dark');
 
 			originalMatchMedia = window.matchMedia;
 			window.matchMedia = vi.fn().mockReturnValue(undefined) as unknown as typeof window.matchMedia;
 
+			const { doc, storage } = createBrowserDocument();
+			mockStorage = storage;
+
 			TestBed.configureTestingModule({
-				providers: [{ provide: PLATFORM_ID, useValue: 'browser' }],
+				providers: [
+					{ provide: PLATFORM_ID, useValue: 'browser' },
+					{ provide: DOCUMENT, useValue: doc },
+				],
 			});
 		});
 
 		afterEach(() => {
-			localStorage.removeItem('mcms-theme');
+			mockStorage.clear();
 			document.documentElement.classList.remove('dark');
 			window.matchMedia = originalMatchMedia;
 		});
@@ -184,21 +241,27 @@ describe('McmsThemeService - extended coverage', () => {
 
 	describe('listenForSystemPreferenceChanges - matchMedia returns null', () => {
 		let originalMatchMedia: typeof window.matchMedia;
+		let mockStorage: Map<string, string>;
 
 		beforeEach(() => {
-			localStorage.removeItem('mcms-theme');
 			document.documentElement.classList.remove('dark');
 
 			originalMatchMedia = window.matchMedia;
 			window.matchMedia = vi.fn().mockReturnValue(null) as unknown as typeof window.matchMedia;
 
+			const { doc, storage } = createBrowserDocument();
+			mockStorage = storage;
+
 			TestBed.configureTestingModule({
-				providers: [{ provide: PLATFORM_ID, useValue: 'browser' }],
+				providers: [
+					{ provide: PLATFORM_ID, useValue: 'browser' },
+					{ provide: DOCUMENT, useValue: doc },
+				],
 			});
 		});
 
 		afterEach(() => {
-			localStorage.removeItem('mcms-theme');
+			mockStorage.clear();
 			document.documentElement.classList.remove('dark');
 			window.matchMedia = originalMatchMedia;
 		});
@@ -212,20 +275,21 @@ describe('McmsThemeService - extended coverage', () => {
 	describe('cookie persistence in setTheme', () => {
 		let service: McmsThemeService;
 		let originalMatchMedia: typeof window.matchMedia;
+		let mockStorage: Map<string, string>;
 
 		beforeEach(() => {
-			localStorage.removeItem('mcms-theme');
 			document.documentElement.classList.remove('dark');
 			// Clear cookies
 			document.cookie = 'mcms-theme=; path=/; max-age=0';
 
 			const result = setupBrowserTestBed();
 			originalMatchMedia = result.originalMatchMedia;
+			mockStorage = result.mockStorage;
 			service = TestBed.inject(McmsThemeService);
 		});
 
 		afterEach(() => {
-			localStorage.removeItem('mcms-theme');
+			mockStorage.clear();
 			document.documentElement.classList.remove('dark');
 			document.cookie = 'mcms-theme=; path=/; max-age=0';
 			window.matchMedia = originalMatchMedia;
@@ -258,18 +322,19 @@ describe('McmsThemeService - extended coverage', () => {
 	describe('applyThemeToDOM via effect', () => {
 		let service: McmsThemeService;
 		let originalMatchMedia: typeof window.matchMedia;
+		let mockStorage: Map<string, string>;
 
 		beforeEach(() => {
-			localStorage.removeItem('mcms-theme');
 			document.documentElement.classList.remove('dark');
 
 			const result = setupBrowserTestBed();
 			originalMatchMedia = result.originalMatchMedia;
+			mockStorage = result.mockStorage;
 			service = TestBed.inject(McmsThemeService);
 		});
 
 		afterEach(() => {
-			localStorage.removeItem('mcms-theme');
+			mockStorage.clear();
 			document.documentElement.classList.remove('dark');
 			window.matchMedia = originalMatchMedia;
 		});
@@ -318,18 +383,19 @@ describe('McmsThemeService - extended coverage', () => {
 	describe('applyThemeToDOM - dark system preference', () => {
 		let service: McmsThemeService;
 		let originalMatchMedia: typeof window.matchMedia;
+		let mockStorage: Map<string, string>;
 
 		beforeEach(() => {
-			localStorage.removeItem('mcms-theme');
 			document.documentElement.classList.remove('dark');
 
 			const result = setupBrowserTestBed({ matches: true });
 			originalMatchMedia = result.originalMatchMedia;
+			mockStorage = result.mockStorage;
 			service = TestBed.inject(McmsThemeService);
 		});
 
 		afterEach(() => {
-			localStorage.removeItem('mcms-theme');
+			mockStorage.clear();
 			document.documentElement.classList.remove('dark');
 			window.matchMedia = originalMatchMedia;
 		});
@@ -345,18 +411,19 @@ describe('McmsThemeService - extended coverage', () => {
 	describe('DestroyRef cleanup', () => {
 		let originalMatchMedia: typeof window.matchMedia;
 		let mockMediaQuery: MockMediaQueryList;
+		let mockStorage: Map<string, string>;
 
 		beforeEach(() => {
-			localStorage.removeItem('mcms-theme');
 			document.documentElement.classList.remove('dark');
 
 			const result = setupBrowserTestBed();
 			mockMediaQuery = result.mockMediaQuery;
 			originalMatchMedia = result.originalMatchMedia;
+			mockStorage = result.mockStorage;
 		});
 
 		afterEach(() => {
-			localStorage.removeItem('mcms-theme');
+			mockStorage.clear();
 			document.documentElement.classList.remove('dark');
 			window.matchMedia = originalMatchMedia;
 		});

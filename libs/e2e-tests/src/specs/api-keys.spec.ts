@@ -414,9 +414,9 @@ test.describe('API Key Access Control', { tag: ['@security', '@api'] }, () => {
 		const deleteOwnResponse = await editorContext.delete(`/api/auth/api-keys/${editorKeyData.id}`);
 		expect(deleteOwnResponse.ok()).toBe(true);
 
-		// Editor cannot delete admin's key
+		// Editor cannot delete admin's key (returns 404 to prevent key ID enumeration)
 		const deleteAdminResponse = await editorContext.delete(`/api/auth/api-keys/${adminKeyData.id}`);
-		expect(deleteAdminResponse.status()).toBe(403);
+		expect(deleteAdminResponse.status()).toBe(404);
 
 		await editorContext.dispose();
 	});

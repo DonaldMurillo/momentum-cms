@@ -87,7 +87,7 @@ export class McmsThemeService {
 		this.theme.set(theme);
 
 		if (this.isBrowser) {
-			this.document.defaultView?.localStorage?.setItem(THEME_STORAGE_KEY, theme);
+			this.getStorage()?.setItem(THEME_STORAGE_KEY, theme);
 			this.document.cookie = `${THEME_STORAGE_KEY}=${theme}; path=/; max-age=31536000; SameSite=Lax`;
 		}
 	}
@@ -101,6 +101,11 @@ export class McmsThemeService {
 		this.setTheme(current === 'dark' ? 'light' : 'dark');
 	}
 
+	private getStorage(): Storage | null {
+		const storage = this.document.defaultView?.localStorage;
+		return storage && typeof storage.getItem === 'function' ? storage : null;
+	}
+
 	/**
 	 * Loads theme from localStorage or defaults to 'system'.
 	 */
@@ -109,7 +114,7 @@ export class McmsThemeService {
 			return 'system';
 		}
 
-		const stored = this.document.defaultView?.localStorage?.getItem(THEME_STORAGE_KEY) ?? null;
+		const stored = this.getStorage()?.getItem(THEME_STORAGE_KEY) ?? null;
 		if (stored === 'light' || stored === 'dark' || stored === 'system') {
 			return stored;
 		}

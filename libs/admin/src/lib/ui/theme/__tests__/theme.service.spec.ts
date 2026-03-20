@@ -3,14 +3,58 @@
  *
  * The service uses effect() and inject(DestroyRef) in the constructor,
  * which requires a fully running Angular application context.
- * For browser context, we test the core logic directly (same as the
- * sibling theme.service.spec.ts) but import the service to exercise its code.
+ * For browser context, we provide a mock document with a working
+ * localStorage so the service can read/write theme state.
  * For server context, TestBed works since the constructor skips effects.
  */
 import { TestBed } from '@angular/core/testing';
-import { PLATFORM_ID, signal, computed } from '@angular/core';
+import { PLATFORM_ID } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { vi } from 'vitest';
-import { McmsThemeService, type McmsTheme } from '../theme.service';
+import { McmsThemeService } from '../theme.service';
+
+/**
+ * Creates a mock document that proxies to the real document but provides
+ * a Map-backed localStorage on defaultView. This avoids reliance on jsdom's
+ * localStorage which can become non-functional in Angular build pipelines.
+ */
+function createBrowserDocument(): { doc: Document; storage: Map<string, string> } {
+	const storage = new Map<string, string>();
+	const mockLocalStorage = {
+		getItem: (key: string): string | null => storage.get(key) ?? null,
+		setItem: (key: string, value: string): void => {
+			storage.set(key, String(value));
+		},
+		removeItem: (key: string): void => {
+			storage.delete(key);
+		},
+		clear: (): void => {
+			storage.clear();
+		},
+		get length(): number {
+			return storage.size;
+		},
+		key: (index: number): string | null => [...storage.keys()][index] ?? null,
+	};
+
+	const doc = new Proxy(document, {
+		get(target, prop, receiver) {
+			if (prop === 'defaultView') {
+				return new Proxy(window, {
+					get(wTarget, wProp, wReceiver) {
+						if (wProp === 'localStorage') return mockLocalStorage;
+						const val = Reflect.get(wTarget, wProp, wReceiver);
+						return typeof val === 'function' ? val.bind(wTarget) : val;
+					},
+				});
+			}
+			const val = Reflect.get(target, prop, receiver);
+			return typeof val === 'function' ? val.bind(target) : val;
+		},
+	});
+
+	return { doc, storage };
+}
 
 describe('McmsThemeService', () => {
 	describe('server context (via TestBed)', () => {
@@ -63,9 +107,14 @@ describe('McmsThemeService', () => {
 	describe('browser context (via TestBed)', () => {
 		let service: McmsThemeService;
 		let originalMatchMedia: typeof window.matchMedia;
+		let mockStorage: Map<string, string>;
+		let mockDoc: Document;
 
 		beforeEach(() => {
-			localStorage.removeItem('mcms-theme');
+			const { doc, storage } = createBrowserDocument();
+			mockStorage = storage;
+			mockDoc = doc;
+
 			document.documentElement.classList.remove('dark');
 
 			// jsdom lacks matchMedia — mock it before service construction
@@ -78,14 +127,17 @@ describe('McmsThemeService', () => {
 
 			TestBed.resetTestingModule();
 			TestBed.configureTestingModule({
-				providers: [{ provide: PLATFORM_ID, useValue: 'browser' }],
+				providers: [
+					{ provide: PLATFORM_ID, useValue: 'browser' },
+					{ provide: DOCUMENT, useValue: mockDoc },
+				],
 			});
 
 			service = TestBed.inject(McmsThemeService);
 		});
 
 		afterEach(() => {
-			localStorage.removeItem('mcms-theme');
+			mockStorage.clear();
 			document.documentElement.classList.remove('dark');
 			window.matchMedia = originalMatchMedia;
 		});
@@ -97,13 +149,13 @@ describe('McmsThemeService', () => {
 		it('should set and persist theme to localStorage', () => {
 			service.setTheme('dark');
 			expect(service.theme()).toBe('dark');
-			expect(localStorage.getItem('mcms-theme')).toBe('dark');
+			expect(mockStorage.get('mcms-theme')).toBe('dark');
 		});
 
 		it('should set light theme', () => {
 			service.setTheme('light');
 			expect(service.theme()).toBe('light');
-			expect(localStorage.getItem('mcms-theme')).toBe('light');
+			expect(mockStorage.get('mcms-theme')).toBe('light');
 		});
 
 		it('should toggle from light to dark', () => {
@@ -131,148 +183,78 @@ describe('McmsThemeService', () => {
 		});
 
 		it('should load stored theme from localStorage', () => {
-			localStorage.setItem('mcms-theme', 'dark');
+			mockStorage.set('mcms-theme', 'dark');
 			TestBed.resetTestingModule();
 			TestBed.configureTestingModule({
-				providers: [{ provide: PLATFORM_ID, useValue: 'browser' }],
+				providers: [
+					{ provide: PLATFORM_ID, useValue: 'browser' },
+					{ provide: DOCUMENT, useValue: mockDoc },
+				],
 			});
 			const svc = TestBed.inject(McmsThemeService);
 			expect(svc.theme()).toBe('dark');
 		});
 
 		it('should ignore invalid stored theme', () => {
-			localStorage.setItem('mcms-theme', 'invalid-value');
+			mockStorage.set('mcms-theme', 'invalid-value');
 			TestBed.resetTestingModule();
 			TestBed.configureTestingModule({
-				providers: [{ provide: PLATFORM_ID, useValue: 'browser' }],
+				providers: [
+					{ provide: PLATFORM_ID, useValue: 'browser' },
+					{ provide: DOCUMENT, useValue: mockDoc },
+				],
 			});
 			const svc = TestBed.inject(McmsThemeService);
 			expect(svc.theme()).toBe('system');
 		});
-	});
-
-	describe('browser theme logic (direct test)', () => {
-		const STORAGE_KEY = 'mcms-theme';
-
-		beforeEach(() => {
-			localStorage.removeItem(STORAGE_KEY);
-			document.documentElement.classList.remove('dark');
-		});
-
-		afterEach(() => {
-			localStorage.removeItem(STORAGE_KEY);
-			document.documentElement.classList.remove('dark');
-		});
-
-		it('should load system as default when no stored value', () => {
-			const loadTheme = (): McmsTheme => {
-				const stored = localStorage.getItem(STORAGE_KEY);
-				if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
-				return 'system';
-			};
-			expect(loadTheme()).toBe('system');
-		});
-
-		it('should load stored dark theme', () => {
-			localStorage.setItem(STORAGE_KEY, 'dark');
-			const stored = localStorage.getItem(STORAGE_KEY);
-			expect(stored).toBe('dark');
-		});
-
-		it('should load stored light theme', () => {
-			localStorage.setItem(STORAGE_KEY, 'light');
-			const stored = localStorage.getItem(STORAGE_KEY);
-			expect(stored).toBe('light');
-		});
-
-		it('should default to system for invalid stored value', () => {
-			localStorage.setItem(STORAGE_KEY, 'neon-purple');
-			const loadTheme = (): McmsTheme => {
-				const stored = localStorage.getItem(STORAGE_KEY);
-				if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
-				return 'system';
-			};
-			expect(loadTheme()).toBe('system');
-		});
-
-		it('should persist theme to localStorage and cookie', () => {
-			const setTheme = (theme: McmsTheme): void => {
-				localStorage.setItem(STORAGE_KEY, theme);
-				document.cookie = `${STORAGE_KEY}=${theme}; path=/; max-age=31536000; SameSite=Lax`;
-			};
-
-			setTheme('dark');
-			expect(localStorage.getItem(STORAGE_KEY)).toBe('dark');
-			expect(document.cookie).toContain('mcms-theme=dark');
-		});
 
 		it('should apply dark class to DOM', () => {
-			document.documentElement.classList.add('dark');
+			service.setTheme('dark');
+			TestBed.flushEffects();
 			expect(document.documentElement.classList.contains('dark')).toBe(true);
 
-			document.documentElement.classList.remove('dark');
+			service.setTheme('light');
+			TestBed.flushEffects();
 			expect(document.documentElement.classList.contains('dark')).toBe(false);
 		});
 
-		it('should resolve system preference via matchMedia (mocked)', () => {
-			// jsdom lacks matchMedia — mock it
-			const originalMatchMedia = window.matchMedia;
-			window.matchMedia = vi
-				.fn()
-				.mockReturnValue({
-					matches: true,
-					addEventListener: vi.fn(),
-					removeEventListener: vi.fn(),
-				});
-			try {
-				const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-				expect(mediaQuery.matches).toBe(true);
-			} finally {
-				window.matchMedia = originalMatchMedia;
-			}
+		it('should resolve system preference via matchMedia', () => {
+			// matchMedia mock returns { matches: false } (light preference)
+			service.setTheme('system');
+			expect(service.resolvedTheme()).toBe('light');
+			expect(service.isDark()).toBe(false);
 		});
 
-		it('should use signal-based resolved theme logic', () => {
-			const theme = signal<McmsTheme>('dark');
-			// Use a fallback for missing matchMedia (jsdom)
-			const getSystemPref = (): 'light' | 'dark' => {
-				if (typeof window.matchMedia !== 'function') return 'light';
-				return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-			};
-			const resolvedTheme = computed((): 'light' | 'dark' => {
-				const current = theme();
-				if (current === 'system') return getSystemPref();
-				return current;
-			});
-			const isDark = computed(() => resolvedTheme() === 'dark');
+		it('should use signal-based resolved theme correctly', () => {
+			service.setTheme('dark');
+			expect(service.resolvedTheme()).toBe('dark');
+			expect(service.isDark()).toBe(true);
 
-			expect(resolvedTheme()).toBe('dark');
-			expect(isDark()).toBe(true);
+			service.setTheme('light');
+			expect(service.resolvedTheme()).toBe('light');
+			expect(service.isDark()).toBe(false);
 
-			theme.set('light');
-			expect(resolvedTheme()).toBe('light');
-			expect(isDark()).toBe(false);
+			service.setTheme('system');
+			// matchMedia mock returns matches: false (light)
+			expect(service.resolvedTheme()).toBe('light');
 		});
 
 		it('should toggle based on resolved theme', () => {
-			const theme = signal<McmsTheme>('light');
-			const resolvedTheme = computed((): 'light' | 'dark' => {
-				const current = theme();
-				if (current === 'system') return 'light'; // fallback for jsdom
-				return current;
-			});
+			service.setTheme('light');
+			expect(service.resolvedTheme()).toBe('light');
 
-			const toggleTheme = (): void => {
-				const current = resolvedTheme();
-				theme.set(current === 'dark' ? 'light' : 'dark');
-			};
+			service.toggleTheme();
+			expect(service.theme()).toBe('dark');
+			expect(service.resolvedTheme()).toBe('dark');
 
-			expect(resolvedTheme()).toBe('light');
-			toggleTheme();
-			expect(theme()).toBe('dark');
-			expect(resolvedTheme()).toBe('dark');
-			toggleTheme();
-			expect(theme()).toBe('light');
+			service.toggleTheme();
+			expect(service.theme()).toBe('light');
+			expect(service.resolvedTheme()).toBe('light');
+		});
+
+		it('should persist theme to cookie', () => {
+			service.setTheme('dark');
+			expect(document.cookie).toContain('mcms-theme=dark');
 		});
 	});
 });

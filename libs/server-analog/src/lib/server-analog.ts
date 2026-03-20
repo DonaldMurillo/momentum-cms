@@ -643,8 +643,9 @@ export function createComprehensiveMomentumHandler(
 						return { error: 'API key not found' };
 					}
 					if (existingKey.createdBy !== String(user.id)) {
-						utils.setResponseStatus(event, 403);
-						return { error: 'You can only delete your own API keys' };
+						// Return 404 (not 403) to prevent API key ID enumeration
+						utils.setResponseStatus(event, 404);
+						return { error: 'API key not found' };
 					}
 				}
 

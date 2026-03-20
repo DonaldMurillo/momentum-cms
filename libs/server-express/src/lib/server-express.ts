@@ -139,7 +139,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				? [corsConfig.origin]
 				: [];
 
-		if (origins.length === 0) {
+		if (origins.length === 0 || origins.includes('*')) {
 			if (process.env['NODE_ENV'] === 'production') {
 				createLogger('CORS').warn(
 					'Origin is set to "*" in production. Configure explicit origins via config.server.cors.origin.',
@@ -898,15 +898,8 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		},
 	);
 
-	// Route: GET /media/file/:path(*) - Serve uploaded files
+	// Route: GET /media/file/:path(*) - Serve uploaded files (public)
 	router.get('/media/file/*', async (req: Request, res: Response) => {
-		// Require authentication to access uploaded files
-		const user = extractUserFromRequest(req);
-		if (!user) {
-			res.status(401).json({ error: 'Authentication required to access files' });
-			return;
-		}
-
 		const uploadConfig = getUploadConfig(config);
 		if (!uploadConfig) {
 			res.status(500).json({ error: 'Storage not configured' });

@@ -946,7 +946,7 @@ describe('MomentumAPI', () => {
 
 			await expect(
 				api.collection('posts').find({
-					where: { or: [{ _status: { equals: 'draft' } }] },
+					where: { or: [{ nonExistentField: { equals: 'draft' } }] },
 				}),
 			).rejects.toThrow(/unknown field/i);
 		});
