@@ -312,7 +312,7 @@ describe('EntityListWidget', () => {
 			component.onRowClick(entity);
 
 			expect(spy).toHaveBeenCalledWith(entity);
-			expect(routerSpy).toHaveBeenCalledWith(['/admin/collections/posts/e1']);
+			expect(routerSpy).toHaveBeenCalledWith(['/admin/collections', 'posts', 'e1']);
 		});
 	});
 
@@ -500,7 +500,7 @@ describe('EntityListWidget', () => {
 		it('should navigate to create path', () => {
 			const routerSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 			component.onCreateClick();
-			expect(routerSpy).toHaveBeenCalledWith(['/admin/collections/posts/new']);
+			expect(routerSpy).toHaveBeenCalledWith(['/admin/collections', 'posts', 'new']);
 		});
 	});
 

@@ -762,8 +762,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 				this.saved.emit(result);
 
 				if (!this.suppressNavigation() && !this.isGlobal()) {
-					const listPath = `${this.basePath()}/${slug}`;
-					this.router.navigate([listPath]);
+					this.router.navigate([this.basePath(), slug]);
 				}
 			} catch (err) {
 				const errorMessage = err instanceof Error ? err.message : 'Save failed';
@@ -878,8 +877,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	onCancel(): void {
 		this.cancelled.emit();
 		if (!this.suppressNavigation()) {
-			const listPath = `${this.basePath()}/${this.collection().slug}`;
-			this.router.navigate([listPath]);
+			this.router.navigate([this.basePath(), this.collection().slug]);
 		}
 	}
 

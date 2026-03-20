@@ -124,7 +124,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	// Security headers middleware
 	router.use((_req: Request, res: Response, next: NextFunction) => {
 		res.setHeader('X-Content-Type-Options', 'nosniff');
-		res.setHeader('X-Frame-Options', 'DENY');
+		res.setHeader('X-Frame-Options', 'SAMEORIGIN');
 		res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 		res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
 		next();

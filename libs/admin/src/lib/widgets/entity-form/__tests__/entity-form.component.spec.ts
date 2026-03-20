@@ -346,7 +346,7 @@ describe('EntityFormWidget', () => {
 			component.onCancel();
 
 			expect(spy).toHaveBeenCalled();
-			expect(routerSpy).toHaveBeenCalledWith(['/admin/collections/posts']);
+			expect(routerSpy).toHaveBeenCalledWith(['/admin/collections', 'posts']);
 		});
 
 		it('should not navigate when suppressNavigation is true', () => {

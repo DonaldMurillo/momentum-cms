@@ -223,14 +223,16 @@ test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 		// Verify the iframe still contains document data after refresh
 		const iframeHandle = await iframe.elementHandle();
 		const frame = await iframeHandle?.contentFrame();
-		if (frame) {
-			await frame.waitForLoadState('domcontentloaded');
-			const h1Text = await frame.evaluate(() => {
-				const h1 = document.querySelector('h1');
-				return h1?.textContent ?? '';
-			});
-			expect(h1Text).toContain('LP-Preview Test Event');
+		if (!frame) {
+			throw new Error('contentFrame() must be available after refresh');
 		}
+
+		await frame.waitForLoadState('domcontentloaded');
+		const h1Text = await frame.evaluate(() => {
+			const h1 = document.querySelector('h1');
+			return h1?.textContent ?? '';
+		});
+		expect(h1Text).toContain('LP-Preview Test Event');
 	});
 });
 

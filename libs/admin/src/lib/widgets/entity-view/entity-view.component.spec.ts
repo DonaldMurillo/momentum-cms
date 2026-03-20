@@ -375,7 +375,7 @@ describe('EntityViewWidget', () => {
 
 			component.onEditClick();
 
-			expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections/posts/123/edit']);
+			expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections', 'posts', '123', 'edit']);
 		});
 
 		it('should emit edit event on edit click', async () => {
@@ -422,7 +422,7 @@ describe('EntityViewWidget', () => {
 			await deletePromise;
 
 			expect(deleteSpy).toHaveBeenCalledWith(mockEntity);
-			expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections/posts']);
+			expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections', 'posts']);
 		});
 
 		it('should emit action event on custom action click', async () => {
@@ -465,7 +465,7 @@ describe('EntityViewWidget', () => {
 
 			component.navigateBack();
 
-			expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections/posts']);
+			expect(navigateSpy).toHaveBeenCalledWith(['/admin/collections', 'posts']);
 		});
 
 		it('should use custom basePath', async () => {
@@ -481,7 +481,7 @@ describe('EntityViewWidget', () => {
 
 			component.navigateBack();
 
-			expect(navigateSpy).toHaveBeenCalledWith(['/dashboard/content/posts']);
+			expect(navigateSpy).toHaveBeenCalledWith(['/dashboard/content', 'posts']);
 		});
 
 		it('should compute correct paths for breadcrumbs', async () => {

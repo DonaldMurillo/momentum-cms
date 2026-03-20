@@ -794,8 +794,7 @@ export class EntityListWidget<T extends Entity = Entity> {
 	onRowClick(entity: T): void {
 		this.entityClick.emit(entity);
 		// Navigate to entity view/edit by default
-		const path = `${this.basePath()}/${this.collection().slug}/${entity.id}`;
-		this.router.navigate([path]);
+		this.router.navigate([this.basePath(), this.collection().slug, entity.id]);
 	}
 
 	/**
@@ -919,7 +918,6 @@ export class EntityListWidget<T extends Entity = Entity> {
 	 * Handle create button click.
 	 */
 	onCreateClick(): void {
-		const path = `${this.basePath()}/${this.collection().slug}/new`;
-		this.router.navigate([path]);
+		this.router.navigate([this.basePath(), this.collection().slug, 'new']);
 	}
 }
