@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/plugins-queue",
-	"version": "0.5.10",
+	"version": "0.5.11",
 	"description": "Job queue plugin for Momentum CMS with PostgreSQL SKIP LOCKED support",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",
@@ -36,7 +36,7 @@
 		}
 	},
 	"dependencies": {
-		"@momentumcms/core": "0.5.10",
+		"@momentumcms/core": "0.5.11",
 		"express": "^4.21.0"
 	},
 	"peerDependencies": {

@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/theme-editor",
-	"version": "0.5.10",
+	"version": "0.5.11",
 	"description": "Visual theme editor for Momentum CMS headless components — generate CSS custom properties with live preview",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",

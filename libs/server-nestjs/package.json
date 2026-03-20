@@ -1,6 +1,6 @@
 {
 	"name": "@momentumcms/server-nestjs",
-	"version": "0.5.10",
+	"version": "0.5.11",
 	"description": "NestJS adapter for Momentum CMS",
 	"license": "MIT",
 	"author": "Momentum CMS Contributors",

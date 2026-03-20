@@ -1,3 +1,14 @@
+## 0.5.11 (2026-03-20)
+
+### 🩹 Fixes
+
+- system field validation, CORS wildcard, localStorage tests & API key enumeration ([228d4a1e](https://github.com/DonaldMurillo/momentum-cms/commit/228d4a1e))
+
+### ❤️ Thank You
+
+- Claude Opus 4.6
+- Donald Murillo @DonaldMurillo
+
 ## 0.5.10 (2026-03-13)
 
 ### 🚀 Features
