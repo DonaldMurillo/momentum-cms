@@ -217,8 +217,8 @@ describe('generateClientCode', () => {
 		const output = generateClientCode(baseConfig, './momentum.types');
 		// find: GET /{slug}
 		expect(output).toContain('`${this.baseUrl}/${this.slug}');
-		// findById: GET /{slug}/{id}
-		expect(output).toContain('`${this.baseUrl}/${this.slug}/${id}');
+		// findById: GET /{slug}/{id} (id is URI-encoded for safety)
+		expect(output).toContain('`${this.baseUrl}/${this.slug}/${encodeURIComponent(id)}');
 		// batch: POST /{slug}/batch
 		expect(output).toContain('/batch');
 		// restore: POST /{slug}/{id}/restore
@@ -330,7 +330,7 @@ describe('generateClientCode — E2E runtime verification', () => {
 			clientCode.indexOf('class GlobalClient'),
 		);
 		expect(collClientSection).toContain('async findById(');
-		expect(collClientSection).toContain('`${this.baseUrl}/${this.slug}/${id}');
+		expect(collClientSection).toContain('`${this.baseUrl}/${this.slug}/${encodeURIComponent(id)}');
 	});
 
 	it('should generate CollectionClient with correct URL patterns for create', () => {
@@ -434,5 +434,77 @@ describe('generateClientCode — E2E runtime verification', () => {
 		expect(factorySection).toContain('global:');
 		expect(factorySection).toContain('new CollectionClient');
 		expect(factorySection).toContain('new GlobalClient');
+	});
+});
+
+// ============================================
+// Security: URL path parameter encoding
+// ============================================
+
+describe('generateClientCode — URL path parameter encoding', () => {
+	const config = {
+		collections: [{ slug: 'posts', fields: [{ name: 'title', type: 'text' }] }],
+	};
+
+	const clientCode = generateClientCode(config, './momentum.types');
+
+	// Extract CollectionClient section for focused assertions
+	const collClientSection = clientCode.slice(
+		clientCode.indexOf('class CollectionClient'),
+		clientCode.indexOf('class GlobalClient'),
+	);
+
+	it('should encode id in findById URL to prevent path traversal', () => {
+		const findByIdMethod = collClientSection.slice(
+			collClientSection.indexOf('async findById('),
+			collClientSection.indexOf('async create('),
+		);
+		expect(findByIdMethod).toContain('encodeURIComponent(id)');
+	});
+
+	it('should encode id in update URL to prevent path traversal', () => {
+		const updateMethod = collClientSection.slice(
+			collClientSection.indexOf('async update('),
+			collClientSection.indexOf('async delete('),
+		);
+		expect(updateMethod).toContain('encodeURIComponent(id)');
+	});
+
+	it('should encode id in delete URL to prevent path traversal', () => {
+		const deleteMethod = collClientSection.slice(
+			collClientSection.indexOf('async delete('),
+			collClientSection.indexOf('async forceDelete('),
+		);
+		expect(deleteMethod).toContain('encodeURIComponent(id)');
+	});
+
+	it('should encode id in forceDelete URL to prevent path traversal', () => {
+		const forceDeleteMethod = collClientSection.slice(
+			collClientSection.indexOf('async forceDelete('),
+			collClientSection.indexOf('async restore('),
+		);
+		expect(forceDeleteMethod).toContain('encodeURIComponent(id)');
+	});
+
+	it('should encode id in restore URL to prevent path traversal', () => {
+		const restoreMethod = collClientSection.slice(
+			collClientSection.indexOf('async restore('),
+			collClientSection.indexOf('async count('),
+		);
+		expect(restoreMethod).toContain('encodeURIComponent(id)');
+	});
+
+	it('should encode slug in CollectionClient constructor to prevent path traversal', () => {
+		// The slug is used raw in every URL — must be encoded to prevent
+		// client.collection("../admin") from causing path traversal
+		expect(collClientSection).toContain('encodeURIComponent(slug)');
+	});
+
+	it('should encode slug in GlobalClient to prevent path traversal', () => {
+		const globalClientSection = clientCode.slice(
+			clientCode.indexOf('class GlobalClient'),
+			clientCode.indexOf('// ── Factory'),
+		);
+		expect(globalClientSection).toContain('encodeURIComponent(slug)');
 	});
 });

@@ -190,9 +190,12 @@ export function generateClientCode(config: MomentumConfig, typesImportPath: stri
 	lines.push(`// ── Collection Client ──────────────────────────`);
 	lines.push('');
 	lines.push(`class CollectionClient<T, W = Record<string, unknown>> {`);
+	lines.push(`\tprivate readonly slug: string;`);
 	lines.push(
-		`\tconstructor(private readonly config: InternalConfig, private readonly baseUrl: string, private readonly slug: string) {}`,
+		`\tconstructor(private readonly config: InternalConfig, private readonly baseUrl: string, slug: string) {`,
 	);
+	lines.push(`\t\tthis.slug = encodeURIComponent(slug);`);
+	lines.push(`\t}`);
 	lines.push('');
 	lines.push(`\tasync find(options?: FindOptions & { where?: W }): Promise<FindResult<T>> {`);
 	lines.push(`\t\tconst qs = buildQueryString(options as FindOptions & Record<string, unknown>);`);
@@ -208,7 +211,7 @@ export function generateClientCode(config: MomentumConfig, typesImportPath: stri
 	lines.push(`\t\tif (options?.withDeleted) params.push('withDeleted=true');`);
 	lines.push(`\t\tconst qs = params.length > 0 ? \`?\${params.join('&')}\` : '';`);
 	lines.push(
-		`\t\tconst res = await momentumFetch<{ doc: T }>(\`\${this.baseUrl}/\${this.slug}/\${id}\${qs}\`, { method: 'GET' }, this.config);`,
+		`\t\tconst res = await momentumFetch<{ doc: T }>(\`\${this.baseUrl}/\${this.slug}/\${encodeURIComponent(id)}\${qs}\`, { method: 'GET' }, this.config);`,
 	);
 	lines.push(`\t\treturn res.doc;`);
 	lines.push(`\t}`);
@@ -222,26 +225,26 @@ export function generateClientCode(config: MomentumConfig, typesImportPath: stri
 	lines.push('');
 	lines.push(`\tasync update(id: string, data: Partial<T>): Promise<T> {`);
 	lines.push(
-		`\t\tconst res = await momentumFetch<{ doc: T }>(\`\${this.baseUrl}/\${this.slug}/\${id}\`, { method: 'PATCH', body: JSON.stringify(data) }, this.config);`,
+		`\t\tconst res = await momentumFetch<{ doc: T }>(\`\${this.baseUrl}/\${this.slug}/\${encodeURIComponent(id)}\`, { method: 'PATCH', body: JSON.stringify(data) }, this.config);`,
 	);
 	lines.push(`\t\treturn res.doc;`);
 	lines.push(`\t}`);
 	lines.push('');
 	lines.push(`\tasync delete(id: string): Promise<DeleteResult> {`);
 	lines.push(
-		`\t\treturn momentumFetch<DeleteResult>(\`\${this.baseUrl}/\${this.slug}/\${id}\`, { method: 'DELETE' }, this.config);`,
+		`\t\treturn momentumFetch<DeleteResult>(\`\${this.baseUrl}/\${this.slug}/\${encodeURIComponent(id)}\`, { method: 'DELETE' }, this.config);`,
 	);
 	lines.push(`\t}`);
 	lines.push('');
 	lines.push(`\tasync forceDelete(id: string): Promise<DeleteResult> {`);
 	lines.push(
-		`\t\treturn momentumFetch<DeleteResult>(\`\${this.baseUrl}/\${this.slug}/\${id}?force=true\`, { method: 'DELETE' }, this.config);`,
+		`\t\treturn momentumFetch<DeleteResult>(\`\${this.baseUrl}/\${this.slug}/\${encodeURIComponent(id)}?force=true\`, { method: 'DELETE' }, this.config);`,
 	);
 	lines.push(`\t}`);
 	lines.push('');
 	lines.push(`\tasync restore(id: string): Promise<T> {`);
 	lines.push(
-		`\t\tconst res = await momentumFetch<{ doc: T }>(\`\${this.baseUrl}/\${this.slug}/\${id}/restore\`, { method: 'POST', body: '{}' }, this.config);`,
+		`\t\tconst res = await momentumFetch<{ doc: T }>(\`\${this.baseUrl}/\${this.slug}/\${encodeURIComponent(id)}/restore\`, { method: 'POST', body: '{}' }, this.config);`,
 	);
 	lines.push(`\t\treturn res.doc;`);
 	lines.push(`\t}`);
@@ -280,9 +283,12 @@ export function generateClientCode(config: MomentumConfig, typesImportPath: stri
 	lines.push(`// ── Global Client ─────────────────────────────`);
 	lines.push('');
 	lines.push(`class GlobalClient<T> {`);
+	lines.push(`\tprivate readonly slug: string;`);
 	lines.push(
-		`\tconstructor(private readonly config: InternalConfig, private readonly baseUrl: string, private readonly slug: string) {}`,
+		`\tconstructor(private readonly config: InternalConfig, private readonly baseUrl: string, slug: string) {`,
 	);
+	lines.push(`\t\tthis.slug = encodeURIComponent(slug);`);
+	lines.push(`\t}`);
 	lines.push('');
 	lines.push(`\tasync findOne(options?: { depth?: number }): Promise<T> {`);
 	lines.push(`\t\tconst qs = options?.depth !== undefined ? \`?depth=\${options.depth}\` : '';`);
