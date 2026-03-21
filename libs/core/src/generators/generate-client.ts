@@ -37,7 +37,7 @@ export function generateClientCode(config: MomentumConfig, typesImportPath: stri
 	for (const t of typeImports) {
 		lines.push(`\t${t},`);
 	}
-	lines.push(`} from '${typesImportPath}';`);
+	lines.push(`} from ${JSON.stringify(typesImportPath)};`);
 	lines.push('');
 
 	// Error class

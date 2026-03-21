@@ -39,7 +39,7 @@ describe('generateAdminConfig', () => {
 	it('should import CollectionSlug from types file', () => {
 		const config = { collections: [{ slug: 'posts', fields: [] }] };
 		const output = generateAdminConfig(config, './momentum.types');
-		expect(output).toContain("import type { CollectionSlug } from './momentum.types';");
+		expect(output).toContain('import type { CollectionSlug } from "./momentum.types";');
 	});
 
 	it('should import GlobalSlug when globals exist', () => {
@@ -48,7 +48,7 @@ describe('generateAdminConfig', () => {
 			globals: [{ slug: 'settings', fields: [] }],
 		};
 		const output = generateAdminConfig(config, './momentum.types');
-		expect(output).toContain("import type { CollectionSlug, GlobalSlug } from './momentum.types';");
+		expect(output).toContain('import type { CollectionSlug, GlobalSlug } from "./momentum.types";');
 	});
 
 	it('should not import GlobalSlug when no globals', () => {
@@ -259,7 +259,7 @@ describe('generateAdminConfig', () => {
 	it('should handle types file in different directory', () => {
 		const config = { collections: [{ slug: 'posts', fields: [] }] };
 		const output = generateAdminConfig(config, '../../types/src/momentum.types');
-		expect(output).toContain("from '../../types/src/momentum.types';");
+		expect(output).toContain('from "../../types/src/momentum.types";');
 	});
 
 	it('should strip server-only field properties in inlined collections', () => {

@@ -54,7 +54,7 @@ export function generateAdminConfig(
 	if (globals.length > 0) {
 		typeImports.push('GlobalSlug');
 	}
-	lines.push(`import type { ${typeImports.join(', ')} } from '${typesRelPath}';`);
+	lines.push(`import type { ${typeImports.join(', ')} } from ${JSON.stringify(typesRelPath)};`);
 
 	// Import plugin admin routes
 	for (const plugin of pluginsWithAdminRoutes) {

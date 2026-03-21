@@ -37,7 +37,7 @@ describe('generateClientCode', () => {
 
 	it('should import types from the types file', () => {
 		const output = generateClientCode(baseConfig, './momentum.types');
-		expect(output).toContain("from './momentum.types'");
+		expect(output).toContain('from "./momentum.types"');
 		expect(output).toContain('Articles');
 		expect(output).toContain('ArticlesWhereClause');
 		expect(output).toContain('Products');
@@ -285,17 +285,40 @@ describe('generateClientCode — E2E runtime verification', () => {
 	const clientCode = generateClientCode(testConfig, './momentum.types');
 
 	it('should produce syntactically valid TypeScript (no syntax errors)', () => {
-		// Verify the generated code can be parsed by checking for balanced braces and valid structure
-		let braceCount = 0;
-		for (const char of clientCode) {
-			if (char === '{') braceCount++;
-			if (char === '}') braceCount--;
-		}
-		expect(braceCount).toBe(0);
+		// Parse the generated code with the TypeScript compiler to verify syntax
+		const ts = require('typescript');
+		const sourceFile = ts.createSourceFile(
+			'momentum-client.ts',
+			clientCode,
+			ts.ScriptTarget.Latest,
+			true,
+		);
 
-		// Check there are no obvious syntax problems
-		expect(clientCode).not.toContain('undefined(');
-		expect(clientCode).not.toContain('NaN');
+		// Collect syntax diagnostics (parse errors)
+		const diagnostics = ts
+			.getPreEmitDiagnostics(
+				ts.createProgram({
+					rootNames: [],
+					options: { noEmit: true },
+					host: {
+						...ts.createCompilerHost({}),
+						getSourceFile: (name: string) =>
+							name === 'momentum-client.ts' ? sourceFile : undefined,
+						fileExists: (name: string) => name === 'momentum-client.ts',
+						readFile: (name: string) => (name === 'momentum-client.ts' ? clientCode : undefined),
+					},
+				}),
+			)
+			.filter((d: { file?: { fileName: string } }) => d.file?.fileName === 'momentum-client.ts');
+
+		const syntaxErrors = diagnostics
+			.filter((d: { category: number }) => d.category === ts.DiagnosticCategory.Error)
+			.map(
+				(d: { messageText: string | { messageText: string }; start?: number }) =>
+					`${typeof d.messageText === 'string' ? d.messageText : d.messageText.messageText} (pos ${d.start})`,
+			);
+
+		expect(syntaxErrors).toEqual([]);
 	});
 
 	it('should generate createMomentumClient factory returning correct collection keys', () => {
