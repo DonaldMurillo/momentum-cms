@@ -239,8 +239,9 @@ export function serializeField(field: FieldDefinition, indent = '\t\t'): string 
 			continue;
 		}
 
-		// Generic serialization for remaining props
-		props.push(`${indent}${key}: ${serializeValue(value, indent + '\t')}`);
+		// Generic serialization for remaining props (quote unsafe keys to prevent injection)
+		const safeKey = needsQuoting(key) ? safeQuote(key) : key;
+		props.push(`${indent}${safeKey}: ${serializeValue(value, indent + '\t')}`);
 	}
 
 	return `{\n${props.join(',\n')},\n${indent.slice(0, -1)}}`;
@@ -256,7 +257,10 @@ function serializeFieldAdmin(admin: Record<string, unknown>, indent: string): st
 	if (entries.length === 0) return null;
 
 	const props = entries
-		.map(([k, v]) => `${indent}\t${k}: ${serializeValue(v, indent + '\t')}`)
+		.map(([k, v]) => {
+			const safeKey = needsQuoting(k) ? safeQuote(k) : k;
+			return `${indent}\t${safeKey}: ${serializeValue(v, indent + '\t')}`;
+		})
 		.join(',\n');
 	return `{\n${props},\n${indent}}`;
 }

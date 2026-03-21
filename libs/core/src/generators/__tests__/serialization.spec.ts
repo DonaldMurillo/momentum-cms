@@ -640,3 +640,53 @@ describe('security: string escaping in generated TypeScript', () => {
 		expect(output).not.toMatch(/export interface.*[';]/);
 	});
 });
+
+// ============================================
+// Security: Object key quoting in serializeField / serializeFieldAdmin
+// ============================================
+
+describe('security: object key injection in serializeField', () => {
+	it('should quote keys with special characters in generic field properties', () => {
+		// A field with a crafted property name that could break out of the object literal
+		const field = {
+			name: 'title',
+			type: 'text',
+			'foo: 1 }; console.log("injected"); const x = { a': 'gotcha',
+		};
+		const result = serializeField(field);
+		// The malicious key must be quoted, not interpolated raw
+		expect(result).not.toContain('foo: 1 }; console.log("injected")');
+		// It should appear as a safely quoted key
+		expect(result).toContain('"foo: 1 }; console.log(\\"injected\\"); const x = { a"');
+	});
+
+	it('should quote keys with single quotes in generic field properties', () => {
+		const field = {
+			name: 'test',
+			type: 'text',
+			"it's-broken": true,
+		};
+		const result = serializeField(field);
+		// Key must not be emitted raw (would be invalid TS identifier)
+		expect(result).toContain('"it\'s-broken"');
+	});
+
+	it('should quote keys with special characters in field admin config', () => {
+		const field = {
+			name: 'title',
+			type: 'text',
+			admin: {
+				'evil: 1 }; hack();//': 'payload',
+				position: 'main',
+			},
+		};
+		const result = serializeField(field);
+		// The malicious admin key must NOT appear as a raw unquoted key
+		// (an unquoted key would look like: \tevil: 1 }; hack();//: "payload")
+		expect(result).not.toMatch(/\tevil: 1 \}/);
+		// It should appear as a safely JSON-quoted key
+		expect(result).toContain('"evil: 1 }; hack();//": "payload"');
+		// Normal key should still work
+		expect(result).toContain('position: "main"');
+	});
+});
