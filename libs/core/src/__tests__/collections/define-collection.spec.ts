@@ -495,4 +495,54 @@ describe('getSoftDeleteField()', () => {
 		});
 		expect(getSoftDeleteField(collection)).toBe('archivedAt');
 	});
+
+	it('should reject softDelete.field with invalid characters', () => {
+		expect(() =>
+			getSoftDeleteField({
+				slug: 'posts',
+				fields: [text('title')],
+				softDelete: { field: 'foo; console.log("pwned")' },
+			}),
+		).toThrow('must be a valid identifier');
+	});
+
+	it('should reject softDelete.field starting with a number', () => {
+		expect(() =>
+			getSoftDeleteField({
+				slug: 'posts',
+				fields: [text('title')],
+				softDelete: { field: '123bad' },
+			}),
+		).toThrow('must be a valid identifier');
+	});
+
+	it('should accept underscore-prefixed softDelete.field', () => {
+		const collection = defineCollection({
+			slug: 'posts',
+			fields: [text('title')],
+			softDelete: { field: '_deletedAt' },
+		});
+		expect(getSoftDeleteField(collection)).toBe('_deletedAt');
+	});
+});
+
+describe('defineCollection() softDelete.field validation', () => {
+	it('should reject invalid softDelete.field at define time', () => {
+		expect(() =>
+			defineCollection({
+				slug: 'posts',
+				fields: [text('title')],
+				softDelete: { field: 'foo}; exploit();//' },
+			}),
+		).toThrow('must be a valid identifier');
+	});
+
+	it('should accept valid softDelete.field at define time', () => {
+		const collection = defineCollection({
+			slug: 'posts',
+			fields: [text('title')],
+			softDelete: { field: 'removedAt' },
+		});
+		expect(collection.softDelete).toEqual({ field: 'removedAt' });
+	});
 });

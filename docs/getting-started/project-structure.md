@@ -86,7 +86,18 @@ Server entry point where Momentum is initialized and API routes are registered.
 
 Includes Tailwind directives and Momentum theme CSS variables for light and dark modes.
 
+## Generated Client SDK (Optional)
+
+You can also generate a framework-agnostic API client:
+
+```bash
+npm run generate -- --client src/generated/momentum.client.ts
+```
+
+This produces a fully typed fetch-based client with collection CRUD methods, global accessors, and error handling. See [Client SDK](client-sdk.md) for details.
+
 ## Next Steps
 
 - [Your First Collection](your-first-collection.md) — Create a custom collection
+- [Client SDK](client-sdk.md) — Use the generated API client
 - [Collection Config](../collections/overview.md) — Full config reference

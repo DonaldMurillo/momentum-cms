@@ -86,7 +86,8 @@ export function generateTypes(config: MomentumConfig): string {
 				typeof collection.softDelete === 'object' && collection.softDelete.field
 					? collection.softDelete.field
 					: 'deletedAt';
-			lines.push(`  ${fieldName}?: string | null;`);
+			const safeName = needsQuoting(fieldName) ? safeQuote(fieldName) : fieldName;
+			lines.push(`  ${safeName}?: string | null;`);
 		}
 
 		// Timestamps

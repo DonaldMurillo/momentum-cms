@@ -49,6 +49,7 @@ The generated project includes:
 - **Tailwind CSS** pre-configured with the Momentum theme
 - **Generated types** at `src/generated/momentum.types.ts`
 - **Generated admin config** at `src/generated/momentum.config.ts`
+- **Generated client SDK** (optional) at `src/generated/momentum.client.ts` — framework-agnostic fetch-based API client
 
 ### Create Form
 
@@ -56,16 +57,16 @@ The generated project includes:
 
 ## Project Scripts
 
-| Command                    | Description                                |
-| -------------------------- | ------------------------------------------ |
-| `npm run dev`              | Start development server with hot reload   |
-| `npm run build`            | Production build                           |
-| `npm start`                | Start production server                    |
-| `npm run generate`         | Generate TypeScript types and admin config |
-| `npm run migrate:generate` | Create a migration from schema changes     |
-| `npm run migrate:run`      | Apply pending migrations                   |
-| `npm run migrate:status`   | Show migration status                      |
-| `npm run migrate:rollback` | Rollback latest migration batch            |
+| Command                    | Description                                                      |
+| -------------------------- | ---------------------------------------------------------------- |
+| `npm run dev`              | Start development server with hot reload                         |
+| `npm run build`            | Production build                                                 |
+| `npm start`                | Start production server                                          |
+| `npm run generate`         | Generate TypeScript types, admin config, and optional client SDK |
+| `npm run migrate:generate` | Create a migration from schema changes                           |
+| `npm run migrate:run`      | Apply pending migrations                                         |
+| `npm run migrate:status`   | Show migration status                                            |
+| `npm run migrate:rollback` | Rollback latest migration batch                                  |
 
 ## File Naming Conventions
 

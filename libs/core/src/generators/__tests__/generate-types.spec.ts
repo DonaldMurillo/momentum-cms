@@ -833,4 +833,22 @@ describe('generateTypes', () => {
 			"export type WhereClauseType<S extends CollectionSlug> = TypedMomentumCollections[S]['where'];",
 		);
 	});
+
+	// Security: softDelete.field sanitization (defense in depth)
+	it('should quote softDelete.field values that need quoting', () => {
+		const config = {
+			collections: [
+				{
+					slug: 'items',
+					fields: [{ name: 'title', type: 'text' }],
+					softDelete: { field: 'deleted-at' },
+				},
+			],
+		};
+		const output = generateTypes(config);
+		// Hyphenated name should be quoted in the output
+		expect(output).toContain('"deleted-at"?: string | null;');
+		// Should NOT appear unquoted
+		expect(output).not.toMatch(/\s+deleted-at\?:/);
+	});
 });
