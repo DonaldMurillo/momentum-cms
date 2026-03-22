@@ -2,47 +2,73 @@ import {
 	ChangeDetectionStrategy,
 	Component,
 	computed,
-	DestroyRef,
 	effect,
-	ElementRef,
+	inject,
+	Injector,
 	input,
-	output,
+	type Provider,
 	signal,
-	untracked,
-	viewChild,
+	Type,
+	ViewEncapsulation,
 } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
-import { inject } from '@angular/core';
+import { NgComponentOutlet } from '@angular/common';
+import type { PreviewConfig } from '@momentumcms/core';
 import { Button } from '@momentumcms/ui';
 
-/** Device size preset for the preview iframe. */
+/** Device size preset for the preview container. */
 export type DeviceSize = 'desktop' | 'tablet' | 'mobile';
 
 /**
  * Live Preview Widget
  *
- * Displays an iframe that shows a live preview of the document being edited.
+ * Renders a user-provided Angular component directly inside the admin panel.
+ * The preview component injects `LivePreviewService` to read live form data —
+ * no iframes, no postMessage, no fetch. Instant signal-based reactivity.
  *
- * Two modes based on preview config type:
- * - `preview: true` (server-rendered HTML): initial GET loads from database, then
- *   subsequent form changes are POSTed to the same endpoint with the current form data
- *   for realtime preview updates (no page reload needed).
- * - `preview: string/function` (URL-based): iframe loads the page URL with scripts DISABLED.
- *   This prevents loading a second Angular app instance (with Vite HMR, SSR hydration, etc.)
- *   which causes tab crashes in dev mode. The SSR-rendered HTML displays correctly without JS.
- *   Use the Refresh button to see form changes reflected in the preview.
- *
- * The iframe is declared statically in the template (no dynamic bindings) to avoid NG0910.
- * Its src/sandbox attributes are set via nativeElement in an effect().
+ * When the preview config includes `providers`, a child injector is created
+ * so the preview component can access additional DI tokens (e.g. block registry).
  */
 @Component({
 	selector: 'mcms-live-preview',
-	imports: [Button],
+	imports: [NgComponentOutlet, Button],
 	changeDetection: ChangeDetectionStrategy.OnPush,
-	host: { class: 'flex flex-col h-full border-l border-border' },
+	encapsulation: ViewEncapsulation.None,
+	host: {
+		class: 'flex flex-col h-full border-l border-border',
+		role: 'complementary',
+		'aria-label': 'Live preview panel',
+	},
+	styles: `
+		/* Force light theme variables inside the preview container so block components render correctly in dark admin */
+		.mcms-preview-light {
+			--mcms-background: 0 0% 100%;
+			--mcms-foreground: 222 47% 11%;
+			--mcms-card: 0 0% 100%;
+			--mcms-card-foreground: 222 47% 11%;
+			--mcms-primary: 221 83% 53%;
+			--mcms-primary-foreground: 210 40% 98%;
+			--mcms-secondary: 210 40% 96%;
+			--mcms-secondary-foreground: 222 47% 11%;
+			--mcms-muted: 210 40% 96%;
+			--mcms-muted-foreground: 215 16% 43%;
+			--mcms-accent: 210 40% 96%;
+			--mcms-accent-foreground: 222 47% 11%;
+			--mcms-destructive: 0 84% 60%;
+			--mcms-destructive-foreground: 210 40% 98%;
+			--mcms-border: 214 32% 91%;
+			--mcms-input: 214 32% 91%;
+			--mcms-ring: 221 83% 53%;
+			background: hsl(0 0% 100%);
+			color: hsl(222 47% 11%);
+		}
+	`,
 	template: `
 		<!-- Preview toolbar -->
-		<div class="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/50">
+		<div
+			class="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/50"
+			role="toolbar"
+			aria-label="Preview controls"
+		>
 			<span class="text-sm font-medium text-foreground">Preview</span>
 			<div class="flex-1"></div>
 
@@ -53,45 +79,23 @@ export type DeviceSize = 'desktop' | 'tablet' | 'mobile';
 				aria-label="Preview device size"
 				data-testid="device-toggle"
 			>
-				<button
-					class="px-2 py-1 text-xs transition-colors"
-					[class]="
-						deviceSize() === 'desktop'
-							? 'bg-primary text-primary-foreground'
-							: 'bg-background text-muted-foreground hover:bg-muted'
-					"
-					[attr.aria-pressed]="deviceSize() === 'desktop'"
-					(click)="deviceSize.set('desktop')"
-					data-testid="device-desktop"
-				>
-					Desktop
-				</button>
-				<button
-					class="px-2 py-1 text-xs border-l border-border transition-colors"
-					[class]="
-						deviceSize() === 'tablet'
-							? 'bg-primary text-primary-foreground'
-							: 'bg-background text-muted-foreground hover:bg-muted'
-					"
-					[attr.aria-pressed]="deviceSize() === 'tablet'"
-					(click)="deviceSize.set('tablet')"
-					data-testid="device-tablet"
-				>
-					Tablet
-				</button>
-				<button
-					class="px-2 py-1 text-xs border-l border-border transition-colors"
-					[class]="
-						deviceSize() === 'mobile'
-							? 'bg-primary text-primary-foreground'
-							: 'bg-background text-muted-foreground hover:bg-muted'
-					"
-					[attr.aria-pressed]="deviceSize() === 'mobile'"
-					(click)="deviceSize.set('mobile')"
-					data-testid="device-mobile"
-				>
-					Mobile
-				</button>
+				@for (size of deviceSizes; track size.id) {
+					<button
+						class="px-2 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+						[class]="
+							deviceSize() === size.id
+								? 'bg-primary text-primary-foreground'
+								: 'bg-background text-muted-foreground hover:bg-muted'
+						"
+						[class.border-l]="!$first"
+						[class.border-border]="!$first"
+						[attr.aria-pressed]="deviceSize() === size.id"
+						(click)="deviceSize.set(size.id)"
+						[attr.data-testid]="'device-' + size.id"
+					>
+						{{ size.label }}
+					</button>
+				}
 			</div>
 
 			<button
@@ -106,100 +110,67 @@ export type DeviceSize = 'desktop' | 'tablet' | 'mobile';
 			</button>
 		</div>
 
-		<!-- Preview iframe container -->
-		<div class="flex-1 overflow-auto bg-muted/30 flex justify-center p-4">
-			@if (previewUrl()) {
-				<!-- Static iframe with no dynamic bindings (avoids NG0910).
-				     src/sandbox/width are set via nativeElement in an effect(). -->
-				<iframe
-					#previewIframe
-					title="Live document preview"
-					data-testid="preview-iframe"
-					class="h-full bg-white border border-border rounded-md shadow-sm transition-[width] duration-300"
-				></iframe>
-			} @else {
-				<div class="flex items-center justify-center h-full text-muted-foreground text-sm">
-					Preview not available
-				</div>
-			}
+		<!-- Preview content container -->
+		<div
+			class="flex-1 overflow-auto bg-muted/30 flex justify-center p-4"
+			role="region"
+			aria-label="Live preview"
+		>
+			<div
+				[style.width]="containerWidth()"
+				class="mcms-preview-light h-full border border-border rounded-md shadow-sm transition-[width] duration-300 overflow-auto"
+				data-testid="preview-content"
+				aria-live="polite"
+				[attr.aria-busy]="!resolvedComponent() && !loadError()"
+			>
+				@if (resolvedComponent()) {
+					<ng-container
+						[ngComponentOutlet]="resolvedComponent()"
+						[ngComponentOutletInjector]="previewInjector()"
+					/>
+				} @else if (loadError()) {
+					<div
+						class="flex items-center justify-center h-full text-destructive text-sm p-4"
+						role="alert"
+					>
+						Failed to load preview component
+					</div>
+				} @else {
+					<div class="flex items-center justify-center h-full text-muted-foreground text-sm">
+						Loading preview…
+					</div>
+				}
+			</div>
 		</div>
 	`,
 })
 export class LivePreviewComponent {
-	private readonly document = inject(DOCUMENT);
-	private readonly destroyRef = inject(DestroyRef);
+	private readonly parentInjector = inject(Injector);
 
-	/** Preview configuration from collection admin config */
-	readonly preview = input.required<
-		boolean | string | ((doc: Record<string, unknown>) => string)
-	>();
+	/** Preview configuration with lazy component loader */
+	readonly preview = input.required<PreviewConfig>();
 
-	/** Current document data from the form */
-	readonly documentData = input.required<Record<string, unknown>>();
-
-	/** Collection slug */
-	readonly collectionSlug = input.required<string>();
-
-	/** Document ID (undefined for create mode) */
-	readonly entityId = input<string | undefined>(undefined);
-
-	/** Emitted when the preview iframe requests editing a block */
-	readonly editBlockRequest = output<number>();
+	/** Device size presets for the toggle group */
+	readonly deviceSizes: ReadonlyArray<{ id: DeviceSize; label: string }> = [
+		{ id: 'desktop', label: 'Desktop' },
+		{ id: 'tablet', label: 'Tablet' },
+		{ id: 'mobile', label: 'Mobile' },
+	];
 
 	/** Current device size */
 	readonly deviceSize = signal<DeviceSize>('desktop');
 
-	/** Refresh counter to force iframe reload */
-	private readonly refreshCounter = signal(0);
+	/** Resolved component type after lazy loading */
+	readonly resolvedComponent = signal<Type<unknown> | null>(null);
 
-	/** Reference to the static iframe element (available when previewUrl is non-null) */
-	private readonly previewIframe = viewChild<ElementRef<HTMLIFrameElement>>('previewIframe');
+	/** Injector for the preview component (includes custom providers if configured) */
+	readonly previewInjector = signal<Injector>(this.parentInjector);
 
-	/** Whether the initial iframe load from GET is complete */
-	private initialLoadDone = false;
+	/** Error from component loading */
+	readonly loadError = signal<unknown>(null);
 
-	/** Compute the raw preview URL */
-	readonly previewUrl = computed((): string | null => {
-		// Force recomputation on refresh
-		this.refreshCounter();
-
-		const previewConfig = this.preview();
-		const data = this.documentData();
-		const slug = this.collectionSlug();
-		const id = this.entityId();
-
-		if (typeof previewConfig === 'function') {
-			try {
-				return previewConfig(data);
-			} catch {
-				return null;
-			}
-		}
-
-		// URL template string: interpolate {fieldName} placeholders with form data
-		// Return null if any placeholder resolves to empty (data not yet loaded)
-		if (typeof previewConfig === 'string') {
-			let hasEmptyField = false;
-			const url = previewConfig.replace(/\{(\w+)\}/g, (_, field: string) => {
-				const val = data[field];
-				if (val == null || val === '') {
-					hasEmptyField = true;
-					return '';
-				}
-				return String(val);
-			});
-			return hasEmptyField ? null : url;
-		}
-
-		if (previewConfig === true && id) {
-			return `/api/${slug}/${id}/preview`;
-		}
-
-		return null;
-	});
-
-	/** Computed iframe width based on device size */
-	readonly iframeWidth = computed((): string => {
+	/** Computed container width based on device size */
+	readonly containerWidth = computed((): string => {
 		switch (this.deviceSize()) {
 			case 'tablet':
 				return '768px';
@@ -210,167 +181,56 @@ export class LivePreviewComponent {
 		}
 	});
 
-	/** Sandbox attribute value based on preview mode */
-	private readonly sandboxValue = computed((): string => {
-		const previewConfig = this.preview();
-		if (previewConfig === true) {
-			// Server-rendered HTML: scripts needed for postMessage live updates
-			return 'allow-same-origin allow-scripts allow-popups allow-forms';
-		}
-		// URL-based preview: no scripts to prevent full Angular app from loading
-		return 'allow-same-origin allow-popups allow-forms';
-	});
+	/** Incremented to force re-creation of the preview component */
+	private readonly refreshCounter = signal(0);
 
-	/** Debounce timer for live preview updates */
-	private debounceTimer: number | undefined = undefined;
-
-	/** AbortController for in-flight POST requests */
-	private fetchAbort: AbortController | undefined = undefined;
+	/** Generation counter to ignore stale promise resolutions */
+	private loadGeneration = 0;
 
 	constructor() {
-		// Effect 1: Set iframe src and sandbox when URL or sandbox config changes.
-		// Uses untracked() for iframeWidth so device size toggles don't trigger a reload.
 		effect(() => {
-			const iframeRef = this.previewIframe();
-			if (!iframeRef) return;
+			const config = this.preview();
+			// Track refresh counter to re-trigger on refresh
+			this.refreshCounter();
 
-			const iframe = iframeRef.nativeElement;
-			const url = this.previewUrl();
-			if (!url) return;
+			this.resolvedComponent.set(null);
+			this.loadError.set(null);
+			this.previewInjector.set(this.parentInjector);
 
-			this.initialLoadDone = false;
-			iframe.setAttribute('sandbox', this.sandboxValue());
-			iframe.src = url;
-			// Set initial width without tracking the signal
-			iframe.style.width = untracked(() => this.iframeWidth());
+			const generation = ++this.loadGeneration;
 
-			// Mark initial load as done once the iframe finishes loading
-			const onLoad = (): void => {
-				this.initialLoadDone = true;
-				iframe.removeEventListener('load', onLoad);
-			};
-			iframe.addEventListener('load', onLoad);
-		});
+			// Resolve component and optional providers in parallel
+			const componentPromise = config.component();
+			const providersPromise = config.providers?.() ?? Promise.resolve(undefined);
 
-		// Effect 2: Update iframe width only (no reload).
-		// Changing CSS width on an iframe does not trigger navigation.
-		effect(() => {
-			const iframeRef = this.previewIframe();
-			if (!iframeRef) return;
+			Promise.all([componentPromise, providersPromise])
+				.then(([component, providers]) => {
+					if (generation !== this.loadGeneration) return;
 
-			iframeRef.nativeElement.style.width = this.iframeWidth();
-		});
-
-		// Effect 3: Live preview updates via POST (for preview: true mode).
-		// When form data changes, POST it to the preview endpoint and write the
-		// response HTML directly to the iframe. This works for all collection types
-		// including email templates where postMessage isn't sufficient.
-		effect(() => {
-			const data = this.documentData();
-			const previewConfig = this.preview();
-
-			// Only use POST-based updates for server-rendered previews (preview: true)
-			if (previewConfig !== true) {
-				// For URL-based previews, use postMessage as before
-				const iframeRef = this.previewIframe();
-				if (!iframeRef?.nativeElement.contentWindow) return;
-
-				if (this.debounceTimer) {
-					clearTimeout(this.debounceTimer);
-				}
-				this.debounceTimer = this.document.defaultView?.setTimeout(() => {
-					const iframeWindow = iframeRef.nativeElement.contentWindow;
-					if (iframeWindow) {
-						const targetOrigin = this.document.defaultView?.location?.origin ?? '';
-						iframeWindow.postMessage({ type: 'momentum-preview-update', data }, targetOrigin);
+					// Create child injector if providers were returned
+					if (providers && Array.isArray(providers) && providers.length > 0) {
+						this.previewInjector.set(
+							Injector.create({
+								// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- providers are typed as unknown[] from PreviewConfig
+								providers: providers as Provider[],
+								parent: this.parentInjector,
+							}),
+						);
 					}
-				}, 300);
-				return;
-			}
 
-			// For preview: true, POST form data to the server preview endpoint
-			const url = untracked(() => this.previewUrl());
-			if (!url) return;
-
-			// Skip the first emission (initial load is handled by iframe src)
-			if (!this.initialLoadDone) return;
-
-			if (this.debounceTimer) {
-				clearTimeout(this.debounceTimer);
-			}
-
-			this.debounceTimer = this.document.defaultView?.setTimeout(() => {
-				this.fetchPreviewHtml(url, data);
-			}, 300);
-		});
-
-		// Listen for edit block requests from preview iframe
-		const win = this.document.defaultView;
-		if (win) {
-			const editHandler = (event: MessageEvent): void => {
-				if (event.origin !== win.location.origin) return;
-				if (event.data?.type !== 'momentum-edit-block') return;
-				const blockIndex = event.data.blockIndex;
-				if (typeof blockIndex === 'number') {
-					this.editBlockRequest.emit(blockIndex);
-				}
-			};
-			win.addEventListener('message', editHandler);
-			this.destroyRef.onDestroy(() => win.removeEventListener('message', editHandler));
-		}
-
-		// Clean up on destroy
-		this.destroyRef.onDestroy(() => {
-			if (this.debounceTimer) {
-				clearTimeout(this.debounceTimer);
-				this.debounceTimer = undefined;
-			}
-			this.fetchAbort?.abort();
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- loader resolves to unknown, safe cast to Type
+					this.resolvedComponent.set(component as Type<unknown>);
+				})
+				.catch((err: unknown) => {
+					if (generation !== this.loadGeneration) return;
+					console.error('[LivePreview] Failed to load preview component:', err);
+					this.loadError.set(err);
+				});
 		});
 	}
 
-	/** Force iframe to reload from server (GET) */
+	/** Force re-load the preview component */
 	refreshPreview(): void {
 		this.refreshCounter.update((c) => c + 1);
-	}
-
-	/** POST form data to the preview endpoint and write the HTML response to the iframe. */
-	private fetchPreviewHtml(url: string, data: Record<string, unknown>): void {
-		// Cancel any in-flight request
-		this.fetchAbort?.abort();
-		this.fetchAbort = new AbortController();
-
-		const win = this.document.defaultView;
-		if (!win) return;
-
-		win
-			.fetch(url, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ data }),
-				credentials: 'include',
-				signal: this.fetchAbort.signal,
-			})
-			.then((response) => {
-				if (!response.ok) return null;
-				return response.text();
-			})
-			.then((html) => {
-				if (!html) return;
-				const iframeRef = this.previewIframe();
-				if (!iframeRef) return;
-
-				const doc = iframeRef.nativeElement.contentDocument;
-				if (doc) {
-					doc.open();
-					doc.write(html);
-					doc.close();
-				}
-			})
-			.catch((err: unknown) => {
-				// Ignore abort errors (expected when a new request supersedes)
-				if (err instanceof DOMException && err.name === 'AbortError') return;
-				console.warn('[momentum:live-preview] Preview fetch failed:', err);
-			});
 	}
 }

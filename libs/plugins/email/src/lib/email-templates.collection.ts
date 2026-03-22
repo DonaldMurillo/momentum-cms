@@ -16,7 +16,6 @@ export const EmailTemplatesCollection = defineCollection({
 		group: 'Settings',
 		useAsTitle: 'name',
 		defaultColumns: ['name', 'slug', 'isSystem', 'updatedAt'],
-		preview: true,
 	},
 	fields: [
 		text('name', {

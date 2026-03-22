@@ -112,6 +112,10 @@ export const cron = cronPlugin({
 export const forms = formBuilderPlugin({
 	honeypot: true,
 	rateLimitPerMinute: 10,
+	preview: {
+		component: () =>
+			import('@momentumcms/example-config/previews').then((m) => m.FormPreviewComponent),
+	},
 });
 
 /**

@@ -45,13 +45,8 @@ test.describe('Admin Collection View', { tag: ['@admin'] }, () => {
 			await expect(heading).toBeVisible({ timeout: 15000 });
 			await expect(heading).not.toHaveText('Momentum CMS');
 
-			// Should NOT have a preview iframe (view page is read-only)
-			await expect(page.locator('[data-testid="preview-iframe"]')).toBeHidden();
-
-			// "Open Page" link should be visible for articles with preview config
-			const openPageLink = page.locator('[data-testid="open-page-link"]');
-			await expect(openPageLink).toBeVisible({ timeout: 10000 });
-			await expect(openPageLink).toHaveAttribute('href', /\/articles\/.+/);
+			// View page should not show preview content (read-only)
+			await expect(page.locator('[data-testid="preview-content"]')).toBeHidden();
 
 			// Page should remain stable for 3 seconds (no crash/blank)
 			const errors: string[] = [];
@@ -109,12 +104,8 @@ test.describe('Admin Collection View', { tag: ['@admin'] }, () => {
 			await expect(heading).toBeVisible({ timeout: 15000 });
 			await expect(heading).not.toHaveText('Momentum CMS');
 
-			// No preview iframe on view page
-			await expect(page.locator('[data-testid="preview-iframe"]')).toBeHidden();
-
-			// "Open Page" link should work for pages with preview config
-			const openPageLink = page.locator('[data-testid="open-page-link"]');
-			await expect(openPageLink).toBeVisible({ timeout: 10000 });
+			// View page should not show preview content (read-only)
+			await expect(page.locator('[data-testid="preview-content"]')).toBeHidden();
 
 			// Page should remain stable
 			const errors: string[] = [];

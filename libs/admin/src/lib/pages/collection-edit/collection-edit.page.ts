@@ -3,21 +3,19 @@ import {
 	ChangeDetectionStrategy,
 	inject,
 	computed,
+	effect,
 	signal,
 	viewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import type { CollectionConfig } from '@momentumcms/core';
-import { Button, DialogService } from '@momentumcms/ui';
+import type { CollectionConfig, PreviewConfig } from '@momentumcms/core';
+import { Button } from '@momentumcms/ui';
 import { CollectionAccessService } from '../../services/collection-access.service';
+import { LivePreviewService } from '../../services/live-preview.service';
 import { getCollectionsFromRouteData } from '../../utils/route-data';
 import { EntityFormWidget } from '../../widgets/entity-form/entity-form.component';
 import type { EntityFormMode } from '../../widgets/entity-form/entity-form.types';
 import { LivePreviewComponent } from '../../widgets/live-preview/live-preview.component';
-import {
-	BlockEditDialog,
-	type BlockEditDialogData,
-} from '../../widgets/visual-block-editor/block-edit-dialog.component';
 import type { HasUnsavedChanges } from '../../guards/unsaved-changes.guard';
 import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-outlet.component';
 
@@ -26,6 +24,7 @@ import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-o
  *
  * Form for creating or editing a document in a collection using EntityFormWidget.
  * When preview is enabled on the collection, shows a live preview panel alongside the form.
+ * Form data is synced to LivePreviewService so preview components get instant updates.
  */
 @Component({
 	selector: 'mcms-collection-edit',
@@ -61,13 +60,7 @@ import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-o
 							</mcms-entity-form>
 						</div>
 						<div class="w-[50%] min-w-[400px] max-w-[720px]">
-							<mcms-live-preview
-								[preview]="preview"
-								[documentData]="formData()"
-								[collectionSlug]="col.slug"
-								[entityId]="entityId()"
-								(editBlockRequest)="onEditBlockRequest($event)"
-							/>
+							<mcms-live-preview [preview]="preview" />
 						</div>
 						<mcms-admin-slot slot="collection-edit:sidebar" [collectionSlug]="col.slug" />
 					</div>
@@ -116,8 +109,8 @@ import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-o
 })
 export class CollectionEditPage implements HasUnsavedChanges {
 	private readonly route = inject(ActivatedRoute);
-	private readonly dialogService = inject(DialogService);
 	private readonly collectionAccess = inject(CollectionAccessService);
+	private readonly livePreview = inject(LivePreviewService);
 
 	readonly basePath = '/admin/collections';
 
@@ -149,13 +142,11 @@ export class CollectionEditPage implements HasUnsavedChanges {
 		return collections.find((c) => c.slug === slug);
 	});
 
-	/** Preview config from collection admin settings (false-y when not configured) */
-	readonly previewConfig = computed(
-		(): boolean | string | ((doc: Record<string, unknown>) => string) | undefined => {
-			const col = this.collection();
-			return col?.admin?.preview || undefined;
-		},
-	);
+	/** Preview config from collection admin settings */
+	readonly previewConfig = computed((): PreviewConfig | undefined => {
+		const col = this.collection();
+		return col?.admin?.preview ?? undefined;
+	});
 
 	/** Reactive form data from the entity form widget */
 	readonly formData = computed((): Record<string, unknown> => {
@@ -163,49 +154,21 @@ export class CollectionEditPage implements HasUnsavedChanges {
 		return form?.formData() ?? {};
 	});
 
+	constructor() {
+		// Sync form state to LivePreviewService for preview components to read
+		effect(() => {
+			this.livePreview.documentData.set(this.formData());
+		});
+		effect(() => {
+			this.livePreview.entityId.set(this.entityId());
+		});
+		effect(() => {
+			this.livePreview.collectionSlug.set(this.collection()?.slug);
+		});
+	}
+
 	/** HasUnsavedChanges implementation for the route guard */
 	hasUnsavedChanges(): boolean {
 		return this.entityFormRef()?.isDirty() ?? false;
-	}
-
-	/** Handle edit block request from preview iframe overlay */
-	onEditBlockRequest(blockIndex: number): void {
-		const col = this.collection();
-		const formRef = this.entityFormRef();
-		if (!col || !formRef) return;
-
-		// Find the blocks field in the collection
-		const blocksField = col.fields.find((f) => f.type === 'blocks');
-		if (!blocksField || blocksField.type !== 'blocks') return;
-
-		// Get current block data to determine its type
-		const data = formRef.formData();
-		const blocksArray = data[blocksField.name];
-		if (!Array.isArray(blocksArray) || !blocksArray[blockIndex]) return;
-
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- blocksArray elements are untyped
-		const block = blocksArray[blockIndex] as Record<string, unknown>;
-		const blockType = block['blockType'];
-		if (typeof blockType !== 'string') return;
-
-		// Find the block config for this type
-		const blockConfig = blocksField.blocks.find((b) => b.slug === blockType);
-		if (!blockConfig) return;
-
-		// Get the signal forms node for the blocks field
-		const formNode = formRef.getFormNode(blocksField.name);
-
-		this.dialogService.open<BlockEditDialog, BlockEditDialogData>(BlockEditDialog, {
-			width: '32rem',
-			data: {
-				blockConfig,
-				formNode,
-				blockIndex,
-				formTree: formRef.entityForm(),
-				formModel: formRef.formModel(),
-				mode: 'edit',
-				path: blocksField.name,
-			},
-		});
 	}
 }

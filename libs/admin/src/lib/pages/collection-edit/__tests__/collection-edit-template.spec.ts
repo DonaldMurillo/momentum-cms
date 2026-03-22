@@ -14,15 +14,14 @@
  * - mode() computed (create/edit/view)
  * - formData() computed
  * - hasUnsavedChanges()
- * - onEditBlockRequest() with various edge cases
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal, computed } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import type { CollectionConfig, BlocksField } from '@momentumcms/core';
+import type { CollectionConfig } from '@momentumcms/core';
 import { CollectionEditPage } from '../collection-edit.page';
 import { CollectionAccessService } from '../../../services/collection-access.service';
-import { DialogService } from '@momentumcms/ui';
+import { LivePreviewService } from '../../../services/live-preview.service';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -62,32 +61,19 @@ describe('CollectionEditPage - template expression coverage', () => {
 	});
 	const previewablePages = makeCollection({
 		slug: 'pages',
-		admin: { preview: '/preview/pages/{slug}' },
+		admin: {
+			preview: {
+				component: () => Promise.resolve(class MockPreview {}),
+			},
+		},
 	});
-	const blocksCollection = makeCollection({
-		slug: 'pages-with-blocks',
-		fields: [
-			{
-				name: 'layout',
-				type: 'blocks',
-				blocks: [
-					{ slug: 'hero', fields: [{ name: 'title', type: 'text' }] },
-					{ slug: 'cta', fields: [{ name: 'text', type: 'text' }] },
-				],
-			} as unknown as BlocksField,
-		],
-	});
-	const allCollections = [posts, previewablePages, blocksCollection];
-
-	let mockDialogService: { open: ReturnType<typeof vi.fn> };
+	const allCollections = [posts, previewablePages];
 
 	function setup(
 		params: Record<string, string | null> = { slug: 'posts', id: 'create' },
 		collections: CollectionConfig[] = allCollections,
 		canUpdate: (slug: string) => boolean = () => true,
 	): { fixture: ComponentFixture<CollectionEditPage>; component: CollectionEditPage } {
-		mockDialogService = { open: vi.fn() };
-
 		const mockAccessService: Partial<CollectionAccessService> = {
 			accessibleCollections: computed(() => collections.map((c) => c.slug)),
 			initialized: signal(true),
@@ -103,7 +89,7 @@ describe('CollectionEditPage - template expression coverage', () => {
 			imports: [CollectionEditPage],
 			providers: [
 				{ provide: CollectionAccessService, useValue: mockAccessService },
-				{ provide: DialogService, useValue: mockDialogService },
+				{ provide: LivePreviewService, useValue: new LivePreviewService() },
 				{
 					provide: ActivatedRoute,
 					useValue: makeActivatedRoute(params, collections),
@@ -244,35 +230,6 @@ describe('CollectionEditPage - template expression coverage', () => {
 		it('should return false when entity form is not present', () => {
 			const { component } = setup();
 			expect(component.hasUnsavedChanges()).toBe(false);
-		});
-	});
-
-	// -----------------------------------------------------------------------
-	// onEditBlockRequest method coverage
-	// -----------------------------------------------------------------------
-	describe('onEditBlockRequest', () => {
-		it('should exit early when collection is undefined', () => {
-			const { component } = setup({ slug: 'nonexistent', id: 'abc' });
-			expect(() => component.onEditBlockRequest(0)).not.toThrow();
-			expect(mockDialogService.open).not.toHaveBeenCalled();
-		});
-
-		it('should exit early when entityFormRef is null', () => {
-			const { component } = setup({ slug: 'posts', id: 'abc' });
-			expect(() => component.onEditBlockRequest(0)).not.toThrow();
-			expect(mockDialogService.open).not.toHaveBeenCalled();
-		});
-
-		it('should exit early when collection has no blocks field', () => {
-			const { component } = setup({ slug: 'posts', id: 'abc' });
-			component.onEditBlockRequest(0);
-			expect(mockDialogService.open).not.toHaveBeenCalled();
-		});
-
-		it('should exit early for blocks collection when formRef is null', () => {
-			const { component } = setup({ slug: 'pages-with-blocks', id: 'abc' });
-			component.onEditBlockRequest(0);
-			expect(mockDialogService.open).not.toHaveBeenCalled();
 		});
 	});
 

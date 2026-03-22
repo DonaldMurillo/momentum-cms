@@ -1259,13 +1259,13 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			await expect(editor.locator('[data-testid="add-field-button"]').first()).toBeVisible();
 		});
 
-		test('should show live preview of the form alongside the editor', async ({
+		test('should show live preview of the form in the side panel', async ({
 			authenticatedPage,
 		}) => {
 			await navigateToContactFormEdit(authenticatedPage);
 
-			// Preview panel should be visible
-			const previewPanel = authenticatedPage.locator('[data-testid="form-preview-panel"]');
+			// Live preview side panel should be visible
+			const previewPanel = authenticatedPage.locator('[data-testid="preview-content"]');
 			await expect(previewPanel).toBeVisible();
 
 			// Preview should render an actual <form> element
@@ -1327,7 +1327,7 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			await expect(newCard).toBeVisible();
 
 			// Preview should now show a phone input field
-			const previewPanel = authenticatedPage.locator('[data-testid="form-preview-panel"]');
+			const previewPanel = authenticatedPage.locator('[data-testid="preview-content"]');
 			await expect(previewPanel.locator('input[name="phone"]')).toBeVisible({ timeout: 5000 });
 		});
 
@@ -1363,7 +1363,7 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			await expect(updatedLabel).toContainText('Your Full Name');
 
 			// Preview should update too
-			const previewPanel = authenticatedPage.locator('[data-testid="form-preview-panel"]');
+			const previewPanel = authenticatedPage.locator('[data-testid="preview-content"]');
 			await expect(previewPanel.getByText('Your Full Name')).toBeVisible({ timeout: 5000 });
 		});
 
@@ -1387,7 +1387,7 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			await expect(editor.locator('[data-testid="field-card"]')).toHaveCount(3);
 
 			// Preview should no longer show the textarea for message
-			const previewPanel = authenticatedPage.locator('[data-testid="form-preview-panel"]');
+			const previewPanel = authenticatedPage.locator('[data-testid="preview-content"]');
 			await expect(previewPanel.locator('textarea[name="message"]')).not.toBeVisible({
 				timeout: 5000,
 			});
@@ -1517,7 +1517,7 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			await expect(dialog).not.toBeVisible({ timeout: 5000 });
 
 			// Preview select should include "Sales" option
-			const previewPanel = authenticatedPage.locator('[data-testid="form-preview-panel"]');
+			const previewPanel = authenticatedPage.locator('[data-testid="preview-content"]');
 			const selectElement = previewPanel.locator('select[name="subject"]');
 			await expect(selectElement).toBeVisible({ timeout: 5000 });
 			const salesOption = selectElement.locator('option', { hasText: /Sales/i });
@@ -1635,7 +1635,7 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			await expect(editor.locator('[data-testid="field-card"]')).toHaveCount(3);
 
 			// Preview should show all 3 fields
-			const previewPanel = authenticatedPage.locator('[data-testid="form-preview-panel"]');
+			const previewPanel = authenticatedPage.locator('[data-testid="preview-content"]');
 			await expect(previewPanel.locator('form')).toBeVisible({ timeout: 10000 });
 
 			// Save the form

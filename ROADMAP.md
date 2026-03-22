@@ -57,6 +57,7 @@ Momentum CMS ships with a comprehensive feature set today:
 - Plugin-injected admin routes with sidebar navigation
 - Media library with upload, search, and edit
 - Responsive design (mobile drawer sidebar, adaptive grids)
+- Live preview side panel with real-time in-memory rendering (no iframes) via signals-based `LivePreviewService`
 - Dark mode via theme service
 
 ### Versioning & Drafts
@@ -123,12 +124,6 @@ Momentum CMS ships with a comprehensive feature set today:
 
 ### P0 — High Priority
 
-#### Live Preview (In-Memory Angular Rendering)
-
-Real-time content preview directly inside the admin panel. Since Momentum is fully Angular, we render the target page component in-memory — no iframes, no `postMessage`, no cross-origin complexity. Draft form state is injected via DI providers, and because everything is signals-based, previews update instantly as the user types.
-
-Possible approaches: secondary router outlets, `ViewContainerRef` dynamic loading, or a dedicated preview outlet.
-
 #### Version Diff UI
 
 Version snapshots are already stored — we need a visual way to compare them. Side-by-side or inline diff viewer with field-level change highlighting and version navigation.
@@ -178,6 +173,7 @@ These features were evaluated and explicitly decided against:
 
 ## Recently Shipped
 
+- Live preview side panel — real-time in-memory Angular rendering with `LivePreviewService`, signals-based instant updates, per-collection preview components, and form builder plugin support
 - Client SDK generation (`--client` flag) — framework-agnostic, fetch-based TypeScript API client with typed CRUD, globals, auth modes, and error handling
 - Generator decomposition into focused modules (types, client, admin config, serialization)
 - Security hardening: unsafe object key quoting, path traversal prevention, import path sanitization, `softDelete.field` identifier validation

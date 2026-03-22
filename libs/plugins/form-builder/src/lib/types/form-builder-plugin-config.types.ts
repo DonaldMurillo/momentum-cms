@@ -1,3 +1,5 @@
+import type { PreviewConfig } from '@momentumcms/core';
+
 /**
  * Configuration for the form builder plugin.
  */
@@ -6,4 +8,6 @@ export interface FormBuilderPluginConfig {
 	honeypot?: boolean;
 	/** Max form submissions per IP per minute (default: 10). */
 	rateLimitPerMinute?: number;
+	/** Optional live preview configuration for the forms collection. */
+	preview?: PreviewConfig;
 }

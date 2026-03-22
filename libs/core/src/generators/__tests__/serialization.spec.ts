@@ -376,42 +376,91 @@ describe('serializeCollection', () => {
 		expect(result).not.toContain('tokenExpiration');
 	});
 
-	it('should convert admin.preview function to URL template string', () => {
+	it('should serialize admin.preview with package-style import (no rewriting needed)', () => {
+		const configPath = '/project/src/momentum.config.ts';
+		const outputPath = '/project/src/generated/momentum.config.ts';
+		const result = serializeCollection(
+			{
+				slug: 'pages',
+				fields: [{ name: 'slug', type: 'text' }],
+				admin: {
+					useAsTitle: 'title',
+					preview: {
+						component: () => import('@test-app/previews').then((m) => m.serializeValue),
+					},
+				},
+			},
+			'\t',
+			configPath,
+			outputPath,
+		);
+		expect(result).toContain('useAsTitle');
+		expect(result).toContain('preview');
+		expect(result).toContain('component:');
+		// Package path should be preserved as-is
+		expect(result).toContain('@test-app/previews');
+		expect(result).toMatch(/component:\s*\(\)\s*=>\s*import\(/);
+	});
+
+	it('should serialize admin.preview with relative import (path rewriting)', () => {
+		const configPath = '/project/src/collections/pages.collection.ts';
+		const outputPath = '/project/src/generated/momentum.config.ts';
+		const result = serializeCollection(
+			{
+				slug: 'pages',
+				fields: [{ name: 'slug', type: 'text' }],
+				admin: {
+					useAsTitle: 'title',
+					preview: {
+						component: () => import('../serialization').then((m) => m.serializeValue),
+					},
+				},
+			},
+			'\t',
+			configPath,
+			outputPath,
+		);
+		expect(result).toContain('preview');
+		expect(result).toMatch(/component:\s*\(\)\s*=>\s*import\(/);
+	});
+
+	it('should serialize admin.preview with providers loader', () => {
+		const configPath = '/project/src/momentum.config.ts';
+		const outputPath = '/project/src/generated/momentum.config.ts';
+		const result = serializeCollection(
+			{
+				slug: 'pages',
+				fields: [{ name: 'slug', type: 'text' }],
+				admin: {
+					preview: {
+						component: () => import('@test-app/previews').then((m) => m.PagePreviewComponent),
+						providers: () => import('@test-app/pages').then((m) => m.providePageBlocks()),
+					},
+				},
+			},
+			'\t',
+			configPath,
+			outputPath,
+		);
+		expect(result).toContain('preview');
+		expect(result).toContain('component:');
+		expect(result).toContain('providers:');
+		// providers should call the factory function with ()
+		expect(result).toMatch(/providePageBlocks\(\)/);
+	});
+
+	it('should strip admin.preview when no configPath/outputPath provided', () => {
 		const result = serializeCollection({
 			slug: 'pages',
 			fields: [{ name: 'slug', type: 'text' }],
 			admin: {
 				useAsTitle: 'title',
-				preview: (doc: Record<string, unknown>) => '/' + String(doc['slug'] ?? ''),
+				preview: { component: () => Promise.resolve({}) },
 			},
 		});
 		expect(result).toContain('useAsTitle');
-		expect(result).toContain('preview');
-		expect(result).toContain('/{slug}');
-	});
-
-	it('should fall back to true when preview function cannot be templated', () => {
-		const result = serializeCollection({
-			slug: 'posts',
-			fields: [],
-			admin: {
-				useAsTitle: 'title',
-				preview: () => 'https://example.com',
-			},
-		});
-		expect(result).toContain('useAsTitle');
-		// No fields referenced → result is a static URL, stored as-is
-		expect(result).toContain('preview');
-		expect(result).toContain('https://example.com');
-	});
-
-	it('should keep admin.preview when it is a boolean', () => {
-		const result = serializeCollection({
-			slug: 'posts',
-			fields: [],
-			admin: { useAsTitle: 'title', preview: true },
-		});
-		expect(result).toContain('preview: true');
+		// Without paths, can't rewrite imports, so preview is stripped
+		expect(result).not.toContain('preview');
 	});
 
 	it('should serialize upload config on collection', () => {

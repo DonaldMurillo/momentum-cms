@@ -8,23 +8,8 @@ import { safeQuote, needsQuoting } from './field-to-typescript';
 import type { FieldDefinition, CollectionDefinition, GlobalDefinition } from './generator-types';
 import { computeRelativeImport } from './generator-types';
 
-/** Properties to strip from collections (server-only). Referenced by serializeCollection comments. */
-const _COLLECTION_STRIP_KEYS = new Set([
-	'access',
-	'hooks',
-	'endpoints',
-	'webhooks',
-	'defaultWhere',
-	'dbName',
-	'indexes',
-	'graphQL',
-]);
-
 /** Properties to strip from fields (server-only / non-serializable) */
 const FIELD_STRIP_KEYS = new Set(['access', 'hooks', 'validate', 'filterOptions']);
-
-/** Properties to strip from globals (server-only). Referenced by serializeGlobal comments. */
-const _GLOBAL_STRIP_KEYS = new Set(['access', 'hooks']);
 
 /** Properties to strip from field admin config */
 const FIELD_ADMIN_STRIP_KEYS = new Set(['condition']);
@@ -32,66 +17,6 @@ const FIELD_ADMIN_STRIP_KEYS = new Set(['condition']);
 /** Type guard: narrows unknown to Record<string, unknown>. */
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/**
- * Recursively collect all data field names from a fields array,
- * descending into tabs (unnamed), collapsible, and row layout wrappers.
- * Named tabs produce a synthetic field name (e.g. 'seo') to match the
- * data nesting at runtime.
- */
-function collectFieldNames(fields: FieldDefinition[]): string[] {
-	const names: string[] = [];
-	for (const field of fields) {
-		if (field.type === 'tabs' && field.tabs) {
-			for (const tab of field.tabs) {
-				if (tab.name) {
-					// Named tab stores data under tab.name — treat as a group
-					names.push(tab.name);
-				} else {
-					// Unnamed tab is layout-only — hoist children
-					names.push(...collectFieldNames(tab.fields));
-				}
-			}
-		} else if ((field.type === 'collapsible' || field.type === 'row') && field.fields) {
-			names.push(...collectFieldNames(field.fields));
-		} else {
-			names.push(field.name);
-		}
-	}
-	return names;
-}
-
-/**
- * Convert a preview function to a URL template string by evaluating it with
- * sentinel placeholder values and replacing them with {fieldName} tokens.
- * Falls back to `true` if the function can't be converted.
- *
- * Example: `(doc) => '/' + String(doc['slug'] ?? '')` -> `'/{slug}'`
- */
-function previewFunctionToTemplate(
-	fn: (...args: unknown[]) => unknown,
-	fields: FieldDefinition[],
-): string | true {
-	try {
-		const sentinel = '__MCMS_FIELD_';
-		const mockDoc: Record<string, string> = {};
-		// Flatten layout wrappers (tabs, collapsible, row) to find actual data field names
-		for (const name of collectFieldNames(fields)) {
-			mockDoc[name] = `${sentinel}${name}__`;
-		}
-		const result = fn(mockDoc);
-		if (typeof result !== 'string') return true;
-
-		// Replace sentinel placeholders with {fieldName} template tokens
-		const template = result.replace(
-			new RegExp(`${sentinel}(\\w+)__`, 'g'),
-			(_match, fieldName: string) => `{${fieldName}}`,
-		);
-		return template;
-	} catch {
-		return true;
-	}
 }
 
 /**
@@ -159,21 +84,32 @@ export function serializeComponentLoaders(
 		if (!importMatch) continue;
 
 		const importPath = importMatch[1];
-		const abs = resolve(dirname(configPath), importPath);
-		const rel = computeRelativeImport(outputPath, abs + '.ts');
+
+		// Non-relative imports (package paths like @momentumcms/...) don't need rewriting
+		let rel: string;
+		if (importPath.startsWith('.')) {
+			const abs = resolve(dirname(configPath), importPath);
+			rel = computeRelativeImport(outputPath, abs + '.ts');
+		} else {
+			rel = importPath;
+		}
 
 		// Extract the exported member name from the final .then() in the chain.
 		// Matches dot access: .then((m) => m.MemberName) or .then(m=>m.MemberName)
 		// Matches bracket access: .then((m) => m["MemberName"]) (vitest/esbuild transform)
+		// Also matches function calls: .then((m) => m.providePageBlocks()) — captures the () in group 4
 		const memberMatch =
-			/\.then\(\s*\(?\s*(\w+)\s*\)?\s*=>\s*\1(?:\.(\w+)|\[["'](\w+)["']\])\s*\)/.exec(source);
+			/\.then\(\s*\(?\s*(\w+)\s*\)?\s*=>\s*\1(?:\.(\w+)|\[["'](\w+)["']\])(\(\))?\s*\)/.exec(
+				source,
+			);
 		if (!memberMatch) continue;
 
-		// Group 2 = dot access (.MemberName), Group 3 = bracket access (["MemberName"])
+		// Group 2 = dot access (.MemberName), Group 3 = bracket access (["MemberName"]), Group 4 = optional ()
 		const memberName = memberMatch[2] || memberMatch[3];
+		const callSuffix = memberMatch[4] ?? '';
 		const safeKey = needsQuoting(key) ? safeQuote(key) : key;
 		entries.push(
-			`${indent}\t${safeKey}: () => import(${JSON.stringify(rel)}).then((m) => m.${memberName})`,
+			`${indent}\t${safeKey}: () => import(${JSON.stringify(rel)}).then((m) => m.${memberName}${callSuffix})`,
 		);
 	}
 	if (entries.length === 0) return null;
@@ -402,21 +338,16 @@ export function serializeCollection(
 	// Fields (serialized with stripping)
 	parts.push(`${indent}\tfields: ${serializeFieldsArray(collection.fields, indent + '\t')}`);
 
-	// Admin config (convert function-type preview to URL template, strip other functions)
+	// Admin config (extract component loaders before generic serialization)
 	if (collection.admin) {
-		// Extract components before generic serialization (they contain functions we want to preserve)
 		const componentsObj = collection.admin['components'];
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- preview is typed as PreviewConfig in CollectionConfig but accessed via index for serialization
+		const previewObj = collection.admin['preview'] as
+			| { component?: unknown; providers?: unknown }
+			| undefined;
 
 		const adminEntries = Object.entries(collection.admin)
-			.filter(([k, v]) => v !== undefined && k !== 'components')
-			.map(([k, v]): [string, unknown] => {
-				if (k === 'preview' && typeof v === 'function') {
-					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowed by typeof check
-					const fn = v as (...args: unknown[]) => unknown;
-					return [k, previewFunctionToTemplate(fn, collection.fields)];
-				}
-				return [k, v];
-			})
+			.filter(([k, v]) => v !== undefined && k !== 'components' && k !== 'preview')
 			.filter(([, v]) => typeof v !== 'function');
 
 		// Serialize component loaders with path rewriting
@@ -429,7 +360,46 @@ export function serializeCollection(
 			componentsStr = serializeComponentLoaders(loaders, configPath, outputPath, indent + '\t\t');
 		}
 
-		if (adminEntries.length > 0 || componentsStr) {
+		// Serialize preview config (component loader + optional providers loader)
+		let previewStr: string | null = null;
+		if (previewObj && typeof previewObj.component === 'function' && configPath && outputPath) {
+			const componentLoader = serializeComponentLoaders(
+				{ component: previewObj.component },
+				configPath,
+				outputPath,
+				indent + '\t\t\t',
+			);
+			if (componentLoader) {
+				const previewParts: string[] = [];
+				// Extract the component entry from the serialized loaders object
+				const componentMatch = /component:\s*\(\)\s*=>.*/.exec(componentLoader);
+				if (componentMatch) {
+					previewParts.push(`${indent}\t\t\t${componentMatch[0].replace(/,$/, '').trim()}`);
+				}
+
+				// If providers loader is present, serialize it (call suffix is preserved by serializeComponentLoaders)
+				if (typeof previewObj.providers === 'function') {
+					const providersLoader = serializeComponentLoaders(
+						{ providers: previewObj.providers },
+						configPath,
+						outputPath,
+						indent + '\t\t\t',
+					);
+					if (providersLoader) {
+						const providersMatch = /providers:\s*\(\)\s*=>.*/.exec(providersLoader);
+						if (providersMatch) {
+							previewParts.push(`${indent}\t\t\t${providersMatch[0].replace(/,$/, '').trim()}`);
+						}
+					}
+				}
+
+				if (previewParts.length > 0) {
+					previewStr = `{\n${previewParts.join(',\n')},\n${indent}\t\t}`;
+				}
+			}
+		}
+
+		if (adminEntries.length > 0 || componentsStr || previewStr) {
 			// Build admin object piece by piece to avoid regex-based injection issues
 			const adminProps: string[] = [];
 			if (adminEntries.length > 0) {
@@ -441,6 +411,9 @@ export function serializeCollection(
 			}
 			if (componentsStr) {
 				adminProps.push(`${indent}\t\tcomponents: ${componentsStr}`);
+			}
+			if (previewStr) {
+				adminProps.push(`${indent}\t\tpreview: ${previewStr}`);
 			}
 			parts.push(`${indent}\tadmin: {\n${adminProps.join(',\n')},\n${indent}\t}`);
 		}

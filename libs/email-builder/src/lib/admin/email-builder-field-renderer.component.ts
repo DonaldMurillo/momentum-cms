@@ -42,10 +42,9 @@ function getFieldNodeState(formNode: unknown): FieldNodeState | null {
 /**
  * Email builder field renderer — bridges Signal Forms ↔ Email Builder.
  *
- * Renders the block editor panel. The live preview is handled by the
- * collection's `preview: true` config which shows the LivePreviewComponent
- * in a separate panel. The server preview endpoint accepts POST data
- * so the preview updates in realtime from form state.
+ * Renders the block editor panel. Live preview is handled by the
+ * collection's `admin.preview` config which shows the LivePreviewComponent
+ * in a separate panel using in-memory Angular rendering via NgComponentOutlet.
  *
  * Registered as the `json-email-builder` field renderer via `provideFieldRenderer()`.
  */

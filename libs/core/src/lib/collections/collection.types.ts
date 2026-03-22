@@ -84,6 +84,23 @@ export interface HooksConfig {
 }
 
 // ============================================
+// Preview Configuration
+// ============================================
+
+/** In-memory preview config: lazy-loads an Angular component rendered alongside the edit form. */
+export interface PreviewConfig {
+	/** Lazy loader for the preview component. The component should inject LivePreviewService to read form data. */
+	component: () => Promise<unknown>;
+	/** Optional lazy providers for the preview component's injector (e.g. block component registry). */
+	providers?: () => Promise<unknown[]>;
+}
+
+/** Type guard for PreviewConfig objects. */
+export function isPreviewConfig(val: unknown): val is PreviewConfig {
+	return typeof val === 'object' && val !== null && 'component' in val;
+}
+
+// ============================================
 // Admin Configuration
 // ============================================
 
@@ -116,8 +133,8 @@ export interface AdminConfig {
 	/** Hide from admin navigation */
 	hidden?: boolean;
 
-	/** Enable preview mode. String values are URL templates with {fieldName} placeholders. */
-	preview?: boolean | string | ((doc: Record<string, unknown>) => string);
+	/** In-memory preview: lazy-loads an Angular component that reads LivePreviewService for live form data. */
+	preview?: PreviewConfig;
 
 	/** Custom action buttons displayed in the collection list header (alongside Create button) */
 	headerActions?: Array<{

@@ -13,7 +13,7 @@ import { signal, computed } from '@angular/core';
 import type { CollectionConfig } from '@momentumcms/core';
 import { CollectionEditPage } from '../collection-edit.page';
 import { CollectionAccessService } from '../../../services/collection-access.service';
-import { DialogService } from '@momentumcms/ui';
+import { LivePreviewService } from '../../../services/live-preview.service';
 
 /** Build a minimal CollectionConfig with optional overrides */
 function makeCollection(overrides: Partial<CollectionConfig> & { slug: string }): CollectionConfig {
@@ -54,13 +54,17 @@ describe('CollectionEditPage', () => {
 	});
 	const previewablePages = makeCollection({
 		slug: 'pages',
-		admin: { preview: '/preview/pages/{slug}' },
+		admin: {
+			preview: {
+				component: () => Promise.resolve(class MockPreview {}),
+			},
+		},
 	});
 
 	const allCollections = [posts, articles, previewablePages];
 
 	let mockCanUpdate: (slug: string) => boolean;
-	let mockDialogService: { open: ReturnType<typeof vi.fn> };
+	let mockPreviewService: LivePreviewService;
 
 	function setup(
 		params: Record<string, string | null> = { slug: 'posts', id: 'create' },
@@ -68,7 +72,7 @@ describe('CollectionEditPage', () => {
 		canUpdate: (slug: string) => boolean = () => true,
 	): void {
 		mockCanUpdate = canUpdate;
-		mockDialogService = { open: vi.fn() };
+		mockPreviewService = new LivePreviewService();
 
 		const mockAccessService: Partial<CollectionAccessService> = {
 			accessibleCollections: computed(() => collections.map((c) => c.slug)),
@@ -88,7 +92,7 @@ describe('CollectionEditPage', () => {
 				provideHttpClient(),
 				provideHttpClientTesting(),
 				{ provide: CollectionAccessService, useValue: mockAccessService },
-				{ provide: DialogService, useValue: mockDialogService },
+				{ provide: LivePreviewService, useValue: mockPreviewService },
 				{
 					provide: ActivatedRoute,
 					useValue: makeActivatedRoute(params, collections),
@@ -208,7 +212,9 @@ describe('CollectionEditPage', () => {
 	describe('previewConfig', () => {
 		it('should return preview config from collection admin settings', () => {
 			setup({ slug: 'pages', id: 'create' });
-			expect(component.previewConfig()).toBe('/preview/pages/{slug}');
+			const config = component.previewConfig();
+			expect(config).toBeDefined();
+			expect(config).toHaveProperty('component');
 		});
 
 		it('should return undefined when collection has no preview config', () => {
@@ -236,27 +242,21 @@ describe('CollectionEditPage', () => {
 		});
 	});
 
-	describe('onEditBlockRequest', () => {
-		it('should not throw when collection is undefined', () => {
-			setup({ slug: 'nonexistent', id: 'abc-123' });
-			expect(() => component.onEditBlockRequest(0)).not.toThrow();
+	describe('LivePreviewService sync', () => {
+		it('should sync entityId to the service', () => {
+			setup({ slug: 'posts', id: 'abc-123' });
+			expect(mockPreviewService.entityId()).toBe('abc-123');
 		});
 
-		it('should not throw when entityFormRef is null (template stripped)', () => {
-			setup({ slug: 'posts', id: 'abc-123' });
-			expect(() => component.onEditBlockRequest(0)).not.toThrow();
+		it('should sync collectionSlug to the service', () => {
+			setup({ slug: 'posts', id: 'create' });
+			expect(mockPreviewService.collectionSlug()).toBe('posts');
 		});
 
-		it('should not throw when collection has no blocks field', () => {
-			setup({ slug: 'posts', id: 'abc-123' });
-			// posts collection has no blocks field, so this should exit early
-			expect(() => component.onEditBlockRequest(0)).not.toThrow();
-		});
-
-		it('should not open dialog when no blocks field exists', () => {
-			setup({ slug: 'posts', id: 'abc-123' });
-			component.onEditBlockRequest(0);
-			expect(mockDialogService.open).not.toHaveBeenCalled();
+		it('should sync formData to the service', () => {
+			setup({ slug: 'posts', id: 'create' });
+			// Form is empty (template stripped), so documentData should be {}
+			expect(mockPreviewService.documentData()).toEqual({});
 		});
 	});
 });

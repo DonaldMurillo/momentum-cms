@@ -38,17 +38,23 @@ const PLUGIN_NAME = 'form-builder';
  * ```
  */
 export function formBuilderPlugin(_config?: FormBuilderPluginConfig): MomentumPlugin {
-	const config: Required<FormBuilderPluginConfig> = {
+	const config = {
 		honeypot: _config?.honeypot ?? true,
 		rateLimitPerMinute: _config?.rateLimitPerMinute ?? 10,
+		preview: _config?.preview,
 	};
+
+	// Apply preview config to forms collection if provided
+	const formsCollection = config.preview
+		? { ...FormsCollection, admin: { ...FormsCollection.admin, preview: config.preview } }
+		: FormsCollection;
 
 	let momentumApi: MomentumAPI | null = null;
 
 	return {
 		name: PLUGIN_NAME,
 
-		collections: [FormsCollection, FormSubmissionsCollection],
+		collections: [formsCollection, FormSubmissionsCollection],
 
 		adminRoutes: FORM_BUILDER_ADMIN_ROUTES,
 

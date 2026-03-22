@@ -365,7 +365,10 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			],
 			admin: {
 				group: 'Content',
-				preview: '/articles/{slug}',
+				preview: {
+					component: () =>
+						import('@momentumcms/example-config/previews').then((m) => m.ArticlePreviewComponent),
+				},
 			},
 			timestamps: true,
 			versions: {
@@ -1144,7 +1147,12 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			],
 			admin: {
 				group: 'Content',
-				preview: '/{slug}',
+				preview: {
+					component: () =>
+						import('@momentumcms/example-config/previews').then((m) => m.PagePreviewComponent),
+					providers: () =>
+						import('@momentumcms/example-config/pages').then((m) => m.providePageBlocks()),
+				},
 			},
 			timestamps: true,
 		},
@@ -1370,7 +1378,10 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			],
 			admin: {
 				useAsTitle: 'title',
-				preview: true,
+				preview: {
+					component: () =>
+						import('@momentumcms/example-config/previews').then((m) => m.EventPreviewComponent),
+				},
 			},
 			timestamps: true,
 		},
@@ -1858,7 +1869,6 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 				group: 'Settings',
 				useAsTitle: 'name',
 				defaultColumns: ['name', 'slug', 'isSystem', 'updatedAt'],
-				preview: true,
 			},
 			timestamps: true,
 		},
@@ -2447,6 +2457,10 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 				defaultColumns: ['title', 'slug', 'status', 'submissionCount', 'updatedAt'],
 				pagination: {
 					defaultLimit: 25,
+				},
+				preview: {
+					component: () =>
+						import('@momentumcms/example-config/previews').then((m) => m.FormPreviewComponent),
 				},
 			},
 			timestamps: true,

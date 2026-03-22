@@ -113,6 +113,7 @@ export {
 	LivePreviewComponent,
 	type DeviceSize,
 } from './lib/widgets/live-preview/live-preview.component';
+export { LivePreviewService } from './lib/services/live-preview.service';
 
 // Visual Block Editor
 export { VisualBlockEditorComponent } from './lib/widgets/visual-block-editor/visual-block-editor.component';

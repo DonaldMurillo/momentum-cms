@@ -43,7 +43,10 @@ export const Articles = defineCollection({
 	},
 	admin: {
 		group: 'Content',
-		preview: (doc) => '/articles/' + String(doc['slug'] ?? ''),
+		preview: {
+			component: () =>
+				import('@momentumcms/example-config/previews').then((m) => m.ArticlePreviewComponent),
+		},
 	},
 	fields: [
 		text('title', { required: true, label: 'Title' }),

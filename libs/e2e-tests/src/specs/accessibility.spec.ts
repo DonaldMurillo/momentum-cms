@@ -371,15 +371,13 @@ test.describe('Accessibility: Live preview', { tag: ['@a11y', '@admin'] }, () =>
 		await expect(mobileBtn).toHaveAttribute('aria-pressed', 'false');
 	});
 
-	test('preview iframe has title attribute', async ({ page }) => {
+	test('preview content container is accessible', async ({ page }) => {
 		await signIn(page, TEST_AUTHOR2_CREDENTIALS);
 		await page.goto(`/admin/collections/events/${eventId}/edit`);
 		await page.waitForLoadState('domcontentloaded');
 
-		const iframe = page.locator('[data-testid="preview-iframe"]');
-		await expect(iframe).toBeVisible({ timeout: 15000 });
-
-		await expect(iframe).toHaveAttribute('title', 'Live document preview');
+		const previewContent = page.locator('[data-testid="preview-content"]');
+		await expect(previewContent).toBeVisible({ timeout: 15000 });
 	});
 });
 
@@ -674,8 +672,8 @@ test.describe('Accessibility: axe-core WCAG 2.1 AA scans', { tag: ['@a11y', '@ad
 		const heading = page.locator('main h1');
 		await expect(heading).toBeVisible({ timeout: 15000 });
 
-		// Exclude preview iframe — axe-core crashes when analyzing cross-origin iframe content
-		const results = await checkA11y(page, { exclude: ['[data-testid="preview-iframe"]'] });
+		// Exclude preview content area from axe analysis
+		const results = await checkA11y(page, { exclude: ['[data-testid="preview-content"]'] });
 
 		// Clean up
 		await page.request.delete(`/api/articles/${articleId}`);
