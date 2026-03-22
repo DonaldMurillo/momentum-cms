@@ -126,17 +126,6 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 					<ng-content select="[entityViewHeaderExtra]" />
 				</div>
 				<div class="flex items-center gap-3">
-					@if (previewUrl(); as url) {
-						<a
-							mcms-button
-							variant="outline"
-							[href]="url"
-							target="_blank"
-							rel="noopener noreferrer"
-							data-testid="open-page-link"
-							>Open Page ↗</a
-						>
-					}
 					@if (isDeleted()) {
 						@if (canEdit()) {
 							<button mcms-button variant="outline" (click)="onRestoreClick()">Restore</button>
@@ -479,38 +468,9 @@ export class EntityViewWidget<T extends Entity = Entity> {
 		return 'draft';
 	});
 
-	/** Preview URL derived from collection's admin.preview config */
-	readonly previewUrl = computed((): string | null => {
-		const col = this.collection();
-		const e = this.entity();
-		if (!e || !col.admin?.preview) return null;
-		const preview = col.admin.preview;
-		if (typeof preview === 'function') {
-			try {
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T extends Entity with index signature
-				return preview(e as Record<string, unknown>);
-			} catch {
-				return null;
-			}
-		}
-		// String template: interpolate {fieldName} placeholders with entity data
-		if (typeof preview === 'string') {
-			let hasEmpty = false;
-			const url = preview.replace(/\{(\w+)\}/g, (_, field: string) => {
-				const val = e[field];
-				if (val == null || val === '') {
-					hasEmpty = true;
-					return '';
-				}
-				return String(val);
-			});
-			return hasEmpty ? null : url;
-		}
-		// Boolean true: use the server-rendered preview API endpoint
-		if (preview === true) {
-			return `/api/${col.slug}/${String(e.id)}/preview`;
-		}
-		return null;
+	/** Whether this collection has preview enabled */
+	readonly hasPreview = computed((): boolean => {
+		return !!this.collection().admin?.preview;
 	});
 
 	constructor() {

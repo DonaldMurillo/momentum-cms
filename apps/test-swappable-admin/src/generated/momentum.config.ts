@@ -76,7 +76,6 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			],
 			admin: {
 				group: 'Content',
-				preview: '/articles/{slug}',
 				components: {
 					list: () =>
 						import('../app/custom-components/custom-articles-list.component').then(
@@ -98,6 +97,10 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 						import('../app/custom-components/view-before-status.component').then(
 							(m) => m.ViewBeforeStatusComponent,
 						),
+				},
+				preview: {
+					component: () =>
+						import('@momentumcms/example-config/previews').then((m) => m.ArticlePreviewComponent),
 				},
 			},
 			timestamps: true,
@@ -528,7 +531,12 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			],
 			admin: {
 				group: 'Content',
-				preview: '/{slug}',
+				preview: {
+					component: () =>
+						import('@momentumcms/example-config/previews').then((m) => m.PagePreviewComponent),
+					providers: () =>
+						import('@momentumcms/example-config/pages').then((m) => m.providePageBlocks()),
+				},
 			},
 			timestamps: true,
 		},
@@ -708,7 +716,10 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			],
 			admin: {
 				useAsTitle: 'title',
-				preview: true,
+				preview: {
+					component: () =>
+						import('@momentumcms/example-config/previews').then((m) => m.EventPreviewComponent),
+				},
 			},
 			timestamps: true,
 		},

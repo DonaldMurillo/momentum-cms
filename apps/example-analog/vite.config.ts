@@ -67,6 +67,14 @@ export default defineConfig(({ mode: _mode }) => {
 							__dirname,
 							'../../libs/example-config/src/globals/index.ts',
 						),
+						'@momentumcms/example-config/previews': resolve(
+							__dirname,
+							'../../libs/example-config/src/previews/index.ts',
+						),
+						'@momentumcms/example-config/pages': resolve(
+							__dirname,
+							'../../libs/example-config/src/pages/index.ts',
+						),
 						'@momentumcms/example-config': resolve(
 							__dirname,
 							'../../libs/example-config/src/index.ts',

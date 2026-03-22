@@ -27,6 +27,8 @@ export default [
 						'^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$',
 						// Core is universal and used both statically and via lazy-loaded routes in admin
 						'@momentumcms/core',
+						// LivePreviewService sub-path — avoids circular dep for preview components
+						'@momentumcms/admin/live-preview',
 						// Browser-safe sub-paths from server-tagged libs
 						'@momentumcms/auth/core',
 						'@momentumcms/auth/collections',
@@ -41,7 +43,8 @@ export default [
 						// Email lib exports browser-safe types used by email-builder
 						'@momentumcms/email',
 						'@momentumcms/email/templates',
-						// Form builder browser-safe sub-paths (validation is pure, no Angular)
+						// Form builder browser-safe sub-paths
+						'@momentumcms/form-builder',
 						'@momentumcms/form-builder/validation',
 						'@momentumcms/plugins-form-builder/admin-routes',
 						'@momentumcms/plugins-form-builder/collections',
@@ -54,6 +57,7 @@ export default [
 						'@momentumcms/example-config/collections',
 						'@momentumcms/example-config/globals',
 						'@momentumcms/example-config/pages',
+						'@momentumcms/example-config/previews',
 					],
 					depConstraints: [
 						// Environment boundaries

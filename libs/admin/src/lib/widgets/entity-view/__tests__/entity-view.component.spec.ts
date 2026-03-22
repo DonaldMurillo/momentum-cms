@@ -271,66 +271,21 @@ describe('EntityViewWidget', () => {
 		});
 	});
 
-	describe('previewUrl', () => {
-		it('should return null when no preview config', () => {
-			expect(component.previewUrl()).toBeNull();
+	describe('hasPreview', () => {
+		it('should return false when no preview config', () => {
+			expect(component.hasPreview()).toBe(false);
 		});
 
-		it('should return null when no entity', () => {
+		it('should return true when collection has preview config', () => {
 			fixture.componentRef.setInput('collection', {
 				...mockCollection,
-				admin: { preview: '/posts/{id}' },
+				admin: {
+					preview: {
+						component: () => Promise.resolve(class MockPreview {}),
+					},
+				},
 			});
-			expect(component.previewUrl()).toBeNull();
-		});
-
-		it('should interpolate string template', () => {
-			fixture.componentRef.setInput('collection', {
-				...mockCollection,
-				admin: { preview: '/posts/{id}' },
-			});
-			component.entity.set({ id: 'doc-1', title: 'Test' });
-			expect(component.previewUrl()).toBe('/posts/doc-1');
-		});
-
-		it('should return null for empty interpolated field', () => {
-			fixture.componentRef.setInput('collection', {
-				...mockCollection,
-				admin: { preview: '/posts/{slug}' },
-			});
-			component.entity.set({ id: 'doc-1' });
-			expect(component.previewUrl()).toBeNull();
-		});
-
-		it('should call function preview', () => {
-			const previewFn = vi.fn().mockReturnValue('/custom/url');
-			fixture.componentRef.setInput('collection', {
-				...mockCollection,
-				admin: { preview: previewFn },
-			});
-			component.entity.set({ id: 'doc-1', title: 'Test' });
-			expect(component.previewUrl()).toBe('/custom/url');
-		});
-
-		it('should return null when function throws', () => {
-			const previewFn = vi.fn().mockImplementation(() => {
-				throw new Error('oops');
-			});
-			fixture.componentRef.setInput('collection', {
-				...mockCollection,
-				admin: { preview: previewFn },
-			});
-			component.entity.set({ id: 'doc-1' });
-			expect(component.previewUrl()).toBeNull();
-		});
-
-		it('should handle boolean true preview', () => {
-			fixture.componentRef.setInput('collection', {
-				...mockCollection,
-				admin: { preview: true },
-			});
-			component.entity.set({ id: 'doc-1' });
-			expect(component.previewUrl()).toBe('/api/posts/doc-1/preview');
+			expect(component.hasPreview()).toBe(true);
 		});
 	});
 

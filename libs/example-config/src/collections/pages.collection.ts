@@ -23,7 +23,12 @@ export const Pages = defineCollection({
 	},
 	admin: {
 		group: 'Content',
-		preview: (doc) => '/' + String(doc['slug'] ?? ''),
+		preview: {
+			component: () =>
+				import('@momentumcms/example-config/previews').then((m) => m.PagePreviewComponent),
+			providers: () =>
+				import('@momentumcms/example-config/pages').then((m) => m.providePageBlocks()),
+		},
 	},
 	fields: [
 		text('title', { required: true, label: 'Page Title' }),

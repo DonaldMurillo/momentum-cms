@@ -4,8 +4,9 @@ import type { APIRequestContext } from '@playwright/test';
 /**
  * Live Preview E2E Tests
  *
- * Verifies that the live preview iframe appears when editing a page
- * and that the preview renders the actual page content.
+ * Verifies that the live preview content appears when editing a page
+ * and that the preview renders the actual page content via in-memory
+ * Angular component rendering (NgComponentOutlet).
  *
  * The Pages collection has admin.preview configured, which triggers
  * the split layout in CollectionEditPage.
@@ -30,7 +31,7 @@ async function getHomePageId(request: APIRequestContext): Promise<string> {
 }
 
 test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
-	test('preview iframe appears when editing a page', async ({
+	test('preview content appears when editing a page', async ({
 		authenticatedPage: page,
 		request,
 	}) => {
@@ -42,12 +43,12 @@ test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 		const previewLayout = page.locator('[data-testid="preview-layout"]');
 		await expect(previewLayout).toBeVisible({ timeout: 15000 });
 
-		// The iframe should exist
-		const iframe = page.locator('[data-testid="preview-iframe"]');
-		await expect(iframe).toBeVisible();
+		// The preview content container should exist
+		const previewContent = page.locator('[data-testid="preview-content"]');
+		await expect(previewContent).toBeVisible();
 	});
 
-	test('preview iframe renders page content', async ({ authenticatedPage: page, request }) => {
+	test('preview content renders page content', async ({ authenticatedPage: page, request }) => {
 		const pageId = await getHomePageId(request);
 
 		await page.goto(`/admin/collections/pages/${pageId}/edit`);
@@ -55,16 +56,15 @@ test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 		// Wait for the preview layout
 		await expect(page.locator('[data-testid="preview-layout"]')).toBeVisible({ timeout: 15000 });
 
-		// Access the iframe content
-		const iframe = page.locator('[data-testid="preview-iframe"]');
-		await expect(iframe).toBeVisible();
+		// Access the preview content directly in the DOM
+		const previewContent = page.locator('[data-testid="preview-content"]');
+		await expect(previewContent).toBeVisible();
 
-		const frame = page.frameLocator('[data-testid="preview-iframe"]');
-
-		// The iframe should eventually render the page content
-		// It may take a moment for the iframe to load and the postMessage to update
-		await expect(frame.locator('[data-testid="hero-heading"]')).toBeVisible({ timeout: 15000 });
-		await expect(frame.locator('[data-testid="hero-heading"]')).toContainText(
+		// The preview should eventually render the page content
+		await expect(previewContent.locator('[data-testid="hero-heading"]')).toBeVisible({
+			timeout: 15000,
+		});
+		await expect(previewContent.locator('[data-testid="hero-heading"]')).toContainText(
 			'Welcome to Our Site',
 		);
 	});

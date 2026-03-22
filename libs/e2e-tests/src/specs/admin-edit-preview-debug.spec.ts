@@ -4,12 +4,13 @@ import type { APIRequestContext } from '@playwright/test';
 /**
  * Admin Edit Page with Preview - Stability Tests
  *
- * Verifies that the edit page with live preview iframe renders correctly
+ * Verifies that the edit page with live preview renders correctly
  * and remains stable (no crash, no blank page) for collections with
- * URL-based preview (articles, pages).
+ * preview enabled (articles, pages). Preview uses in-memory Angular
+ * component rendering via NgComponentOutlet instead of iframes.
  *
  * These tests use real DOM interaction: navigate from list → view → edit,
- * and verify the page stays alive after the preview iframe loads.
+ * and verify the page stays alive after the preview content loads.
  */
 
 async function signIn(request: APIRequestContext): Promise<void> {
@@ -24,7 +25,7 @@ async function signIn(request: APIRequestContext): Promise<void> {
 }
 
 test.describe('Admin Edit Page with Preview', { tag: ['@admin', '@blocks'] }, () => {
-	test('article edit page shows preview iframe without crashing', async ({
+	test('article edit page shows preview content without crashing', async ({
 		authenticatedPage: page,
 		request,
 	}) => {
@@ -51,22 +52,22 @@ test.describe('Admin Edit Page with Preview', { tag: ['@admin', '@blocks'] }, ()
 		const previewLayout = page.locator('[data-testid="preview-layout"]');
 		await expect(previewLayout).toBeVisible({ timeout: 15000 });
 
-		// The preview iframe should exist and be visible (appears after entity data loads)
-		const iframe = page.locator('[data-testid="preview-iframe"]');
-		await expect(iframe).toBeVisible({ timeout: 20000 });
+		// The preview content should exist and be visible (appears after entity data loads)
+		const previewContent = page.locator('[data-testid="preview-content"]');
+		await expect(previewContent).toBeVisible({ timeout: 20000 });
 
 		// Wait 5 seconds to confirm the page doesn't crash
 		await new Promise<void>((resolve) => setTimeout(resolve, 5000)); // negative proof: page remains stable (no crash)
 
 		// Page should still be alive
 		await expect(heading).toBeVisible();
-		await expect(iframe).toBeVisible({ timeout: 15000 });
+		await expect(previewContent).toBeVisible({ timeout: 15000 });
 
 		// No JS errors should have occurred
 		expect(pageErrors, 'No page errors during preview load').toEqual([]);
 	});
 
-	test('page edit page shows preview iframe without crashing', async ({
+	test('page edit page shows preview content without crashing', async ({
 		authenticatedPage: page,
 		request,
 	}) => {
@@ -89,14 +90,14 @@ test.describe('Admin Edit Page with Preview', { tag: ['@admin', '@blocks'] }, ()
 		const previewLayout = page.locator('[data-testid="preview-layout"]');
 		await expect(previewLayout).toBeVisible({ timeout: 10000 });
 
-		const iframe = page.locator('[data-testid="preview-iframe"]');
-		await expect(iframe).toBeVisible({ timeout: 15000 });
+		const previewContent = page.locator('[data-testid="preview-content"]');
+		await expect(previewContent).toBeVisible({ timeout: 15000 });
 
 		// Wait 5 seconds to confirm no crash
 		await new Promise<void>((resolve) => setTimeout(resolve, 5000)); // negative proof: page remains stable (no crash)
 
 		await expect(heading).toBeVisible();
-		await expect(iframe).toBeVisible({ timeout: 15000 });
+		await expect(previewContent).toBeVisible({ timeout: 15000 });
 		expect(pageErrors, 'No page errors during preview load').toEqual([]);
 	});
 
@@ -144,16 +145,16 @@ test.describe('Admin Edit Page with Preview', { tag: ['@admin', '@blocks'] }, ()
 		const previewLayout = page.locator('[data-testid="preview-layout"]');
 		await expect(previewLayout).toBeVisible({ timeout: 10000 });
 
-		// Preview iframe should be visible
-		const iframe = page.locator('[data-testid="preview-iframe"]');
-		await expect(iframe).toBeVisible({ timeout: 15000 });
+		// Preview content should be visible
+		const previewContent = page.locator('[data-testid="preview-content"]');
+		await expect(previewContent).toBeVisible({ timeout: 15000 });
 
 		// Wait 5 seconds to confirm no crash
 		await new Promise<void>((resolve) => setTimeout(resolve, 5000)); // negative proof: page remains stable (no crash)
 
 		// Page should still be alive
 		await expect(heading).toBeVisible();
-		await expect(iframe).toBeVisible({ timeout: 15000 });
+		await expect(previewContent).toBeVisible({ timeout: 15000 });
 		expect(pageErrors, 'No page errors during SPA navigation to edit').toEqual([]);
 	});
 
@@ -186,8 +187,8 @@ test.describe('Admin Edit Page with Preview', { tag: ['@admin', '@blocks'] }, ()
 
 		// Page should still be alive after refresh
 		await expect(heading).toBeVisible();
-		const iframe = page.locator('[data-testid="preview-iframe"]');
-		await expect(iframe).toBeVisible({ timeout: 15000 });
+		const previewContent = page.locator('[data-testid="preview-content"]');
+		await expect(previewContent).toBeVisible({ timeout: 15000 });
 		expect(pageErrors, 'No page errors after refresh').toEqual([]);
 	});
 
@@ -227,6 +228,6 @@ test.describe('Admin Edit Page with Preview', { tag: ['@admin', '@blocks'] }, ()
 
 		// Preview layout should reappear
 		await expect(page.locator('[data-testid="preview-layout"]')).toBeVisible({ timeout: 10000 });
-		await expect(page.locator('[data-testid="preview-iframe"]')).toBeVisible();
+		await expect(page.locator('[data-testid="preview-content"]')).toBeVisible();
 	});
 });

@@ -40,7 +40,10 @@ export const Events = defineCollection({
 	],
 	admin: {
 		useAsTitle: 'title',
-		preview: true,
+		preview: {
+			component: () =>
+				import('@momentumcms/example-config/previews').then((m) => m.EventPreviewComponent),
+		},
 	},
 	access: {
 		read: allowAll(),

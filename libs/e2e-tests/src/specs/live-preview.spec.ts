@@ -2,8 +2,8 @@ import { test, expect, TEST_AUTHOR3_CREDENTIALS } from '../fixtures';
 
 /**
  * Live Preview E2E tests.
- * Verifies the live preview panel renders real HTML content, postMessage delivers
- * field values, and the iframe URL responds correctly.
+ * Verifies the live preview panel renders real HTML content via in-memory
+ * Angular component rendering (NgComponentOutlet) instead of iframes.
  *
  * Uses the Events collection which has `admin.preview: true` enabled.
  */
@@ -65,7 +65,7 @@ test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 		}
 	});
 
-	test('preview iframe loads and renders styled HTML with document data', async ({ page }) => {
+	test('preview content loads and renders styled HTML with document data', async ({ page }) => {
 		await signInPage(page);
 		await page.goto(`/admin/collections/events/${eventId}/edit`);
 		await page.waitForLoadState('domcontentloaded');
@@ -74,36 +74,19 @@ test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 		const previewLayout = page.locator('[data-testid="preview-layout"]');
 		await expect(previewLayout).toBeVisible({ timeout: 15000 });
 
-		// Preview iframe should exist
-		const iframe = page.locator('[data-testid="preview-iframe"]');
-		await expect(iframe).toBeVisible({ timeout: 10000 });
+		// Preview content container should exist
+		const previewContent = page.locator('[data-testid="preview-content"]');
+		await expect(previewContent).toBeVisible({ timeout: 10000 });
 
-		// Verify iframe src points to the built-in preview endpoint
-		await expect(iframe).toHaveAttribute(
-			'src',
-			new RegExp(`${eventId}.*\\/preview|\\/preview.*${eventId}`),
-		);
+		// The preview should render the title as an <h1> element directly in the DOM
+		const h1 = previewContent.locator('h1');
+		await expect(h1).toContainText('LP-Preview Test Event', { timeout: 15000 });
 
-		// Access the iframe's content frame and verify it rendered HTML
-		const iframeHandle = await iframe.elementHandle();
-		const frame = await iframeHandle?.contentFrame();
-		expect(frame).toBeTruthy();
-
-		await frame?.waitForLoadState('domcontentloaded');
-
-		// The preview should render the title as an <h1> element
-		const h1Text = await frame?.evaluate(() => {
-			const h1 = document.querySelector('h1');
-			return h1?.textContent ?? '';
-		});
-		expect(h1Text).toContain('LP-Preview Test Event');
-
-		// Verify field labels are rendered
-		const bodyText = await frame?.evaluate(() => document.body.innerText);
-		expect(bodyText).toContain('Preview City');
+		// Verify field values are rendered
+		await expect(previewContent).toContainText('Preview City');
 	});
 
-	test('device size toggle changes iframe width', async ({ page }) => {
+	test('device size toggle changes preview container width', async ({ page }) => {
 		await signInPage(page);
 		await page.goto(`/admin/collections/events/${eventId}/edit`);
 		await page.waitForLoadState('domcontentloaded');
@@ -111,15 +94,15 @@ test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 		const previewLayout = page.locator('[data-testid="preview-layout"]');
 		await expect(previewLayout).toBeVisible({ timeout: 15000 });
 
-		const iframe = page.locator('[data-testid="preview-iframe"]');
-		await expect(iframe).toBeVisible({ timeout: 10000 });
+		const previewContent = page.locator('[data-testid="preview-content"]');
+		await expect(previewContent).toBeVisible({ timeout: 10000 });
 
 		// Switch to tablet — retry click for hydration timing
 		await expect
 			.poll(
 				async () => {
 					await page.locator('[data-testid="device-tablet"]').click();
-					return iframe.evaluate((el) => el.style.width);
+					return previewContent.evaluate((el) => el.style.width);
 				},
 				{ timeout: 5000 },
 			)
@@ -130,7 +113,7 @@ test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 			.poll(
 				async () => {
 					await page.locator('[data-testid="device-mobile"]').click();
-					return iframe.evaluate((el) => el.style.width);
+					return previewContent.evaluate((el) => el.style.width);
 				},
 				{ timeout: 5000 },
 			)
@@ -141,7 +124,7 @@ test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 			.poll(
 				async () => {
 					await page.locator('[data-testid="device-desktop"]').click();
-					return iframe.evaluate((el) => el.style.width);
+					return previewContent.evaluate((el) => el.style.width);
 				},
 				{ timeout: 5000 },
 			)
@@ -158,21 +141,20 @@ test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 		const previewLayout = page.locator('[data-testid="preview-layout"]');
 		await expect(previewLayout).not.toBeVisible({ timeout: 5000 });
 
-		const iframe = page.locator('[data-testid="preview-iframe"]');
-		await expect(iframe).toBeHidden();
+		const previewContent = page.locator('[data-testid="preview-content"]');
+		await expect(previewContent).toBeHidden();
 	});
 
-	test('preview iframe updates after editing a field', async ({ page }) => {
+	test('preview content updates after editing a field', async ({ page }) => {
 		await signInPage(page);
 		await page.goto(`/admin/collections/events/${eventId}/edit`);
 		await page.waitForLoadState('domcontentloaded');
 
-		const iframe = page.locator('[data-testid="preview-iframe"]');
-		await expect(iframe).toBeVisible({ timeout: 15000 });
+		const previewContent = page.locator('[data-testid="preview-content"]');
+		await expect(previewContent).toBeVisible({ timeout: 15000 });
 
-		// Wait for iframe content to fully render using frameLocator (resilient to navigation)
-		const iframeLocator = page.frameLocator('[data-testid="preview-iframe"]');
-		await expect(iframeLocator.locator('h1')).toContainText('LP-Preview Test Event', {
+		// Wait for preview content to fully render
+		await expect(previewContent.locator('h1')).toContainText('LP-Preview Test Event', {
 			timeout: 15000,
 		});
 
@@ -183,56 +165,46 @@ test.describe('Live Preview', { tag: ['@admin', '@blocks'] }, () => {
 		await page.keyboard.press('ControlOrMeta+a');
 		await locationInput.pressSequentially('Updated Preview City', { delay: 20 });
 
-		// Events collection uses preview: true (server-rendered).
-		// The component POSTs form data to the preview endpoint and rewrites the iframe HTML.
-		// Wait for the iframe content to reflect the updated location value.
+		// Wait for the preview content to reflect the updated location value
 		await expect
 			.poll(
 				async () => {
 					try {
-						return await iframeLocator.locator('body').textContent();
+						return await previewContent.textContent();
 					} catch {
 						return '';
 					}
 				},
-				{ timeout: 15000, message: 'Iframe should contain updated location value' },
+				{ timeout: 15000, message: 'Preview should contain updated location value' },
 			)
 			.toContain('Updated Preview City');
 	});
 
-	test('refresh button reloads preview iframe', async ({ page }) => {
+	test('refresh button reloads preview content', async ({ page }) => {
 		await signInPage(page);
 		await page.goto(`/admin/collections/events/${eventId}/edit`);
 		await page.waitForLoadState('domcontentloaded');
 
-		const iframe = page.locator('[data-testid="preview-iframe"]');
-		await expect(iframe).toBeVisible({ timeout: 15000 });
+		const previewContent = page.locator('[data-testid="preview-content"]');
+		await expect(previewContent).toBeVisible({ timeout: 15000 });
 
-		// Verify the original src is present
-		await expect(iframe).toHaveAttribute('src', /.+/);
+		// Wait for content to render
+		await expect(previewContent.locator('h1')).toContainText('LP-Preview Test Event', {
+			timeout: 15000,
+		});
 
 		// Click refresh
 		const refreshButton = page.locator('[data-testid="preview-refresh"]');
 		await expect(refreshButton).toBeVisible();
 		await refreshButton.click();
 
-		// Wait for iframe to still be visible after refresh with correct src
-		await expect(iframe).toBeVisible({ timeout: 5000 });
-		await expect(iframe).toHaveAttribute('src', new RegExp(eventId));
+		// Wait for preview content to still be visible after refresh
+		await expect(previewContent).toBeVisible({ timeout: 5000 });
 
-		// Verify the iframe still contains document data after refresh
-		const iframeHandle = await iframe.elementHandle();
-		const frame = await iframeHandle?.contentFrame();
-		if (!frame) {
-			throw new Error('contentFrame() must be available after refresh');
-		}
-
-		await frame.waitForLoadState('domcontentloaded');
-		const h1Text = await frame.evaluate(() => {
-			const h1 = document.querySelector('h1');
-			return h1?.textContent ?? '';
+		// Verify the preview still contains document data after refresh
+		await expect(previewContent.locator('h1')).toContainText('LP-Preview Test Event', {
+			timeout: 15000,
 		});
-		expect(h1Text).toContain('LP-Preview Test Event');
 	});
 });
 
