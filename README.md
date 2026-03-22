@@ -45,7 +45,8 @@ Full documentation is available in the [docs/](docs/README.md) directory, coveri
 
 ## Features
 
-- **Collection-first** — Define your data model in TypeScript with 20 field types; the admin UI, API routes, and database schema are generated automatically
+- **Collection-first** — Define your data model in TypeScript with 20 field types; the admin UI, API routes, database schema, and optional client SDK are generated automatically
+- **Client SDK** — Auto-generated, framework-agnostic fetch-based API client with full TypeScript types for any consumer (React, Vue, Svelte, vanilla JS)
 - **Angular 21** — Server-side rendered with Express, NestJS, or Analog/Nitro
 - **REST + GraphQL** — Auto-generated REST API with filtering, sorting, pagination, and depth population. Auto-generated GraphQL schema with queries and mutations.
 - **Full-text Search** — Built-in search via PostgreSQL `tsvector`/`tsquery`
@@ -88,40 +89,46 @@ export const Posts = defineCollection({
 
 ## Packages
 
-| Package                             | npm                         | Description                                             |
-| ----------------------------------- | --------------------------- | ------------------------------------------------------- |
-| `@momentumcms/core`                 | `libs/core`                 | Collection config, fields, hooks, and access control    |
-| `@momentumcms/db-drizzle`           | `libs/db-drizzle`           | Drizzle ORM database adapter (PostgreSQL + SQLite)      |
-| `@momentumcms/auth`                 | `libs/auth`                 | Better Auth integration                                 |
-| `@momentumcms/server-core`          | `libs/server-core`          | Framework-agnostic server handlers                      |
-| `@momentumcms/server-express`       | `libs/server-express`       | Express adapter for Angular SSR                         |
-| `@momentumcms/server-nestjs`        | `libs/server-nestjs`        | NestJS adapter for Angular SSR                          |
-| `@momentumcms/server-analog`        | `libs/server-analog`        | Nitro/h3 adapter for Analog.js                          |
-| `@momentumcms/admin`                | `libs/admin`                | Angular admin dashboard UI                              |
-| `@momentumcms/ui`                   | `libs/ui`                   | Base UI component library                               |
-| `@momentumcms/headless`             | `libs/headless`             | Unstyled Angular headless primitives                    |
-| `@momentumcms/storage`              | `libs/storage`              | File storage adapters (local, S3)                       |
-| `@momentumcms/migrations`           | `libs/migrations`           | Database migration system (generate, run, rollback)     |
-| `@momentumcms/logger`               | `libs/logger`               | Structured logging                                      |
-| `@momentumcms/plugins-core`         | `libs/plugins/core`         | Plugin system core (event bus)                          |
-| `@momentumcms/plugins-analytics`    | `libs/plugins/analytics`    | Analytics and tracking plugin                           |
-| `@momentumcms/plugins-seo`          | `libs/plugins/seo`          | SEO plugin (meta tags, sitemap, robots.txt)             |
-| `@momentumcms/plugins-otel`         | `libs/plugins/otel`         | OpenTelemetry observability plugin                      |
-| `@momentumcms/plugins-redirects`    | `libs/plugins/redirects`    | URL redirect management plugin                          |
-| `@momentumcms/form-builder`         | `libs/form-builder`         | Angular form builder (schema-driven, Signal Forms)      |
-| `@momentumcms/plugins-form-builder` | `libs/plugins/form-builder` | Form submissions, validation, and webhooks plugin       |
-| `@momentumcms/email`                | `libs/email`                | Email rendering and transport                           |
-| `@momentumcms/email-builder`        | `libs/email-builder`        | Visual email template editor                            |
-| `@momentumcms/plugins-email`        | `libs/plugins/email`        | Email plugin (templates, sending, tracking)             |
-| `@momentumcms/queue`                | `libs/queue`                | Background job queue infrastructure                     |
-| `@momentumcms/plugins-queue`        | `libs/plugins/queue`        | Queue plugin (job processing, retries)                  |
-| `@momentumcms/plugins-cron`         | `libs/plugins/cron`         | Scheduled task execution plugin                         |
-| `@momentumcms/plugins-image`        | `libs/plugins/image`        | Image processing plugin (resize, variants, focal point) |
-| `create-momentum-app`               | `apps/create-momentum-app`  | CLI scaffolding tool                                    |
+| Package                             | npm                         | Description                                                                                             |
+| ----------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `@momentumcms/core`                 | `libs/core`                 | Collection config, fields, hooks, access control, and code generation (types, admin config, client SDK) |
+| `@momentumcms/db-drizzle`           | `libs/db-drizzle`           | Drizzle ORM database adapter (PostgreSQL + SQLite)                                                      |
+| `@momentumcms/auth`                 | `libs/auth`                 | Better Auth integration                                                                                 |
+| `@momentumcms/server-core`          | `libs/server-core`          | Framework-agnostic server handlers                                                                      |
+| `@momentumcms/server-express`       | `libs/server-express`       | Express adapter for Angular SSR                                                                         |
+| `@momentumcms/server-nestjs`        | `libs/server-nestjs`        | NestJS adapter for Angular SSR                                                                          |
+| `@momentumcms/server-analog`        | `libs/server-analog`        | Nitro/h3 adapter for Analog.js                                                                          |
+| `@momentumcms/admin`                | `libs/admin`                | Angular admin dashboard UI                                                                              |
+| `@momentumcms/ui`                   | `libs/ui`                   | Base UI component library                                                                               |
+| `@momentumcms/headless`             | `libs/headless`             | Unstyled Angular headless primitives                                                                    |
+| `@momentumcms/storage`              | `libs/storage`              | File storage adapters (local, S3)                                                                       |
+| `@momentumcms/migrations`           | `libs/migrations`           | Database migration system (generate, run, rollback)                                                     |
+| `@momentumcms/logger`               | `libs/logger`               | Structured logging                                                                                      |
+| `@momentumcms/plugins-core`         | `libs/plugins/core`         | Plugin system core (event bus)                                                                          |
+| `@momentumcms/plugins-analytics`    | `libs/plugins/analytics`    | Analytics and tracking plugin                                                                           |
+| `@momentumcms/plugins-seo`          | `libs/plugins/seo`          | SEO plugin (meta tags, sitemap, robots.txt)                                                             |
+| `@momentumcms/plugins-otel`         | `libs/plugins/otel`         | OpenTelemetry observability plugin                                                                      |
+| `@momentumcms/plugins-redirects`    | `libs/plugins/redirects`    | URL redirect management plugin                                                                          |
+| `@momentumcms/form-builder`         | `libs/form-builder`         | Angular form builder (schema-driven, Signal Forms)                                                      |
+| `@momentumcms/plugins-form-builder` | `libs/plugins/form-builder` | Form submissions, validation, and webhooks plugin                                                       |
+| `@momentumcms/email`                | `libs/email`                | Email rendering and transport                                                                           |
+| `@momentumcms/email-builder`        | `libs/email-builder`        | Visual email template editor                                                                            |
+| `@momentumcms/plugins-email`        | `libs/plugins/email`        | Email plugin (templates, sending, tracking)                                                             |
+| `@momentumcms/queue`                | `libs/queue`                | Background job queue infrastructure                                                                     |
+| `@momentumcms/plugins-queue`        | `libs/plugins/queue`        | Queue plugin (job processing, retries)                                                                  |
+| `@momentumcms/plugins-cron`         | `libs/plugins/cron`         | Scheduled task execution plugin                                                                         |
+| `@momentumcms/plugins-image`        | `libs/plugins/image`        | Image processing plugin (resize, variants, focal point)                                                 |
+| `create-momentum-app`               | `apps/create-momentum-app`  | CLI scaffolding tool                                                                                    |
 
 ## Architecture
 
 ```
+              ┌──────────────────────┐
+              │    Code Generator    │
+              │  (types, admin cfg,  │
+              │    client SDK)       │
+              └──────────┬───────────┘
+                         │ generates
 ┌─────────────────────────────────────────┐
 │              Admin Dashboard            │
 │          (@momentumcms/admin)          │
@@ -227,6 +234,9 @@ See [ROADMAP.md](ROADMAP.md) for the full detailed roadmap including current fea
 
 ### Recently Shipped
 
+- **Client SDK Generation** — Auto-generated, framework-agnostic fetch-based TypeScript API client via `--client` flag, with typed CRUD, globals, auth modes, and error handling
+- **Generator Decomposition** — Modular code generator architecture with dedicated modules for types, client, admin config, and serialization
+- **Security Hardening** — Unsafe object key quoting, path traversal prevention via `encodeURIComponent`, import path sanitization with `JSON.stringify`, and `softDelete.field` identifier validation
 - **Headless UI component library** — 32 accessible, unstyled Angular primitives with a global styling contract and example harness
 - **NestJS Adapter** — Full-featured NestJS server adapter with complete API parity, DI container, and Angular SSR integration
 - **Form Builder** — Schema-driven form builder plugin with conditional fields, server-side validation, submission storage, rate limiting, and webhook forwarding
@@ -243,7 +253,6 @@ See [ROADMAP.md](ROADMAP.md) for the full detailed roadmap including current fea
 
 - **Live Preview** — In-memory Angular rendering of content previews directly in the admin (no iframes)
 - **Version Diff UI** — Side-by-side visual comparison of document versions
-- **Frontend SDK** — Standalone `@momentumcms/client` package for non-Angular consumers
 
 **Medium priority:**
 

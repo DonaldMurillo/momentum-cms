@@ -16,6 +16,14 @@ Momentum CMS ships with a comprehensive feature set today:
 - Field-level access control, hooks, validation, and conditional display
 - Display formatting via `Intl.NumberFormat` and `Intl.DateTimeFormat`
 
+### Code Generation
+
+- Modular code generator decomposed into focused modules (types, client, admin config, serialization)
+- TypeScript interface generation from collection configs (`--types`)
+- Browser-safe Angular admin config generation (`--config`)
+- Framework-agnostic fetch-based client SDK generation (`--client`) for React, Vue, Svelte, vanilla JS
+- Security hardening: unsafe key quoting, path traversal prevention, import path sanitization, identifier validation
+
 ### API
 
 - Auto-generated REST API for all collections
@@ -125,10 +133,6 @@ Possible approaches: secondary router outlets, `ViewContainerRef` dynamic loadin
 
 Version snapshots are already stored — we need a visual way to compare them. Side-by-side or inline diff viewer with field-level change highlighting and version navigation.
 
-#### Standalone Frontend SDK (`@momentumcms/client`)
-
-The typed API client (`MomentumClientAPI`) exists inside `@momentumcms/admin` but is Angular-specific. Extract it to a standalone `@momentumcms/client` package so React, Vue, Svelte, and vanilla JS consumers can use typed queries against the Momentum API.
-
 ### P1 — Medium Priority
 
 #### Media Library Enhancements
@@ -174,6 +178,9 @@ These features were evaluated and explicitly decided against:
 
 ## Recently Shipped
 
+- Client SDK generation (`--client` flag) — framework-agnostic, fetch-based TypeScript API client with typed CRUD, globals, auth modes, and error handling
+- Generator decomposition into focused modules (types, client, admin config, serialization)
+- Security hardening: unsafe object key quoting, path traversal prevention, import path sanitization, `softDelete.field` identifier validation
 - Headless UI component library (32 accessible, unstyled Angular primitives)
 - NestJS adapter with full API parity
 - Form builder plugin with conditional fields, validation, submissions, webhooks

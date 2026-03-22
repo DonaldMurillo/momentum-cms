@@ -23,6 +23,12 @@
 import type { CollectionConfig, GlobalConfig, SoftDeleteConfig } from './collection.types';
 
 /**
+ * Regex for valid soft-delete field names: a JS identifier starting with a letter or underscore.
+ * Matches camelCase, snake_case, PascalCase — no hyphens, spaces, or special chars.
+ */
+const VALID_FIELD_NAME = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
+
+/**
  * Define a collection configuration
  * @param config Collection configuration object
  * @returns The same configuration with proper typing
@@ -48,6 +54,15 @@ export function defineCollection(config: CollectionConfig): CollectionConfig {
 		throw new Error(
 			`Collection slug "${collection.slug}" must be kebab-case (lowercase letters, numbers, and hyphens, starting with a letter)`,
 		);
+	}
+
+	// Validate softDelete.field if provided
+	if (typeof collection.softDelete === 'object' && collection.softDelete.field !== undefined) {
+		if (!VALID_FIELD_NAME.test(collection.softDelete.field)) {
+			throw new Error(
+				`softDelete.field "${collection.softDelete.field}" must be a valid identifier (letters, numbers, underscores, starting with a letter or underscore)`,
+			);
+		}
 	}
 
 	return collection;
@@ -89,7 +104,13 @@ export function getSoftDeleteField(config: CollectionConfig): string | null {
 	if (!config.softDelete) return null;
 	if (config.softDelete === true) return 'deletedAt';
 	const sdConfig: SoftDeleteConfig = config.softDelete;
-	return sdConfig.field ?? 'deletedAt';
+	const field = sdConfig.field ?? 'deletedAt';
+	if (!VALID_FIELD_NAME.test(field)) {
+		throw new Error(
+			`softDelete.field "${field}" must be a valid identifier (letters, numbers, underscores, starting with a letter or underscore)`,
+		);
+	}
+	return field;
 }
 
 /**

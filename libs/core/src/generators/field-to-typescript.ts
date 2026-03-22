@@ -23,7 +23,7 @@ export function slugToPascalCase(slug: string): string {
 /**
  * Check if a field name needs quoting (contains hyphens or starts with a digit).
  */
-function needsQuoting(name: string): boolean {
+export function needsQuoting(name: string): boolean {
 	return /[^a-zA-Z0-9_$]/.test(name) || /^\d/.test(name);
 }
 

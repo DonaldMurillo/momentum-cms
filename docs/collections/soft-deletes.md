@@ -21,6 +21,8 @@ softDelete: {
 }
 ```
 
+> **Validation:** `softDelete.field` must be a valid JavaScript identifier — letters, numbers, underscores, starting with a letter or underscore. Names like `camelCase`, `snake_case`, and `_prefixed` are allowed. Hyphens, spaces, and special characters are rejected at define time to prevent code injection in generated types.
+
 ## How It Works
 
 - **DELETE** requests set `deletedAt` to the current timestamp instead of removing the row

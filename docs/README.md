@@ -9,6 +9,7 @@
 - [Quick Start](getting-started/quick-start.md) — Scaffold a new project in minutes
 - [Project Structure](getting-started/project-structure.md) — What each file does in a generated project
 - [Your First Collection](getting-started/your-first-collection.md) — Define, migrate, and use a collection
+- [Client SDK](getting-started/client-sdk.md) — Generated fetch-based API client for any TypeScript app
 
 ## Collections
 
