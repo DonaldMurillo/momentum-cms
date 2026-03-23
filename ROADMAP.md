@@ -158,6 +158,14 @@ Dedicated tenant system beyond the current `defaultWhere` scoping. Tenant collec
 
 ---
 
+## Tech Debt
+
+| Area                | Issue                                                                                                                                                                                                              | Impact                                                                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Server adapters** | Express, Analog, and NestJS adapters duplicate route handler logic (validation, error handling, status codes). Each adapter should be a thin request/response translator calling shared handlers in `server-core`. | Bug parity drift — e.g., Analog was missing `parentId` in version compare while Express had it. Every new route must be copy-pasted 3 times. |
+
+---
+
 ## Not Planned
 
 These features were evaluated and explicitly decided against:

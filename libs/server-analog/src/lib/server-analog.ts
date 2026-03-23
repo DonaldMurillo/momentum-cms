@@ -925,6 +925,7 @@ export function createComprehensiveMomentumHandler(
 						versionId1 as string,
 						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- string validated above
 						versionId2 as string,
+						seg1,
 					);
 					return { differences };
 				} catch (error) {

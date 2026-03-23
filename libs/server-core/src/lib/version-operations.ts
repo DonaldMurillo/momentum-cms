@@ -387,6 +387,11 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 		// Check readVersions access
 		await this.checkAccess('readVersions');
 
+		// If comparing against the current live document, also check read access
+		if (versionId1 === 'current' || versionId2 === 'current') {
+			await this.checkAccess('read');
+		}
+
 		// Resolve version data — "current" means the live document
 		const data1 = await this.resolveVersionData(versionId1, parentId);
 		const data2 = await this.resolveVersionData(versionId2, parentId);
@@ -414,7 +419,18 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 				throw new DocumentNotFoundError(this.slug, parentId);
 			}
 			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- adapter returns unknown shape
-			return doc as Record<string, unknown>;
+			let docRecord = doc as Record<string, unknown>;
+
+			// Apply field-level read filtering (same as findVersionById path)
+			if (!this.context.overrideAccess && hasFieldAccessControl(this.collectionConfig.fields)) {
+				docRecord = await filterReadableFields(
+					this.collectionConfig.fields,
+					docRecord,
+					this.buildRequestContext(),
+				);
+			}
+
+			return docRecord;
 		}
 
 		const version = await this.findVersionById(versionId);
