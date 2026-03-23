@@ -191,6 +191,7 @@ export function password(name: string, options: PasswordFieldOptions = {}): Pass
 		name,
 		type: 'password',
 		...options,
+		diffExclude: true,
 	};
 }
 

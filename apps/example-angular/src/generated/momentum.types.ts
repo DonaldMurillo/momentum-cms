@@ -36,18 +36,8 @@ export interface Articles {
 	seo?: {
 		metaTitle?: string;
 		metaDescription?: string;
-		canonicalUrl?: string;
-		focusKeyword?: string;
-		ogTitle?: string;
-		ogDescription?: string;
-		ogImage?: string;
-		ogType?: 'website' | 'article' | 'product' | 'profile';
-		twitterCard?: 'summary' | 'summary_large_image' | 'player' | 'app';
-		noIndex?: boolean;
-		noFollow?: boolean;
-		excludeFromSitemap?: boolean;
-		structuredData?: Record<string, unknown>;
 	};
+	internalNotes?: string;
 	_status?: 'draft' | 'published';
 	createdAt: string;
 	updatedAt: string;
@@ -68,6 +58,7 @@ export interface Products {
 		description?: string;
 		highlighted?: boolean;
 	}>;
+	_status?: 'draft' | 'published';
 	createdAt: string;
 	updatedAt: string;
 }
@@ -533,6 +524,7 @@ export interface ArticlesWhereClause {
 	coverImage?: string | { equals?: string; not?: string; in?: string[] };
 	content?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
 	category?: string | { equals?: string; not?: string; in?: string[] };
+	internalNotes?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
 	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }

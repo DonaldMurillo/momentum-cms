@@ -71,7 +71,7 @@ export const AuthSessionCollection: CollectionConfig = defineCollection({
 	timestamps: true,
 	fields: [
 		text('userId', { required: true }),
-		text('token', { required: true }),
+		text('token', { required: true, diffExclude: true }),
 		date('expiresAt', { required: true }),
 		text('ipAddress'),
 		text('userAgent'),
@@ -104,13 +104,13 @@ export const AuthAccountCollection: CollectionConfig = defineCollection({
 		text('userId', { required: true }),
 		text('accountId', { required: true }),
 		text('providerId', { required: true }),
-		text('accessToken'),
-		text('refreshToken'),
+		text('accessToken', { diffExclude: true }),
+		text('refreshToken', { diffExclude: true }),
 		date('accessTokenExpiresAt'),
 		date('refreshTokenExpiresAt'),
 		text('scope'),
-		text('idToken'),
-		text('password'),
+		text('idToken', { diffExclude: true }),
+		text('password', { diffExclude: true }),
 	],
 	indexes: [{ columns: ['userId'] }],
 	admin: {
@@ -165,7 +165,12 @@ export const AuthApiKeysCollection: CollectionConfig = defineCollection({
 	timestamps: true,
 	fields: [
 		text('name', { required: true }),
-		text('keyHash', { required: true, admin: { hidden: true }, access: { read: () => false } }),
+		text('keyHash', {
+			required: true,
+			admin: { hidden: true },
+			access: { read: () => false },
+			diffExclude: true,
+		}),
 		text('keyPrefix', { required: true }),
 		relationship('createdBy', {
 			required: true,

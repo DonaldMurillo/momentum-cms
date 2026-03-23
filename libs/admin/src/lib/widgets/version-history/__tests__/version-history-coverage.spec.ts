@@ -250,13 +250,13 @@ describe('VersionHistoryWidget (coverage)', () => {
 				expect.objectContaining({
 					data: expect.objectContaining({
 						versionId1: 'v-old',
-						versionId2: 'v-current',
+						versionId2: 'current',
 						label1: expect.any(String),
 						label2: 'Current',
 						collection: 'posts',
 						documentId: 'doc-1',
 					}),
-					width: '40rem',
+					width: '56rem',
 				}),
 			);
 

@@ -73,8 +73,8 @@ describe('VersionService', () => {
 	};
 
 	const mockDiffs: VersionFieldDiff[] = [
-		{ field: 'title', oldValue: 'Old Title', newValue: 'New Title' },
-		{ field: 'content', oldValue: 'Old Content', newValue: 'New Content' },
+		{ field: 'title', changeType: 'changed', oldValue: 'Old Title', newValue: 'New Title' },
+		{ field: 'content', changeType: 'changed', oldValue: 'Old Content', newValue: 'New Content' },
 	];
 
 	const mockCompareResult: VersionCompareResult = {

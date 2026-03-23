@@ -15,7 +15,9 @@ import type {
 	SchedulePublishResult,
 	AccessArgs,
 	RequestContext,
+	DeepDiffResult,
 } from '@momentumcms/core';
+import { deepDiff } from '@momentumcms/core';
 import type {
 	MomentumAPIContext,
 	VersionOperations,
@@ -381,51 +383,51 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 		versionId1: string,
 		versionId2: string,
 		parentId?: string,
-	): Promise<{ field: string; oldValue: unknown; newValue: unknown }[]> {
+	): Promise<DeepDiffResult[]> {
 		// Check readVersions access
 		await this.checkAccess('readVersions');
 
-		const version1 = await this.findVersionById(versionId1);
-		const version2 = await this.findVersionById(versionId2);
-
-		if (!version1 || !version2) {
-			throw new Error('One or both versions not found');
-		}
-
-		// Validate both versions belong to the specified parent document
-		if (parentId) {
-			if (version1.parent !== parentId || version2.parent !== parentId) {
-				throw new Error('Version does not belong to the specified document');
-			}
-		}
-
-		const data1 = version1.version;
-		const data2 = version2.version;
+		// Resolve version data — "current" means the live document
+		const data1 = await this.resolveVersionData(versionId1, parentId);
+		const data2 = await this.resolveVersionData(versionId2, parentId);
 
 		if (!isRecord(data1) || !isRecord(data2)) {
 			return [];
 		}
 
-		const differences: { field: string; oldValue: unknown; newValue: unknown }[] = [];
+		return deepDiff(data1, data2, this.collectionConfig.fields);
+	}
 
-		// Get all unique keys from both versions
-		const allKeys = new Set([...Object.keys(data1), ...Object.keys(data2)]);
-
-		for (const key of allKeys) {
-			const val1 = data1[key];
-			const val2 = data2[key];
-
-			// Simple comparison (deep comparison would require more logic)
-			if (JSON.stringify(val1) !== JSON.stringify(val2)) {
-				differences.push({
-					field: key,
-					oldValue: val1,
-					newValue: val2,
-				});
+	/**
+	 * Resolve version data by ID. "current" fetches the live document.
+	 */
+	private async resolveVersionData(
+		versionId: string,
+		parentId?: string,
+	): Promise<Record<string, unknown> | null> {
+		if (versionId === 'current') {
+			if (!parentId) {
+				throw new Error('parentId is required when comparing against current document');
 			}
+			const doc = await this.adapter.findById(this.slug, parentId);
+			if (!doc) {
+				throw new DocumentNotFoundError(this.slug, parentId);
+			}
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- adapter returns unknown shape
+			return doc as Record<string, unknown>;
 		}
 
-		return differences;
+		const version = await this.findVersionById(versionId);
+		if (!version) {
+			throw new Error(`Version "${versionId}" not found`);
+		}
+
+		if (parentId && version.parent !== parentId) {
+			throw new Error('Version does not belong to the specified document');
+		}
+
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- version payload is stored as unknown
+		return version.version as Record<string, unknown>;
 	}
 
 	async schedulePublish(docId: string, publishAt: string): Promise<SchedulePublishResult> {

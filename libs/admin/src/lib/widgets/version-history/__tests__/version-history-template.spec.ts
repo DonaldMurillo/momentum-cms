@@ -222,7 +222,7 @@ describe('VersionHistoryWidget (template coverage)', () => {
 			expect(text).toContain('autosave');
 		});
 
-		it('should render separator between versions (not before the first)', () => {
+		it('should render timeline connectors between versions (not after the last)', () => {
 			createComponent();
 			component.isLoading.set(false);
 			component.versions.set([
@@ -232,9 +232,9 @@ describe('VersionHistoryWidget (template coverage)', () => {
 			]);
 			fixture.detectChanges();
 
-			const separators = fixture.nativeElement.querySelectorAll('mcms-separator');
-			// 3 versions -> 2 separators (no separator before the first)
-			expect(separators.length).toBe(2);
+			const connectors = fixture.nativeElement.querySelectorAll('.bg-border.min-h-4');
+			// 3 versions -> 2 connectors (no connector after the last)
+			expect(connectors.length).toBe(2);
 		});
 
 		it('should render date using date pipe', () => {
@@ -249,16 +249,16 @@ describe('VersionHistoryWidget (template coverage)', () => {
 			expect(dateEl.textContent.trim().length).toBeGreaterThan(0);
 		});
 
-		it('should render Compare and Restore buttons for non-first versions', () => {
+		it('should render Compare button on all versions and Restore only on non-first', () => {
 			createComponent();
 			component.isLoading.set(false);
 			component.versions.set([makeVersion({ id: 'v1' }), makeVersion({ id: 'v2' })]);
 			fixture.detectChanges();
 
-			const compareBtn = fixture.nativeElement.querySelector(
-				'[aria-label="Compare with current version"]',
+			const compareButtons = fixture.nativeElement.querySelectorAll(
+				'[aria-label="Compare with current document"]',
 			);
-			expect(compareBtn).toBeTruthy();
+			expect(compareButtons.length).toBe(2);
 
 			const restoreButtons = fixture.nativeElement.querySelectorAll(
 				'[aria-label*="Restore version"]',
@@ -266,32 +266,31 @@ describe('VersionHistoryWidget (template coverage)', () => {
 			expect(restoreButtons.length).toBe(1);
 		});
 
-		it('should NOT render Compare/Restore for the first (current) version', () => {
+		it('should render Compare button even with single version', () => {
 			createComponent();
 			component.isLoading.set(false);
 			component.versions.set([makeVersion({ id: 'v1' })]);
 			fixture.detectChanges();
 
 			const compareBtn = fixture.nativeElement.querySelector(
-				'[aria-label="Compare with current version"]',
+				'[aria-label="Compare with current document"]',
 			);
-			expect(compareBtn).toBeNull();
+			expect(compareBtn).toBeTruthy();
 		});
 
 		it('should call onCompare when Compare button is clicked', () => {
 			createComponent();
 			component.isLoading.set(false);
 			const v1 = makeVersion({ id: 'v1' });
-			const v2 = makeVersion({ id: 'v2' });
-			component.versions.set([v1, v2]);
+			component.versions.set([v1]);
 			fixture.detectChanges();
 
 			const spy = vi.spyOn(component, 'onCompare');
 			const compareBtn = fixture.nativeElement.querySelector(
-				'[aria-label="Compare with current version"]',
+				'[aria-label="Compare with current document"]',
 			);
 			compareBtn.click();
-			expect(spy).toHaveBeenCalledWith(v2);
+			expect(spy).toHaveBeenCalledWith(v1);
 		});
 
 		it('should call onRestore when Restore button is clicked', () => {

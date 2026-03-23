@@ -574,37 +574,32 @@ describe('VersionHistoryWidget (extended coverage)', () => {
 	// -----------------------------------------------------------------------
 	// 6. onCompare – additional coverage
 	// -----------------------------------------------------------------------
-	describe('onCompare – with populated versions', () => {
-		it('should use the first version in the array as "current"', async () => {
-			const current = makeVersion({
-				id: 'v-latest',
-				_status: 'published',
-				createdAt: '2024-06-20T00:00:00Z',
-			});
-			const older = makeVersion({
+	describe('onCompare – compares against current live document', () => {
+		it('should use "current" as versionId2 for the live document', async () => {
+			const version = makeVersion({
 				id: 'v-older',
 				_status: 'draft',
 				createdAt: '2024-06-10T00:00:00Z',
 			});
 
-			mockVersionService.findVersions.mockResolvedValue(makePage1Result([current, older], false));
+			mockVersionService.findVersions.mockResolvedValue(makePage1Result([version], false));
 			createComponent();
 
 			await vi.waitFor(() => {
-				expect(component.versions().length).toBe(2);
+				expect(component.versions().length).toBe(1);
 			});
 
-			component.onCompare(older);
+			component.onCompare(version);
 
 			expect(mockDialog.open).toHaveBeenCalledWith(
 				expect.anything(),
 				expect.objectContaining({
 					data: expect.objectContaining({
 						versionId1: 'v-older',
-						versionId2: 'v-latest',
+						versionId2: 'current',
 						label2: 'Current',
 					}),
-					width: '40rem',
+					width: '56rem',
 				}),
 			);
 		});

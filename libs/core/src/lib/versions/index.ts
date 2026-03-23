@@ -4,3 +4,4 @@
  */
 
 export * from './version.types';
+export * from './deep-diff';

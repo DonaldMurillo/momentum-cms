@@ -47,11 +47,18 @@ export const Products = defineCollection({
 			maxRows: 10,
 		}),
 	],
+	versions: {
+		drafts: true,
+		maxPerDoc: 10,
+	},
 	access: {
 		read: allowAll(),
 		create: allowAll(),
 		update: allowAll(),
 		delete: allowAll(),
 		admin: allowAll(),
+		readVersions: allowAll(),
+		publishVersions: allowAll(),
+		restoreVersions: allowAll(),
 	},
 });
