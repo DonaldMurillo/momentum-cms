@@ -1,9 +1,11 @@
 import {
 	defineCollection,
 	text,
+	textarea,
 	richText,
 	relationship,
 	upload,
+	group,
 	allowAll,
 	isAuthenticated,
 	hasRole,
@@ -66,6 +68,18 @@ export const Articles = defineCollection({
 		relationship('category', {
 			label: 'Category',
 			collection: () => Categories,
+		}),
+		group('seo', {
+			label: 'SEO',
+			fields: [
+				text('metaTitle', { label: 'Meta Title' }),
+				textarea('metaDescription', { label: 'Meta Description' }),
+			],
+		}),
+		text('internalNotes', {
+			label: 'Internal Notes',
+			description: 'Never included in version comparisons.',
+			diffExclude: true,
 		}),
 	],
 	// Enable versioning with drafts for E2E testing

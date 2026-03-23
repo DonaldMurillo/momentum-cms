@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { LivePreviewService } from '@momentumcms/admin/live-preview';
+import { LivePreviewService } from '@momentumcms/admin';
 
 @Component({
 	selector: 'app-post-preview',

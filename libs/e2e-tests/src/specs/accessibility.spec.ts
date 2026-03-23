@@ -162,8 +162,8 @@ test.describe('Accessibility: Entity form', { tag: ['@a11y', '@admin'] }, () => 
 		await page.goto('/admin/collections/articles/new');
 		await page.waitForLoadState('domcontentloaded');
 
-		// Wait for the form to render
-		const heading = page.locator('main h1');
+		// Wait for the form to render (use first() to avoid conflict with live preview heading)
+		const heading = page.locator('main h1').first();
 		await expect(heading).toBeVisible({ timeout: 15000 });
 
 		// Submit the form without filling required fields to trigger validation error
@@ -249,7 +249,8 @@ test.describe('Accessibility: Rich text editor', { tag: ['@a11y', '@admin'] }, (
 		await page.waitForLoadState('domcontentloaded');
 
 		// Toolbar is a sibling of the editor content area, both inside a wrapper div
-		const toolbar = page.locator('[role="toolbar"]');
+		// Use aria-label to target the formatting toolbar (exclude live preview toolbar)
+		const toolbar = page.getByRole('toolbar', { name: /formatting/i });
 		await expect(toolbar).toBeVisible({ timeout: 15000 });
 
 		// All SVGs inside toolbar buttons should be aria-hidden
@@ -641,8 +642,8 @@ test.describe('Accessibility: axe-core WCAG 2.1 AA scans', { tag: ['@a11y', '@ad
 		await page.goto('/admin/collections/articles/new');
 		await page.waitForLoadState('domcontentloaded');
 
-		// Wait for entity form to render (no native <form> — Angular signal forms)
-		const heading = page.locator('main h1');
+		// Wait for entity form to render (use first() to avoid conflict with live preview heading)
+		const heading = page.locator('main h1').first();
 		await expect(heading).toBeVisible({ timeout: 15000 });
 
 		const results = await checkA11y(page);
@@ -668,8 +669,8 @@ test.describe('Accessibility: axe-core WCAG 2.1 AA scans', { tag: ['@a11y', '@ad
 		await page.goto(`/admin/collections/articles/${articleId}/edit`);
 		await page.waitForLoadState('domcontentloaded');
 
-		// Wait for entity form to render (no native <form> — Angular signal forms)
-		const heading = page.locator('main h1');
+		// Wait for entity form to render (use first() to avoid conflict with live preview heading)
+		const heading = page.locator('main h1').first();
 		await expect(heading).toBeVisible({ timeout: 15000 });
 
 		// Exclude preview content area from axe analysis
@@ -841,7 +842,7 @@ test.describe('Accessibility: Phase 6 remaining gaps', { tag: ['@a11y', '@admin'
 		await page.goto('/admin/collections/articles/new');
 		await page.waitForLoadState('domcontentloaded');
 
-		const heading = page.locator('main h1');
+		const heading = page.locator('main h1').first();
 		await expect(heading).toBeVisible({ timeout: 15000 });
 
 		// The relationship field renderer should be present (articles have a "category" field)
@@ -869,7 +870,7 @@ test.describe('Accessibility: Phase 6 remaining gaps', { tag: ['@a11y', '@admin'
 		await page.goto('/admin/collections/field-test-items/new');
 		await page.waitForLoadState('domcontentloaded');
 
-		const heading = page.locator('main h1');
+		const heading = page.locator('main h1').first();
 		await expect(heading).toBeVisible({ timeout: 15000 });
 
 		// Exclude known pre-existing color-contrast issues on destructive variants
@@ -890,12 +891,18 @@ test.describe('Accessibility: Phase 6 remaining gaps', { tag: ['@a11y', '@admin'
 		await page.goto('/admin/collections/pages/new');
 		await page.waitForLoadState('domcontentloaded');
 
-		const heading = page.locator('main h1');
+		const heading = page.locator('main h1').first();
 		await expect(heading).toBeVisible({ timeout: 15000 });
 
 		// Exclude known pre-existing color-contrast issues on destructive variants
+		// and live preview content (rendered user components with their own a11y concerns)
 		const results = await checkA11y(page, {
-			exclude: ['[variant="destructive"]', 'mcms-toast', 'mcms-alert'],
+			exclude: [
+				'[variant="destructive"]',
+				'mcms-toast',
+				'mcms-alert',
+				'[data-testid="preview-content"]',
+			],
 		});
 		expect(
 			results.violations,

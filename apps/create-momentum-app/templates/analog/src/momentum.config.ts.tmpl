@@ -36,6 +36,16 @@ export const seo = seoPlugin({
 	adminDashboard: true,
 });
 
+/**
+ * Add live preview to the Posts collection.
+ * Defined here so the generator can resolve the relative import path correctly.
+ */
+Posts.admin ??= {};
+Posts.admin.preview = {
+	component: () =>
+		import('./previews/post-preview.component').then((m) => m.PostPreviewComponent),
+};
+
 const config = defineMomentumConfig({
 	db: { adapter: dbAdapter },
 	collections: [Posts],

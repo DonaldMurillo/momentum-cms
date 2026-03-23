@@ -34,6 +34,21 @@ const mockRestrictedCollection: CollectionConfig = {
 	},
 };
 
+// Mock collection where readVersions is allowed but read is denied (e.g. auditor role)
+const mockReadRestrictedCollection: CollectionConfig = {
+	slug: 'secrets',
+	labels: { singular: 'Secret', plural: 'Secrets' },
+	fields: [
+		{ name: 'title', type: 'text', required: true, label: 'Title' },
+		{ name: 'secretData', type: 'text', label: 'Secret Data', access: { read: () => false } },
+	],
+	versions: { drafts: true },
+	access: {
+		read: ({ req }) => req.user?.role === 'admin',
+		readVersions: ({ req }) => !!req.user,
+	},
+};
+
 // Create a mock version
 function createMockVersion(overrides: Partial<DocumentVersion> = {}): DocumentVersion {
 	return {
@@ -475,7 +490,7 @@ describe('VersionOperationsImpl', () => {
 	});
 
 	describe('compare()', () => {
-		it('should compare two versions and return differences', async () => {
+		it('should return DeepDiffResult with changeType, fieldType, and label', async () => {
 			const version1 = createMockVersion({
 				id: 'v1',
 				version: JSON.stringify({ title: 'Original', content: 'Hello' }),
@@ -497,12 +512,47 @@ describe('VersionOperationsImpl', () => {
 
 			const differences = await versionOps.compare('v1', 'v2');
 
-			expect(differences).toHaveLength(1);
-			expect(differences[0]).toEqual({
-				field: 'title',
-				oldValue: 'Original',
-				newValue: 'Modified',
+			// Should include results for both configured fields
+			const titleDiff = differences.find((d) => d.field === 'title');
+			const contentDiff = differences.find((d) => d.field === 'content');
+
+			expect(titleDiff).toBeDefined();
+			expect(titleDiff?.changeType).toBe('changed');
+			expect(titleDiff?.fieldType).toBe('text');
+			expect(titleDiff?.label).toBe('Title');
+			expect(titleDiff?.oldValue).toBe('Original');
+			expect(titleDiff?.newValue).toBe('Modified');
+
+			expect(contentDiff).toBeDefined();
+			expect(contentDiff?.changeType).toBe('unchanged');
+			expect(contentDiff?.fieldType).toBe('textarea');
+		});
+
+		it('should include textDiff for changed text fields', async () => {
+			const version1 = createMockVersion({
+				id: 'v1',
+				version: JSON.stringify({ title: 'Hello World', content: 'Same' }),
 			});
+			const version2 = createMockVersion({
+				id: 'v2',
+				version: JSON.stringify({ title: 'Hello Angular World', content: 'Same' }),
+			});
+			vi.mocked(mockAdapter.findVersionById)
+				.mockResolvedValueOnce(version1)
+				.mockResolvedValueOnce(version2);
+
+			const versionOps = new VersionOperationsImpl(
+				'posts',
+				mockVersionedCollection,
+				mockAdapter,
+				context,
+			);
+
+			const differences = await versionOps.compare('v1', 'v2');
+			const titleDiff = differences.find((d) => d.field === 'title');
+
+			expect(titleDiff?.textDiff).toBeDefined();
+			expect(titleDiff?.textDiff?.length).toBeGreaterThan(0);
 		});
 
 		it('should throw error when version not found', async () => {
@@ -515,9 +565,116 @@ describe('VersionOperationsImpl', () => {
 				context,
 			);
 
-			await expect(versionOps.compare('v1', 'v2')).rejects.toThrow(
-				'One or both versions not found',
+			await expect(versionOps.compare('v1', 'v2')).rejects.toThrow('Version "v1" not found');
+		});
+
+		it('should compare against current live document when versionId is "current"', async () => {
+			const version1 = createMockVersion({
+				id: 'v1',
+				parent: 'doc-1',
+				version: JSON.stringify({ title: 'Old Title', content: 'Hello' }),
+			});
+			const liveDoc = { id: 'doc-1', title: 'Live Title', content: 'Hello' };
+			vi.mocked(mockAdapter.findVersionById).mockResolvedValueOnce(version1);
+			vi.mocked(mockAdapter.findById).mockResolvedValueOnce(liveDoc);
+
+			const versionOps = new VersionOperationsImpl(
+				'posts',
+				mockVersionedCollection,
+				mockAdapter,
+				context,
 			);
+
+			const differences = await versionOps.compare('v1', 'current', 'doc-1');
+			const titleDiff = differences.find((d) => d.field === 'title');
+
+			expect(titleDiff?.changeType).toBe('changed');
+			expect(titleDiff?.oldValue).toBe('Old Title');
+			expect(titleDiff?.newValue).toBe('Live Title');
+		});
+
+		it('should check read access when comparing against "current"', async () => {
+			const versionOps = new VersionOperationsImpl(
+				'secrets',
+				mockReadRestrictedCollection,
+				mockAdapter,
+				{ user: { id: '1', role: 'user' } }, // has readVersions but NOT read
+			);
+
+			await expect(versionOps.compare('v1', 'current', 'doc-1')).rejects.toThrow(AccessDeniedError);
+		});
+
+		it('should filter restricted fields from "current" document data', async () => {
+			const version1 = createMockVersion({
+				id: 'v1',
+				parent: 'doc-1',
+				version: JSON.stringify({ title: 'Old', secretData: 'old-secret' }),
+			});
+			const liveDoc = { id: 'doc-1', title: 'New', secretData: 'new-secret' };
+			vi.mocked(mockAdapter.findVersionById).mockResolvedValueOnce(version1);
+			vi.mocked(mockAdapter.findById).mockResolvedValueOnce(liveDoc);
+
+			// Use admin role so collection-level read passes, but field-level access.read on secretData still denies
+			const versionOps = new VersionOperationsImpl(
+				'secrets',
+				mockReadRestrictedCollection,
+				mockAdapter,
+				{ user: { id: '1', role: 'admin' } },
+			);
+
+			const differences = await versionOps.compare('v1', 'current', 'doc-1');
+			const secretDiff = differences.find((d) => d.field === 'secretData');
+
+			// secretData values should be filtered out — field entry may exist but actual values must not leak
+			if (secretDiff) {
+				expect(secretDiff.oldValue).toBeUndefined();
+				expect(secretDiff.newValue).toBeUndefined();
+			}
+		});
+
+		it('should reject version belonging to a different document', async () => {
+			const version1 = createMockVersion({
+				id: 'v1',
+				parent: 'doc-OTHER',
+				version: JSON.stringify({ title: 'Hacked' }),
+			});
+			vi.mocked(mockAdapter.findVersionById).mockResolvedValueOnce(version1);
+
+			const versionOps = new VersionOperationsImpl(
+				'posts',
+				mockVersionedCollection,
+				mockAdapter,
+				context,
+			);
+
+			await expect(versionOps.compare('v1', 'current', 'doc-1')).rejects.toThrow(
+				'Version does not belong to the specified document',
+			);
+		});
+
+		it('should return empty changes for identical versions', async () => {
+			const version1 = createMockVersion({
+				id: 'v1',
+				version: JSON.stringify({ title: 'Same', content: 'Same' }),
+			});
+			const version2 = createMockVersion({
+				id: 'v2',
+				version: JSON.stringify({ title: 'Same', content: 'Same' }),
+			});
+			vi.mocked(mockAdapter.findVersionById)
+				.mockResolvedValueOnce(version1)
+				.mockResolvedValueOnce(version2);
+
+			const versionOps = new VersionOperationsImpl(
+				'posts',
+				mockVersionedCollection,
+				mockAdapter,
+				context,
+			);
+
+			const differences = await versionOps.compare('v1', 'v2');
+			const changes = differences.filter((d) => d.changeType !== 'unchanged');
+			expect(changes).toHaveLength(0);
 		});
 	});
 });

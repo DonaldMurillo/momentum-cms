@@ -14,6 +14,8 @@ export interface BaseFieldOptions {
 	access?: FieldAccessConfig;
 	hooks?: FieldHooksConfig;
 	validate?: ValidateFunction;
+	/** Exclude this field from version diffs. Values are never sent in compare responses. */
+	diffExclude?: boolean;
 }
 
 // Field admin panel configuration
@@ -142,6 +144,8 @@ export interface BaseField {
 	access?: FieldAccessConfig;
 	hooks?: FieldHooksConfig;
 	validate?: ValidateFunction;
+	/** Exclude this field from version diffs. Values are never sent in compare responses. */
+	diffExclude?: boolean;
 }
 
 // Text field

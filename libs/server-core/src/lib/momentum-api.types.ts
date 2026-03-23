@@ -15,6 +15,7 @@ import type {
 	RestoreVersionOptions,
 	PublishOptions,
 	SchedulePublishResult,
+	DeepDiffResult,
 } from '@momentumcms/core';
 
 // ============================================
@@ -344,15 +345,11 @@ export interface VersionOperations<T = Record<string, unknown>> {
 	 * Compare two versions of a document.
 	 * Returns the differences between the versions.
 	 *
-	 * @param versionId1 - First version ID
-	 * @param versionId2 - Second version ID
+	 * @param versionId1 - First version ID (or "current" for the live document)
+	 * @param versionId2 - Second version ID (or "current" for the live document)
 	 * @returns Object with field-level differences
 	 */
-	compare(
-		versionId1: string,
-		versionId2: string,
-		parentId?: string,
-	): Promise<{ field: string; oldValue: unknown; newValue: unknown }[]>;
+	compare(versionId1: string, versionId2: string, parentId?: string): Promise<DeepDiffResult[]>;
 
 	/**
 	 * Schedule a document for future publishing.

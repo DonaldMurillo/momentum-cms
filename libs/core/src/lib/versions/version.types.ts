@@ -189,6 +189,55 @@ export interface SchedulePublishResult {
 }
 
 // ============================================
+// Deep Diff Types
+// ============================================
+
+/** Type of change detected between two values. */
+export type DiffChangeType = 'added' | 'removed' | 'changed' | 'unchanged';
+
+/** A word-level diff segment for text comparison. */
+export interface TextDiffSegment {
+	type: 'common' | 'added' | 'removed';
+	value: string;
+}
+
+/** A single item change within an array diff. */
+export interface ArrayDiffItem {
+	/** Index in the compared arrays */
+	index: number;
+	/** Type of change for this item */
+	changeType: 'added' | 'removed' | 'changed' | 'moved';
+	/** Old value (for removed/changed) */
+	oldValue?: unknown;
+	/** New value (for added/changed) */
+	newValue?: unknown;
+	/** Field-level diffs within this array item (for changed items with sub-fields) */
+	children?: DeepDiffResult[];
+}
+
+/** Result of a deep diff between two version snapshots. */
+export interface DeepDiffResult {
+	/** Field path (dot-notation for nested, e.g. "seo.title") */
+	field: string;
+	/** Human-readable label from field config */
+	label?: string;
+	/** Field type from collection config (e.g. 'text', 'array', 'group') */
+	fieldType?: string;
+	/** Type of change */
+	changeType: DiffChangeType;
+	/** Old value */
+	oldValue?: unknown;
+	/** New value */
+	newValue?: unknown;
+	/** Nested diffs for group/object fields */
+	children?: DeepDiffResult[];
+	/** Per-item diffs for array fields */
+	arrayChanges?: ArrayDiffItem[];
+	/** Word-level diff segments for text fields */
+	textDiff?: TextDiffSegment[];
+}
+
+// ============================================
 // Version Utilities
 // ============================================
 

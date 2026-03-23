@@ -157,7 +157,7 @@ describe('Field Builders', () => {
 	describe('password()', () => {
 		it('should create a password field with name and type', () => {
 			const field = password('userPassword');
-			expect(field).toEqual({ name: 'userPassword', type: 'password' });
+			expect(field).toEqual({ name: 'userPassword', type: 'password', diffExclude: true });
 		});
 
 		it('should include minLength option', () => {

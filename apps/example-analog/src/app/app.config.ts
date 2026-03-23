@@ -40,6 +40,18 @@ import {
 	articleDetailResolver,
 } from '@momentumcms/example-config/pages';
 
+// Add preview config to FormsCollection (matches what the code generator produces for Angular)
+const FormsCollectionWithPreview = {
+	...FormsCollection,
+	admin: {
+		...FormsCollection.admin,
+		preview: {
+			component: () =>
+				import('@momentumcms/example-config/previews').then((m) => m.FormPreviewComponent),
+		},
+	},
+};
+
 // Merge all collections for admin routes, then inject plugin fields
 const adminCollections = [
 	...collections,
@@ -48,7 +60,7 @@ const adminCollections = [
 	QueueJobsCollection,
 	CronSchedulesCollection,
 	RedirectsCollection,
-	FormsCollection,
+	FormsCollectionWithPreview,
 	FormSubmissionsCollection,
 ];
 injectBlockAnalyticsFields(adminCollections);

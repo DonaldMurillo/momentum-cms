@@ -96,19 +96,19 @@ export interface StatusResult {
 }
 
 /**
- * A single field difference between two versions.
+ * Re-export DeepDiffResult as the canonical diff type.
  */
-export interface VersionFieldDiff {
-	field: string;
-	oldValue: unknown;
-	newValue: unknown;
-}
+import type { DeepDiffResult } from '@momentumcms/core';
+export type { DeepDiffResult } from '@momentumcms/core';
+
+/** @deprecated Use DeepDiffResult instead. Kept for backward compat. */
+export type VersionFieldDiff = DeepDiffResult;
 
 /**
  * Result of comparing two versions.
  */
 export interface VersionCompareResult {
-	differences: VersionFieldDiff[];
+	differences: DeepDiffResult[];
 }
 
 // ============================================
@@ -320,7 +320,7 @@ export class VersionService {
 		docId: string,
 		versionId1: string,
 		versionId2: string,
-	): Observable<VersionFieldDiff[]> {
+	): Observable<DeepDiffResult[]> {
 		const url = this.buildUrl(collection, docId, 'versions', 'compare');
 		return this.http
 			.post<VersionCompareResult>(url, { versionId1, versionId2 })
@@ -335,7 +335,7 @@ export class VersionService {
 		docId: string,
 		versionId1: string,
 		versionId2: string,
-	): Promise<VersionFieldDiff[]> {
+	): Promise<DeepDiffResult[]> {
 		return firstValueFrom(this.compareVersions$(collection, docId, versionId1, versionId2));
 	}
 

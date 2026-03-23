@@ -92,6 +92,42 @@ describe('VersionHistoryWidget', () => {
 		});
 	});
 
+	describe('getTimelineDotClass', () => {
+		const version: DocumentVersionParsed = {
+			id: 'v1',
+			parent: 'doc-1',
+			version: {},
+			_status: 'published',
+			createdAt: '2024-01-01T00:00:00Z',
+			updatedAt: '2024-01-01T00:00:00Z',
+			autosave: false,
+		};
+
+		it('should return ring class for current version', () => {
+			const cls = component.getTimelineDotClass(version, true);
+			expect(cls).toContain('ring-2');
+			expect(cls).toContain('bg-primary');
+		});
+
+		it('should return filled dot for published version', () => {
+			const cls = component.getTimelineDotClass(version, false);
+			expect(cls).toContain('bg-primary');
+			expect(cls).not.toContain('ring-2');
+		});
+
+		it('should return hollow dot for draft version', () => {
+			const draft = { ...version, _status: 'draft' as const };
+			const cls = component.getTimelineDotClass(draft, false);
+			expect(cls).toContain('bg-background');
+		});
+
+		it('should return smaller dot for autosave version', () => {
+			const autosave = { ...version, autosave: true, _status: 'draft' as const };
+			const cls = component.getTimelineDotClass(autosave, false);
+			expect(cls).toContain('h-2 w-2');
+		});
+	});
+
 	describe('getStatusVariant', () => {
 		it('should return "default" for published', () => {
 			expect(component.getStatusVariant('published')).toBe('default');
@@ -195,31 +231,8 @@ describe('VersionHistoryWidget', () => {
 	});
 
 	describe('onCompare', () => {
-		it('should not open dialog when no versions', () => {
-			component.versions.set([]);
-			component.onCompare({
-				id: 'v1',
-				parent: 'doc-1',
-				version: {},
-				_status: 'draft',
-				createdAt: '2024-01-01T00:00:00Z',
-				updatedAt: '2024-01-01T00:00:00Z',
-				autosave: false,
-			});
-			expect(mockDialog.open).not.toHaveBeenCalled();
-		});
-
-		it('should open diff dialog with correct data', () => {
-			const current = {
-				id: 'v2',
-				parent: 'doc-1',
-				version: {},
-				_status: 'published' as const,
-				createdAt: '2024-01-02T00:00:00Z',
-				updatedAt: '2024-01-02T00:00:00Z',
-				autosave: false,
-			};
-			const older = {
+		it('should open diff dialog comparing version against current live document', () => {
+			const version = {
 				id: 'v1',
 				parent: 'doc-1',
 				version: {},
@@ -228,9 +241,9 @@ describe('VersionHistoryWidget', () => {
 				updatedAt: '2024-01-01T00:00:00Z',
 				autosave: false,
 			};
-			component.versions.set([current, older]);
+			component.versions.set([version]);
 
-			component.onCompare(older);
+			component.onCompare(version);
 
 			expect(mockDialog.open).toHaveBeenCalledWith(
 				expect.anything(),
@@ -239,9 +252,11 @@ describe('VersionHistoryWidget', () => {
 						collection: 'posts',
 						documentId: 'doc-1',
 						versionId1: 'v1',
-						versionId2: 'v2',
+						versionId2: 'current',
 						label2: 'Current',
+						versions: [version],
 					}),
+					width: '56rem',
 				}),
 			);
 		});

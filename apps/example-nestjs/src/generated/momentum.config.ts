@@ -188,179 +188,61 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			},
 			fields: [
 				{
-					name: 'seoTabs',
-					type: 'tabs',
-					tabs: [
+					name: 'title',
+					type: 'text',
+					required: true,
+					label: 'Title',
+				},
+				{
+					name: 'slug',
+					type: 'text',
+					label: 'URL Slug',
+				},
+				{
+					name: 'coverImage',
+					type: 'upload',
+					relationTo: 'media',
+					label: 'Cover Image',
+					mimeTypes: ['image/*'],
+					maxSize: 5242880,
+				},
+				{
+					name: 'content',
+					type: 'richText',
+					label: 'Content',
+				},
+				{
+					name: 'category',
+					type: 'relationship',
+					label: 'Category',
+					collection: () => ({
+						slug: 'categories',
+						labels: { singular: 'Category', plural: 'Categories' },
+					}),
+				},
+				{
+					name: 'seo',
+					type: 'group',
+					label: 'SEO',
+					fields: [
 						{
-							label: 'Content',
-							fields: [
-								{
-									name: 'title',
-									type: 'text',
-									required: true,
-									label: 'Title',
-								},
-								{
-									name: 'slug',
-									type: 'text',
-									label: 'URL Slug',
-								},
-								{
-									name: 'coverImage',
-									type: 'upload',
-									relationTo: 'media',
-									label: 'Cover Image',
-									mimeTypes: ['image/*'],
-									maxSize: 5242880,
-								},
-								{
-									name: 'content',
-									type: 'richText',
-									label: 'Content',
-								},
-								{
-									name: 'category',
-									type: 'relationship',
-									label: 'Category',
-									collection: () => ({
-										slug: 'categories',
-										labels: { singular: 'Category', plural: 'Categories' },
-									}),
-								},
-							],
+							name: 'metaTitle',
+							type: 'text',
+							label: 'Meta Title',
 						},
 						{
-							name: 'seo',
-							label: 'SEO',
-							description: 'Search engine optimization settings',
-							fields: [
-								{
-									name: 'metaTitle',
-									type: 'text',
-									label: 'Meta Title',
-									maxLength: 70,
-									description: 'Title tag for search engines (50-60 chars recommended)',
-								},
-								{
-									name: 'metaDescription',
-									type: 'textarea',
-									label: 'Meta Description',
-									maxLength: 160,
-									rows: 3,
-									description: 'Description for search results (120-155 chars recommended)',
-								},
-								{
-									name: 'canonicalUrl',
-									type: 'text',
-									label: 'Canonical URL',
-									description: 'Override the canonical URL for this page',
-								},
-								{
-									name: 'focusKeyword',
-									type: 'text',
-									label: 'Focus Keyword',
-									description: 'Primary keyword to optimize this content for',
-								},
-								{
-									name: 'ogTitle',
-									type: 'text',
-									label: 'OG Title',
-									description: 'Open Graph title (falls back to Meta Title)',
-								},
-								{
-									name: 'ogDescription',
-									type: 'textarea',
-									label: 'OG Description',
-									rows: 2,
-									description: 'Open Graph description (falls back to Meta Description)',
-								},
-								{
-									name: 'ogImage',
-									type: 'upload',
-									relationTo: 'media',
-									label: 'OG Image',
-									mimeTypes: ['image/*'],
-									description: 'Recommended size: 1200x630px',
-								},
-								{
-									name: 'ogType',
-									type: 'select',
-									label: 'OG Type',
-									options: [
-										{
-											label: 'Website',
-											value: 'website',
-										},
-										{
-											label: 'Article',
-											value: 'article',
-										},
-										{
-											label: 'Product',
-											value: 'product',
-										},
-										{
-											label: 'Profile',
-											value: 'profile',
-										},
-									],
-									defaultValue: 'website',
-								},
-								{
-									name: 'twitterCard',
-									type: 'select',
-									label: 'Twitter Card',
-									options: [
-										{
-											label: 'Summary',
-											value: 'summary',
-										},
-										{
-											label: 'Summary Large Image',
-											value: 'summary_large_image',
-										},
-										{
-											label: 'Player',
-											value: 'player',
-										},
-										{
-											label: 'App',
-											value: 'app',
-										},
-									],
-									defaultValue: 'summary_large_image',
-								},
-								{
-									name: 'noIndex',
-									type: 'checkbox',
-									label: 'No Index',
-									description: 'Tell search engines not to index this page',
-									defaultValue: false,
-								},
-								{
-									name: 'noFollow',
-									type: 'checkbox',
-									label: 'No Follow',
-									description: 'Tell search engines not to follow links on this page',
-									defaultValue: false,
-								},
-								{
-									name: 'excludeFromSitemap',
-									type: 'checkbox',
-									label: 'Exclude from Sitemap',
-									description:
-										'Exclude this page from the XML sitemap without affecting search engine indexing',
-									defaultValue: false,
-								},
-								{
-									name: 'structuredData',
-									type: 'json',
-									label: 'Structured Data (JSON-LD)',
-									description: 'Custom JSON-LD structured data for this page',
-								},
-							],
+							name: 'metaDescription',
+							type: 'textarea',
+							label: 'Meta Description',
 						},
 					],
+				},
+				{
+					name: 'internalNotes',
+					type: 'text',
+					label: 'Internal Notes',
+					description: 'Never included in version comparisons.',
+					diffExclude: true,
 				},
 			],
 			admin: {
@@ -457,6 +339,10 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 				},
 			],
 			timestamps: true,
+			versions: {
+				drafts: true,
+				maxPerDoc: 10,
+			},
 		},
 		{
 			slug: 'pages',
@@ -1942,6 +1828,7 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 					name: 'token',
 					type: 'text',
 					required: true,
+					diffExclude: true,
 				},
 				{
 					name: 'expiresAt',
@@ -1986,10 +1873,12 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 				{
 					name: 'accessToken',
 					type: 'text',
+					diffExclude: true,
 				},
 				{
 					name: 'refreshToken',
 					type: 'text',
+					diffExclude: true,
 				},
 				{
 					name: 'accessTokenExpiresAt',
@@ -2006,10 +1895,12 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 				{
 					name: 'idToken',
 					type: 'text',
+					diffExclude: true,
 				},
 				{
 					name: 'password',
 					type: 'text',
+					diffExclude: true,
 				},
 			],
 			admin: {
@@ -2062,6 +1953,7 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 					admin: {
 						hidden: true,
 					},
+					diffExclude: true,
 				},
 				{
 					name: 'keyPrefix',

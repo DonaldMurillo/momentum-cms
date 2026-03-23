@@ -197,6 +197,181 @@ test.describe('Versioning Admin UI', { tag: ['@versioning', '@multi-user', '@adm
 		await expect(versionEntries.first()).toBeVisible({ timeout: 10000 });
 	});
 
+	test('version history shows timeline indicators', async ({ authenticatedPage: page }) => {
+		await page.goto(`/admin/collections/articles/${testArticleId}/edit`);
+		await page.waitForLoadState('domcontentloaded');
+
+		const versionHistory = page.locator('mcms-version-history');
+		await expect(versionHistory).toBeVisible({ timeout: 15000 });
+
+		// Timeline dots should be present
+		const timelineDots = versionHistory.locator('[data-testid="timeline-dot"]');
+		await expect(timelineDots.first()).toBeVisible({ timeout: 10000 });
+
+		// First version (current) should have data-current="true"
+		const currentDot = timelineDots.first();
+		await expect(currentDot).toHaveAttribute('data-current', 'true');
+	});
+
+	test('compare dialog opens with version selectors and view mode tabs', async ({
+		authenticatedPage: page,
+		request,
+	}) => {
+		// Create article with 2 published versions for diff
+		await signInApi(request, TEST_CREDENTIALS);
+		const createRes = await request.post('/api/articles', {
+			headers: { 'Content-Type': 'application/json' },
+			data: { title: 'VUI-Diff Dialog', content: '<p>Original</p>' },
+		});
+		expect(createRes.status()).toBe(201);
+		const created = (await createRes.json()) as { doc: { id: string } };
+
+		await request.post(`/api/articles/${created.doc.id}/publish`);
+		await request.patch(`/api/articles/${created.doc.id}`, {
+			headers: { 'Content-Type': 'application/json' },
+			data: { title: 'VUI-Diff Dialog Updated', content: '<p>Changed</p>' },
+		});
+		await request.post(`/api/articles/${created.doc.id}/publish`);
+
+		// Navigate to edit page
+		await page.goto(`/admin/collections/articles/${created.doc.id}/edit`);
+		await page.waitForLoadState('domcontentloaded');
+
+		const versionHistory = page.locator('mcms-version-history');
+		await expect(versionHistory).toBeVisible({ timeout: 15000 });
+
+		// Click Compare on the second (non-current/older) version — .first() would
+		// compare the current version against the live doc (identical), so use .nth(1).
+		const compareButtons = versionHistory.getByRole('button', { name: 'Compare' });
+		await expect(compareButtons.nth(1)).toBeVisible({ timeout: 10000 });
+		await compareButtons.nth(1).click();
+
+		// Dialog should open
+		const dialog = page.locator('mcms-version-diff-dialog');
+		await expect(dialog).toBeVisible({ timeout: 10000 });
+
+		// Version selectors should be present
+		await expect(dialog.locator('[data-testid="version-select-left"]')).toBeVisible();
+		await expect(dialog.locator('[data-testid="version-select-right"]')).toBeVisible();
+
+		// View mode tabs should be present
+		await expect(dialog.locator('[data-testid="tab-inline"]')).toBeVisible();
+		await expect(dialog.locator('[data-testid="tab-side-by-side"]')).toBeVisible();
+
+		// Summary bar should be visible with change counts
+		const summary = dialog.locator('[data-testid="diff-summary"]');
+		await expect(summary).toBeVisible({ timeout: 10000 });
+
+		// Diff content should show field differences
+		const diffContent = dialog.locator('[data-testid="diff-content"]');
+		await expect(diffContent).toBeVisible({ timeout: 10000 });
+
+		// Close dialog
+		await dialog.getByRole('button', { name: 'Close' }).click();
+	});
+
+	test('compare dialog allows switching between inline and side-by-side modes', async ({
+		authenticatedPage: page,
+		request,
+	}) => {
+		await signInApi(request, TEST_CREDENTIALS);
+		const createRes = await request.post('/api/articles', {
+			headers: { 'Content-Type': 'application/json' },
+			data: { title: 'VUI-View Modes', content: '<p>Original</p>' },
+		});
+		expect(createRes.status()).toBe(201);
+		const created = (await createRes.json()) as { doc: { id: string } };
+
+		await request.post(`/api/articles/${created.doc.id}/publish`);
+		await request.patch(`/api/articles/${created.doc.id}`, {
+			headers: { 'Content-Type': 'application/json' },
+			data: { title: 'VUI-View Modes Changed' },
+		});
+		await request.post(`/api/articles/${created.doc.id}/publish`);
+
+		await page.goto(`/admin/collections/articles/${created.doc.id}/edit`);
+		await page.waitForLoadState('domcontentloaded');
+
+		const versionHistory = page.locator('mcms-version-history');
+		await expect(versionHistory).toBeVisible({ timeout: 15000 });
+
+		// Use .nth(1) to pick the older version — .first() is the current version
+		// which would compare identical data and yield no visible diffs.
+		const compareButtons = versionHistory.getByRole('button', { name: 'Compare' });
+		await expect(compareButtons.nth(1)).toBeVisible({ timeout: 10000 });
+		await compareButtons.nth(1).click();
+
+		const dialog = page.locator('mcms-version-diff-dialog');
+		await expect(dialog).toBeVisible({ timeout: 10000 });
+
+		// Wait for diff content to load before interacting with tabs
+		const diffContent = dialog.locator('[data-testid="diff-content"]');
+		await expect(diffContent).toBeVisible({ timeout: 10000 });
+
+		// Default is inline mode — inline tab should have primary variant
+		const inlineTab = dialog.locator('[data-testid="tab-inline"]');
+		const sideBySideTab = dialog.locator('[data-testid="tab-side-by-side"]');
+
+		// Switch to side-by-side
+		await sideBySideTab.click();
+
+		// Switch back to inline
+		await inlineTab.click();
+
+		// Dialog should still be visible and functional
+		await expect(diffContent).toBeVisible();
+
+		await dialog.getByRole('button', { name: 'Close' }).click();
+	});
+
+	test('compare dialog swap button exchanges version selections', async ({
+		authenticatedPage: page,
+		request,
+	}) => {
+		await signInApi(request, TEST_CREDENTIALS);
+		const createRes = await request.post('/api/articles', {
+			headers: { 'Content-Type': 'application/json' },
+			data: { title: 'VUI-Swap Test', content: '<p>Original</p>' },
+		});
+		expect(createRes.status()).toBe(201);
+		const created = (await createRes.json()) as { doc: { id: string } };
+
+		await request.post(`/api/articles/${created.doc.id}/publish`);
+		await request.patch(`/api/articles/${created.doc.id}`, {
+			headers: { 'Content-Type': 'application/json' },
+			data: { title: 'VUI-Swap Test Updated' },
+		});
+		await request.post(`/api/articles/${created.doc.id}/publish`);
+
+		await page.goto(`/admin/collections/articles/${created.doc.id}/edit`);
+		await page.waitForLoadState('domcontentloaded');
+
+		const versionHistory = page.locator('mcms-version-history');
+		await expect(versionHistory).toBeVisible({ timeout: 15000 });
+
+		const compareButtons = versionHistory.getByRole('button', { name: 'Compare' });
+		await expect(compareButtons.nth(1)).toBeVisible({ timeout: 10000 });
+		await compareButtons.nth(1).click();
+
+		const dialog = page.locator('mcms-version-diff-dialog');
+		await expect(dialog).toBeVisible({ timeout: 10000 });
+
+		// Get initial version selections
+		const leftSelect = dialog.locator('[data-testid="version-select-left"]');
+		const rightSelect = dialog.locator('[data-testid="version-select-right"]');
+		const initialLeft = await leftSelect.inputValue();
+		const initialRight = await rightSelect.inputValue();
+
+		// Click swap
+		await dialog.locator('[data-testid="diff-swap"]').click();
+
+		// Selections should be exchanged
+		await expect(leftSelect).toHaveValue(initialRight);
+		await expect(rightSelect).toHaveValue(initialLeft);
+
+		await dialog.getByRole('button', { name: 'Close' }).click();
+	});
+
 	test('admin can publish via UI and status updates', async ({
 		authenticatedPage: page,
 		request,

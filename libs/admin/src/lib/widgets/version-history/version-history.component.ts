@@ -15,7 +15,6 @@ import {
 	Card,
 	CardHeader,
 	CardContent,
-	Separator,
 	DialogService,
 } from '@momentumcms/ui';
 import {
@@ -32,21 +31,12 @@ import {
 /**
  * Version History Widget
  *
- * Displays a list of document versions with the ability to restore previous versions.
- *
- * @example
- * ```html
- * <mcms-version-history
- *   [collection]="'posts'"
- *   [documentId]="'abc123'"
- *   [documentLabel]="'Post'"
- *   (restored)="onVersionRestored($event)"
- * />
- * ```
+ * Displays a visual timeline of document versions with the ability to
+ * restore previous versions and compare any two versions.
  */
 @Component({
 	selector: 'mcms-version-history',
-	imports: [DatePipe, Badge, Button, Skeleton, Card, CardHeader, CardContent, Separator],
+	imports: [DatePipe, Badge, Button, Skeleton, Card, CardHeader, CardContent],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `
@@ -60,7 +50,7 @@ import {
 				</div>
 			</mcms-card-header>
 
-			<mcms-card-content class="space-y-3">
+			<mcms-card-content class="space-y-0">
 				@if (isLoading()) {
 					<div class="space-y-3">
 						@for (i of [1, 2, 3]; track i) {
@@ -72,57 +62,72 @@ import {
 				} @else if (versions().length === 0) {
 					<p class="text-sm text-muted-foreground">No version history available</p>
 				} @else {
-					@for (version of versions(); track version.id; let first = $first) {
-						@if (!first) {
-							<mcms-separator />
-						}
-						<div class="flex items-center justify-between py-2">
-							<div class="flex flex-col gap-1">
-								<div class="flex items-center gap-2">
-									<mcms-badge [variant]="getStatusVariant(version._status)">
-										{{ version._status }}
-									</mcms-badge>
-									@if (version.autosave) {
-										<mcms-badge variant="outline">autosave</mcms-badge>
-									}
-									@if (first) {
-										<mcms-badge variant="secondary">current</mcms-badge>
-									}
-								</div>
-								<span class="text-sm text-muted-foreground">
-									{{ version.createdAt | date: 'medium' }}
-								</span>
+					@for (version of versions(); track version.id; let first = $first; let last = $last) {
+						<div class="flex gap-3" data-testid="version-timeline-item">
+							<!-- Timeline indicator -->
+							<div class="flex flex-col items-center pt-3">
+								<div
+									class="rounded-full border-2"
+									[class]="getTimelineDotClass(version, first)"
+									data-testid="timeline-dot"
+									[attr.data-status]="version._status"
+									[attr.data-current]="first"
+									[attr.data-autosave]="version.autosave"
+								></div>
+								@if (!last) {
+									<div class="w-px flex-1 bg-border min-h-4"></div>
+								}
 							</div>
-							@if (!first) {
+
+							<!-- Version content -->
+							<div class="flex flex-1 items-center justify-between py-2">
+								<div class="flex flex-col gap-1">
+									<div class="flex items-center gap-2">
+										<mcms-badge [variant]="getStatusVariant(version._status)">
+											{{ version._status }}
+										</mcms-badge>
+										@if (version.autosave) {
+											<mcms-badge variant="outline">autosave</mcms-badge>
+										}
+										@if (first) {
+											<mcms-badge variant="secondary">current</mcms-badge>
+										}
+									</div>
+									<span class="text-sm text-muted-foreground">
+										{{ version.createdAt | date: 'medium' }}
+									</span>
+								</div>
 								<div class="flex items-center gap-1">
 									<button
 										mcms-button
 										variant="ghost"
 										size="sm"
-										title="Compare with current version"
-										aria-label="Compare with current version"
+										title="Compare with current document"
+										aria-label="Compare with current document"
 										(click)="onCompare(version)"
 									>
 										Compare
 									</button>
-									<button
-										mcms-button
-										variant="outline"
-										size="sm"
-										[disabled]="isRestoring()"
-										[attr.aria-label]="
-											'Restore version from ' + (version.createdAt | date: 'medium')
-										"
-										(click)="onRestore(version)"
-									>
-										@if (isRestoring() && restoringVersionId() === version.id) {
-											Restoring...
-										} @else {
-											Restore
-										}
-									</button>
+									@if (!first) {
+										<button
+											mcms-button
+											variant="outline"
+											size="sm"
+											[disabled]="isRestoring()"
+											[attr.aria-label]="
+												'Restore version from ' + (version.createdAt | date: 'medium')
+											"
+											(click)="onRestore(version)"
+										>
+											@if (isRestoring() && restoringVersionId() === version.id) {
+												Restoring...
+											} @else {
+												Restore
+											}
+										</button>
+									}
 								</div>
-							}
+							</div>
 						</div>
 					}
 				}
@@ -200,6 +205,22 @@ export class VersionHistoryWidget {
 				this.loadVersions(collection, docId, 1);
 			}
 		});
+	}
+
+	/**
+	 * Get CSS classes for the timeline dot based on version status.
+	 */
+	getTimelineDotClass(version: DocumentVersionParsed, isCurrent: boolean): string {
+		const base = isCurrent ? 'h-3.5 w-3.5' : version.autosave ? 'h-2 w-2' : 'h-3 w-3';
+
+		if (isCurrent) {
+			return `${base} border-primary bg-primary ring-2 ring-primary/20`;
+		}
+		if (version._status === 'published') {
+			return `${base} border-primary bg-primary`;
+		}
+		// Draft: hollow
+		return `${base} border-muted-foreground bg-background`;
 	}
 
 	/**
@@ -282,24 +303,24 @@ export class VersionHistoryWidget {
 	}
 
 	/**
-	 * Compare a version with the current (most recent) version.
+	 * Compare a version against the current live document.
+	 * Uses "current" as a special version ID that the server resolves
+	 * to the live document data.
 	 */
 	onCompare(version: DocumentVersionParsed): void {
-		const current = this.versions()[0];
-		if (!current) return;
-
 		const data: VersionDiffDialogData = {
 			collection: this.collection(),
 			documentId: this.documentId(),
 			versionId1: version.id,
-			versionId2: current.id,
+			versionId2: 'current',
 			label1: new Date(version.createdAt).toLocaleString(),
 			label2: 'Current',
+			versions: this.versions(),
 		};
 
 		this.dialogService.open(VersionDiffDialogComponent, {
 			data,
-			width: '40rem',
+			width: '56rem',
 		});
 	}
 

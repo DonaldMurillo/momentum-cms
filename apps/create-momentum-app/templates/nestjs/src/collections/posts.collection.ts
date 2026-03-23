@@ -28,10 +28,6 @@ export const Posts = defineCollection({
 	admin: {
 		useAsTitle: 'title',
 		group: 'Content',
-		preview: {
-			component: () =>
-				import('../previews/post-preview.component').then((m) => m.PostPreviewComponent),
-		},
 	},
 	fields: [
 		text('title', { required: true, label: 'Title' }),
