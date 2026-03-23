@@ -66,28 +66,38 @@ export interface MomentumTracker {
  * Generate or retrieve a visitor ID from localStorage.
  */
 function getVisitorId(): string {
-	if (typeof localStorage === 'undefined') return 'server';
+	try {
+		if (typeof localStorage === 'undefined') return 'server';
 
-	let visitorId = localStorage.getItem('_m_vid');
-	if (!visitorId) {
-		visitorId = generateId();
-		localStorage.setItem('_m_vid', visitorId);
+		let visitorId = localStorage.getItem('_m_vid');
+		if (!visitorId) {
+			visitorId = generateId();
+			localStorage.setItem('_m_vid', visitorId);
+		}
+		return visitorId;
+	} catch {
+		// jsdom may tear down localStorage before pending callbacks complete
+		return 'server';
 	}
-	return visitorId;
 }
 
 /**
  * Generate or retrieve a session ID from sessionStorage.
  */
 function getSessionId(): string {
-	if (typeof sessionStorage === 'undefined') return 'server';
+	try {
+		if (typeof sessionStorage === 'undefined') return 'server';
 
-	let sessionId = sessionStorage.getItem('_m_sid');
-	if (!sessionId) {
-		sessionId = generateId();
-		sessionStorage.setItem('_m_sid', sessionId);
+		let sessionId = sessionStorage.getItem('_m_sid');
+		if (!sessionId) {
+			sessionId = generateId();
+			sessionStorage.setItem('_m_sid', sessionId);
+		}
+		return sessionId;
+	} catch {
+		// jsdom may tear down sessionStorage before pending callbacks complete
+		return 'server';
 	}
-	return sessionId;
 }
 
 /**

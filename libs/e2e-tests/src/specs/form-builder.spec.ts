@@ -911,8 +911,10 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 				await expect(formOption).toBeVisible({ timeout: 5000 });
 				await formOption.click();
 
-				// Form block should appear
-				const formBlock = authenticatedPage.locator('[data-block-type="form"]');
+				// Form block should appear (scope to block-wrapper to avoid duplicate from block-renderer)
+				const formBlock = authenticatedPage.locator(
+					'[data-testid="block-wrapper"][data-block-type="form"]',
+				);
 				await expect(formBlock).toBeVisible({ timeout: 5000 });
 
 				// Should show the Form relationship dropdown (select element)
@@ -961,7 +963,9 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 				await expect(formOption).toBeVisible({ timeout: 5000 });
 				await formOption.click();
 
-				const formBlock = authenticatedPage.locator('[data-block-type="form"]');
+				const formBlock = authenticatedPage.locator(
+					'[data-testid="block-wrapper"][data-block-type="form"]',
+				);
 				await expect(formBlock).toBeVisible({ timeout: 5000 });
 
 				// Select "Contact Us" from the relationship dropdown

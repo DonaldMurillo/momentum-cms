@@ -105,9 +105,16 @@ test.describe('Visual Block Editor', { tag: ['@admin', '@blocks'] }, () => {
 		await expect(visualEditor).toBeVisible({ timeout: 10000 });
 
 		// Check block types are properly identified via data attributes
-		await expect(authenticatedPage.locator('[data-block-type="hero"]')).toBeVisible();
-		await expect(authenticatedPage.locator('[data-block-type="textBlock"]')).toBeVisible();
-		await expect(authenticatedPage.locator('[data-block-type="feature"]')).toBeVisible();
+		// Scope to block-wrapper to avoid duplicates from block-renderer admin mode wrapper
+		await expect(
+			visualEditor.locator('[data-testid="block-wrapper"][data-block-type="hero"]'),
+		).toBeVisible();
+		await expect(
+			visualEditor.locator('[data-testid="block-wrapper"][data-block-type="textBlock"]'),
+		).toBeVisible();
+		await expect(
+			visualEditor.locator('[data-testid="block-wrapper"][data-block-type="feature"]'),
+		).toBeVisible();
 	});
 
 	test('shows empty state for page with no blocks', async ({ authenticatedPage, request }) => {

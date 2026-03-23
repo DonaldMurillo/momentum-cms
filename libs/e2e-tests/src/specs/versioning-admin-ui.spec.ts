@@ -240,10 +240,11 @@ test.describe('Versioning Admin UI', { tag: ['@versioning', '@multi-user', '@adm
 		const versionHistory = page.locator('mcms-version-history');
 		await expect(versionHistory).toBeVisible({ timeout: 15000 });
 
-		// Click Compare on the second (non-current) version
-		const compareButton = versionHistory.getByRole('button', { name: 'Compare' }).first();
-		await expect(compareButton).toBeVisible({ timeout: 10000 });
-		await compareButton.click();
+		// Click Compare on the second (non-current/older) version — .first() would
+		// compare the current version against the live doc (identical), so use .nth(1).
+		const compareButtons = versionHistory.getByRole('button', { name: 'Compare' });
+		await expect(compareButtons.nth(1)).toBeVisible({ timeout: 10000 });
+		await compareButtons.nth(1).click();
 
 		// Dialog should open
 		const dialog = page.locator('mcms-version-diff-dialog');
@@ -294,12 +295,18 @@ test.describe('Versioning Admin UI', { tag: ['@versioning', '@multi-user', '@adm
 		const versionHistory = page.locator('mcms-version-history');
 		await expect(versionHistory).toBeVisible({ timeout: 15000 });
 
-		const compareButton = versionHistory.getByRole('button', { name: 'Compare' }).first();
-		await expect(compareButton).toBeVisible({ timeout: 10000 });
-		await compareButton.click();
+		// Use .nth(1) to pick the older version — .first() is the current version
+		// which would compare identical data and yield no visible diffs.
+		const compareButtons = versionHistory.getByRole('button', { name: 'Compare' });
+		await expect(compareButtons.nth(1)).toBeVisible({ timeout: 10000 });
+		await compareButtons.nth(1).click();
 
 		const dialog = page.locator('mcms-version-diff-dialog');
 		await expect(dialog).toBeVisible({ timeout: 10000 });
+
+		// Wait for diff content to load before interacting with tabs
+		const diffContent = dialog.locator('[data-testid="diff-content"]');
+		await expect(diffContent).toBeVisible({ timeout: 10000 });
 
 		// Default is inline mode — inline tab should have primary variant
 		const inlineTab = dialog.locator('[data-testid="tab-inline"]');
@@ -312,7 +319,7 @@ test.describe('Versioning Admin UI', { tag: ['@versioning', '@multi-user', '@adm
 		await inlineTab.click();
 
 		// Dialog should still be visible and functional
-		await expect(dialog.locator('[data-testid="diff-content"]')).toBeVisible();
+		await expect(diffContent).toBeVisible();
 
 		await dialog.getByRole('button', { name: 'Close' }).click();
 	});
@@ -342,9 +349,9 @@ test.describe('Versioning Admin UI', { tag: ['@versioning', '@multi-user', '@adm
 		const versionHistory = page.locator('mcms-version-history');
 		await expect(versionHistory).toBeVisible({ timeout: 15000 });
 
-		const compareButton = versionHistory.getByRole('button', { name: 'Compare' }).first();
-		await expect(compareButton).toBeVisible({ timeout: 10000 });
-		await compareButton.click();
+		const compareButtons = versionHistory.getByRole('button', { name: 'Compare' });
+		await expect(compareButtons.nth(1)).toBeVisible({ timeout: 10000 });
+		await compareButtons.nth(1).click();
 
 		const dialog = page.locator('mcms-version-diff-dialog');
 		await expect(dialog).toBeVisible({ timeout: 10000 });

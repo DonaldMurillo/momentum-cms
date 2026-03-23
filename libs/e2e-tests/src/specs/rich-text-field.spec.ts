@@ -203,8 +203,8 @@ test.describe('Rich text field', { tag: ['@field', '@admin'] }, () => {
 		const editor = page.locator('[data-testid="rich-text-editor"]');
 		await expect(editor).toBeVisible({ timeout: 15000 });
 
-		// The toolbar should be visible
-		const toolbar = page.locator('[role="toolbar"]');
+		// The toolbar should be visible (use aria-label to target the formatting toolbar, not preview toolbar)
+		const toolbar = page.getByRole('toolbar', { name: /formatting/i });
 		await expect(toolbar).toBeVisible();
 
 		// Verify toolbar buttons exist

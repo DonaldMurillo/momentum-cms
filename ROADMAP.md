@@ -63,6 +63,7 @@ Momentum CMS ships with a comprehensive feature set today:
 ### Versioning & Drafts
 
 - Full document version history with restore
+- Version diff UI with deep diff engine, field-level change highlighting, and side-by-side comparison
 - Draft/published workflow
 - Autosave with configurable interval
 - Scheduled publishing (`scheduledPublishAt`)
@@ -122,12 +123,6 @@ Momentum CMS ships with a comprehensive feature set today:
 
 ## Planned Features
 
-### P0 — High Priority
-
-#### Version Diff UI
-
-Version snapshots are already stored — we need a visual way to compare them. Side-by-side or inline diff viewer with field-level change highlighting and version navigation.
-
 ### P1 — Medium Priority
 
 #### Media Library Enhancements
@@ -181,6 +176,7 @@ These features were evaluated and explicitly decided against:
 
 ## Recently Shipped
 
+- Version diff UI — deep diff engine with field-level change highlighting, side-by-side comparison, inline diff toggle, and version navigation with security access control
 - Live preview side panel — real-time in-memory Angular rendering with `LivePreviewService`, signals-based instant updates, per-collection preview components, and form builder plugin support
 - Client SDK generation (`--client` flag) — framework-agnostic, fetch-based TypeScript API client with typed CRUD, globals, auth modes, and error handling
 - Generator decomposition into focused modules (types, client, admin config, serialization)
