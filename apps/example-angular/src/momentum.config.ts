@@ -18,6 +18,7 @@ import { cronPlugin } from '@momentumcms/plugins/cron';
 import { formBuilderPlugin } from '@momentumcms/plugins-form-builder';
 import { imagePlugin } from '@momentumcms/plugins/image';
 import { otelPlugin } from '@momentumcms/plugins/otel';
+import { mediaOrganizerPlugin } from '@momentumcms/plugins/media-organizer';
 import { join } from 'node:path';
 import { collections } from '@momentumcms/example-config/collections';
 import { globals } from '@momentumcms/example-config/globals';
@@ -134,6 +135,11 @@ export const otel = otelPlugin({
 	metrics: { enabled: true, prometheus: true },
 });
 
+/**
+ * Media Organizer plugin — adds folder/tag organization to upload collections.
+ */
+export const mediaOrganizer = mediaOrganizerPlugin();
+
 export const seo = seoPlugin({
 	collections: ['categories', 'articles', 'pages'],
 	siteUrl: `http://localhost:${process.env['PORT'] || 4000}`,
@@ -178,7 +184,20 @@ const config = defineMomentumConfig({
 		level: 'debug',
 		format: 'pretty',
 	},
-	plugins: [events, analytics, seo, redirects, email, authPlugin, queue, cron, forms, images, otel],
+	plugins: [
+		events,
+		analytics,
+		seo,
+		redirects,
+		email,
+		authPlugin,
+		queue,
+		cron,
+		forms,
+		images,
+		otel,
+		mediaOrganizer,
+	],
 	seeding: {
 		...exampleSeedingConfig,
 		defaults: (helpers) => [

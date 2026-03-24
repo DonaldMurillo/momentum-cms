@@ -196,7 +196,23 @@ export function initializeMomentum(
 		// 2. Initialize database schema (respects db.syncSchema / migrations.mode)
 		await syncDatabaseSchema(config, log);
 
-		// 3. Initialize Momentum API singleton
+		// 3. Apply plugin collection modifications (field injections, etc.)
+		for (const plugin of plugins) {
+			if (plugin.collections) {
+				const slugs = new Set(config.collections.map((c) => c.slug));
+				for (const col of plugin.collections) {
+					if (!slugs.has(col.slug)) {
+						config.collections.push(col);
+						slugs.add(col.slug);
+					}
+				}
+			}
+			if (plugin.modifyCollections) {
+				plugin.modifyCollections(config.collections);
+			}
+		}
+
+		// 4. Initialize Momentum API singleton
 		log.info('Initializing API...');
 		const api = initializeMomentumAPI(config);
 

@@ -4,7 +4,7 @@
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Subject } from 'rxjs';
 import { UploadFieldRenderer } from '../upload-field.component';
 import { UploadService, type UploadProgress } from '../../../../services/upload.service';
@@ -690,17 +690,63 @@ describe('UploadFieldRenderer', () => {
 	});
 
 	describe('openMediaPicker', () => {
-		it('should open dialog with DialogService', () => {
-			setup({ mimeTypes: ['image/*'], relationTo: 'media' });
+		let httpTesting: HttpTestingController;
 
-			component.openMediaPicker();
-
-			expect(mockDialog.open).toHaveBeenCalled();
+		beforeEach(() => {
+			httpTesting = TestBed.inject(HttpTestingController);
 		});
 
-		it('should set value on formNode when media is selected', () => {
+		/** Flush the folder/tag API requests that openMediaPicker fires */
+		function flushFolderTagRequests(
+			folders: Array<{ id: string; name: string }> = [],
+			tags: Array<{ id: string; name: string }> = [],
+		): void {
+			httpTesting
+				.expectOne((req) => req.url.includes('/api/media-folders'))
+				.flush({ docs: folders, totalDocs: folders.length, totalPages: 1 });
+			httpTesting
+				.expectOne((req) => req.url.includes('/api/media-tags'))
+				.flush({ docs: tags, totalDocs: tags.length, totalPages: 1 });
+		}
+
+		it('should open dialog with folders and tags from API', async () => {
+			setup({ mimeTypes: ['image/*'], relationTo: 'media' });
+
+			const promise = component.openMediaPicker();
+			flushFolderTagRequests([{ id: 'f1', name: 'Photos' }], [{ id: 't1', name: 'Important' }]);
+			await promise;
+
+			expect(mockDialog.open).toHaveBeenCalled();
+			const callArgs = mockDialog.open.mock.calls[0];
+			const data = callArgs[1].data;
+			expect(data.folders).toEqual([{ id: 'f1', name: 'Photos' }]);
+			expect(data.tags).toEqual([{ id: 't1', name: 'Important' }]);
+		});
+
+		it('should pass empty arrays when plugin collections do not exist', async () => {
+			setup({ mimeTypes: ['image/*'], relationTo: 'media' });
+
+			const promise = component.openMediaPicker();
+			// Simulate 404 — plugin not installed
+			httpTesting
+				.expectOne((req) => req.url.includes('/api/media-folders'))
+				.flush('Not Found', { status: 404, statusText: 'Not Found' });
+			httpTesting
+				.expectOne((req) => req.url.includes('/api/media-tags'))
+				.flush('Not Found', { status: 404, statusText: 'Not Found' });
+			await promise;
+
+			expect(mockDialog.open).toHaveBeenCalled();
+			const data = mockDialog.open.mock.calls[0][1].data;
+			expect(data.folders).toEqual([]);
+			expect(data.tags).toEqual([]);
+		});
+
+		it('should set value on formNode when media is selected', async () => {
 			const { state: mock } = setup();
-			component.openMediaPicker();
+			const promise = component.openMediaPicker();
+			flushFolderTagRequests();
+			await promise;
 
 			const selectedMedia = {
 				id: 'media-42',
@@ -715,18 +761,22 @@ describe('UploadFieldRenderer', () => {
 			expect(mock.state.markAsTouched).toHaveBeenCalled();
 		});
 
-		it('should not set value when dialog is closed without selection', () => {
+		it('should not set value when dialog is closed without selection', async () => {
 			const { state: mock } = setup({}, null);
-			component.openMediaPicker();
+			const promise = component.openMediaPicker();
+			flushFolderTagRequests();
+			await promise;
 
 			mockDialog.afterClosedSubject.next(undefined);
 
 			expect(mock.state.value()).toBeNull();
 		});
 
-		it('should not set value when dialog returns null media', () => {
+		it('should not set value when dialog returns null media', async () => {
 			const { state: mock } = setup({}, null);
-			component.openMediaPicker();
+			const promise = component.openMediaPicker();
+			flushFolderTagRequests();
+			await promise;
 
 			mockDialog.afterClosedSubject.next({ media: null });
 

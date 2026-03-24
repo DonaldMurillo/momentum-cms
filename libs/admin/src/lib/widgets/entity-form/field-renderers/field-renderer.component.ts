@@ -5,6 +5,7 @@ import {
 	effect,
 	inject,
 	input,
+	reflectComponentType,
 	signal,
 	Type,
 } from '@angular/core';
@@ -68,6 +69,9 @@ export class FieldRenderer {
 	/** Resolved component type, set after lazy loading completes */
 	readonly resolvedComponent = signal<Type<unknown> | null>(null);
 
+	/** Input names accepted by the resolved component (avoids NG0303 errors) */
+	private readonly componentInputNames = signal<Set<string>>(new Set());
+
 	/** Error from lazy loading failure */
 	readonly loadError = signal<Error | null>(null);
 
@@ -86,15 +90,27 @@ export class FieldRenderer {
 		return f.type;
 	});
 
-	/** Inputs to pass to the dynamically loaded component via NgComponentOutlet */
-	readonly rendererInputs = computed(() => ({
-		field: this.field(),
-		formNode: this.formNode(),
-		formTree: this.formTree(),
-		formModel: this.formModel(),
-		mode: this.mode(),
-		path: this.path(),
-	}));
+	/** Inputs to pass to the dynamically loaded component via NgComponentOutlet.
+	 *  Only includes inputs the target component declares to avoid NG0303 errors. */
+	readonly rendererInputs = computed(() => {
+		const allInputs: Record<string, unknown> = {
+			field: this.field(),
+			formNode: this.formNode(),
+			formTree: this.formTree(),
+			formModel: this.formModel(),
+			mode: this.mode(),
+			path: this.path(),
+		};
+		const accepted = this.componentInputNames();
+		if (accepted.size === 0) return allInputs;
+		const filtered: Record<string, unknown> = {};
+		for (const [key, value] of Object.entries(allInputs)) {
+			if (accepted.has(key)) {
+				filtered[key] = value;
+			}
+		}
+		return filtered;
+	});
 
 	constructor() {
 		effect(() => {
@@ -103,7 +119,14 @@ export class FieldRenderer {
 
 			if (loader) {
 				loader()
-					.then((component) => this.resolvedComponent.set(component))
+					.then((component) => {
+						// Reflect the component's declared inputs to filter NgComponentOutlet inputs
+						const mirror = reflectComponentType(component);
+						if (mirror) {
+							this.componentInputNames.set(new Set(mirror.inputs.map((i) => i.propName)));
+						}
+						this.resolvedComponent.set(component);
+					})
 					.catch((error: unknown) => {
 						this.loadError.set(error instanceof Error ? error : new Error(String(error)));
 					});

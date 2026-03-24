@@ -112,7 +112,9 @@
 			],
 			"@momentumcms/plugins-form-builder/collections": [
 				"libs/plugins/form-builder/src/lib/collections/index.ts"
-			]
+			],
+			"@momentumcms/plugins-media-organizer": ["libs/plugins/media-organizer/src/index.ts"],
+			"@momentumcms/plugins/media-organizer": ["libs/plugins/media-organizer/src/index.ts"]
 		}
 	},
 	"exclude": ["node_modules", "tmp"]

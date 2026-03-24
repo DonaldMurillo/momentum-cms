@@ -458,7 +458,9 @@ describe('MediaLibraryPage - coverage', () => {
 			await vi.waitFor(() => {
 				const calls = mockCollection.find.mock.calls;
 				const lastCall = calls[calls.length - 1]?.[0];
-				expect(lastCall?.where).toEqual({ filename: { contains: 'landscape' } });
+				expect(lastCall?.where).toEqual({
+					or: [{ filename: { contains: 'landscape' } }, { alt: { contains: 'landscape' } }],
+				});
 				expect(lastCall?.page).toBe(1);
 			});
 		});

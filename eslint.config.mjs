@@ -148,7 +148,13 @@ export default [
 	},
 	{
 		// Relax rules for test and story files
-		files: ['**/*.spec.ts', '**/*.test.ts', '**/e2e/**/*.ts', '**/*-e2e/**/*.ts', '**/*.stories.ts'],
+		files: [
+			'**/*.spec.ts',
+			'**/*.test.ts',
+			'**/e2e/**/*.ts',
+			'**/*-e2e/**/*.ts',
+			'**/*.stories.ts',
+		],
 		rules: {
 			'@typescript-eslint/no-explicit-any': 'off',
 			'@typescript-eslint/consistent-type-assertions': 'off',

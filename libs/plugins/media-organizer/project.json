@@ -1,0 +1,28 @@
+{
+	"name": "media-organizer",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/plugins/media-organizer/src",
+	"projectType": "library",
+	"tags": ["scope:plugin", "env:server"],
+	"targets": {
+		"test": {
+			"executor": "@nx/vitest:test",
+			"outputs": ["{workspaceRoot}/coverage/libs/plugins/media-organizer"],
+			"options": {
+				"config": "libs/plugins/media-organizer/vitest.config.ts"
+			}
+		},
+		"build": {
+			"executor": "@nx/esbuild:esbuild",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/libs/plugins/media-organizer",
+				"main": "libs/plugins/media-organizer/src/index.ts",
+				"tsConfig": "libs/plugins/media-organizer/tsconfig.lib.json",
+				"assets": ["libs/plugins/media-organizer/*.md"],
+				"format": ["cjs"],
+				"generatePackageJson": true
+			}
+		}
+	}
+}

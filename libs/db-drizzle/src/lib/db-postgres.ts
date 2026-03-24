@@ -55,6 +55,11 @@ import {
  * Maps field types to PostgreSQL column types.
  */
 function getColumnType(field: Field): string {
+	// hasMany fields store arrays — use JSONB
+	if ('hasMany' in field && field.hasMany) {
+		return 'JSONB';
+	}
+
 	switch (field.type) {
 		case 'text':
 		case 'textarea':
@@ -343,6 +348,9 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 	/** Maps collection slugs to actual DB table names (populated during initialize). */
 	const tableNameMap = new Map<string, string>();
 
+	/** Maps collection slugs to sets of hasMany field names (for JSONB query generation). */
+	const hasManyFieldsMap = new Map<string, Set<string>>();
+
 	/**
 	 * Resolves a collection slug to its actual database table name.
 	 * Falls back to the slug itself if no mapping exists.
@@ -427,6 +435,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 			paramIndex,
 			false,
 			mainTable,
+			hasManyFieldsMap.get(j.targetTable),
 		);
 		const joinWhere = joinClauses.length > 0 ? ` AND ${joinClauses.join(' AND ')}` : '';
 		const tableName = resolveTableName(j.targetTable);
@@ -443,6 +452,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 		paramIndex: number,
 		skipReserved: boolean,
 		mainTable?: string,
+		hasManyFields?: Set<string>,
 	): number {
 		for (const [key, value] of Object.entries(params)) {
 			if (skipReserved && pgReservedParams.has(key)) continue;
@@ -475,6 +485,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 						paramIndex,
 						false,
 						mainTable,
+						hasManyFields,
 					);
 					if (innerClauses.length > 0) {
 						subClauses.push(`(${innerClauses.join(' AND ')})`);
@@ -576,9 +587,32 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 								`Operator ${op} array exceeds maximum of ${MAX_IN_ARRAY_SIZE} elements (got ${arr.length})`,
 							);
 						}
-						const placeholders = arr.map(() => `$${paramIndex++}`).join(', ');
-						whereClauses.push(`${col} ${sql} (${placeholders})`);
-						whereValues.push(...arr);
+
+						// For hasMany (JSONB array) fields, use containment operator
+						if (hasManyFields?.has(key)) {
+							// JSONB @> checks if array contains the element(s)
+							// For $in: match if column contains ANY of the values → OR'd @> checks
+							// For $nin: match if column does NOT contain ANY → AND'd NOT @> checks
+							if (op === '$in') {
+								const containsClauses = arr.map(() => {
+									const placeholder = `$${paramIndex++}`;
+									return `${col} @> ${placeholder}::jsonb`;
+								});
+								whereClauses.push(`(${containsClauses.join(' OR ')})`);
+								whereValues.push(...arr.map((v) => JSON.stringify([v])));
+							} else {
+								const notContainsClauses = arr.map(() => {
+									const placeholder = `$${paramIndex++}`;
+									return `NOT (${col} @> ${placeholder}::jsonb)`;
+								});
+								whereClauses.push(`(${notContainsClauses.join(' AND ')})`);
+								whereValues.push(...arr.map((v) => JSON.stringify([v])));
+							}
+						} else {
+							const placeholders = arr.map(() => `$${paramIndex++}`).join(', ');
+							whereClauses.push(`${col} ${sql} (${placeholders})`);
+							whereValues.push(...arr);
+						}
 					}
 				}
 
@@ -619,6 +653,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 					1,
 					true,
 					resolveTableName(collection),
+					hasManyFieldsMap.get(collection),
 				);
 
 				// Handle $joins — build EXISTS subqueries for relationship filtering
@@ -646,6 +681,8 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 							whereValues,
 							paramIndex,
 							false,
+							undefined,
+							hasManyFieldsMap.get(j.targetTable),
 						);
 						const joinWhere = joinClauses.length > 0 ? ` AND ${joinClauses.join(' AND ')}` : '';
 						const tableName = resolveTableName(j.targetTable);
@@ -694,6 +731,7 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 					1,
 					true,
 					resolveTableName(collection),
+					hasManyFieldsMap.get(collection),
 				);
 
 				// Handle $joins — build EXISTS subqueries for relationship filtering
@@ -721,6 +759,8 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 							whereValues,
 							paramIndex,
 							false,
+							undefined,
+							hasManyFieldsMap.get(j.targetTable),
 						);
 						const joinWhere = joinClauses.length > 0 ? ` AND ${joinClauses.join(' AND ')}` : '';
 						const tableName = resolveTableName(j.targetTable);
@@ -1224,6 +1264,18 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 		for (const collection of collections) {
 			const tbl = getTableName(collection);
 			tableNameMap.set(collection.slug, tbl);
+
+			// Build hasMany field set for JSONB query generation
+			const hasManyFields = new Set<string>();
+			const dataFields = flattenDataFields(collection.fields);
+			for (const field of dataFields) {
+				if ('hasMany' in field && field.hasMany) {
+					hasManyFields.add(field.name);
+				}
+			}
+			if (hasManyFields.size > 0) {
+				hasManyFieldsMap.set(collection.slug, hasManyFields);
+			}
 		}
 	}
 

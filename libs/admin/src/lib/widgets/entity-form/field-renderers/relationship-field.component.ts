@@ -89,11 +89,11 @@ interface RelationshipOption {
 				<select
 					[id]="fieldId()"
 					[disabled]="isDisabled()"
-					class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 					(change)="onSingleSelect($event)"
 					(blur)="onBlur()"
+					class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 				>
-					<option value="">Select {{ relatedLabel() }}...</option>
+					<option value="" [selected]="!singleValue()">Select {{ relatedLabel() }}...</option>
 					@for (opt of allOptions(); track opt.value) {
 						<option [value]="opt.value" [selected]="opt.value === singleValue()">
 							{{ opt.label }}
@@ -278,14 +278,13 @@ export class RelationshipFieldRenderer {
 		});
 	}
 
-	/** Handle single-select change */
+	/** Handle single-select value change */
 	onSingleSelect(event: Event): void {
 		const target = event.target;
-		if (target instanceof HTMLSelectElement) {
-			const state = this.nodeState();
-			if (state) {
-				state.value.set(target.value || null);
-			}
+		if (!(target instanceof HTMLSelectElement)) return;
+		const state = this.nodeState();
+		if (state) {
+			state.value.set(target.value || null);
 		}
 	}
 
@@ -336,19 +335,29 @@ export class RelationshipFieldRenderer {
 
 		this.entitySheetService.openCreate(slug).subscribe((result) => {
 			if (result.action === 'created' && result.entity) {
-				const state = this.nodeState();
-				if (!state) return;
-
 				const entityId = String(result.entity.id);
-				if (this.isMulti()) {
-					const current = this.multiValues();
-					state.value.set([...current, entityId]);
-				} else {
-					state.value.set(entityId);
+				const titleField = this.titleField();
+				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- casting untyped entity sheet result
+				const entity = result.entity as Record<string, unknown>;
+				const titleVal = entity[titleField];
+				const label = titleField !== 'id' && typeof titleVal === 'string' ? titleVal : entityId;
+
+				// Optimistically add the new option so the dropdown updates immediately
+				const currentOptions = this.allOptions();
+				if (!currentOptions.some((opt) => opt.value === entityId)) {
+					this.allOptions.set([...currentOptions, { value: entityId, label }]);
 				}
 
-				// Refresh options to include the newly created entity
-				this.fetchOptions(slug);
+				// Auto-select the newly created entity if form state is available
+				const state = this.nodeState();
+				if (state) {
+					if (this.isMulti()) {
+						const current = this.multiValues();
+						state.value.set([...current, entityId]);
+					} else {
+						state.value.set(entityId);
+					}
+				}
 			}
 		});
 	}

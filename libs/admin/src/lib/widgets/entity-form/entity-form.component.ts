@@ -604,7 +604,10 @@ export class EntityFormWidget<T extends Entity = Entity> {
 				return;
 			}
 			this.originalData.set(entity);
-			this.formModel.set({ ...entity });
+			// Merge with initial defaults so plugin-injected fields (e.g. folder, tags)
+			// always have keys in the model even if the API response omits null columns.
+			const initial = createInitialFormData(this.collection());
+			this.formModel.set({ ...initial, ...entity });
 			const ef = this.entityForm();
 			if (ef) ef().reset();
 		} catch (err) {

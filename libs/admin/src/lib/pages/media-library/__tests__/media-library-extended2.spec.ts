@@ -256,7 +256,9 @@ describe('MediaLibraryPage - extended2 (coverage)', () => {
 				const calls = mockCollection.find.mock.calls;
 				const lastCall = calls[calls.length - 1]?.[0];
 				expect(lastCall).toBeDefined();
-				expect(lastCall.where).toEqual({ filename: { contains: 'landscape' } });
+				expect(lastCall.where).toEqual({
+					or: [{ filename: { contains: 'landscape' } }, { alt: { contains: 'landscape' } }],
+				});
 			});
 		});
 

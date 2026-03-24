@@ -211,5 +211,9 @@ export * from './lib/block-renderer/block-admin-mode.service';
 export * from './lib/block-renderer/block-outlet.component';
 export * from './lib/block-renderer/block-renderer.component';
 
+// Date Range Picker
+export * from './lib/date-range-picker/date-range-picker.types';
+export * from './lib/date-range-picker/date-range-picker.component';
+
 // Kitchen Sink (demo page)
 export * from './lib/kitchen-sink/kitchen-sink.page';

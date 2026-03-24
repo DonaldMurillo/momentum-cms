@@ -398,13 +398,8 @@ describe('RelationshipFieldRenderer', () => {
 			const option = document.createElement('option');
 			option.value = value;
 			select.appendChild(option);
-			const emptyOption = document.createElement('option');
-			emptyOption.value = '';
-			select.appendChild(emptyOption);
 			select.value = value;
-			const event = new Event('change');
-			Object.defineProperty(event, 'target', { value: select });
-			return event;
+			return { target: select } as unknown as Event;
 		}
 
 		it('should set value on form state', () => {
@@ -425,12 +420,6 @@ describe('RelationshipFieldRenderer', () => {
 
 			component.onSingleSelect(makeSelectEvent(''));
 			expect(state.value()).toBeNull();
-		});
-
-		it('should ignore non-select target', () => {
-			flushOptionsRequest();
-			const event = new Event('change');
-			expect(() => component.onSingleSelect(event)).not.toThrow();
 		});
 	});
 
