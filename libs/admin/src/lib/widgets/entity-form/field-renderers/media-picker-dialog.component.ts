@@ -281,45 +281,41 @@ export class MediaPickerDialog {
 			if (folderId) where['folder'] = { equals: folderId };
 			if (tagIds.size > 0) where['tags'] = { in: Array.from(tagIds) };
 
+			// Server-side search filter (filename contains search term)
+			if (search) {
+				where['filename'] = { contains: search };
+			}
+
+			// Server-side MIME type filter
+			const mimeTypes = this.data?.mimeTypes;
+			if (mimeTypes && mimeTypes.length > 0) {
+				const exactTypes = mimeTypes.filter((p) => !p.endsWith('/*'));
+				const wildcardPrefixes = mimeTypes
+					.filter((p) => p.endsWith('/*'))
+					.map((p) => p.slice(0, -1));
+
+				const mimeConditions: Record<string, unknown>[] = [];
+				if (exactTypes.length > 0) {
+					mimeConditions.push({ mimeType: { in: exactTypes } });
+				}
+				for (const prefix of wildcardPrefixes) {
+					mimeConditions.push({ mimeType: { like: `${prefix}%` } });
+				}
+				if (mimeConditions.length > 0) {
+					where['$or'] = mimeConditions;
+				}
+			}
+
 			const result = await collection.find({
 				page,
 				limit: this.limit(),
 				where: Object.keys(where).length > 0 ? where : undefined,
 			});
 
-			let items = toMediaItems(result.docs);
-
-			// Client-side search filter
-			if (search) {
-				const lowerSearch = search.toLowerCase();
-				items = items.filter((m) => m.filename.toLowerCase().includes(lowerSearch));
-			}
-
-			// Client-side MIME type filter
-			const mimeTypes = this.data?.mimeTypes;
-			if (mimeTypes && mimeTypes.length > 0) {
-				items = items.filter((m) =>
-					mimeTypes.some((pattern) => {
-						if (pattern.endsWith('/*')) {
-							return m.mimeType.startsWith(pattern.slice(0, -1));
-						}
-						return m.mimeType === pattern;
-					}),
-				);
-			}
-
+			const items = toMediaItems(result.docs);
 			this.mediaItems.set(items);
-
-			// When client-side filtering is active, use filtered counts
-			// to avoid pagination showing incorrect totals
-			const hasClientFilter = !!search || (mimeTypes && mimeTypes.length > 0);
-			if (hasClientFilter) {
-				this.totalDocs.set(items.length);
-				this.totalPages.set(1); // Client-filtered results are always a single page
-			} else {
-				this.totalDocs.set(result.totalDocs);
-				this.totalPages.set(result.totalPages);
-			}
+			this.totalDocs.set(result.totalDocs);
+			this.totalPages.set(result.totalPages);
 		} catch (error) {
 			console.error('Failed to load media:', error);
 			this.mediaItems.set([]);

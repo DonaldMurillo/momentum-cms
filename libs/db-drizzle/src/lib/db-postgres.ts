@@ -445,6 +445,25 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 		return paramIndex;
 	}
 
+	/**
+	 * Push a JSONB containment clause (`col @> $N::jsonb`) for hasMany fields.
+	 * Used by $eq, $ne, $contains, $in, and $nin on JSONB array columns.
+	 */
+	function pushJsonbContainment(
+		col: string,
+		value: unknown,
+		negate: boolean,
+		whereClauses: string[],
+		whereValues: unknown[],
+		paramIndex: number,
+	): number {
+		const placeholder = `$${paramIndex++}`;
+		const clause = `${col} @> ${placeholder}::jsonb`;
+		whereClauses.push(negate ? `NOT (${clause})` : clause);
+		whereValues.push(JSON.stringify([value]));
+		return paramIndex;
+	}
+
 	function buildPgWhereFragments(
 		params: Record<string, unknown>,
 		whereClauses: string[],
@@ -542,17 +561,30 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 							whereClauses.push(`${col} IS NOT NULL`);
 						} else if (op === '$eq' && valObj[op] === null) {
 							whereClauses.push(`${col} IS NULL`);
+						} else if (hasManyFields?.has(key) && (op === '$eq' || op === '$ne')) {
+							// hasMany JSONB: $eq and $ne both use containment (@>)
+							paramIndex = pushJsonbContainment(
+								col,
+								valObj[op],
+								op === '$ne',
+								whereClauses,
+								whereValues,
+								paramIndex,
+							);
 						} else {
-							if (op === '$like' && String(valObj[op]).length > MAX_PATTERN_LENGTH) {
+							if (
+								(op === '$like' || op === '$notLike') &&
+								String(valObj[op]).length > MAX_PATTERN_LENGTH
+							) {
 								throw new Error(
-									`Pattern value for $like exceeds maximum length of ${MAX_PATTERN_LENGTH} characters`,
+									`Pattern value for ${op} exceeds maximum length of ${MAX_PATTERN_LENGTH} characters`,
 								);
 							}
 							// For JSON path comparisons with numeric operators, cast to NUMERIC
 							const castSuffix =
 								rawExpr && ['>', '>=', '<', '<='].includes(sqlOp) ? '::NUMERIC' : '';
-							// Add ESCAPE clause for LIKE so backslash-escaped wildcards work consistently
-							const escapeSuffix = op === '$like' ? " ESCAPE '\\'" : '';
+							// Add ESCAPE clause for LIKE/NOT LIKE so backslash-escaped wildcards work consistently
+							const escapeSuffix = op === '$like' || op === '$notLike' ? " ESCAPE '\\'" : '';
 							whereClauses.push(`${col}${castSuffix} ${sqlOp} $${paramIndex}${escapeSuffix}`);
 							whereValues.push(valObj[op]);
 							paramIndex++;
@@ -561,16 +593,28 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				}
 
 				if ('$contains' in valObj) {
-					const val = String(valObj['$contains']);
-					if (val.length > MAX_PATTERN_LENGTH) {
-						throw new Error(
-							`Pattern value for $contains exceeds maximum length of ${MAX_PATTERN_LENGTH} characters`,
+					if (hasManyFields?.has(key)) {
+						// hasMany JSONB: $contains is semantically identical to $eq (array contains value)
+						paramIndex = pushJsonbContainment(
+							col,
+							valObj['$contains'],
+							false,
+							whereClauses,
+							whereValues,
+							paramIndex,
 						);
+					} else {
+						const val = String(valObj['$contains']);
+						if (val.length > MAX_PATTERN_LENGTH) {
+							throw new Error(
+								`Pattern value for $contains exceeds maximum length of ${MAX_PATTERN_LENGTH} characters`,
+							);
+						}
+						const escaped = val.replace(/[%_\\]/g, '\\$&');
+						whereClauses.push(`${col} ILIKE $${paramIndex} ESCAPE '\\'`);
+						whereValues.push(`%${escaped}%`);
+						paramIndex++;
 					}
-					const escaped = val.replace(/[%_\\]/g, '\\$&');
-					whereClauses.push(`${col} ILIKE $${paramIndex} ESCAPE '\\'`);
-					whereValues.push(`%${escaped}%`);
-					paramIndex++;
 				}
 
 				for (const [op, sql] of [
@@ -590,24 +634,22 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 
 						// For hasMany (JSONB array) fields, use containment operator
 						if (hasManyFields?.has(key)) {
-							// JSONB @> checks if array contains the element(s)
-							// For $in: match if column contains ANY of the values → OR'd @> checks
-							// For $nin: match if column does NOT contain ANY → AND'd NOT @> checks
-							if (op === '$in') {
-								const containsClauses = arr.map(() => {
-									const placeholder = `$${paramIndex++}`;
-									return `${col} @> ${placeholder}::jsonb`;
-								});
-								whereClauses.push(`(${containsClauses.join(' OR ')})`);
-								whereValues.push(...arr.map((v) => JSON.stringify([v])));
-							} else {
-								const notContainsClauses = arr.map(() => {
-									const placeholder = `$${paramIndex++}`;
-									return `NOT (${col} @> ${placeholder}::jsonb)`;
-								});
-								whereClauses.push(`(${notContainsClauses.join(' AND ')})`);
-								whereValues.push(...arr.map((v) => JSON.stringify([v])));
+							// $in: match if column contains ANY of the values → OR'd @> checks
+							// $nin: match if column does NOT contain ANY → AND'd NOT @> checks
+							const negate = op === '$nin';
+							const joiner = negate ? ' AND ' : ' OR ';
+							const subClauses: string[] = [];
+							for (const v of arr) {
+								paramIndex = pushJsonbContainment(
+									col,
+									v,
+									negate,
+									subClauses,
+									whereValues,
+									paramIndex,
+								);
 							}
+							whereClauses.push(`(${subClauses.join(joiner)})`);
 						} else {
 							const placeholders = arr.map(() => `$${paramIndex++}`).join(', ');
 							whereClauses.push(`${col} ${sql} (${placeholders})`);
