@@ -402,7 +402,9 @@ test.describe('Lifecycle hooks', { tag: ['@api', '@hooks'] }, () => {
 				headers: { 'Content-Type': 'application/json' },
 				data: { title: 'Error Test 1', slug: 'error-1' },
 			});
-			expect(createResponse.status(), 'Create should fail with 500').toBe(500);
+			expect(createResponse.status(), 'beforeValidate rejection is a validation error (400)').toBe(
+				400,
+			);
 
 			// Reset config
 			await request.post('/api/test-hook-config', {
@@ -434,7 +436,9 @@ test.describe('Lifecycle hooks', { tag: ['@api', '@hooks'] }, () => {
 				headers: { 'Content-Type': 'application/json' },
 				data: { title: 'Error Test 2', slug: 'error-2' },
 			});
-			expect(createResponse.status(), 'Create should fail with 500').toBe(500);
+			expect(createResponse.status(), 'beforeChange rejection is a validation error (400)').toBe(
+				400,
+			);
 
 			// Reset config
 			await request.post('/api/test-hook-config', {
@@ -950,7 +954,9 @@ test.describe('Lifecycle hooks', { tag: ['@api', '@hooks'] }, () => {
 				headers: { 'Content-Type': 'application/json' },
 				data: { title: 'Should Not Persist' },
 			});
-			expect(updateResponse.status(), 'Update should fail with 500').toBe(500);
+			expect(updateResponse.status(), 'beforeValidate rejection is a validation error (400)').toBe(
+				400,
+			);
 
 			await request.post('/api/test-hook-config', {
 				headers: { 'Content-Type': 'application/json' },
@@ -982,7 +988,9 @@ test.describe('Lifecycle hooks', { tag: ['@api', '@hooks'] }, () => {
 				headers: { 'Content-Type': 'application/json' },
 				data: { title: 'Should Not Persist' },
 			});
-			expect(updateResponse.status(), 'Update should fail with 500').toBe(500);
+			expect(updateResponse.status(), 'beforeChange rejection is a validation error (400)').toBe(
+				400,
+			);
 
 			await request.post('/api/test-hook-config', {
 				headers: { 'Content-Type': 'application/json' },

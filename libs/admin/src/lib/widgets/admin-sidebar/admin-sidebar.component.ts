@@ -117,6 +117,13 @@ interface PluginRouteGroup {
 						[exact]="true"
 					/>
 
+					<!-- Media Library (dedicated page, not a collection route) -->
+					<mcms-sidebar-nav-item
+						label="Media Library"
+						[href]="basePath() + '/media'"
+						icon="heroPhoto"
+					/>
+
 					<mcms-admin-slot slot="shell:nav-start" />
 
 					<!-- Collection Sections (grouped by admin.group) -->

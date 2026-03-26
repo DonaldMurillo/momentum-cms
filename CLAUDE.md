@@ -62,6 +62,10 @@ nx run-many -t lint
 | `@momentumcms/auth/core`        | Browser-safe types: `MomentumUser`, `MomentumSession`, `AUTH_ROLES` |
 | `@momentumcms/auth/collections` | Browser-safe collection definitions: `BASE_AUTH_COLLECTIONS`        |
 
+## Database Schema Management
+
+**NEVER run raw SQL DDL (CREATE TABLE, ALTER TABLE, etc.) against the dev database.** The server auto-syncs schema on startup via `syncSchema: 'auto'` in `db-postgres.ts` `initialize()`. When new collections or fields are added (e.g., by plugins), just restart the dev server (`nx serve example-angular`) and it will run `CREATE TABLE IF NOT EXISTS` and `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` automatically. E2E tests create fresh databases per worker and auto-sync on each run.
+
 ## Skills, Agents & Hooks
 
 Domain-specific guidance lives in workflow elements, not here. Key ones:

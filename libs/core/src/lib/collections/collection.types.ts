@@ -19,6 +19,7 @@ export interface AccessArgs {
 export interface RequestContext {
 	user?: UserContext;
 	headers?: Record<string, string>;
+	api?: unknown;
 	// Add more request context as needed
 }
 

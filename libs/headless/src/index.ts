@@ -162,3 +162,7 @@ export { HdlCommandGroup } from './lib/command/command-group.component';
 export { HdlCommandSeparator } from './lib/command/command-separator.component';
 export { HdlCommandDialog } from './lib/command/command-dialog.component';
 export { HdlCommandDialogPanel } from './lib/command/command-dialog-panel.component';
+
+// Calendar
+export { HdlCalendar } from './lib/calendar/calendar.component';
+export type { DateRange } from './lib/calendar/calendar.component';

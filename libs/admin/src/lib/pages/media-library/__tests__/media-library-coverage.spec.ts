@@ -35,6 +35,7 @@ interface MediaItem {
 	alt?: string;
 	width?: number;
 	height?: number;
+	tags?: string[];
 }
 
 function validMedia(overrides: Partial<MediaItem> = {}): MediaItem {
@@ -78,6 +79,9 @@ function createFileEvent(files: File[]): Event {
 
 class MockCollection {
 	find = vi.fn().mockResolvedValue({ docs: [], totalDocs: 0, totalPages: 1 });
+	findById = vi.fn().mockResolvedValue(null);
+	create = vi.fn().mockResolvedValue({});
+	update = vi.fn().mockResolvedValue({});
 	delete = vi.fn().mockResolvedValue({ id: '1', deleted: true });
 	batchDelete = vi.fn().mockResolvedValue([]);
 }
@@ -270,6 +274,156 @@ describe('MediaLibraryPage - coverage', () => {
 		});
 	});
 
+	describe('dialog-driven media organization actions', () => {
+		it('should create a folder from dialog input', async () => {
+			const afterClosedSubject = new Subject<string | undefined>();
+			mockDialog.open.mockReturnValue({ afterClosed: afterClosedSubject.asObservable() });
+
+			component.selectedFolderId.set('parent-folder');
+
+			const createFolderPromise = component.createFolder();
+			afterClosedSubject.next('Campaign Assets');
+			afterClosedSubject.complete();
+			await createFolderPromise;
+
+			expect(mockDialog.open).toHaveBeenCalledWith(
+				expect.anything(),
+				expect.objectContaining({
+					data: expect.objectContaining({ title: 'New Folder', label: 'Folder name' }),
+				}),
+			);
+			expect(mockApi.collection).toHaveBeenCalledWith('media-folders');
+			expect(mockCollection.create).toHaveBeenCalledWith({
+				name: 'Campaign Assets',
+				parent: 'parent-folder',
+			});
+			expect(mockToast.success).toHaveBeenCalledWith(
+				'Folder created',
+				'Created folder "Campaign Assets"',
+			);
+		});
+
+		it('should create a tag from dialog input', async () => {
+			const afterClosedSubject = new Subject<string | undefined>();
+			mockDialog.open.mockReturnValue({ afterClosed: afterClosedSubject.asObservable() });
+
+			const createTagPromise = component.createTag();
+			afterClosedSubject.next('Homepage');
+			afterClosedSubject.complete();
+			await createTagPromise;
+
+			expect(mockApi.collection).toHaveBeenCalledWith('media-tags');
+			expect(mockCollection.create).toHaveBeenCalledWith({ name: 'Homepage' });
+			expect(mockToast.success).toHaveBeenCalledWith('Tag created', 'Created tag "Homepage"');
+		});
+
+		it('should move selected items to a folder chosen in the dialog', async () => {
+			const afterClosedSubject = new Subject<string | undefined>();
+			mockDialog.open.mockReturnValue({ afterClosed: afterClosedSubject.asObservable() });
+
+			component.allFolders.set([
+				{ id: 'folder-1', name: 'Photos', parent: null },
+				{ id: 'folder-2', name: 'Archive', parent: null },
+			]);
+			component.selectedItems.set(new Set(['media-1', 'media-2']));
+
+			const movePromise = component.bulkMoveToFolder();
+			afterClosedSubject.next('folder-2');
+			afterClosedSubject.complete();
+			await movePromise;
+
+			expect(mockCollection.update).toHaveBeenNthCalledWith(1, 'media-1', { folder: 'folder-2' });
+			expect(mockCollection.update).toHaveBeenNthCalledWith(2, 'media-2', { folder: 'folder-2' });
+			expect(component.selectedItems().size).toBe(0);
+			expect(mockToast.success).toHaveBeenCalledWith('Moved', 'Moved 2 file(s) to "Archive"');
+		});
+
+		it('should tag selected items with the chosen tag while preserving existing tags', async () => {
+			const afterClosedSubject = new Subject<string | undefined>();
+			mockDialog.open.mockReturnValue({ afterClosed: afterClosedSubject.asObservable() });
+
+			component.allTags.set([
+				{ id: 'tag-1', name: 'Featured' },
+				{ id: 'tag-2', name: 'Homepage' },
+			]);
+
+			// findById returns fresh server data (may differ from local signal state)
+			mockCollection.findById
+				.mockResolvedValueOnce(validMedia({ id: 'media-1', path: 'uploads/a.jpg' }))
+				.mockResolvedValueOnce({
+					...validMedia({ id: 'media-3', path: 'uploads/c.jpg' }),
+					tags: ['tag-2'],
+				});
+
+			component.selectedItems.set(new Set(['media-1', 'media-3']));
+
+			const tagPromise = component.bulkTag();
+			afterClosedSubject.next('tag-1');
+			afterClosedSubject.complete();
+			await tagPromise;
+
+			expect(mockCollection.update).toHaveBeenCalledWith('media-1', { tags: ['tag-1'] });
+			expect(mockCollection.update).toHaveBeenCalledWith('media-3', { tags: ['tag-2', 'tag-1'] });
+			expect(component.selectedItems().size).toBe(0);
+			expect(mockToast.success).toHaveBeenCalledWith('Tagged', 'Tagged 2 file(s) with "Featured"');
+		});
+
+		it('should fetch fresh data from server per-item instead of using stale local state', async () => {
+			const afterClosedSubject = new Subject<string | undefined>();
+			mockDialog.open.mockReturnValue({ afterClosed: afterClosedSubject.asObservable() });
+
+			component.allTags.set([{ id: 'tag-new', name: 'New Tag' }]);
+
+			// Local signal has STALE data (no tags)
+			component.mediaItems.set([validMedia({ id: 'media-1', path: 'uploads/a.jpg' })]);
+
+			// Server has FRESH data (tag-existing was added by another user)
+			mockCollection.findById.mockResolvedValueOnce({
+				...validMedia({ id: 'media-1', path: 'uploads/a.jpg' }),
+				tags: ['tag-existing'],
+			});
+
+			component.selectedItems.set(new Set(['media-1']));
+
+			const tagPromise = component.bulkTag();
+			afterClosedSubject.next('tag-new');
+			afterClosedSubject.complete();
+			await tagPromise;
+
+			// Must call findById on the 'media' collection to get fresh data
+			expect(mockApi.collection).toHaveBeenCalledWith('media');
+			expect(mockCollection.findById).toHaveBeenCalled();
+			expect(mockCollection.findById.mock.calls[0][0]).toBe('media-1');
+			// Must preserve the server's tag-existing AND add the new tag
+			expect(mockCollection.update).toHaveBeenCalledWith('media-1', {
+				tags: ['tag-existing', 'tag-new'],
+			});
+		});
+
+		it('should skip tagging when item already has the tag (using server data)', async () => {
+			const afterClosedSubject = new Subject<string | undefined>();
+			mockDialog.open.mockReturnValue({ afterClosed: afterClosedSubject.asObservable() });
+
+			component.allTags.set([{ id: 'tag-1', name: 'Featured' }]);
+
+			// Server says this item already has the tag
+			mockCollection.findById.mockResolvedValueOnce({
+				...validMedia({ id: 'media-1', path: 'uploads/a.jpg' }),
+				tags: ['tag-1'],
+			});
+
+			component.selectedItems.set(new Set(['media-1']));
+
+			const tagPromise = component.bulkTag();
+			afterClosedSubject.next('tag-1');
+			afterClosedSubject.complete();
+			await tagPromise;
+
+			// Should NOT call update since server already has this tag
+			expect(mockCollection.update).not.toHaveBeenCalled();
+		});
+	});
+
 	// -----------------------------------------------------------------------
 	// viewMedia calls window.open
 	// -----------------------------------------------------------------------
@@ -424,6 +578,73 @@ describe('MediaLibraryPage - coverage', () => {
 	});
 
 	// -----------------------------------------------------------------------
+	// loadMedia staleness guard — stale responses must not overwrite fresh data
+	// -----------------------------------------------------------------------
+	describe('loadMedia - stale response guard', () => {
+		it('should discard stale API responses when a newer request is in-flight', async () => {
+			// Wait for initial load to complete
+			await vi.waitFor(() => expect(component.isLoading()).toBe(false));
+			mockCollection.find.mockClear();
+
+			// Create two deferred promises we can resolve in any order
+			let resolveStale!: (v: unknown) => void;
+			let resolveFresh!: (v: unknown) => void;
+
+			const stalePromise = new Promise((r) => {
+				resolveStale = r;
+			});
+			const freshPromise = new Promise((r) => {
+				resolveFresh = r;
+			});
+
+			mockCollection.find
+				.mockReturnValueOnce(stalePromise) // 1st call (stale — "cat" search)
+				.mockReturnValueOnce(freshPromise); // 2nd call (fresh — "dog" search)
+
+			// Trigger first search — let the effect fire
+			component.onSearchChange('cat');
+			await vi.waitFor(() => {
+				expect(mockCollection.find.mock.calls.length).toBeGreaterThanOrEqual(1);
+			});
+
+			// Trigger second search before first resolves — effect fires again
+			component.onSearchChange('dog');
+			await vi.waitFor(() => {
+				expect(mockCollection.find.mock.calls.length).toBeGreaterThanOrEqual(2);
+			});
+
+			// Resolve FRESH first, then STALE (out of order)
+			resolveFresh({
+				docs: [validMedia({ id: 'dog-1', filename: 'dog.jpg' })],
+				totalDocs: 1,
+				totalPages: 1,
+			});
+
+			await vi.waitFor(() => {
+				expect(component.mediaItems().length).toBe(1);
+				expect(component.mediaItems()[0].filename).toBe('dog.jpg');
+			});
+
+			// Now resolve STALE — it must NOT overwrite fresh results
+			resolveStale({
+				docs: [
+					validMedia({ id: 'cat-1', filename: 'cat.jpg' }),
+					validMedia({ id: 'cat-2', filename: 'cat2.jpg' }),
+				],
+				totalDocs: 2,
+				totalPages: 1,
+			});
+
+			// Give microtasks time to flush
+			await new Promise((r) => setTimeout(r, 50));
+
+			// Fresh "dog" results must still be displayed, not overwritten by stale "cat" results
+			expect(component.mediaItems().length).toBe(1);
+			expect(component.mediaItems()[0].filename).toBe('dog.jpg');
+		});
+	});
+
+	// -----------------------------------------------------------------------
 	// getMediaUrl - edge cases
 	// -----------------------------------------------------------------------
 	describe('getMediaUrl - edge cases', () => {
@@ -458,7 +679,9 @@ describe('MediaLibraryPage - coverage', () => {
 			await vi.waitFor(() => {
 				const calls = mockCollection.find.mock.calls;
 				const lastCall = calls[calls.length - 1]?.[0];
-				expect(lastCall?.where).toEqual({ filename: { contains: 'landscape' } });
+				expect(lastCall?.where).toEqual({
+					or: [{ filename: { contains: 'landscape' } }, { alt: { contains: 'landscape' } }],
+				});
 				expect(lastCall?.page).toBe(1);
 			});
 		});

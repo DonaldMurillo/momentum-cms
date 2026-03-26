@@ -1415,6 +1415,30 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 				res.status(401).json({ error: 'Authentication required to upload files' });
 				return;
 			}
+
+			// JSON PATCH requests should bypass multer entirely. The router-level JSON parser
+			// has already consumed the body stream, so re-running multipart parsing here
+			// crashes with a disturbed/locked body error before the update handler runs.
+			if (!req.is('multipart/form-data')) {
+				const request: MomentumRequest = {
+					method: 'PATCH',
+					collectionSlug: slug,
+					id: req.params['id'],
+					body: getBody(req),
+					user,
+				};
+				handlers
+					.routeRequest(request)
+					.then((response) => {
+						res.status(response.status ?? 200).json(response);
+					})
+					.catch((error: unknown) => {
+						const message = sanitizeErrorMessage(error, 'Upload update failed');
+						res.status(500).json({ error: message });
+					});
+				return;
+			}
+
 			// Try multer to parse optional file from multipart
 			upload.single('file')(req, res, async (err) => {
 				if (err) {

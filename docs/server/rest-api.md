@@ -30,6 +30,14 @@ Two URL formats are supported:
 - **JSON**: `?where={"title":{"contains":"hello"}}`
 - **Nested query string**: `?where[title][contains]=hello`
 
+For `in` and `not_in`, nested query string callers may send either repeated array params or a single value.
+Single bracket-notation values are normalized to one-item arrays:
+
+```
+?where[status][in]=draft
+?where[status][in][]=draft&where[status][in][]=published
+```
+
 #### Available Operators
 
 | Operator      | Description                                                  | Example                                   |

@@ -205,6 +205,38 @@ describe('MomentumAPI', () => {
 				});
 			}
 		});
+
+		it('should convert plain beforeChange hook errors into ValidationError', async () => {
+			config.collections.push({
+				slug: 'failing-hooks',
+				labels: { singular: 'Failing Hook', plural: 'Failing Hooks' },
+				fields: [{ name: 'title', type: 'text', required: true, label: 'Title' }],
+				hooks: {
+					beforeChange: [
+						() => {
+							throw new Error('Hook rejected input');
+						},
+					],
+				},
+			});
+
+			const api = initializeMomentumAPI(config);
+
+			await expect(api.collection('failing-hooks').create({ title: 'Test' })).rejects.toThrow(
+				ValidationError,
+			);
+
+			try {
+				await api.collection('failing-hooks').create({ title: 'Test' });
+				expect.fail('Should have thrown');
+			} catch (error) {
+				expect(error).toBeInstanceOf(ValidationError);
+				expect((error as ValidationError).errors).toContainEqual({
+					field: 'root',
+					message: 'Hook rejected input',
+				});
+			}
+		});
 	});
 
 	describe('update()', () => {

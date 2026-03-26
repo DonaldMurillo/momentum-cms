@@ -75,13 +75,30 @@ async function initialize(): Promise<void> {
 		}
 	}
 
-	// 3. Register webhook hooks on collections
+	// 3. Apply plugin collection modifications before schema sync so plugin-injected
+	// fields (e.g., folder/tags from media-organizer) exist in the database.
+	for (const plugin of plugins) {
+		if (plugin.collections) {
+			const slugs = new Set(momentumConfig.collections.map((c) => c.slug));
+			for (const col of plugin.collections) {
+				if (!slugs.has(col.slug)) {
+					momentumConfig.collections.push(col);
+					slugs.add(col.slug);
+				}
+			}
+		}
+		if (plugin.modifyCollections) {
+			plugin.modifyCollections(momentumConfig.collections);
+		}
+	}
+
+	// 4. Register webhook hooks on collections
 	registerWebhookHooks(momentumConfig.collections);
 
-	// 4. Initialize database schema (respects db.syncSchema / migrations.mode)
+	// 5. Initialize database schema (respects db.syncSchema / migrations.mode)
 	await syncDatabaseSchema(momentumConfig, log);
 
-	// 5. Initialize Momentum API singleton
+	// 6. Initialize Momentum API singleton
 	log.info('Initializing API...');
 	const api = initializeMomentumAPI(momentumConfig);
 
@@ -90,7 +107,7 @@ async function initialize(): Promise<void> {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/consistent-type-assertions, local/no-direct-browser-apis -- cross-bundle bridge: Nitro and Vite SSR are separate module instances
 	(globalThis as any).__momentum_api = api;
 
-	// 6. Run seeding if configured
+	// 7. Run seeding if configured
 	const runOnStart = momentumConfig.seeding?.options?.runOnStart ?? 'development';
 	if (momentumConfig.seeding && shouldRunSeeding(runOnStart)) {
 		log.info('Running seeding...');
@@ -102,13 +119,13 @@ async function initialize(): Promise<void> {
 		);
 	}
 
-	// 7. Start publish scheduler (auto-publishes documents when scheduledPublishAt arrives)
+	// 8. Start publish scheduler (auto-publishes documents when scheduledPublishAt arrives)
 	startPublishScheduler(momentumConfig.db.adapter, momentumConfig.collections, {
 		intervalMs: 2000,
 	});
 	log.info('Publish scheduler started (interval: 2000ms)');
 
-	// 8. Run plugin onReady (API is initialized, seeding complete)
+	// 9. Run plugin onReady (API is initialized, seeding complete)
 	if (plugins.length > 0) {
 		log.info('Notifying plugins: ready');
 		await pluginRunner.runReady(api);

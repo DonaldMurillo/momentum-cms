@@ -5,6 +5,7 @@ import {
 	resetMomentumAPI,
 	GlobalNotFoundError,
 	AccessDeniedError,
+	ValidationError,
 } from './momentum-api';
 import type { GlobalConfig, MomentumConfig, DatabaseAdapter } from '@momentumcms/core';
 
@@ -42,6 +43,19 @@ const mockGlobalWithHooks: GlobalConfig = {
 	},
 };
 
+const mockGlobalWithFailingHook: GlobalConfig = {
+	slug: 'failing-hook-settings',
+	label: 'Failing Hook Settings',
+	fields: [{ name: 'value', type: 'text', label: 'Value' }],
+	hooks: {
+		beforeChange: [
+			() => {
+				throw new Error('Global hook rejected input');
+			},
+		],
+	},
+};
+
 describe('GlobalOperations', () => {
 	let mockAdapter: DatabaseAdapter;
 	let config: MomentumConfig;
@@ -62,7 +76,12 @@ describe('GlobalOperations', () => {
 
 		config = {
 			collections: [],
-			globals: [mockSiteSettings, mockRestrictedGlobal, mockGlobalWithHooks],
+			globals: [
+				mockSiteSettings,
+				mockRestrictedGlobal,
+				mockGlobalWithHooks,
+				mockGlobalWithFailingHook,
+			],
 			db: { adapter: mockAdapter },
 			server: { port: 4000 },
 		};
@@ -184,6 +203,60 @@ describe('GlobalOperations', () => {
 		});
 	});
 
+	describe('req.api shape', () => {
+		it('should provide a collection() method on req.api in global hooks', async () => {
+			// Add a collection so we can verify it's accessible from global hooks
+			config.collections = [
+				{
+					slug: 'pages',
+					labels: { singular: 'Page', plural: 'Pages' },
+					fields: [{ name: 'title', type: 'text', label: 'Title' }],
+				},
+			];
+			resetMomentumAPI();
+			initializeMomentumAPI(config);
+
+			let capturedApi: unknown = null;
+			const spyGlobal: GlobalConfig = {
+				slug: 'api-test-settings',
+				label: 'API Test',
+				fields: [{ name: 'value', type: 'text', label: 'Value' }],
+				hooks: {
+					afterRead: [
+						({ req }) => {
+							capturedApi = req.api;
+							return null;
+						},
+					],
+				},
+			};
+			const globals = config.globals ?? [];
+			globals.push(spyGlobal);
+			config.globals = globals;
+			resetMomentumAPI();
+			initializeMomentumAPI(config);
+
+			vi.mocked(mockAdapter.findGlobal).mockResolvedValue({
+				slug: 'api-test-settings',
+				value: 'x',
+			});
+
+			const api = getMomentumAPI();
+			await api.global('api-test-settings').findOne();
+
+			// req.api must have a collection() method
+			expect(capturedApi).toBeDefined();
+			expect(typeof (capturedApi as Record<string, unknown>).collection).toBe('function');
+
+			// And it should actually return a collection operations object
+			const pagesOps = (capturedApi as { collection: (slug: string) => unknown }).collection(
+				'pages',
+			);
+			expect(pagesOps).toBeDefined();
+			expect(typeof (pagesOps as Record<string, unknown>).find).toBe('function');
+		});
+	});
+
 	describe('hooks', () => {
 		it('should run afterRead hooks', async () => {
 			vi.mocked(mockAdapter.findGlobal).mockResolvedValue({
@@ -230,6 +303,30 @@ describe('GlobalOperations', () => {
 
 			const afterChangeHook = mockGlobalWithHooks.hooks?.afterChange?.[0];
 			expect(afterChangeHook).toHaveBeenCalled();
+		});
+
+		it('should convert plain beforeChange hook errors into ValidationError', async () => {
+			vi.mocked(mockAdapter.findGlobal).mockResolvedValue({
+				slug: 'failing-hook-settings',
+				value: 'old',
+			});
+
+			const api = getMomentumAPI();
+
+			await expect(api.global('failing-hook-settings').update({ value: 'new' })).rejects.toThrow(
+				ValidationError,
+			);
+
+			try {
+				await api.global('failing-hook-settings').update({ value: 'new' });
+				expect.fail('Should have thrown');
+			} catch (error) {
+				expect(error).toBeInstanceOf(ValidationError);
+				expect((error as ValidationError).errors).toContainEqual({
+					field: 'root',
+					message: 'Global hook rejected input',
+				});
+			}
 		});
 	});
 });

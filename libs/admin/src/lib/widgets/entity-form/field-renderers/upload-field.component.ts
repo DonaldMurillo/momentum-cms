@@ -536,8 +536,41 @@ export class UploadFieldRenderer {
 
 	/**
 	 * Open media picker dialog to select existing media.
+	 * Loads folder/tag options lazily so the picker supports filtering.
 	 */
-	openMediaPicker(): void {
+	async openMediaPicker(): Promise<void> {
+		// Load folder/tag options in parallel; gracefully degrade if plugin not installed
+		const [folders, tags] = await Promise.all([
+			this.api
+				.collection('media-folders')
+				.find({ limit: 100 })
+				.then(
+					(r) => {
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- casting untyped API response docs
+						const docs = r.docs as Record<string, unknown>[];
+						return docs.map((d) => ({
+							id: String(d['id']),
+							name: String(d['name'] ?? d['id']),
+						}));
+					},
+					(): { id: string; name: string }[] => [],
+				),
+			this.api
+				.collection('media-tags')
+				.find({ limit: 100 })
+				.then(
+					(r) => {
+						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- casting untyped API response docs
+						const docs = r.docs as Record<string, unknown>[];
+						return docs.map((d) => ({
+							id: String(d['id']),
+							name: String(d['name'] ?? d['id']),
+						}));
+					},
+					(): { id: string; name: string }[] => [],
+				),
+		]);
+
 		const dialogRef = this.dialogService.open<MediaPickerDialog, unknown, MediaPickerResult>(
 			MediaPickerDialog,
 			{
@@ -546,6 +579,8 @@ export class UploadFieldRenderer {
 				data: {
 					mimeTypes: this.uploadField().mimeTypes,
 					relationTo: this.uploadField().relationTo,
+					folders,
+					tags,
 				},
 			},
 		);

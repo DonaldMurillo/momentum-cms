@@ -472,11 +472,13 @@ test.describe('Accessibility: Upload field', { tag: ['@a11y', '@admin'] }, () =>
 		await page.waitForLoadState('domcontentloaded');
 
 		// The media library should have an upload button with an accessible label
-		// The upload "button" is a <span mcms-button> inside a <label>, so use role-based locator
 		const uploadButton = page.getByRole('button', { name: /Upload Files/ });
 		await expect(uploadButton).toBeVisible({ timeout: 15000 });
 
-		// File input should be present in the DOM for upload functionality
+		// Upload zone is collapsible — click the button to expand it
+		await uploadButton.click();
+
+		// File input should be present in the DOM after expanding the upload zone
 		const fileInput = page.locator('input[type="file"]');
 		await expect(fileInput).toBeAttached();
 	});

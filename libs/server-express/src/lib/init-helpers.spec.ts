@@ -122,6 +122,45 @@ describe('initializeMomentum', () => {
 			const apiOrder = vi.mocked(initializeMomentumAPI).mock.invocationCallOrder[0];
 			expect(syncOrder).toBeLessThan(apiOrder);
 		});
+
+		it('should apply plugin modifyCollections before syncDatabaseSchema', async () => {
+			const adapter = createMockAdapter(true);
+			const config: MomentumConfig = {
+				collections: [
+					{
+						...mockCollection,
+						slug: 'media',
+						upload: { mimeTypes: ['image/*'] },
+					},
+				],
+				db: { adapter },
+				server: { port: 4000 },
+				plugins: [
+					{
+						name: 'inject-media-fields',
+						modifyCollections(collections) {
+							const media = collections.find((collection) => collection.slug === 'media');
+							if (!media || media.fields.some((field) => field.name === 'folder')) {
+								return;
+							}
+							media.fields.push({
+								name: 'folder',
+								type: 'relationship',
+								collection: () => mockCollection,
+							});
+						},
+					},
+				],
+			};
+
+			const result = initializeMomentum(config, { logging: false });
+			await result.ready;
+
+			const syncConfig = vi.mocked(syncDatabaseSchema).mock.calls[0]?.[0];
+			const syncedMedia = syncConfig?.collections.find((collection) => collection.slug === 'media');
+
+			expect(syncedMedia?.fields.some((field) => field.name === 'folder')).toBe(true);
+		});
 	});
 
 	describe('syncDatabaseSchema delegation', () => {

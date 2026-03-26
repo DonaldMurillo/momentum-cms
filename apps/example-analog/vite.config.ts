@@ -106,6 +106,14 @@ export default defineConfig(({ mode: _mode }) => {
 							__dirname,
 							'../../libs/plugins/image/src/index.ts',
 						),
+						'@momentumcms/plugins/media-organizer': resolve(
+							__dirname,
+							'../../libs/plugins/media-organizer/src/index.ts',
+						),
+						'@momentumcms/plugins-media-organizer/modify-collections': resolve(
+							__dirname,
+							'../../libs/plugins/media-organizer/src/lib/modify-collections.ts',
+						),
 						'@momentumcms/plugins-queue/collections': resolve(
 							__dirname,
 							'../../libs/plugins/queue/src/lib/queue-jobs.collection.ts',

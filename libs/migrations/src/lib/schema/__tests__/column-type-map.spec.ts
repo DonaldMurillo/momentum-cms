@@ -12,7 +12,6 @@ import type { Field } from '@momentumcms/core';
  * Helper to create a minimal field with a given type.
  */
 function makeField(type: string, name = 'test'): Field {
-	 
 	return { name, type } as Field;
 }
 
@@ -54,6 +53,21 @@ describe('column-type-map', () => {
 			['upload', 'VARCHAR(36)'],
 		])('should map %s to %s', (fieldType, expected) => {
 			expect(fieldToPostgresType(makeField(fieldType))).toBe(expected);
+		});
+
+		it('should map hasMany relationship to JSONB', () => {
+			const field = { name: 'tags', type: 'relationship', hasMany: true } as Field;
+			expect(fieldToPostgresType(field)).toBe('JSONB');
+		});
+
+		it('should map hasMany upload to JSONB', () => {
+			const field = { name: 'gallery', type: 'upload', hasMany: true } as Field;
+			expect(fieldToPostgresType(field)).toBe('JSONB');
+		});
+
+		it('should map hasMany select to JSONB', () => {
+			const field = { name: 'categories', type: 'select', hasMany: true, options: [] } as Field;
+			expect(fieldToPostgresType(field)).toBe('JSONB');
 		});
 
 		it.each([
@@ -113,6 +127,23 @@ describe('column-type-map', () => {
 		});
 	});
 
+	describe('fieldToSqliteType — hasMany', () => {
+		it('should map hasMany relationship to TEXT (JSON string)', () => {
+			const field = { name: 'tags', type: 'relationship', hasMany: true } as Field;
+			expect(fieldToSqliteType(field)).toBe('TEXT');
+		});
+
+		it('should map hasMany upload to TEXT (JSON string)', () => {
+			const field = { name: 'gallery', type: 'upload', hasMany: true } as Field;
+			expect(fieldToSqliteType(field)).toBe('TEXT');
+		});
+
+		it('should map hasMany select to TEXT (JSON string)', () => {
+			const field = { name: 'categories', type: 'select', hasMany: true, options: [] } as Field;
+			expect(fieldToSqliteType(field)).toBe('TEXT');
+		});
+	});
+
 	describe('fieldToColumnType', () => {
 		it('should delegate to postgres mapper for postgresql dialect', () => {
 			expect(fieldToColumnType(makeField('checkbox'), 'postgresql')).toBe('BOOLEAN');
@@ -126,15 +157,11 @@ describe('column-type-map', () => {
 	describe('normalizeColumnType', () => {
 		describe('postgresql', () => {
 			it('should normalize CHARACTER VARYING(255) to VARCHAR(255)', () => {
-				expect(normalizeColumnType('character varying(255)', 'postgresql')).toBe(
-					'VARCHAR(255)',
-				);
+				expect(normalizeColumnType('character varying(255)', 'postgresql')).toBe('VARCHAR(255)');
 			});
 
 			it('should normalize CHARACTER VARYING(36) to VARCHAR(36)', () => {
-				expect(normalizeColumnType('character varying(36)', 'postgresql')).toBe(
-					'VARCHAR(36)',
-				);
+				expect(normalizeColumnType('character varying(36)', 'postgresql')).toBe('VARCHAR(36)');
 			});
 
 			it('should normalize CHARACTER VARYING (no length) to VARCHAR(255)', () => {
@@ -142,15 +169,11 @@ describe('column-type-map', () => {
 			});
 
 			it('should normalize TIMESTAMP WITH TIME ZONE to TIMESTAMPTZ', () => {
-				expect(normalizeColumnType('timestamp with time zone', 'postgresql')).toBe(
-					'TIMESTAMPTZ',
-				);
+				expect(normalizeColumnType('timestamp with time zone', 'postgresql')).toBe('TIMESTAMPTZ');
 			});
 
 			it('should normalize TIMESTAMP WITHOUT TIME ZONE to TIMESTAMP', () => {
-				expect(normalizeColumnType('timestamp without time zone', 'postgresql')).toBe(
-					'TIMESTAMP',
-				);
+				expect(normalizeColumnType('timestamp without time zone', 'postgresql')).toBe('TIMESTAMP');
 			});
 
 			it('should pass through already-normalized types', () => {
@@ -182,15 +205,13 @@ describe('column-type-map', () => {
 
 	describe('areTypesCompatible', () => {
 		it('should consider character varying(255) and VARCHAR(255) compatible', () => {
-			expect(
-				areTypesCompatible('character varying(255)', 'VARCHAR(255)', 'postgresql'),
-			).toBe(true);
+			expect(areTypesCompatible('character varying(255)', 'VARCHAR(255)', 'postgresql')).toBe(true);
 		});
 
 		it('should consider timestamp with time zone and TIMESTAMPTZ compatible', () => {
-			expect(
-				areTypesCompatible('timestamp with time zone', 'TIMESTAMPTZ', 'postgresql'),
-			).toBe(true);
+			expect(areTypesCompatible('timestamp with time zone', 'TIMESTAMPTZ', 'postgresql')).toBe(
+				true,
+			);
 		});
 
 		it('should consider TEXT and TEXT compatible', () => {

@@ -219,23 +219,29 @@ describe('RelationshipFieldRenderer (coverage - additional branches)', () => {
 			expect(state.value()).toBeNull();
 		});
 
-		it('should not call openCreate when formNode is null', () => {
+		it('should still update dropdown options when formNode is null', () => {
 			setupWithSheet();
 			flushOptionsRequest();
 
 			// formNode not set - onCreateRelated should still call openCreate
-			// (it only checks slug and entitySheetService, not formNode)
 			component.onCreateRelated();
 			expect(mockSheetService.openCreate).toHaveBeenCalledWith('authors');
 
-			// But when result comes back with created entity, setting value should be safe
+			// Seed initial options so we can verify the new one is added
+			component.allOptions.set([{ value: 'a1', label: 'Existing Author' }]);
+
+			// When result comes back with created entity, options should update
+			// even though nodeState is null (the bug was that it bailed out early)
 			mockSheetService.openCreateSubject.next({
 				action: 'created',
 				entity: { id: 'new-1', name: 'New Author' },
 			});
 
-			// No crash expected even when nodeState is null
-			httpMock.match((r) => r.url === '/api/authors').forEach((r) => r.flush({ docs: [] }));
+			// Optimistic add should have happened despite null formNode
+			expect(component.allOptions().length).toBe(2);
+			expect(
+				component.allOptions().some((o) => o.value === 'new-1' && o.label === 'New Author'),
+			).toBe(true);
 		});
 	});
 
@@ -442,13 +448,8 @@ describe('RelationshipFieldRenderer (coverage - additional branches)', () => {
 			flushOptionsRequest();
 
 			const select = document.createElement('select');
-			const option = document.createElement('option');
-			option.value = 'a1';
-			select.appendChild(option);
 			select.value = 'a1';
-			const event = new Event('change');
-			Object.defineProperty(event, 'target', { value: select });
-
+			const event = { target: select } as unknown as Event;
 			expect(() => component.onSingleSelect(event)).not.toThrow();
 		});
 	});

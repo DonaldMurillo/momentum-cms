@@ -50,14 +50,17 @@ function buildOperatorClauses(
 			} else if (op === '$eq' && record[op] === null) {
 				whereClauses.push(`${col} IS NULL`);
 			} else {
-				// Guard: limit pattern length for LIKE operator
-				if (op === '$like' && String(record[op]).length > MAX_PATTERN_LENGTH) {
+				// Guard: limit pattern length for LIKE/NOT LIKE operator
+				if (
+					(op === '$like' || op === '$notLike') &&
+					String(record[op]).length > MAX_PATTERN_LENGTH
+				) {
 					throw new Error(
-						`Pattern value for $like exceeds maximum length of ${MAX_PATTERN_LENGTH} characters`,
+						`Pattern value for ${op} exceeds maximum length of ${MAX_PATTERN_LENGTH} characters`,
 					);
 				}
-				// Add ESCAPE clause for LIKE so backslash-escaped wildcards work consistently
-				if (op === '$like') {
+				// Add ESCAPE clause for LIKE/NOT LIKE so backslash-escaped wildcards work consistently
+				if (op === '$like' || op === '$notLike') {
 					whereClauses.push(`${col} ${sqlOp} ? ESCAPE '\\'`);
 				} else {
 					whereClauses.push(`${col} ${sqlOp} ?`);

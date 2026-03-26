@@ -268,6 +268,196 @@ test.describe('Entity Sheet', { tag: ['@admin', '@crud'] }, () => {
 		});
 	});
 
+	test.describe('Sheet creates entity and refreshes dropdown', () => {
+		test('should add new entity to relationship dropdown after sheet create', async ({
+			authenticatedPage,
+			request,
+		}) => {
+			// Sign in for API access (cleanup + media lookup)
+			const signInResp = await request.post('/api/auth/sign-in/email', {
+				headers: { 'Content-Type': 'application/json' },
+				data: { email: TEST_CREDENTIALS.email, password: TEST_CREDENTIALS.password },
+			});
+			expect(signInResp.ok()).toBe(true);
+
+			// Verify media-folders collection is available (media-organizer plugin must be active)
+			const foldersResp = await request.get('/api/media-folders?limit=1');
+			expect(foldersResp.ok()).toBe(true);
+
+			// Upload a small test image to get a media item
+			const pngHeader = Buffer.from([
+				0x89,
+				0x50,
+				0x4e,
+				0x47,
+				0x0d,
+				0x0a,
+				0x1a,
+				0x0a, // PNG signature
+				0x00,
+				0x00,
+				0x00,
+				0x0d,
+				0x49,
+				0x48,
+				0x44,
+				0x52, // IHDR chunk
+				0x00,
+				0x00,
+				0x00,
+				0x01,
+				0x00,
+				0x00,
+				0x00,
+				0x01, // 1x1 px
+				0x08,
+				0x02,
+				0x00,
+				0x00,
+				0x00,
+				0x90,
+				0x77,
+				0x53,
+				0xde, // RGB, no filter
+				0x00,
+				0x00,
+				0x00,
+				0x0c,
+				0x49,
+				0x44,
+				0x41,
+				0x54, // IDAT chunk
+				0x08,
+				0xd7,
+				0x63,
+				0xf8,
+				0xcf,
+				0xc0,
+				0x00,
+				0x00,
+				0x00,
+				0x02,
+				0x00,
+				0x01,
+				0xe2,
+				0x21,
+				0xbc,
+				0x33, // compressed data
+				0x00,
+				0x00,
+				0x00,
+				0x00,
+				0x49,
+				0x45,
+				0x4e,
+				0x44,
+				0xae,
+				0x42,
+				0x60,
+				0x82, // IEND
+			]);
+			const uploadResp = await request.post('/api/media', {
+				multipart: {
+					file: { name: 'e2e-test.png', mimeType: 'image/png', buffer: pngHeader },
+				},
+			});
+			expect(uploadResp.ok()).toBe(true);
+			const uploadData = (await uploadResp.json()) as { doc: { id: string } };
+			const mediaId = uploadData.doc.id;
+
+			// Navigate to media edit page
+			await authenticatedPage.goto(`/admin/collections/media/${mediaId}/edit`);
+
+			// Wait for the folder relationship field to load
+			const folderField = authenticatedPage
+				.locator('mcms-relationship-field-renderer')
+				.filter({ hasText: /Folder/i });
+			await expect(folderField).toBeVisible({ timeout: 10000 });
+
+			// Wait for options to load (no "Loading options..." text)
+			const folderSelect = folderField.locator('select');
+			await expect(folderSelect).toBeVisible({ timeout: 10000 });
+
+			// Record option count before creating
+			const optionsBefore = await folderSelect.locator('option').count();
+
+			// Click "New" to open the entity sheet for media-folders
+			const newButton = folderField.getByRole('button', { name: /new/i });
+			const sheetDialog = authenticatedPage.locator('[role="dialog"][aria-modal="true"]');
+
+			await expect
+				.poll(
+					async () => {
+						if (await sheetDialog.isVisible()) return true;
+						if (await newButton.isVisible()) {
+							await newButton.dispatchEvent('click');
+						}
+						return sheetDialog.isVisible();
+					},
+					{ timeout: 15000, message: 'Entity sheet should open for media-folders' },
+				)
+				.toBe(true);
+
+			// Fill in the folder name
+			const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+			const folderName = `E2E Folder ${suffix}`;
+			await sheetDialog.locator('input#field-name').fill(folderName);
+
+			// Click Create inside the sheet (use exact match to avoid the "Create new Media Folder" button)
+			const createButton = sheetDialog.locator('button[mcms-button][variant="primary"]');
+			await createButton.click();
+
+			// Sheet should close
+			await expect(sheetDialog).not.toBeVisible({ timeout: 10000 });
+
+			// The dropdown should now contain the new folder (optimistic add + re-fetch)
+			await expect
+				.poll(
+					async () => {
+						const count = await folderSelect.locator('option').count();
+						return count;
+					},
+					{
+						timeout: 10000,
+						message: `Dropdown should have more options after creating folder (had ${optionsBefore})`,
+					},
+				)
+				.toBeGreaterThan(optionsBefore);
+
+			// Verify the new folder name appears in the dropdown options
+			await expect
+				.poll(
+					async () => {
+						const texts = await folderSelect.locator('option').allTextContents();
+						return texts.map((t) => t.trim());
+					},
+					{ timeout: 10000, message: `Dropdown should contain "${folderName}"` },
+				)
+				.toContainEqual(folderName);
+
+			// Verify the new folder is auto-selected in the dropdown
+			await expect
+				.poll(
+					async () => {
+						const selectedText = await folderSelect.locator('option:checked').textContent();
+						return selectedText?.trim();
+					},
+					{ timeout: 10000, message: `New folder "${folderName}" should be auto-selected` },
+				)
+				.toBe(folderName);
+
+			// Clean up: delete the folder and media item via API
+			const allFolders = (await (await request.get('/api/media-folders?limit=100')).json()) as {
+				docs: Array<{ id: string; name: string }>;
+			};
+			const createdFolder = allFolders.docs.find((f) => f.name === folderName);
+			if (createdFolder) {
+				await request.delete(`/api/media-folders/${createdFolder.id}`);
+			}
+			await request.delete(`/api/media/${mediaId}`);
+		});
+	});
+
 	test.describe('URL state', () => {
 		test('should reflect sheet state in URL with query params', async ({ authenticatedPage }) => {
 			const relationshipField = await navigateToArticlesForm(authenticatedPage);

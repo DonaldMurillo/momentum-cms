@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import { momentumApiMiddleware } from './server-express';
-import { createInMemoryAdapter } from '@momentumcms/server-core';
+import { createInMemoryAdapter, resetMomentumAPI } from '@momentumcms/server-core';
 import type { CollectionConfig, MomentumConfig, DatabaseAdapter } from '@momentumcms/core';
 
 // Mock collections for testing
@@ -24,12 +24,26 @@ const mockUsersCollection: CollectionConfig = {
 	],
 };
 
+const mockMediaCollection: CollectionConfig = {
+	slug: 'media',
+	labels: { singular: 'Media', plural: 'Media' },
+	fields: [
+		{ name: 'filename', type: 'text', required: true, label: 'Filename' },
+		{ name: 'mimeType', type: 'text', required: true, label: 'MIME Type' },
+		{ name: 'alt', type: 'text', label: 'Alt Text' },
+	],
+	upload: {
+		mimeTypes: ['image/*'],
+	},
+};
+
 describe('momentumApiMiddleware', () => {
 	let adapter: DatabaseAdapter;
 	let app: express.Application;
 	let config: MomentumConfig;
 
 	beforeEach(() => {
+		resetMomentumAPI();
 		adapter = createInMemoryAdapter();
 		config = {
 			collections: [mockPostsCollection, mockUsersCollection],
@@ -131,6 +145,36 @@ describe('momentumApiMiddleware', () => {
 			const res = await request(app).patch('/api/posts/nonexistent').send({ title: 'Update' });
 
 			expect(res.status).toBe(404);
+		});
+
+		it('should handle JSON updates for upload collections without invoking multipart parsing', async () => {
+			const uploadAdapter = createInMemoryAdapter();
+			const uploadConfig: MomentumConfig = {
+				collections: [mockMediaCollection],
+				db: { adapter: uploadAdapter },
+				server: { port: 4000 },
+			};
+			resetMomentumAPI();
+			const uploadApp = express();
+			uploadApp.use((req, _res, next) => {
+				Object.assign(req, {
+					user: { id: 'admin-1', email: 'admin@test.com', role: 'admin' },
+				});
+				next();
+			});
+			uploadApp.use('/api', momentumApiMiddleware(uploadConfig));
+
+			const created = await uploadAdapter.create('media', {
+				filename: 'existing.jpg',
+				mimeType: 'image/jpeg',
+			});
+
+			const res = await request(uploadApp).patch(`/api/media/${created['id']}`).send({
+				alt: 'Updated alt text',
+			});
+
+			expect(res.status).toBe(200);
+			expect(res.body.doc.alt).toBe('Updated alt text');
 		});
 	});
 

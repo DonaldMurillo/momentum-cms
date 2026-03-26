@@ -127,9 +127,28 @@ describe('parseWhereParam', () => {
 		expect(parseWhereParam('')).toBeUndefined();
 	});
 
-	it('passes through pre-parsed objects (qs bracket notation)', () => {
+	it('normalizes JSON string `in` operator scalars into arrays', () => {
+		const result = parseWhereParam('{"tags":{"in":"tag-1"}}');
+		expect(result).toEqual({ tags: { in: ['tag-1'] } });
+	});
+
+	it('normalizes pre-parsed objects (qs bracket notation)', () => {
 		const obj = { slug: { equals: 'home' } };
-		expect(parseWhereParam(obj)).toBe(obj);
+		expect(parseWhereParam(obj)).toEqual(obj);
+	});
+
+	it('normalizes bracket-notation `in` operator scalars into arrays', () => {
+		const obj = { tags: { in: 'tag-1' } };
+		expect(parseWhereParam(obj)).toEqual({ tags: { in: ['tag-1'] } });
+	});
+
+	it('normalizes nested logical clauses recursively', () => {
+		const obj = {
+			or: [{ tags: { in: 'tag-1' } }, { status: { not_in: 'archived' } }],
+		};
+		expect(parseWhereParam(obj)).toEqual({
+			or: [{ tags: { in: ['tag-1'] } }, { status: { not_in: ['archived'] } }],
+		});
 	});
 
 	it('returns undefined for null', () => {
@@ -146,6 +165,32 @@ describe('parseWhereParam', () => {
 
 	it('returns undefined for booleans', () => {
 		expect(parseWhereParam(true)).toBeUndefined();
+	});
+
+	it('rejects object values inside in operator (only wraps primitives)', () => {
+		// Simulates crafted query: ?where[status][in][equals]=something
+		const obj = { status: { in: { equals: 'something' } } };
+		const result = parseWhereParam(obj);
+		// Object should NOT be wrapped into an array — should be stripped or ignored
+		expect(result).toEqual({ status: {} });
+	});
+
+	it('rejects object values inside not_in operator', () => {
+		const obj = { status: { not_in: { equals: 'something' } } };
+		const result = parseWhereParam(obj);
+		expect(result).toEqual({ status: {} });
+	});
+
+	it('wraps primitive string values in in/not_in as arrays', () => {
+		const obj = { tags: { in: 'tag-1' }, status: { not_in: 'archived' } };
+		const result = parseWhereParam(obj);
+		expect(result).toEqual({ tags: { in: ['tag-1'] }, status: { not_in: ['archived'] } });
+	});
+
+	it('wraps primitive number values in in/not_in as arrays', () => {
+		const obj = { priority: { in: 5 } };
+		const result = parseWhereParam(obj);
+		expect(result).toEqual({ priority: { in: [5] } });
 	});
 });
 

@@ -272,6 +272,8 @@ export interface Media {
 	height?: number;
 	focalPoint?: Record<string, unknown>;
 	sizes?: Record<string, unknown>;
+	folder?: string;
+	tags?: string[];
 	createdAt: string;
 	updatedAt: string;
 }
@@ -484,6 +486,23 @@ export interface FormSubmissions {
 	updatedAt: string;
 }
 
+export interface MediaFolders {
+	id: string;
+	name: string;
+	parent?: string;
+	parentKey?: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface MediaTags {
+	id: string;
+	name: string;
+	color?: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
 // ── Global Types ───────────────────────────────
 
 export interface SiteSettingsGlobal {
@@ -607,6 +626,8 @@ export interface MediaWhereClause {
 				lte?: number;
 				in?: number[];
 		  };
+	folder?: string | { equals?: string; not?: string; in?: string[] };
+	tags?: string | { equals?: string; not?: string; in?: string[] };
 	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
@@ -1030,6 +1051,23 @@ export interface FormSubmissionsWhereClause {
 	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
 
+export interface MediaFoldersWhereClause {
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	parent?: string | { equals?: string; not?: string; in?: string[] };
+	parentKey?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+}
+
+export interface MediaTagsWhereClause {
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	color?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+}
+
 export type CollectionSlug =
 	| 'categories'
 	| 'articles'
@@ -1053,7 +1091,9 @@ export type CollectionSlug =
 	| 'queue-jobs'
 	| 'cron-schedules'
 	| 'forms'
-	| 'form-submissions';
+	| 'form-submissions'
+	| 'media-folders'
+	| 'media-tags';
 
 export type GlobalSlug = 'site-settings';
 
@@ -1081,6 +1121,8 @@ export interface MomentumCollections {
 	'cron-schedules': CronSchedules;
 	forms: Forms;
 	'form-submissions': FormSubmissions;
+	'media-folders': MediaFolders;
+	'media-tags': MediaTags;
 }
 
 export interface MomentumGlobals {
@@ -1111,6 +1153,8 @@ export type TypedMomentumCollections = {
 	'cron-schedules': { doc: CronSchedules; where: CronSchedulesWhereClause };
 	forms: { doc: Forms; where: FormsWhereClause };
 	'form-submissions': { doc: FormSubmissions; where: FormSubmissionsWhereClause };
+	'media-folders': { doc: MediaFolders; where: MediaFoldersWhereClause };
+	'media-tags': { doc: MediaTags; where: MediaTagsWhereClause };
 };
 
 export type DocumentType<S extends CollectionSlug> = MomentumCollections[S];

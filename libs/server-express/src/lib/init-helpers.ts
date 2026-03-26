@@ -193,10 +193,27 @@ export function initializeMomentum(
 		// Store all collected middleware for auto-mounting by momentumApiMiddleware()
 		setPluginMiddleware(pluginMiddleware);
 
-		// 2. Initialize database schema (respects db.syncSchema / migrations.mode)
+		// 2. Apply plugin collection modifications before schema sync so plugin-injected
+		// fields exist in fresh databases as well as the runtime API.
+		for (const plugin of plugins) {
+			if (plugin.collections) {
+				const slugs = new Set(config.collections.map((c) => c.slug));
+				for (const col of plugin.collections) {
+					if (!slugs.has(col.slug)) {
+						config.collections.push(col);
+						slugs.add(col.slug);
+					}
+				}
+			}
+			if (plugin.modifyCollections) {
+				plugin.modifyCollections(config.collections);
+			}
+		}
+
+		// 3. Initialize database schema (respects db.syncSchema / migrations.mode)
 		await syncDatabaseSchema(config, log);
 
-		// 3. Initialize Momentum API singleton
+		// 4. Initialize Momentum API singleton
 		log.info('Initializing API...');
 		const api = initializeMomentumAPI(config);
 

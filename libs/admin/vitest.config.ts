@@ -27,6 +27,7 @@ export default defineConfig({
 			'@momentumcms/server-core': resolve(__dirname, '../../libs/server-core/src/index.ts'),
 			'@momentumcms/admin': resolve(__dirname, './src/index.ts'),
 			'@momentumcms/ui': resolve(__dirname, '../../libs/ui/src/index.ts'),
+			'@momentumcms/headless': resolve(__dirname, '../../libs/headless/src/index.ts'),
 		},
 	},
 });

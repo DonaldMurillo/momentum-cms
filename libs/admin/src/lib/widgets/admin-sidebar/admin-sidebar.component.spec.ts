@@ -113,8 +113,8 @@ describe('AdminSidebarWidget', () => {
 		await fixture.whenStable();
 
 		const navItems = fixture.nativeElement.querySelectorAll('mcms-sidebar-nav-item');
-		// Dashboard + 2 collections
-		expect(navItems.length).toBe(3);
+		// Dashboard + Media + 2 collections
+		expect(navItems.length).toBe(4);
 	});
 
 	it('should use collection labels for display', async () => {

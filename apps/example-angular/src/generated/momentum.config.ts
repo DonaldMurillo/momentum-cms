@@ -1350,6 +1350,28 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 						hidden: true,
 					},
 				},
+				{
+					name: 'folder',
+					type: 'relationship',
+					collection: () => ({
+						slug: 'media-folders',
+						labels: { singular: 'Media Folder', plural: 'Media Folders' },
+						admin: { useAsTitle: 'name' },
+					}),
+					onDelete: 'set-null',
+					label: 'Folder',
+				},
+				{
+					name: 'tags',
+					type: 'relationship',
+					collection: () => ({
+						slug: 'media-tags',
+						labels: { singular: 'Media Tag', plural: 'Media Tags' },
+						admin: { useAsTitle: 'name' },
+					}),
+					hasMany: true,
+					label: 'Tags',
+				},
 			],
 			admin: {
 				useAsTitle: 'filename',
@@ -2451,6 +2473,73 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 				},
 			],
 			admin: {
+				hidden: true,
+			},
+			timestamps: true,
+		},
+		{
+			slug: 'media-folders',
+			labels: {
+				singular: 'Media Folder',
+				plural: 'Media Folders',
+			},
+			fields: [
+				{
+					name: 'name',
+					type: 'text',
+					required: true,
+					label: 'Folder Name',
+				},
+				{
+					name: 'parent',
+					type: 'relationship',
+					collection: () => ({
+						slug: 'media-folders',
+						labels: { singular: 'Media Folder', plural: 'Media Folders' },
+						admin: { useAsTitle: 'name' },
+					}),
+					onDelete: 'set-null',
+					label: 'Parent Folder',
+				},
+				{
+					name: 'parentKey',
+					type: 'text',
+					defaultValue: '__root__',
+					admin: {
+						hidden: true,
+					},
+				},
+			],
+			admin: {
+				useAsTitle: 'name',
+				group: 'Media',
+				hidden: true,
+			},
+			timestamps: true,
+		},
+		{
+			slug: 'media-tags',
+			labels: {
+				singular: 'Media Tag',
+				plural: 'Media Tags',
+			},
+			fields: [
+				{
+					name: 'name',
+					type: 'text',
+					required: true,
+					label: 'Tag Name',
+				},
+				{
+					name: 'color',
+					type: 'text',
+					label: 'Color',
+					description: 'Hex color for visual distinction',
+				},
+			],
+			admin: {
+				useAsTitle: 'name',
+				group: 'Media',
 				hidden: true,
 			},
 			timestamps: true,

@@ -15,6 +15,11 @@ export type DatabaseDialect = 'postgresql' | 'sqlite';
  * Map a Momentum field type to a PostgreSQL column type.
  */
 export function fieldToPostgresType(field: Field): string {
+	// hasMany fields store arrays — use JSONB for PostgreSQL
+	if ('hasMany' in field && field.hasMany) {
+		return 'JSONB';
+	}
+
 	switch (field.type) {
 		case 'text':
 		case 'textarea':

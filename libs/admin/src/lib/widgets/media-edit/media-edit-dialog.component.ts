@@ -32,12 +32,29 @@ export interface MediaEditItem {
 	width?: number;
 	height?: number;
 	focalPoint?: { x: number; y: number };
+	folder?: string | null;
+	tags?: string[];
+}
+
+/** Folder option for the dropdown. */
+export interface MediaEditFolderOption {
+	id: string;
+	name: string;
+}
+
+/** Tag option for the multi-select. */
+export interface MediaEditTagOption {
+	id: string;
+	name: string;
+	color?: string;
 }
 
 /** Data passed to the MediaEditDialog. */
 export interface MediaEditDialogData {
 	media: MediaEditItem;
 	imageSizes?: ImageSizeConfig[];
+	folders?: MediaEditFolderOption[];
+	tags?: MediaEditTagOption[];
 }
 
 /** Result returned when the dialog closes. */
@@ -130,6 +147,49 @@ function formatFileSize(bytes?: number): string {
 							/>
 						</div>
 
+						<!-- Folder selector -->
+						@if (folderOptions.length > 0) {
+							<div class="space-y-2">
+								<mcms-label for="media-folder">Folder</mcms-label>
+								<select
+									id="media-folder"
+									class="flex h-9 w-full rounded-md border border-[hsl(var(--mcms-border))] bg-transparent px-3 py-1 text-sm"
+									[value]="selectedFolder() ?? ''"
+									(change)="onFolderChange($event)"
+									data-slot="folder-select"
+								>
+									<option value="">None</option>
+									@for (folder of folderOptions; track folder.id) {
+										<option [value]="folder.id">{{ folder.name }}</option>
+									}
+								</select>
+							</div>
+						}
+
+						<!-- Tag multi-select -->
+						@if (tagOptions.length > 0) {
+							<div class="space-y-2">
+								<mcms-label>Tags</mcms-label>
+								<div class="flex flex-wrap gap-1" data-slot="tag-select">
+									@for (tag of tagOptions; track tag.id) {
+										<button
+											type="button"
+											class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs transition-colors"
+											[class.bg-[hsl(var(--mcms-primary))]]="selectedTagIds().has(tag.id)"
+											[class.text-[hsl(var(--mcms-primary-foreground))]]="
+												selectedTagIds().has(tag.id)
+											"
+											[class.border-[hsl(var(--mcms-primary))]]="selectedTagIds().has(tag.id)"
+											[class.border-[hsl(var(--mcms-border))]]="!selectedTagIds().has(tag.id)"
+											(click)="toggleTag(tag.id)"
+										>
+											{{ tag.name }}
+										</button>
+									}
+								</div>
+							</div>
+						}
+
 						<!-- Read-only info -->
 						<div class="space-y-1 text-sm text-muted-foreground">
 							<p>Type: {{ media.mimeType }}</p>
@@ -182,9 +242,13 @@ export class MediaEditDialog {
 
 	readonly media = this.data.media;
 	readonly imageSizes = this.data.imageSizes ?? [];
+	readonly folderOptions = this.data.folders ?? [];
+	readonly tagOptions = this.data.tags ?? [];
 	readonly filename = signal(this.data.media.filename);
 	readonly altText = signal(this.data.media.alt ?? '');
 	readonly focalPointValue = signal(this.data.media.focalPoint ?? { x: 0.5, y: 0.5 });
+	readonly selectedFolder = signal<string | null>(this.data.media.folder ?? null);
+	readonly selectedTagIds = signal<Set<string>>(new Set(this.data.media.tags ?? []));
 	readonly isSaving = signal(false);
 	readonly saveError = signal<string | null>(null);
 	readonly formattedSize = formatFileSize(this.data.media.filesize);
@@ -199,15 +263,38 @@ export class MediaEditDialog {
 		const fpChanged =
 			this.focalPointValue().x !== (this.media.focalPoint?.x ?? 0.5) ||
 			this.focalPointValue().y !== (this.media.focalPoint?.y ?? 0.5);
+		const folderChanged = this.selectedFolder() !== (this.media.folder ?? null);
+		const originalTags = new Set(this.media.tags ?? []);
+		const currentTags = this.selectedTagIds();
+		const tagsChanged =
+			originalTags.size !== currentTags.size || [...currentTags].some((t) => !originalTags.has(t));
 		return (
 			this.filename() !== this.media.filename ||
 			this.altText() !== (this.media.alt ?? '') ||
-			fpChanged
+			fpChanged ||
+			folderChanged ||
+			tagsChanged
 		);
 	});
 
 	onFocalPointChange(fp: { x: number; y: number }): void {
 		this.focalPointValue.set(fp);
+	}
+
+	onFolderChange(event: Event): void {
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- DOM event target narrowing
+		const select = event.target as HTMLSelectElement;
+		this.selectedFolder.set(select.value || null);
+	}
+
+	toggleTag(tagId: string): void {
+		const ids = new Set(this.selectedTagIds());
+		if (ids.has(tagId)) {
+			ids.delete(tagId);
+		} else {
+			ids.add(tagId);
+		}
+		this.selectedTagIds.set(ids);
 	}
 
 	/**
@@ -224,6 +311,12 @@ export class MediaEditDialog {
 			};
 			if (this.isImage()) {
 				updateData['focalPoint'] = this.focalPointValue();
+			}
+			if (this.folderOptions.length > 0) {
+				updateData['folder'] = this.selectedFolder();
+			}
+			if (this.tagOptions.length > 0) {
+				updateData['tags'] = Array.from(this.selectedTagIds());
 			}
 			const result = await this.api.collection('media').update(this.media.id, updateData);
 

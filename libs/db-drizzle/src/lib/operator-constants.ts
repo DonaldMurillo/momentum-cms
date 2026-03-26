@@ -15,6 +15,7 @@ export const SIMPLE_OP_MAP: Record<string, string> = {
 	$lte: '<=',
 	$ne: '!=',
 	$like: 'LIKE',
+	$notLike: 'NOT LIKE',
 };
 
 /** All recognised $-prefixed operator keys (simple + special-cased) */

@@ -60,6 +60,18 @@ function toMediaItems(docs: unknown): MediaItem[] {
 	return docs.filter(isMediaItem);
 }
 
+/** Folder option for navigation. */
+interface PickerFolderOption {
+	id: string;
+	name: string;
+}
+
+/** Tag option for filtering. */
+interface PickerTagOption {
+	id: string;
+	name: string;
+}
+
 /**
  * Data passed to the MediaPickerDialog.
  */
@@ -68,6 +80,10 @@ export interface MediaPickerDialogData {
 	mimeTypes?: string[];
 	/** Collection to query (default: 'media') */
 	relationTo?: string;
+	/** Available folders for navigation */
+	folders?: PickerFolderOption[];
+	/** Available tags for filtering */
+	tags?: PickerTagOption[];
 }
 
 /**
@@ -104,12 +120,47 @@ export interface MediaPickerResult {
 
 		<mcms-dialog-content class="max-h-[60vh] overflow-auto">
 			<!-- Search -->
-			<div class="mb-4">
+			<div class="mb-4 space-y-2">
 				<mcms-search-input
 					placeholder="Search media..."
 					[value]="searchQuery()"
 					(valueChange)="onSearchChange($event)"
 				/>
+
+				@if (folderOptions.length > 0) {
+					<div class="flex items-center gap-2">
+						<span class="text-xs text-mcms-muted-foreground">Folder:</span>
+						<select
+							class="rounded-md border border-mcms-border bg-transparent px-2 py-1 text-xs"
+							[value]="selectedFolderId() ?? ''"
+							(change)="onFolderChange($event)"
+						>
+							<option value="">All</option>
+							@for (folder of folderOptions; track folder.id) {
+								<option [value]="folder.id">{{ folder.name }}</option>
+							}
+						</select>
+					</div>
+				}
+
+				@if (tagOptions.length > 0) {
+					<div class="flex flex-wrap items-center gap-1">
+						<span class="text-xs text-mcms-muted-foreground">Tags:</span>
+						@for (tag of tagOptions; track tag.id) {
+							<button
+								type="button"
+								class="rounded-full border px-2 py-0.5 text-xs transition-colors"
+								[class.bg-mcms-primary]="selectedTagIds().has(tag.id)"
+								[class.text-mcms-primary-foreground]="selectedTagIds().has(tag.id)"
+								[class.border-mcms-primary]="selectedTagIds().has(tag.id)"
+								[class.border-mcms-border]="!selectedTagIds().has(tag.id)"
+								(click)="toggleTag(tag.id)"
+							>
+								{{ tag.name }}
+							</button>
+						}
+					</div>
+				}
 			</div>
 
 			@if (isLoading()) {
@@ -195,15 +246,22 @@ export class MediaPickerDialog {
 	readonly totalPages = signal(1);
 	readonly totalDocs = signal(0);
 	readonly limit = signal(24);
+	readonly selectedFolderId = signal<string | null>(null);
+	readonly selectedTagIds = signal<Set<string>>(new Set());
 
 	/** Collection to query */
 	readonly collectionSlug = computed(() => this.data?.relationTo ?? 'media');
+	readonly folderOptions = this.data?.folders ?? [];
+	readonly tagOptions = this.data?.tags ?? [];
 
 	constructor() {
-		// Load media on init and when search/page changes
+		// Load media on init and when search/page/folder/tag changes
 		effect(() => {
 			const query = this.searchQuery();
 			const page = this.currentPage();
+			// Track folder/tag signals so the effect re-runs when they change
+			this.selectedFolderId();
+			this.selectedTagIds();
 			this.loadMedia(query, page);
 		});
 	}
@@ -217,45 +275,47 @@ export class MediaPickerDialog {
 		try {
 			const collection = this.api.collection(this.collectionSlug());
 
-			// Fetch all media — DB adapter does not support complex where operators
+			const where: Record<string, unknown> = {};
+			const folderId = this.selectedFolderId();
+			const tagIds = this.selectedTagIds();
+			if (folderId) where['folder'] = { equals: folderId };
+			if (tagIds.size > 0) where['tags'] = { in: Array.from(tagIds) };
+
+			// Server-side search filter (filename contains search term)
+			if (search) {
+				where['filename'] = { contains: search };
+			}
+
+			// Server-side MIME type filter
+			const mimeTypes = this.data?.mimeTypes;
+			if (mimeTypes && mimeTypes.length > 0) {
+				const exactTypes = mimeTypes.filter((p) => !p.endsWith('/*'));
+				const wildcardPrefixes = mimeTypes
+					.filter((p) => p.endsWith('/*'))
+					.map((p) => p.slice(0, -1));
+
+				const mimeConditions: Record<string, unknown>[] = [];
+				if (exactTypes.length > 0) {
+					mimeConditions.push({ mimeType: { in: exactTypes } });
+				}
+				for (const prefix of wildcardPrefixes) {
+					mimeConditions.push({ mimeType: { like: `${prefix}%` } });
+				}
+				if (mimeConditions.length > 0) {
+					where['or'] = mimeConditions;
+				}
+			}
+
 			const result = await collection.find({
 				page,
 				limit: this.limit(),
+				where: Object.keys(where).length > 0 ? where : undefined,
 			});
 
-			let items = toMediaItems(result.docs);
-
-			// Client-side search filter
-			if (search) {
-				const lowerSearch = search.toLowerCase();
-				items = items.filter((m) => m.filename.toLowerCase().includes(lowerSearch));
-			}
-
-			// Client-side MIME type filter
-			const mimeTypes = this.data?.mimeTypes;
-			if (mimeTypes && mimeTypes.length > 0) {
-				items = items.filter((m) =>
-					mimeTypes.some((pattern) => {
-						if (pattern.endsWith('/*')) {
-							return m.mimeType.startsWith(pattern.slice(0, -1));
-						}
-						return m.mimeType === pattern;
-					}),
-				);
-			}
-
+			const items = toMediaItems(result.docs);
 			this.mediaItems.set(items);
-
-			// When client-side filtering is active, use filtered counts
-			// to avoid pagination showing incorrect totals
-			const hasClientFilter = !!search || (mimeTypes && mimeTypes.length > 0);
-			if (hasClientFilter) {
-				this.totalDocs.set(items.length);
-				this.totalPages.set(1); // Client-filtered results are always a single page
-			} else {
-				this.totalDocs.set(result.totalDocs);
-				this.totalPages.set(result.totalPages);
-			}
+			this.totalDocs.set(result.totalDocs);
+			this.totalPages.set(result.totalPages);
 		} catch (error) {
 			console.error('Failed to load media:', error);
 			this.mediaItems.set([]);
@@ -269,7 +329,25 @@ export class MediaPickerDialog {
 	 */
 	onSearchChange(query: string): void {
 		this.searchQuery.set(query);
-		this.currentPage.set(1); // Reset to first page on search
+		this.currentPage.set(1);
+	}
+
+	onFolderChange(event: Event): void {
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- DOM event target narrowing
+		const select = event.target as HTMLSelectElement;
+		this.selectedFolderId.set(select.value || null);
+		this.currentPage.set(1);
+	}
+
+	toggleTag(tagId: string): void {
+		const ids = new Set(this.selectedTagIds());
+		if (ids.has(tagId)) {
+			ids.delete(tagId);
+		} else {
+			ids.add(tagId);
+		}
+		this.selectedTagIds.set(ids);
+		this.currentPage.set(1);
 	}
 
 	/**
