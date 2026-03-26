@@ -578,6 +578,73 @@ describe('MediaLibraryPage - coverage', () => {
 	});
 
 	// -----------------------------------------------------------------------
+	// loadMedia staleness guard — stale responses must not overwrite fresh data
+	// -----------------------------------------------------------------------
+	describe('loadMedia - stale response guard', () => {
+		it('should discard stale API responses when a newer request is in-flight', async () => {
+			// Wait for initial load to complete
+			await vi.waitFor(() => expect(component.isLoading()).toBe(false));
+			mockCollection.find.mockClear();
+
+			// Create two deferred promises we can resolve in any order
+			let resolveStale!: (v: unknown) => void;
+			let resolveFresh!: (v: unknown) => void;
+
+			const stalePromise = new Promise((r) => {
+				resolveStale = r;
+			});
+			const freshPromise = new Promise((r) => {
+				resolveFresh = r;
+			});
+
+			mockCollection.find
+				.mockReturnValueOnce(stalePromise) // 1st call (stale — "cat" search)
+				.mockReturnValueOnce(freshPromise); // 2nd call (fresh — "dog" search)
+
+			// Trigger first search — let the effect fire
+			component.onSearchChange('cat');
+			await vi.waitFor(() => {
+				expect(mockCollection.find.mock.calls.length).toBeGreaterThanOrEqual(1);
+			});
+
+			// Trigger second search before first resolves — effect fires again
+			component.onSearchChange('dog');
+			await vi.waitFor(() => {
+				expect(mockCollection.find.mock.calls.length).toBeGreaterThanOrEqual(2);
+			});
+
+			// Resolve FRESH first, then STALE (out of order)
+			resolveFresh({
+				docs: [validMedia({ id: 'dog-1', filename: 'dog.jpg' })],
+				totalDocs: 1,
+				totalPages: 1,
+			});
+
+			await vi.waitFor(() => {
+				expect(component.mediaItems().length).toBe(1);
+				expect(component.mediaItems()[0].filename).toBe('dog.jpg');
+			});
+
+			// Now resolve STALE — it must NOT overwrite fresh results
+			resolveStale({
+				docs: [
+					validMedia({ id: 'cat-1', filename: 'cat.jpg' }),
+					validMedia({ id: 'cat-2', filename: 'cat2.jpg' }),
+				],
+				totalDocs: 2,
+				totalPages: 1,
+			});
+
+			// Give microtasks time to flush
+			await new Promise((r) => setTimeout(r, 50));
+
+			// Fresh "dog" results must still be displayed, not overwritten by stale "cat" results
+			expect(component.mediaItems().length).toBe(1);
+			expect(component.mediaItems()[0].filename).toBe('dog.jpg');
+		});
+	});
+
+	// -----------------------------------------------------------------------
 	// getMediaUrl - edge cases
 	// -----------------------------------------------------------------------
 	describe('getMediaUrl - edge cases', () => {

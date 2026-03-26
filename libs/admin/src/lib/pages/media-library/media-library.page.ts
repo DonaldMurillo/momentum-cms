@@ -378,6 +378,7 @@ export class MediaLibraryPage {
 	private readonly dialog = inject(DialogService);
 	private readonly destroyRef = inject(DestroyRef);
 	private readonly uploadSubscriptions: Subscription[] = [];
+	private loadRequestId = 0;
 
 	readonly mediaImageSizes: ImageSizeConfig[] = (() => {
 		const collections = getCollectionsFromRouteData(this.route.parent?.snapshot.data);
@@ -439,6 +440,7 @@ export class MediaLibraryPage {
 		tagIds: Set<string>,
 		filters: MediaFilterState,
 	): Promise<void> {
+		const requestId = ++this.loadRequestId;
 		this.isLoading.set(true);
 
 		try {
@@ -467,15 +469,21 @@ export class MediaLibraryPage {
 				sort: '-createdAt',
 			});
 
+			// Discard stale responses — a newer request was fired while we awaited
+			if (requestId !== this.loadRequestId) return;
+
 			this.mediaItems.set(toMediaItems(result.docs));
 			this.totalDocs.set(result.totalDocs);
 			this.totalPages.set(result.totalPages);
 		} catch (error) {
+			if (requestId !== this.loadRequestId) return;
 			console.error('Failed to load media:', error);
 			this.feedback.operationFailed('Failed to load media');
 			this.mediaItems.set([]);
 		} finally {
-			this.isLoading.set(false);
+			if (requestId === this.loadRequestId) {
+				this.isLoading.set(false);
+			}
 		}
 	}
 

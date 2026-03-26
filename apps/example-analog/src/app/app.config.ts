@@ -32,6 +32,8 @@ import {
 	FormSubmissionsCollection,
 } from '@momentumcms/plugins-form-builder/collections';
 import { providePageViewTracking } from '@momentumcms/plugins-analytics/page-tracker';
+import { mediaOrganizerModifyCollections } from '@momentumcms/plugins-media-organizer/modify-collections';
+import { MediaFoldersCollection, MediaTagsCollection } from '@momentumcms/plugins/media-organizer';
 
 import { provideMomentumFormBuilder } from '@momentumcms/form-builder';
 import {
@@ -62,9 +64,12 @@ const adminCollections = [
 	RedirectsCollection,
 	FormsCollectionWithPreview,
 	FormSubmissionsCollection,
+	MediaFoldersCollection,
+	MediaTagsCollection,
 ];
 injectBlockAnalyticsFields(adminCollections);
 injectSeoFields(adminCollections, { collections: ['categories', 'articles', 'pages'] });
+mediaOrganizerModifyCollections(adminCollections);
 
 // Page routes — defined explicitly so the PageComponent receives route params directly
 // (Analog's file-based routing wraps components in loadChildren, which can interfere with param inheritance)

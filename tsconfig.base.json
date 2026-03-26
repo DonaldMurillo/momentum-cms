@@ -114,6 +114,9 @@
 				"libs/plugins/form-builder/src/lib/collections/index.ts"
 			],
 			"@momentumcms/plugins-media-organizer": ["libs/plugins/media-organizer/src/index.ts"],
+			"@momentumcms/plugins-media-organizer/modify-collections": [
+				"libs/plugins/media-organizer/src/lib/modify-collections.ts"
+			],
 			"@momentumcms/plugins/media-organizer": ["libs/plugins/media-organizer/src/index.ts"]
 		}
 	},

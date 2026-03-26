@@ -190,14 +190,9 @@ describe('MediaPickerDialog (coverage - loadMedia branches)', () => {
 			const whereParam = searchReq.request.params.get('where');
 			expect(whereParam).toBeTruthy();
 			const where = JSON.parse(whereParam as string);
-			expect(where).toHaveProperty('or');
-			// Search uses OR across filename and alt fields
-			const orConditions = where['or'];
-			const hasFilenameSearch = orConditions.some(
-				(c: Record<string, unknown>) =>
-					(c['filename'] as Record<string, unknown>)?.['contains'] === 'photo',
-			);
-			expect(hasFilenameSearch).toBe(true);
+			// Media picker uses direct filename filter (not OR with alt like the library page)
+			expect(where).toHaveProperty('filename');
+			expect((where['filename'] as Record<string, unknown>)['contains']).toBe('photo');
 
 			const filteredDocs: MediaItem[] = [
 				{ id: '1', filename: 'Photo_One.jpg', mimeType: 'image/jpeg', path: '/1.jpg' },

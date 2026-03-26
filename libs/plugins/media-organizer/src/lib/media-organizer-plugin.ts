@@ -1,7 +1,7 @@
 import type { MomentumPlugin, PluginContext, PluginReadyContext } from '@momentumcms/plugins/core';
-import { relationship } from '@momentumcms/core';
 import { MediaFoldersCollection } from './media-folders.collection';
 import { MediaTagsCollection, registerUploadCollectionSlugs } from './media-tags.collection';
+import { mediaOrganizerModifyCollections } from './modify-collections';
 
 export interface MediaOrganizerPluginConfig {
 	/** Disable the plugin without removing it from config. @default true */
@@ -19,26 +19,21 @@ export function mediaOrganizerPlugin(config: MediaOrganizerPluginConfig = {}): M
 		name: 'media-organizer',
 		collections: [MediaFoldersCollection, MediaTagsCollection],
 
+		// Browser-safe import paths for the admin config generator
+		browserImports: {
+			modifyCollections: {
+				path: '@momentumcms/plugins-media-organizer/modify-collections',
+				exportName: 'mediaOrganizerModifyCollections',
+			},
+		},
+
 		modifyCollections(collections) {
 			if (!enabled) return;
+			mediaOrganizerModifyCollections(collections);
 			const uploadSlugs: string[] = [];
 			for (const col of collections) {
 				if (!col.upload) continue;
 				uploadSlugs.push(col.slug);
-				// Skip if folder/tags already injected (idempotent)
-				if (col.fields.some((f) => f.name === 'folder')) continue;
-				col.fields.push(
-					relationship('folder', {
-						collection: () => MediaFoldersCollection,
-						onDelete: 'set-null',
-						label: 'Folder',
-					}),
-					relationship('tags', {
-						collection: () => MediaTagsCollection,
-						hasMany: true,
-						label: 'Tags',
-					}),
-				);
 			}
 			registerUploadCollectionSlugs(uploadSlugs);
 		},

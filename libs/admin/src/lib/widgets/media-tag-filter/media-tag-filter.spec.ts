@@ -134,4 +134,37 @@ describe('MediaTagFilterComponent', () => {
 		expect(component.getContrastColor('#000000')).toBe('#ffffff');
 		expect(component.getContrastColor('#ffffff')).toBe('#000000');
 	});
+
+	describe('getContrastColor edge cases', () => {
+		let component: MediaTagFilterComponent;
+
+		beforeEach(() => {
+			component = fixture.debugElement.children[0].componentInstance as MediaTagFilterComponent;
+		});
+
+		it('should handle 3-char hex codes by expanding them', () => {
+			// #fff → #ffffff → white background → should return black text
+			expect(component.getContrastColor('#fff')).toBe('#000000');
+			// #000 → #000000 → black background → should return white text
+			expect(component.getContrastColor('#000')).toBe('#ffffff');
+		});
+
+		it('should handle 3-char hex with mixed case', () => {
+			// #FFF → #FFFFFF → white background → black text
+			expect(component.getContrastColor('#FFF')).toBe('#000000');
+		});
+
+		it('should handle 3-char hex with color values', () => {
+			// #ff0 → #ffff00 → yellow → high YIQ → dark text
+			expect(component.getContrastColor('#ff0')).toBe('#000000');
+			// #00f → #0000ff → blue → low YIQ → light text
+			expect(component.getContrastColor('#00f')).toBe('#ffffff');
+		});
+
+		it('should return white for undefined or non-hex values', () => {
+			expect(component.getContrastColor(undefined)).toBe('#ffffff');
+			expect(component.getContrastColor('rgb(0,0,0)')).toBe('#ffffff');
+			expect(component.getContrastColor('')).toBe('#ffffff');
+		});
+	});
 });
