@@ -48,7 +48,7 @@ function buildMediaPickerWhere(opts: {
 			mimeConditions.push({ mimeType: { like: `${prefix}%` } });
 		}
 		if (mimeConditions.length > 0) {
-			where['$or'] = mimeConditions;
+			where['or'] = mimeConditions;
 		}
 	}
 
@@ -87,24 +87,28 @@ describe('MediaPickerDialog where-clause building (server-side filters)', () => 
 		expect(where['filename']).toEqual({ contains: 'photo' });
 	});
 
-	it('should handle wildcard MIME type (image/*) as $or with like query', () => {
+	it('should use unprefixed "or" key for wildcard MIME type (image/*)', () => {
 		const where = buildMediaPickerWhere({ mimeTypes: ['image/*'] });
-		expect(where['$or']).toEqual([{ mimeType: { like: 'image/%' } }]);
+		// Server only recognizes unprefixed "or", not "$or"
+		expect(where['or']).toEqual([{ mimeType: { like: 'image/%' } }]);
+		expect(where).not.toHaveProperty('$or');
 	});
 
-	it('should handle exact MIME type as $or with in query', () => {
+	it('should use unprefixed "or" key for exact MIME type', () => {
 		const where = buildMediaPickerWhere({ mimeTypes: ['application/pdf'] });
-		expect(where['$or']).toEqual([{ mimeType: { in: ['application/pdf'] } }]);
+		expect(where['or']).toEqual([{ mimeType: { in: ['application/pdf'] } }]);
+		expect(where).not.toHaveProperty('$or');
 	});
 
-	it('should combine exact + wildcard MIME types with $or', () => {
+	it('should combine exact + wildcard MIME types with unprefixed "or"', () => {
 		const where = buildMediaPickerWhere({
 			mimeTypes: ['application/pdf', 'image/*'],
 		});
-		expect(where['$or']).toEqual([
+		expect(where['or']).toEqual([
 			{ mimeType: { in: ['application/pdf'] } },
 			{ mimeType: { like: 'image/%' } },
 		]);
+		expect(where).not.toHaveProperty('$or');
 	});
 
 	it('should combine all filter types together', () => {
@@ -117,26 +121,21 @@ describe('MediaPickerDialog where-clause building (server-side filters)', () => 
 		expect(where['folder']).toEqual({ equals: 'f1' });
 		expect(where['tags']).toEqual({ in: ['t1'] });
 		expect(where['filename']).toEqual({ contains: 'sunset' });
-		expect(where['$or']).toEqual([{ mimeType: { like: 'image/%' } }]);
+		expect(where['or']).toEqual([{ mimeType: { like: 'image/%' } }]);
+		expect(where).not.toHaveProperty('$or');
 	});
 
 	it('should NOT have any client-side filtering that forces totalPages to 1', () => {
-		// This test verifies the fix: the old code had a `hasClientFilter` check
-		// that forced totalPages=1. The new code sends all filters to the server.
-		// We verify this by checking that the buildMediaPickerWhere function always
-		// produces a where clause (never returns a flag to force pagination).
 		const where = buildMediaPickerWhere({
 			folderId: 'f1',
 			search: 'test',
 			mimeTypes: ['image/*'],
 		});
 
-		// All filters are in the where clause — none are "client-side"
 		expect(where['filename']).toBeDefined();
 		expect(where['folder']).toBeDefined();
-		expect(where['$or']).toBeDefined(); // MIME filter uses $or
-
-		// The where object should be non-empty for the API call
+		expect(where['or']).toBeDefined();
+		expect(where).not.toHaveProperty('$or');
 		expect(Object.keys(where).length).toBeGreaterThan(0);
 	});
 });

@@ -302,7 +302,7 @@ export class MediaPickerDialog {
 					mimeConditions.push({ mimeType: { like: `${prefix}%` } });
 				}
 				if (mimeConditions.length > 0) {
-					where['$or'] = mimeConditions;
+					where['or'] = mimeConditions;
 				}
 			}
 

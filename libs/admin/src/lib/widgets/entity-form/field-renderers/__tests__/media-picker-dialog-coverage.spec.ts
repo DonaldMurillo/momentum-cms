@@ -152,6 +152,11 @@ describe('MediaPickerDialog (coverage - loadMedia branches)', () => {
 
 			const reqs = httpMock.match((r) => r.url.startsWith('/api/media'));
 			expect(reqs.length).toBeGreaterThan(0);
+
+			const req = reqs[reqs.length - 1];
+			expect(req.request.params.get('page')).toBe('1');
+			expect(req.request.params.get('limit')).toBeTruthy();
+
 			for (const r of reqs) {
 				r.flush({ docs: [], totalDocs: 0, totalPages: 1 });
 			}
@@ -178,11 +183,29 @@ describe('MediaPickerDialog (coverage - loadMedia branches)', () => {
 			component.onSearchChange('photo');
 			await flushPromises();
 
+			// Verify the search term is sent in the where clause
+			const reqs = httpMock.match((r) => r.url.startsWith('/api/'));
+			expect(reqs.length).toBeGreaterThan(0);
+			const searchReq = reqs[reqs.length - 1];
+			const whereParam = searchReq.request.params.get('where');
+			expect(whereParam).toBeTruthy();
+			const where = JSON.parse(whereParam as string);
+			expect(where).toHaveProperty('or');
+			// Search uses OR across filename and alt fields
+			const orConditions = where['or'];
+			const hasFilenameSearch = orConditions.some(
+				(c: Record<string, unknown>) =>
+					(c['filename'] as Record<string, unknown>)?.['contains'] === 'photo',
+			);
+			expect(hasFilenameSearch).toBe(true);
+
 			const filteredDocs: MediaItem[] = [
 				{ id: '1', filename: 'Photo_One.jpg', mimeType: 'image/jpeg', path: '/1.jpg' },
 				{ id: '3', filename: 'PHOTO_TWO.png', mimeType: 'image/png', path: '/3.png' },
 			];
-			flushApiRequest({ docs: filteredDocs, totalDocs: 2, totalPages: 1 });
+			for (const r of reqs) {
+				if (!r.cancelled) r.flush({ docs: filteredDocs, totalDocs: 2, totalPages: 1 });
+			}
 			await flushPromises();
 
 			expect(component.mediaItems().length).toBe(2);
@@ -265,6 +288,26 @@ describe('MediaPickerDialog (coverage - loadMedia branches)', () => {
 
 			expect(component.mediaItems().length).toBe(2);
 			expect(component.mediaItems().map((m) => m.id)).toEqual(['1', '3']);
+		});
+
+		it('should use unprefixed "or" key (not "$or") in the where clause for MIME conditions', async () => {
+			setup({ mimeTypes: ['image/*', 'video/mp4'] });
+			await flushPromises();
+
+			const reqs = httpMock.match((r) => r.url.startsWith('/api/'));
+			expect(reqs.length).toBeGreaterThan(0);
+
+			const req = reqs[reqs.length - 1];
+			const whereParam = req.request.params.get('where');
+			expect(whereParam).toBeTruthy();
+
+			const where = JSON.parse(whereParam as string);
+			// The server-side where processor only recognizes unprefixed "or" as logical OR.
+			// Using "$or" causes a ValidationError ("Unknown field: $or").
+			expect(where).toHaveProperty('or');
+			expect(where).not.toHaveProperty('$or');
+
+			req.flush({ docs: [], totalDocs: 0, totalPages: 1 });
 		});
 
 		it('should display server-filtered results for multiple MIME patterns', async () => {
@@ -431,9 +474,12 @@ describe('MediaPickerDialog (coverage - loadMedia branches)', () => {
 			component.onPageChange(2);
 			await flushPromises();
 
-			// Should have new pending request(s)
+			// Verify the page parameter is sent in the request
 			const reqs = httpMock.match((r) => r.url.startsWith('/api/'));
 			expect(reqs.length).toBeGreaterThan(0);
+			const pageReq = reqs[reqs.length - 1];
+			expect(pageReq.request.params.get('page')).toBe('2');
+
 			for (const r of reqs) {
 				r.flush({ docs: [], totalDocs: 0, totalPages: 3 });
 			}
