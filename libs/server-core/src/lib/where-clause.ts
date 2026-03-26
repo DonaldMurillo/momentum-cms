@@ -26,6 +26,7 @@ export const OPERATOR_MAP: Record<string, string> = {
 	lte: '$lte',
 	not_equals: '$ne',
 	like: '$like',
+	not_like: '$notLike',
 	contains: '$contains',
 	in: '$in',
 	not_in: '$nin',

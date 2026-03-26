@@ -10,7 +10,6 @@ import {
 } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { heroCloudArrowUp, heroXMark } from '@ng-icons/heroicons/outline';
-import { Button } from '@momentumcms/ui';
 import { UploadService, type UploadProgress } from '../../services/upload.service';
 import { injectMomentumAPI } from '../../services/momentum-api.service';
 import { MediaPreviewComponent } from '../media-preview/media-preview.component';
@@ -27,7 +26,7 @@ interface UploadItem {
 
 @Component({
 	selector: 'mcms-media-upload-zone',
-	imports: [NgIcon, Button, MediaPreviewComponent],
+	imports: [NgIcon, MediaPreviewComponent],
 	providers: [provideIcons({ heroCloudArrowUp, heroXMark })],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },

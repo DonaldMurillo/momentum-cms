@@ -47,13 +47,12 @@ export function buildFilterWhere(state: MediaFilterState): Record<string, unknow
 			document: 'application/%',
 		};
 		if (state.mimeCategory === 'other') {
-			where['mimeType'] = {
-				not_like: 'image/%',
-				and: {
-					not_like: 'video/%',
-					and: { not_like: 'audio/%', and: { not_like: 'application/%' } },
-				},
-			};
+			where['and'] = [
+				{ mimeType: { not_like: 'image/%' } },
+				{ mimeType: { not_like: 'video/%' } },
+				{ mimeType: { not_like: 'audio/%' } },
+				{ mimeType: { not_like: 'application/%' } },
+			];
 		} else {
 			where['mimeType'] = { like: mimeMap[state.mimeCategory] };
 		}

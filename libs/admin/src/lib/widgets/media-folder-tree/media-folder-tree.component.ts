@@ -113,64 +113,59 @@ function flattenTree(nodes: FolderTreeNode[], expandedIds: Set<string>, depth: n
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `
-		<div class="space-y-0.5" role="tree" aria-label="Media folders">
-			<!-- All Media root -->
-			<button
-				type="button"
-				role="treeitem"
-				class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-[hsl(var(--mcms-accent))]"
-				[class.bg-[hsl(var(--mcms-accent))]]="!selectedFolderId()"
-				[class.font-medium]="!selectedFolderId()"
-				(click)="selectFolder(null)"
-				data-slot="all-media"
-			>
-				<ng-icon name="heroFolder" class="h-4 w-4 shrink-0" aria-hidden="true" />
-				All Media
-			</button>
+		<div class="space-y-0.5">
+			<div class="space-y-0.5" role="tree" aria-label="Media folders">
+				<!-- All Media root -->
+				<button
+					type="button"
+					role="treeitem"
+					class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-[hsl(var(--mcms-accent))]"
+					[class.bg-[hsl(var(--mcms-accent))]]="!selectedFolderId()"
+					[class.font-medium]="!selectedFolderId()"
+					[attr.aria-level]="1"
+					[attr.aria-selected]="!selectedFolderId()"
+					(click)="selectFolder(null)"
+					data-slot="all-media"
+				>
+					<ng-icon name="heroFolder" class="h-4 w-4 shrink-0" aria-hidden="true" />
+					All Media
+				</button>
 
-			<!-- Flattened folder tree -->
-			@for (node of flatNodes(); track node.id) {
-				<div [style.padding-left.px]="node.depth * 16">
-					<button
-						type="button"
-						role="treeitem"
-						class="flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-[hsl(var(--mcms-accent))]"
-						[class.bg-[hsl(var(--mcms-accent))]]="selectedFolderId() === node.id"
-						[class.font-medium]="selectedFolderId() === node.id"
-						(click)="selectFolder(node.id)"
-						[attr.aria-expanded]="node.hasChildren ? expandedIds().has(node.id) : null"
-						[attr.title]="node.path"
-						[attr.data-folder-id]="node.id"
-					>
-						@if (node.hasChildren) {
-							<span
-								class="shrink-0 cursor-pointer rounded p-0.5 hover:bg-[hsl(var(--mcms-border))]"
-								(click)="$event.stopPropagation(); toggleExpand(node.id)"
-								role="button"
-								[attr.aria-label]="
-									expandedIds().has(node.id) ? 'Collapse ' + node.name : 'Expand ' + node.name
-								"
-							>
-								<ng-icon
-									[name]="expandedIds().has(node.id) ? 'heroChevronDown' : 'heroChevronRight'"
-									class="h-3 w-3"
-									aria-hidden="true"
-								/>
+				<!-- Flattened folder tree -->
+				@for (node of flatNodes(); track node.id) {
+					<div role="presentation" [style.padding-left.px]="node.depth * 16">
+						<button
+							type="button"
+							role="treeitem"
+							class="flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-[hsl(var(--mcms-accent))]"
+							[class.bg-[hsl(var(--mcms-accent))]]="selectedFolderId() === node.id"
+							[class.font-medium]="selectedFolderId() === node.id"
+							[attr.aria-expanded]="node.hasChildren ? expandedIds().has(node.id) : null"
+							[attr.aria-level]="node.depth + 1"
+							[attr.aria-selected]="selectedFolderId() === node.id"
+							[attr.title]="node.path"
+							[attr.data-folder-id]="node.id"
+							(click)="onNodeSelected(node)"
+						>
+							<span class="flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">
+								@if (node.hasChildren) {
+									<ng-icon
+										[name]="expandedIds().has(node.id) ? 'heroChevronDown' : 'heroChevronRight'"
+										class="h-3 w-3"
+									/>
+								}
 							</span>
-						} @else {
-							<span class="w-5 shrink-0"></span>
-						}
-						<ng-icon
-							[name]="expandedIds().has(node.id) ? 'heroFolderOpen' : 'heroFolder'"
-							class="h-4 w-4 shrink-0"
-							aria-hidden="true"
-						/>
-						<span class="truncate">{{ node.name }}</span>
-					</button>
-				</div>
-			}
+							<ng-icon
+								[name]="expandedIds().has(node.id) ? 'heroFolderOpen' : 'heroFolder'"
+								class="h-4 w-4 shrink-0"
+								aria-hidden="true"
+							/>
+							<span class="truncate">{{ node.name }}</span>
+						</button>
+					</div>
+				}
+			</div>
 
-			<!-- Create folder button -->
 			@if (showCreateButton()) {
 				<button
 					type="button"
@@ -201,6 +196,13 @@ export class MediaFolderTreeComponent {
 
 	selectFolder(id: string | null): void {
 		this.folderSelected.emit(id);
+	}
+
+	onNodeSelected(node: FlatNode): void {
+		this.selectFolder(node.id);
+		if (node.hasChildren) {
+			this.toggleExpand(node.id);
+		}
 	}
 
 	toggleExpand(id: string): void {

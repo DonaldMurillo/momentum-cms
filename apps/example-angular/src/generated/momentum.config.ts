@@ -2501,6 +2501,14 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 					onDelete: 'set-null',
 					label: 'Parent Folder',
 				},
+				{
+					name: 'parentKey',
+					type: 'text',
+					defaultValue: '__root__',
+					admin: {
+						hidden: true,
+					},
+				},
 			],
 			admin: {
 				useAsTitle: 'name',

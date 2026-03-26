@@ -36,18 +36,25 @@ describe('MediaFoldersCollection', () => {
 		expect(pathField).toBeUndefined();
 	});
 
-	it('should have unique index on [name, parent]', () => {
+	it('should store a hidden parentKey for root-folder uniqueness', () => {
+		const parentKeyField = MediaFoldersCollection.fields.find((f) => f.name === 'parentKey');
+		expect(parentKeyField).toBeDefined();
+		expect(parentKeyField?.type).toBe('text');
+		expect(parentKeyField?.admin?.hidden).toBe(true);
+	});
+
+	it('should have unique index on [name, parentKey]', () => {
 		expect(MediaFoldersCollection.indexes).toBeDefined();
 		const idx = MediaFoldersCollection.indexes?.find(
-			(i) => i.columns.includes('name') && i.columns.includes('parent'),
+			(i) => i.columns.includes('name') && i.columns.includes('parentKey'),
 		);
 		expect(idx).toBeDefined();
 		expect(idx?.unique).toBe(true);
 	});
 
-	it('should have a beforeChange hook for cycle prevention', () => {
+	it('should have beforeChange hooks for cycle prevention and duplicate detection', () => {
 		expect(MediaFoldersCollection.hooks?.beforeChange).toBeDefined();
-		expect(MediaFoldersCollection.hooks?.beforeChange?.length).toBeGreaterThan(0);
+		expect(MediaFoldersCollection.hooks?.beforeChange?.length).toBe(2);
 	});
 
 	it('should be hidden in admin and grouped under Media', () => {

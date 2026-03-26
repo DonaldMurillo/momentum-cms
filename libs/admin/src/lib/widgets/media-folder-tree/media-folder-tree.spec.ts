@@ -16,7 +16,7 @@ const FOLDERS: FolderNode[] = [
 ];
 
 @Component({
-	selector: 'test-host',
+	selector: 'mcms-test-host',
 	imports: [MediaFolderTreeComponent],
 	template: `
 		<mcms-media-folder-tree

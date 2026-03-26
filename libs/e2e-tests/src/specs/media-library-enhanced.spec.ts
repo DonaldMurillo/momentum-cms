@@ -162,7 +162,9 @@ test.describe('Media Folders API', { tag: ['@media', '@api'] }, () => {
 			headers: { 'Content-Type': 'application/json' },
 			data: { name: 'Unique Folder' },
 		});
-		expect([400, 409, 422, 500]).toContain(r2.status());
+		expect([400, 409, 422]).toContain(r2.status());
+		const body = await r2.json();
+		expect(body.errors?.length).toBeGreaterThan(0);
 	});
 
 	test('should reject setting folder as its own parent (self-cycle)', async ({
@@ -257,7 +259,9 @@ test.describe('Media Tags API', { tag: ['@media', '@api'] }, () => {
 			headers: { 'Content-Type': 'application/json' },
 			data: { name: 'Unique Tag' },
 		});
-		expect([400, 409, 422, 500]).toContain(r2.status());
+		expect([400, 409, 422]).toContain(r2.status());
+		const body = await r2.json();
+		expect(body.errors?.length).toBeGreaterThan(0);
 	});
 });
 
@@ -455,7 +459,7 @@ test.describe('Media Organization Edge Cases', { tag: ['@media', '@api'] }, () =
 		await authenticatedPage.request.delete(`/api/media-folders/${folder.id}`);
 
 		const mediaGet = await authenticatedPage.request.get(`/api/media/${media.id}`);
-		const mediaData = await mediaGet.json();
+		const mediaData = (await mediaGet.json()).doc;
 		expect(mediaData.folder == null).toBe(true);
 
 		await authenticatedPage.request.delete(`/api/media/${media.id}`);
@@ -485,7 +489,7 @@ test.describe('Media Organization Edge Cases', { tag: ['@media', '@api'] }, () =
 		await authenticatedPage.request.delete(`/api/media-tags/${tag.id}`);
 
 		const mediaGet = await authenticatedPage.request.get(`/api/media/${media.id}`);
-		const mediaData = await mediaGet.json();
+		const mediaData = (await mediaGet.json()).doc;
 		const mediaTags: string[] = mediaData.tags ?? [];
 		expect(mediaTags).not.toContain(tag.id);
 
@@ -504,9 +508,9 @@ test.describe('Media Library Admin UI', { tag: ['@media', '@admin'] }, () => {
 
 		await authenticatedPage
 			.getByLabel('Main navigation')
-			.getByRole('link', { name: 'Media' })
+			.getByRole('link', { name: 'Media Library' })
 			.click();
-		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/media/, {
+		await expect(authenticatedPage).toHaveURL(/\/admin\/media/, {
 			timeout: 10000,
 		});
 	});
@@ -519,7 +523,7 @@ test.describe('Media Library Admin UI', { tag: ['@media', '@admin'] }, () => {
 		const folder = (await folderResp.json()).doc;
 
 		try {
-			await authenticatedPage.goto('/admin/collections/media');
+			await authenticatedPage.goto('/admin/media');
 			await authenticatedPage.waitForLoadState('domcontentloaded');
 
 			const folderTree = authenticatedPage.locator('mcms-media-folder-tree');
@@ -539,7 +543,7 @@ test.describe('Media Library Admin UI', { tag: ['@media', '@admin'] }, () => {
 		const tag = (await tagResp.json()).doc;
 
 		try {
-			await authenticatedPage.goto('/admin/collections/media');
+			await authenticatedPage.goto('/admin/media');
 			await authenticatedPage.waitForLoadState('domcontentloaded');
 
 			const tagFilter = authenticatedPage.locator('mcms-media-tag-filter');
@@ -575,7 +579,7 @@ test.describe('Media Library Admin UI', { tag: ['@media', '@admin'] }, () => {
 		});
 
 		try {
-			await authenticatedPage.goto('/admin/collections/media');
+			await authenticatedPage.goto('/admin/media');
 			await authenticatedPage.waitForLoadState('domcontentloaded');
 
 			const folderTree = authenticatedPage.locator('mcms-media-folder-tree');
@@ -621,7 +625,7 @@ test.describe('Media Library Admin UI', { tag: ['@media', '@admin'] }, () => {
 		});
 
 		try {
-			await authenticatedPage.goto('/admin/collections/media');
+			await authenticatedPage.goto('/admin/media');
 			await authenticatedPage.waitForLoadState('domcontentloaded');
 
 			const tagFilter = authenticatedPage.locator('mcms-media-tag-filter');
@@ -655,10 +659,12 @@ test.describe('Media Library Admin UI', { tag: ['@media', '@admin'] }, () => {
 		const media = (await uploadResp.json()).doc;
 
 		try {
-			await authenticatedPage.goto('/admin/collections/media');
+			await authenticatedPage.goto('/admin/media');
 			await authenticatedPage.waitForLoadState('domcontentloaded');
 
-			const searchInput = authenticatedPage.getByPlaceholder(/search/i);
+			const searchInput = authenticatedPage
+				.locator('mcms-search-input')
+				.getByRole('textbox', { name: 'Search' });
 			await expect(searchInput).toBeVisible({ timeout: 15000 });
 			await searchInput.fill('xyzzy');
 
@@ -673,7 +679,7 @@ test.describe('Media Library Admin UI', { tag: ['@media', '@admin'] }, () => {
 	});
 
 	test('should show filter panel toggle', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/media');
+		await authenticatedPage.goto('/admin/media');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const filterPanel = authenticatedPage.locator('mcms-media-filter-panel');
@@ -685,7 +691,7 @@ test.describe('Media Library Admin UI', { tag: ['@media', '@admin'] }, () => {
 	});
 
 	test('should show new folder button in folder tree', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/media');
+		await authenticatedPage.goto('/admin/media');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const folderTree = authenticatedPage.locator('mcms-media-folder-tree');
@@ -696,16 +702,192 @@ test.describe('Media Library Admin UI', { tag: ['@media', '@admin'] }, () => {
 		await expect(newFolderBtn).toBeEnabled();
 	});
 
+	test('should create a folder from the media library dialog', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/admin/media');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		const folderTree = authenticatedPage.locator('mcms-media-folder-tree');
+		await expect(folderTree).toBeVisible({ timeout: 15000 });
+
+		const createResponsePromise = authenticatedPage.waitForResponse(
+			(resp) => resp.url().includes('/api/media-folders') && resp.request().method() === 'POST',
+		);
+
+		await folderTree.getByRole('button', { name: /new folder/i }).click();
+
+		const dialog = authenticatedPage.getByRole('dialog');
+		await expect(dialog).toBeVisible();
+		await dialog.getByLabel('Folder name').fill('Dialog Created Folder');
+		await dialog.getByRole('button', { name: 'Create' }).click();
+
+		const createResponse = await createResponsePromise;
+		const folder = (await createResponse.json()).doc;
+
+		try {
+			await expect(folderTree.getByText('Dialog Created Folder')).toBeVisible({ timeout: 10000 });
+		} finally {
+			await authenticatedPage.request.delete(`/api/media-folders/${folder.id}`);
+		}
+	});
+
+	test('should create the first tag from the media library dialog', async ({
+		authenticatedPage,
+	}) => {
+		await authenticatedPage.goto('/admin/media');
+		await authenticatedPage.waitForLoadState('domcontentloaded');
+
+		const tagFilter = authenticatedPage.locator('mcms-media-tag-filter');
+		await expect(tagFilter).toBeVisible({ timeout: 15000 });
+
+		const createResponsePromise = authenticatedPage.waitForResponse(
+			(resp) => resp.url().includes('/api/media-tags') && resp.request().method() === 'POST',
+		);
+
+		await tagFilter.getByRole('button', { name: /add tag/i }).click();
+
+		const dialog = authenticatedPage.getByRole('dialog');
+		await expect(dialog).toBeVisible();
+		await dialog.getByLabel('Tag name').fill('Dialog Created Tag');
+		await dialog.getByRole('button', { name: 'Create' }).click();
+
+		const createResponse = await createResponsePromise;
+		const tag = (await createResponse.json()).doc;
+
+		try {
+			await expect(tagFilter.getByText('Dialog Created Tag')).toBeVisible({ timeout: 10000 });
+		} finally {
+			await authenticatedPage.request.delete(`/api/media-tags/${tag.id}`);
+		}
+	});
+
+	test('should bulk move selected media through the folder dialog', async ({
+		authenticatedPage,
+	}) => {
+		const folderResp = await authenticatedPage.request.post('/api/media-folders', {
+			headers: { 'Content-Type': 'application/json' },
+			data: { name: 'Bulk Move Folder' },
+		});
+		const folder = (await folderResp.json()).doc;
+
+		const uploadResp1 = await authenticatedPage.request.post('/api/media/upload', {
+			multipart: {
+				file: { name: 'bulk-move-a.jpg', mimeType: 'image/jpeg', buffer: JPEG_BUFFER },
+			},
+		});
+		const uploadResp2 = await authenticatedPage.request.post('/api/media/upload', {
+			multipart: {
+				file: { name: 'bulk-move-b.jpg', mimeType: 'image/jpeg', buffer: JPEG_BUFFER },
+			},
+		});
+		const media1 = (await uploadResp1.json()).doc;
+		const media2 = (await uploadResp2.json()).doc;
+
+		try {
+			await authenticatedPage.goto('/admin/media');
+			await authenticatedPage.waitForLoadState('domcontentloaded');
+
+			await expect(authenticatedPage.getByLabel('Select bulk-move-a.jpg')).toBeVisible({
+				timeout: 15000,
+			});
+			await authenticatedPage.getByLabel('Select bulk-move-a.jpg').check();
+			await authenticatedPage.getByLabel('Select bulk-move-b.jpg').check();
+
+			const bulkActions = authenticatedPage.locator('[data-slot="bulk-actions"]');
+			await expect(bulkActions).toContainText('2 selected');
+			await bulkActions.getByRole('button', { name: 'Move' }).click();
+
+			const dialog = authenticatedPage.getByRole('dialog');
+			await expect(dialog).toBeVisible();
+			await dialog.getByLabel('Select folder').selectOption(folder.id);
+			await dialog.getByRole('button', { name: 'Move' }).click();
+
+			await expect
+				.poll(async () => {
+					const [mediaResp1, mediaResp2] = await Promise.all([
+						authenticatedPage.request.get(`/api/media/${media1.id}`),
+						authenticatedPage.request.get(`/api/media/${media2.id}`),
+					]);
+					const [{ doc: mediaDoc1 }, { doc: mediaDoc2 }] = await Promise.all([
+						mediaResp1.json(),
+						mediaResp2.json(),
+					]);
+					return [mediaDoc1.folder, mediaDoc2.folder];
+				})
+				.toEqual([folder.id, folder.id]);
+		} finally {
+			await authenticatedPage.request.delete(`/api/media/${media1.id}`);
+			await authenticatedPage.request.delete(`/api/media/${media2.id}`);
+			await authenticatedPage.request.delete(`/api/media-folders/${folder.id}`);
+		}
+	});
+
+	test('should bulk tag selected media through the tag dialog', async ({ authenticatedPage }) => {
+		const tagResp = await authenticatedPage.request.post('/api/media-tags', {
+			headers: { 'Content-Type': 'application/json' },
+			data: { name: 'Bulk Dialog Tag' },
+		});
+		const tag = (await tagResp.json()).doc;
+
+		const uploadResp1 = await authenticatedPage.request.post('/api/media/upload', {
+			multipart: {
+				file: { name: 'bulk-tag-a.jpg', mimeType: 'image/jpeg', buffer: JPEG_BUFFER },
+			},
+		});
+		const uploadResp2 = await authenticatedPage.request.post('/api/media/upload', {
+			multipart: {
+				file: { name: 'bulk-tag-b.jpg', mimeType: 'image/jpeg', buffer: JPEG_BUFFER },
+			},
+		});
+		const media1 = (await uploadResp1.json()).doc;
+		const media2 = (await uploadResp2.json()).doc;
+
+		try {
+			await authenticatedPage.goto('/admin/media');
+			await authenticatedPage.waitForLoadState('domcontentloaded');
+
+			await expect(authenticatedPage.getByLabel('Select bulk-tag-a.jpg')).toBeVisible({
+				timeout: 15000,
+			});
+			await authenticatedPage.getByLabel('Select bulk-tag-a.jpg').check();
+			await authenticatedPage.getByLabel('Select bulk-tag-b.jpg').check();
+
+			const bulkActions = authenticatedPage.locator('[data-slot="bulk-actions"]');
+			await expect(bulkActions).toContainText('2 selected');
+			await bulkActions.getByRole('button', { name: 'Tag' }).click();
+
+			const dialog = authenticatedPage.getByRole('dialog');
+			await expect(dialog).toBeVisible();
+			await dialog.getByLabel('Select tag').selectOption(tag.id);
+			await dialog.getByRole('button', { name: 'Add Tag' }).click();
+
+			await expect
+				.poll(async () => {
+					const [mediaResp1, mediaResp2] = await Promise.all([
+						authenticatedPage.request.get(`/api/media/${media1.id}`),
+						authenticatedPage.request.get(`/api/media/${media2.id}`),
+					]);
+					const [{ doc: mediaDoc1 }, { doc: mediaDoc2 }] = await Promise.all([
+						mediaResp1.json(),
+						mediaResp2.json(),
+					]);
+					return [(mediaDoc1.tags ?? []).includes(tag.id), (mediaDoc2.tags ?? []).includes(tag.id)];
+				})
+				.toEqual([true, true]);
+		} finally {
+			await authenticatedPage.request.delete(`/api/media/${media1.id}`);
+			await authenticatedPage.request.delete(`/api/media/${media2.id}`);
+			await authenticatedPage.request.delete(`/api/media-tags/${tag.id}`);
+		}
+	});
+
 	test('accessibility: media library page passes axe checks', async ({ authenticatedPage }) => {
-		await authenticatedPage.goto('/admin/collections/media');
+		await authenticatedPage.goto('/admin/media');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// Wait for page to fully render
-		await expect(
-			authenticatedPage
-				.locator('mcms-media-folder-tree')
-				.or(authenticatedPage.getByPlaceholder(/search/i)),
-		).toBeVisible({ timeout: 15000 });
+		await expect(authenticatedPage.locator('mcms-media-folder-tree')).toBeVisible({
+			timeout: 15000,
+		});
 
 		const results = await checkA11y(authenticatedPage, {
 			exclude: ['.cdk-overlay-container'],
@@ -752,11 +934,13 @@ test.describe('Media Edit Dialog with Organization', { tag: ['@media', '@admin']
 		const media = (await uploadResp.json()).doc;
 
 		try {
-			await authenticatedPage.goto('/admin/collections/media');
+			await authenticatedPage.goto('/admin/media');
 			await authenticatedPage.waitForLoadState('domcontentloaded');
 
 			// Wait for media grid to load and find the edit button for our media
-			await expect(authenticatedPage.getByPlaceholder(/search/i)).toBeVisible({
+			await expect(
+				authenticatedPage.locator('mcms-search-input').getByRole('textbox', { name: 'Search' }),
+			).toBeVisible({
 				timeout: 15000,
 			});
 

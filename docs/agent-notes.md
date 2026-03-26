@@ -143,3 +143,12 @@
 - Evidence: `apps/example-angular-e2e/playwright.config.ts`, `apps/example-analog-e2e/playwright.config.ts`, `apps/example-nestjs-e2e/playwright.config.ts`, `pnpm run test:all`
 - Next time: If a suite only flakes in the full run, look at the worker budget before touching the product code; sometimes the bug is just that the test harness is being a little too confident.
 - Status: active
+
+## 2026-03-24 - Media organizer E2E needs a fresh server build
+
+- Scope: e2e
+- Trigger: Direct Playwright runs against `libs/e2e-tests/src/specs/media-library-enhanced.spec.ts` can keep exercising stale server code because global setup only checks for an existing `dist/apps/example-angular/server/server.mjs`.
+- Approach: Rebuild `example-angular` after server-side changes before trusting Playwright results, then rerun the focused spec. The media tag cleanup path now relies on `libs/plugins/media-organizer/src/lib/media-tags.collection.ts` `afterDelete` to scan `media` and remove the deleted tag id from `media.tags`.
+- Evidence: `pnpm nx build example-angular`, `CI=1 MOMENTUM_E2E_WORKERS=1 pnpm exec playwright test -c apps/example-angular-e2e/playwright.config.ts libs/e2e-tests/src/specs/media-library-enhanced.spec.ts --reporter=line --retries=0`
+- Next time: Rebuild the example app before debugging server/plugin E2E failures, or you will be interrogating yesterday's binary instead of today's code.
+- Status: active

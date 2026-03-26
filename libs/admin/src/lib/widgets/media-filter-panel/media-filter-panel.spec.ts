@@ -8,7 +8,7 @@ import {
 } from './media-filter-panel.component';
 
 @Component({
-	selector: 'test-host',
+	selector: 'mcms-test-host',
 	imports: [MediaFilterPanelComponent],
 	template: ` <mcms-media-filter-panel (filterChanged)="onFilter($event)" /> `,
 })
@@ -190,5 +190,31 @@ describe('buildFilterWhere', () => {
 		expect(where['mimeType']).toBeDefined();
 		expect(where['createdAt']).toBeDefined();
 		expect(where['filesize']).toBeDefined();
+	});
+
+	it('should use valid operators and array-based "and" for "other" MIME category', () => {
+		const where = buildFilterWhere({ mimeCategory: 'other', dateRange: null, sizePreset: null });
+		// The where clause must use array-based "and" (not object-based nesting)
+		// and must use not_like (now a valid server operator) instead of invalid nesting
+		expect(where['and']).toBeDefined();
+		expect(Array.isArray(where['and'])).toBe(true);
+		// Should NOT use invalid nested object-based and syntax
+		const json = JSON.stringify(where);
+		expect(json).not.toMatch(/"and"\s*:\s*\{/);
+	});
+
+	it('should produce a valid "other" filter that excludes known MIME categories', () => {
+		const where = buildFilterWhere({ mimeCategory: 'other', dateRange: null, sizePreset: null });
+		// The "and" combinator must be an array (server rejects object-based and)
+		expect(where['and']).toBeDefined();
+		expect(Array.isArray(where['and'])).toBe(true);
+		// Must exclude all four major MIME categories
+		const andClauses = where['and'] as Record<string, unknown>[];
+		expect(andClauses.length).toBe(4);
+		const patterns = andClauses.map((c) => (c['mimeType'] as Record<string, string>)['not_like']);
+		expect(patterns).toContain('image/%');
+		expect(patterns).toContain('video/%');
+		expect(patterns).toContain('audio/%');
+		expect(patterns).toContain('application/%');
 	});
 });

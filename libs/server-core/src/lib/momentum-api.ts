@@ -196,6 +196,26 @@ class MomentumAPIImpl implements MomentumAPI {
 	}
 }
 
+function rethrowHookError(
+	error: unknown,
+	hookType: 'beforeValidate' | 'beforeChange' | 'afterChange',
+): never {
+	if (hookType === 'afterChange') {
+		throw error;
+	}
+
+	if (error instanceof ValidationError) {
+		throw error;
+	}
+
+	if (error instanceof Error && error.name !== 'Error') {
+		throw error;
+	}
+
+	const message = error instanceof Error ? error.message : 'Hook validation failed';
+	throw new ValidationError([{ field: 'root', message }]);
+}
+
 // Where clause processing, deep equality, and transient key stripping
 // are now imported from ./where-clause and ./api-utils
 
@@ -1149,6 +1169,24 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 	private buildRequestContext(): RequestContext {
 		return {
 			user: this.context.user,
+			api: {
+				collection: <U>(slug: string) => {
+					const collectionConfig = this.allCollections.find(
+						(collection) => collection.slug === slug,
+					);
+					if (!collectionConfig) {
+						throw new CollectionNotFoundError(slug);
+					}
+
+					return new CollectionOperationsImpl<U>(
+						slug,
+						collectionConfig,
+						this.adapter,
+						this.context,
+						this.allCollections,
+					);
+				},
+			},
 		};
 	}
 
@@ -1279,7 +1317,12 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 				originalDoc,
 			};
 
-			const result = await Promise.resolve(hook(hookArgs));
+			let result: unknown;
+			try {
+				result = await Promise.resolve(hook(hookArgs));
+			} catch (error) {
+				rethrowHookError(error, hookType);
+			}
 			if (result && typeof result === 'object') {
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Hook returns object, safe cast
 				processedData = result as Record<string, unknown>;
@@ -1605,6 +1648,21 @@ class GlobalOperationsImpl<T> implements GlobalOperations<T> {
 	private buildRequestContext(): RequestContext {
 		return {
 			user: this.context.user,
+			api: {
+				collection: <U>(slug: string) => {
+					const collectionConfig = this.allCollections.find((c) => c.slug === slug);
+					if (!collectionConfig) {
+						throw new CollectionNotFoundError(slug);
+					}
+					return new CollectionOperationsImpl<U>(
+						slug,
+						collectionConfig,
+						this.adapter,
+						this.context,
+						this.allCollections,
+					);
+				},
+			},
 		};
 	}
 
@@ -1645,7 +1703,12 @@ class GlobalOperationsImpl<T> implements GlobalOperations<T> {
 				originalDoc: originalDoc ?? undefined,
 			};
 
-			const result = await Promise.resolve(hook(hookArgs));
+			let result: unknown;
+			try {
+				result = await Promise.resolve(hook(hookArgs));
+			} catch (error) {
+				rethrowHookError(error, hookType);
+			}
 			if (result && typeof result === 'object') {
 				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Hook returns object
 				processedData = result as Record<string, unknown>;

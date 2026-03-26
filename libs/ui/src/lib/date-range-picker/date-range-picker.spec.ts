@@ -182,9 +182,16 @@ describe('DateRangePicker', () => {
 		expect(getCalendarDialog()).toBeNull();
 	});
 
-	it('should have calendar icon in trigger', () => {
-		const svg = getTriggerButton().querySelector('svg');
-		expect(svg).toBeTruthy();
+	it('should accept class input for host customization per UI CLAUDE.md', () => {
+		// UI components must accept a class input and merge with host classes
+		const picker = fixture.debugElement.children[0].componentInstance as DateRangePicker;
+		// The component should have a class input
+		expect('class' in picker).toBe(true);
+	});
+
+	it('should have calendar icon in trigger using ng-icon', () => {
+		const icon = getTriggerButton().querySelector('ng-icon');
+		expect(icon).toBeTruthy();
 	});
 
 	it('should have dialog role on popover', () => {

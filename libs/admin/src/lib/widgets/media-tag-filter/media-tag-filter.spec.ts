@@ -9,7 +9,7 @@ const TAGS: MediaTag[] = [
 ];
 
 @Component({
-	selector: 'test-host',
+	selector: 'mcms-test-host',
 	imports: [MediaTagFilterComponent],
 	template: `
 		<mcms-media-tag-filter

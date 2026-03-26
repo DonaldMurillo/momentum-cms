@@ -22,7 +22,21 @@ describe('HdlCalendar', () => {
 		expect(component).toBeTruthy();
 	});
 
-	it('should render month grid with correct days', () => {
+	it('should use <ng-content /> template per headless CLAUDE.md', () => {
+		// Headless components must use template: '<ng-content />'
+		// The host element should NOT render structural elements
+		const hostEl = fixture.nativeElement as HTMLElement;
+		expect(hostEl.querySelector('table')).toBeNull();
+		expect(hostEl.querySelector('thead')).toBeNull();
+		expect(hostEl.querySelector('tbody')).toBeNull();
+	});
+
+	it('should not have any host class styles per headless CLAUDE.md', () => {
+		const hostEl = fixture.nativeElement as HTMLElement;
+		expect(hostEl.className).toBe('');
+	});
+
+	it('should compute month grid with correct days', () => {
 		const weeks = component.weeks();
 		// January 2025 starts on Wednesday (3 empty cells before)
 		expect(weeks.length).toBeGreaterThanOrEqual(4);
@@ -34,33 +48,29 @@ describe('HdlCalendar', () => {
 		expect(allDays[allDays.length - 1].getDate()).toBe(31);
 	});
 
-	it('should have role="grid" on table', () => {
-		const table = fixture.nativeElement.querySelector('table');
-		expect(table.getAttribute('role')).toBe('grid');
+	it('should have role="application" on host', () => {
+		const hostEl = fixture.nativeElement as HTMLElement;
+		expect(hostEl.getAttribute('role')).toBe('application');
 	});
 
-	it('should render weekday headers', () => {
-		const headers = fixture.nativeElement.querySelectorAll('th');
-		expect(headers.length).toBe(7);
-		expect(headers[0].textContent.trim()).toBe('Su');
-		expect(headers[6].textContent.trim()).toBe('Sa');
+	it('should expose weekDays', () => {
+		expect(component.weekDays.length).toBe(7);
+		expect(component.weekDays[0]).toBe('Sunday');
+		expect(component.weekDays[6]).toBe('Saturday');
 	});
 
 	it('should display correct month label', () => {
-		const label = fixture.nativeElement.querySelector('[data-slot="month-label"]');
-		expect(label.textContent.trim()).toBe('January 2025');
+		expect(component.monthLabel()).toBe('January 2025');
 	});
 
 	it('should navigate to previous month', () => {
 		component.prevMonth();
-		fixture.detectChanges();
 		expect(component.viewMonth()).toBe(11);
 		expect(component.viewYear()).toBe(2024);
 	});
 
 	it('should navigate to next month', () => {
 		component.nextMonth();
-		fixture.detectChanges();
 		expect(component.viewMonth()).toBe(1);
 		expect(component.viewYear()).toBe(2025);
 	});
@@ -76,13 +86,11 @@ describe('HdlCalendar', () => {
 		expect(emitted[0].getDate()).toBe(15);
 	});
 
-	it('should mark selected day with aria-selected', () => {
-		component.selectDay(new Date(2025, 0, 15));
-		fixture.detectChanges();
-
-		const selectedCell = fixture.nativeElement.querySelector('[aria-selected="true"]');
-		expect(selectedCell).toBeTruthy();
-		expect(selectedCell.textContent.trim()).toBe('15');
+	it('should report selected day via isSelected()', () => {
+		const day = new Date(2025, 0, 15);
+		component.selectDay(day);
+		expect(component.isSelected(day)).toBe(true);
+		expect(component.isSelected(new Date(2025, 0, 16))).toBe(false);
 	});
 
 	it('should handle range selection (two clicks)', () => {

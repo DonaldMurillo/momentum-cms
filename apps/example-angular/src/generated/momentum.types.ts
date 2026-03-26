@@ -504,6 +504,7 @@ export interface MediaFolders {
 	id: string;
 	name: string;
 	parent?: string;
+	parentKey?: string;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -1118,6 +1119,7 @@ export interface MediaFoldersWhereClause {
 	id?: string | { equals?: string; not?: string; in?: string[] };
 	name?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
 	parent?: string | { equals?: string; not?: string; in?: string[] };
+	parentKey?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
 	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }

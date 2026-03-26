@@ -14,8 +14,8 @@ export interface DateRange {
 }
 
 /**
- * Headless calendar component — behavior only, no styles.
- * Renders a month grid with keyboard navigation and optional range selection.
+ * Headless calendar component — behavior only, no styles, no DOM.
+ * Exposes state signals and methods for consumers to build their own calendar UI.
  */
 @Component({
 	selector: 'hdl-calendar',
@@ -25,68 +25,7 @@ export interface DateRange {
 		'[attr.aria-label]': 'ariaLabel()',
 		'(keydown)': 'onKeydown($event)',
 	},
-	template: `
-		<div data-slot="header">
-			<button
-				type="button"
-				data-slot="prev-month"
-				[attr.aria-label]="'Previous month'"
-				(click)="prevMonth()"
-			>
-				<ng-content select="[prevIcon]">&#8249;</ng-content>
-			</button>
-			<span data-slot="month-label" aria-live="polite">
-				{{ monthLabel() }}
-			</span>
-			<button
-				type="button"
-				data-slot="next-month"
-				[attr.aria-label]="'Next month'"
-				(click)="nextMonth()"
-			>
-				<ng-content select="[nextIcon]">&#8250;</ng-content>
-			</button>
-		</div>
-
-		<table role="grid" data-slot="grid" [attr.aria-label]="monthLabel()">
-			<thead>
-				<tr>
-					@for (day of weekDays; track day) {
-						<th scope="col" [attr.aria-label]="day" data-slot="weekday">
-							{{ day.slice(0, 2) }}
-						</th>
-					}
-				</tr>
-			</thead>
-			<tbody>
-				@for (week of weeks(); track $index) {
-					<tr>
-						@for (day of week; track day?.toISOString() ?? $index) {
-							<td
-								role="gridcell"
-								data-slot="day"
-								[attr.aria-selected]="isSelected(day) ? 'true' : null"
-								[attr.aria-disabled]="!day ? 'true' : null"
-								[attr.data-today]="isToday(day) ? '' : null"
-								[attr.data-in-range]="isInRange(day) ? '' : null"
-								[attr.data-range-start]="isRangeStart(day) ? '' : null"
-								[attr.data-range-end]="isRangeEnd(day) ? '' : null"
-								[attr.data-outside-month]="!day ? '' : null"
-								[attr.data-focused]="isFocused(day) ? '' : null"
-								[tabindex]="isFocused(day) ? 0 : -1"
-								(click)="day && selectDay(day)"
-								(focus)="day && setFocusedDate(day)"
-							>
-								@if (day) {
-									{{ day.getDate() }}
-								}
-							</td>
-						}
-					</tr>
-				}
-			</tbody>
-		</table>
-	`,
+	template: '<ng-content />',
 })
 export class HdlCalendar {
 	readonly ariaLabel = input('Calendar');

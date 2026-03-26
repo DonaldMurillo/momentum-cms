@@ -1,7 +1,7 @@
 import type { MomentumPlugin, PluginContext, PluginReadyContext } from '@momentumcms/plugins/core';
 import { relationship } from '@momentumcms/core';
 import { MediaFoldersCollection } from './media-folders.collection';
-import { MediaTagsCollection } from './media-tags.collection';
+import { MediaTagsCollection, registerUploadCollectionSlugs } from './media-tags.collection';
 
 export interface MediaOrganizerPluginConfig {
 	/** Disable the plugin without removing it from config. @default true */
@@ -21,8 +21,10 @@ export function mediaOrganizerPlugin(config: MediaOrganizerPluginConfig = {}): M
 
 		modifyCollections(collections) {
 			if (!enabled) return;
+			const uploadSlugs: string[] = [];
 			for (const col of collections) {
 				if (!col.upload) continue;
+				uploadSlugs.push(col.slug);
 				// Skip if folder/tags already injected (idempotent)
 				if (col.fields.some((f) => f.name === 'folder')) continue;
 				col.fields.push(
@@ -38,6 +40,7 @@ export function mediaOrganizerPlugin(config: MediaOrganizerPluginConfig = {}): M
 					}),
 				);
 			}
+			registerUploadCollectionSlugs(uploadSlugs);
 		},
 
 		async onInit({ collections, logger }: PluginContext) {

@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
-import { type Subscription } from 'rxjs';
+import { type Subscription, firstValueFrom } from 'rxjs';
 import {
 	Button,
 	Spinner,
@@ -52,6 +52,12 @@ import {
 	type MediaFilterState,
 } from '../../widgets/media-filter-panel/media-filter-panel.component';
 import { MediaUploadZoneComponent } from '../../widgets/media-upload-zone/media-upload-zone.component';
+import {
+	PromptDialog,
+	type PromptDialogData,
+	SelectDialog,
+	type SelectDialogData,
+} from './prompt-dialog.component';
 
 /** Helper type to represent media document from API */
 interface MediaItem {
@@ -190,14 +196,12 @@ function getInputElement(event: Event): HTMLInputElement | null {
 						</div>
 
 						<!-- Tag filter chips -->
-						@if (allTags().length > 0) {
-							<mcms-media-tag-filter
-								[tags]="allTags()"
-								[selectedTagIds]="selectedTagIds()"
-								(tagSelectionChanged)="onTagSelectionChanged($event)"
-								(createTagClicked)="createTag()"
-							/>
-						}
+						<mcms-media-tag-filter
+							[tags]="allTags()"
+							[selectedTagIds]="selectedTagIds()"
+							(tagSelectionChanged)="onTagSelectionChanged($event)"
+							(createTagClicked)="createTag()"
+						/>
 					</div>
 
 					<!-- Bulk actions -->
@@ -552,7 +556,14 @@ export class MediaLibraryPage {
 	}
 
 	async createFolder(): Promise<void> {
-		const name = prompt('Folder name:');
+		const dialogRef = this.dialog.open<PromptDialog, PromptDialogData, string | undefined>(
+			PromptDialog,
+			{
+				width: '24rem',
+				data: { title: 'New Folder', label: 'Folder name', placeholder: 'e.g. Photos' },
+			},
+		);
+		const name = await firstValueFrom(dialogRef.afterClosed);
 		if (!name) return;
 
 		try {
@@ -569,7 +580,14 @@ export class MediaLibraryPage {
 	}
 
 	async createTag(): Promise<void> {
-		const name = prompt('Tag name:');
+		const dialogRef = this.dialog.open<PromptDialog, PromptDialogData, string | undefined>(
+			PromptDialog,
+			{
+				width: '24rem',
+				data: { title: 'New Tag', label: 'Tag name', placeholder: 'e.g. Featured' },
+			},
+		);
+		const name = await firstValueFrom(dialogRef.afterClosed);
 		if (!name) return;
 
 		try {
@@ -675,16 +693,23 @@ export class MediaLibraryPage {
 			return;
 		}
 
-		const folderName = prompt(
-			'Move to folder (enter name):\n' + folders.map((f) => `  - ${f.name}`).join('\n'),
+		const dialogRef = this.dialog.open<SelectDialog, SelectDialogData, string | undefined>(
+			SelectDialog,
+			{
+				width: '24rem',
+				data: {
+					title: 'Move to Folder',
+					label: 'Select folder',
+					options: folders,
+					confirmText: 'Move',
+				},
+			},
 		);
-		if (!folderName) return;
+		const folderId = await firstValueFrom(dialogRef.afterClosed);
+		if (!folderId) return;
 
-		const folder = folders.find((f) => f.name === folderName);
-		if (!folder) {
-			this.toast.error('Not found', `Folder "${folderName}" not found`);
-			return;
-		}
+		const folder = folders.find((f) => f.id === folderId);
+		if (!folder) return;
 
 		try {
 			const ids = Array.from(this.selectedItems());
@@ -692,7 +717,7 @@ export class MediaLibraryPage {
 				ids.map((id) => this.api.collection('media').update(id, { folder: folder.id })),
 			);
 			this.selectedItems.set(new Set());
-			this.toast.success('Moved', `Moved ${ids.length} file(s) to "${folderName}"`);
+			this.toast.success('Moved', `Moved ${ids.length} file(s) to "${folder.name}"`);
 			this.loadMedia(
 				this.searchQuery(),
 				this.currentPage(),
@@ -713,21 +738,35 @@ export class MediaLibraryPage {
 			return;
 		}
 
-		const tagName = prompt('Add tag (enter name):\n' + tags.map((t) => `  - ${t.name}`).join('\n'));
-		if (!tagName) return;
+		const dialogRef = this.dialog.open<SelectDialog, SelectDialogData, string | undefined>(
+			SelectDialog,
+			{
+				width: '24rem',
+				data: {
+					title: 'Add Tag',
+					label: 'Select tag',
+					options: tags,
+					confirmText: 'Add Tag',
+				},
+			},
+		);
+		const tagId = await firstValueFrom(dialogRef.afterClosed);
+		if (!tagId) return;
 
-		const tag = tags.find((t) => t.name === tagName);
-		if (!tag) {
-			this.toast.error('Not found', `Tag "${tagName}" not found`);
-			return;
-		}
+		const tag = tags.find((t) => t.id === tagId);
+		if (!tag) return;
 
 		try {
 			const ids = Array.from(this.selectedItems());
 			await Promise.all(
 				ids.map(async (id) => {
-					const existing = this.mediaItems().find((m) => m.id === id);
-					const currentTags = existing?.tags ?? [];
+					const fresh = await this.api.collection('media').findById(id);
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- API returns untyped Record, narrowing required for tag array access
+					const freshRecord = fresh as Record<string, unknown>;
+					const rawTags = freshRecord?.['tags'];
+					const currentTags: string[] = Array.isArray(rawTags)
+						? rawTags.filter((t): t is string => typeof t === 'string')
+						: [];
 					if (!currentTags.includes(tag.id)) {
 						await this.api.collection('media').update(id, {
 							tags: [...currentTags, tag.id],
@@ -736,7 +775,7 @@ export class MediaLibraryPage {
 				}),
 			);
 			this.selectedItems.set(new Set());
-			this.toast.success('Tagged', `Tagged ${ids.length} file(s) with "${tagName}"`);
+			this.toast.success('Tagged', `Tagged ${ids.length} file(s) with "${tag.name}"`);
 			this.loadMedia(
 				this.searchQuery(),
 				this.currentPage(),

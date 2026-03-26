@@ -6,7 +6,7 @@ import { MediaUploadZoneComponent } from './media-upload-zone.component';
 import type { FolderNode } from '../media-folder-tree/media-folder-tree.component';
 import type { MediaTag } from '../media-tag-filter/media-tag-filter.component';
 @Component({
-	selector: 'test-host',
+	selector: 'mcms-test-host',
 	imports: [MediaUploadZoneComponent],
 	template: `
 		<mcms-media-upload-zone
