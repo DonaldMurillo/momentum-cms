@@ -323,6 +323,121 @@ export function parseCsvImport(
 	return { docs };
 }
 
+// ============================================
+// Validation Types
+// ============================================
+
+export interface ImportValidationResult {
+	/** Index of the document in the input array */
+	index: number;
+	/** Whether the document passed all validation checks */
+	valid: boolean;
+	/** Validation errors for this document */
+	errors: { field: string; message: string }[];
+	/** The document with coerced values */
+	coerced: Record<string, unknown>;
+}
+
+// ============================================
+// Validation Functions
+// ============================================
+
+/**
+ * Validate import documents against a collection schema without persisting.
+ * Returns per-document validation results with coerced values and errors.
+ */
+export function validateImportDocs(
+	docs: Record<string, unknown>[],
+	collection: CollectionConfig,
+): ImportValidationResult[] {
+	const dataFields = flattenDataFields(collection.fields);
+	const fieldMap = new Map<string, Field>();
+	for (const field of dataFields) {
+		fieldMap.set(field.name, field);
+	}
+
+	return docs.map((doc, index) => {
+		const errors: { field: string; message: string }[] = [];
+		const coerced: Record<string, unknown> = {};
+
+		// Copy all values, coercing known fields
+		for (const [key, value] of Object.entries(doc)) {
+			const field = fieldMap.get(key);
+			if (!field) {
+				// Unknown field — pass through without error
+				coerced[key] = value;
+				continue;
+			}
+
+			const coercedValue = coerceAndValidateValue(value, field);
+			if (coercedValue.error) {
+				errors.push({ field: key, message: coercedValue.error });
+			}
+			coerced[key] = coercedValue.value;
+		}
+
+		// Check required fields
+		for (const field of dataFields) {
+			if (
+				field.required &&
+				(doc[field.name] === undefined || doc[field.name] === null || doc[field.name] === '')
+			) {
+				errors.push({ field: field.name, message: `"${field.name}" is required` });
+			}
+		}
+
+		return {
+			index,
+			valid: errors.length === 0,
+			errors,
+			coerced,
+		};
+	});
+}
+
+/**
+ * Coerce and validate a single value against its field type.
+ * Returns the coerced value and an optional error message.
+ */
+function coerceAndValidateValue(value: unknown, field: Field): { value: unknown; error?: string } {
+	if (value === undefined || value === null || value === '') {
+		return { value };
+	}
+
+	switch (field.type) {
+		case 'number': {
+			if (typeof value === 'number') return { value };
+			const num = Number(value);
+			if (Number.isNaN(num)) {
+				return { value, error: `"${field.name}" must be a valid number, got "${String(value)}"` };
+			}
+			return { value: num };
+		}
+		case 'checkbox': {
+			if (typeof value === 'boolean') return { value };
+			const str = String(value).toLowerCase();
+			return { value: str === 'true' || str === '1' };
+		}
+		case 'json':
+		case 'array':
+		case 'group':
+		case 'blocks':
+		case 'point': {
+			if (typeof value === 'object') return { value };
+			if (typeof value === 'string') {
+				try {
+					return { value: JSON.parse(value) };
+				} catch {
+					return { value, error: `"${field.name}" contains invalid JSON: "${value}"` };
+				}
+			}
+			return { value };
+		}
+		default:
+			return { value };
+	}
+}
+
 /**
  * Coerce a CSV string value to the appropriate type based on field type.
  */

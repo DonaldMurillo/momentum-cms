@@ -11,10 +11,12 @@ import type { Entity, EntityAction } from '../../widgets/widget.types';
 import type { EntityListBulkActionEvent } from '../../widgets/entity-list/entity-list.types';
 import { injectMomentumAPI } from '../../services/momentum-api.service';
 import { FeedbackService } from '../../widgets/feedback/feedback.service';
+import { ImportExportService } from '../../services/import-export.service';
 import {
 	GenerateApiKeyDialog,
 	type GenerateApiKeyDialogData,
 } from '../../components/generate-api-key-dialog/generate-api-key-dialog.component';
+import { ImportExportMenu } from '../../components/import-export/import-export-menu.component';
 
 /**
  * Collection List Page Component
@@ -24,12 +26,15 @@ import {
  */
 @Component({
 	selector: 'mcms-collection-list',
-	imports: [EntityListWidget, AdminSlotOutlet],
+	imports: [EntityListWidget, AdminSlotOutlet, ImportExportMenu],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: { class: 'block' },
 	template: `
 		@if (collection(); as col) {
 			<mcms-admin-slot slot="collection-list:before" [collectionSlug]="col.slug" />
+			<div class="mb-4 flex items-center justify-end px-4">
+				<mcms-import-export-menu [collection]="col" (importComplete)="onImportComplete()" />
+			</div>
 			<mcms-entity-list
 				#entityList
 				[collection]="col"
@@ -53,6 +58,7 @@ export class CollectionListPage {
 	private readonly api = injectMomentumAPI();
 	private readonly feedback = inject(FeedbackService);
 	private readonly dialog = inject(DialogService);
+	private readonly importExport = inject(ImportExportService);
 
 	readonly entityList = viewChild<EntityListWidget>('entityList');
 
@@ -77,6 +83,10 @@ export class CollectionListPage {
 	});
 
 	readonly bulkActions = computed((): EntityAction[] => [
+		{
+			id: 'export-selected',
+			label: 'Export selected',
+		},
 		{
 			id: 'delete',
 			label: 'Delete',
@@ -109,6 +119,10 @@ export class CollectionListPage {
 		}
 	}
 
+	onImportComplete(): void {
+		this.entityList()?.reload();
+	}
+
 	async onBulkAction(event: EntityListBulkActionEvent): Promise<void> {
 		const col = this.collection();
 		if (!col) return;
@@ -121,6 +135,12 @@ export class CollectionListPage {
 			} catch {
 				// Error handled by crudToastInterceptor
 			}
+		}
+
+		if (event.action.id === 'export-selected') {
+			this.importExport.exportSelected(col.slug, 'json', event.entities);
+			const label = col.labels?.plural ?? col.slug;
+			this.feedback.exportSuccess(label, 'json');
 		}
 	}
 }

@@ -17,6 +17,7 @@ import { CollectionAccessService } from '../../../services/collection-access.ser
 import { DialogService } from '@momentumcms/ui';
 import { FeedbackService } from '../../../widgets/feedback/feedback.service';
 import { MOMENTUM_API as _MOMENTUM_API } from '../../../services/momentum-api.service';
+import { ImportExportService } from '../../../services/import-export.service';
 import type { Entity } from '../../../widgets/widget.types';
 
 /** Build a minimal CollectionConfig with optional overrides */
@@ -74,6 +75,10 @@ describe('CollectionListPage', () => {
 
 	let mockDialogService: { open: ReturnType<typeof vi.fn> };
 	let mockFeedbackService: Partial<FeedbackService>;
+	let mockImportExport: {
+		exportSelected: ReturnType<typeof vi.fn>;
+		exportCollection: ReturnType<typeof vi.fn>;
+	};
 
 	function setup(slug = 'posts', collections: CollectionConfig[] = allCollections): void {
 		mockDialogService = { open: vi.fn() };
@@ -83,6 +88,11 @@ describe('CollectionListPage', () => {
 			entitiesDeleted: vi.fn(),
 			operationFailed: vi.fn(),
 			confirmBulkDelete: vi.fn().mockResolvedValue(true),
+			exportSuccess: vi.fn(),
+		};
+		mockImportExport = {
+			exportSelected: vi.fn(),
+			exportCollection: vi.fn(),
 		};
 
 		const mockAccessService: Partial<CollectionAccessService> = {
@@ -105,6 +115,7 @@ describe('CollectionListPage', () => {
 				{ provide: CollectionAccessService, useValue: mockAccessService },
 				{ provide: DialogService, useValue: mockDialogService },
 				{ provide: FeedbackService, useValue: mockFeedbackService },
+				{ provide: ImportExportService, useValue: mockImportExport },
 				{
 					provide: ActivatedRoute,
 					useValue: makeActivatedRoute(slug, collections),
@@ -210,9 +221,18 @@ describe('CollectionListPage', () => {
 		it('should have a delete bulk action', () => {
 			setup('posts');
 			const actions = component.bulkActions();
-			expect(actions).toHaveLength(1);
-			expect(actions[0].id).toBe('delete');
-			expect(actions[0].label).toBe('Delete');
+			expect(actions).toHaveLength(2);
+			const deleteAction = actions.find((a) => a.id === 'delete');
+			expect(deleteAction).toBeTruthy();
+			expect(deleteAction?.label).toBe('Delete');
+		});
+
+		it('should have an export-selected bulk action', () => {
+			setup('posts');
+			const actions = component.bulkActions();
+			const exportAction = actions.find((a) => a.id === 'export-selected');
+			expect(exportAction).toBeTruthy();
+			expect(exportAction?.label).toBe('Export selected');
 		});
 
 		it('should have destructive variant on delete action', () => {
@@ -225,6 +245,19 @@ describe('CollectionListPage', () => {
 			setup('posts');
 			const deleteAction = component.bulkActions().find((a) => a.id === 'delete');
 			expect(deleteAction?.requiresConfirmation).toBe(true);
+		});
+
+		it('should call exportSelected when export-selected bulk action is triggered', async () => {
+			setup('posts');
+			const entities = [
+				{ id: '1', title: 'Post 1' },
+				{ id: '2', title: 'Post 2' },
+			];
+			await component.onBulkAction({
+				action: { id: 'export-selected', label: 'Export selected' },
+				entities,
+			});
+			expect(mockImportExport.exportSelected).toHaveBeenCalledWith('posts', 'json', entities);
 		});
 	});
 

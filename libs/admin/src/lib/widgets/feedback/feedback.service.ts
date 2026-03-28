@@ -235,6 +235,38 @@ export class FeedbackService {
 		this.toast.success('Draft saved', 'Your changes have been saved as a draft.');
 	}
 
+	// === Import/Export Messages ===
+
+	/**
+	 * Show success message when import completes.
+	 */
+	importSuccess(collectionLabel: string, count: number): void {
+		this.toast.success(
+			'Import complete',
+			`${count} ${collectionLabel.toLowerCase()} imported successfully.`,
+		);
+	}
+
+	/**
+	 * Show warning when import partially succeeds.
+	 */
+	importPartialSuccess(collectionLabel: string, imported: number, failed: number): void {
+		this.toast.warning(
+			'Import partially complete',
+			`${imported} ${collectionLabel.toLowerCase()} imported, ${failed} failed.`,
+		);
+	}
+
+	/**
+	 * Show success message when export completes.
+	 */
+	exportSuccess(collectionLabel: string, format: string): void {
+		this.toast.success(
+			'Export complete',
+			`${collectionLabel} exported as ${format.toUpperCase()}.`,
+		);
+	}
+
 	/**
 	 * Show confirmation with custom config.
 	 */

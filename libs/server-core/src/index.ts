@@ -151,16 +151,28 @@ export { syncDatabaseSchema, type SchemaLogger } from './lib/schema-sync';
 // Shared Server Utilities
 export { sanitizeErrorMessage, parseWhereParam, sanitizeFilename } from './lib/shared-server-utils';
 
+// Import/Export Handler
+export {
+	handleExportRequest,
+	handleImportRequest,
+	MAX_IMPORT_DOCS,
+	type ExportHandlerParams,
+	type ImportHandlerParams,
+	type HandlerResult,
+} from './lib/import-export-handler';
+
 // Import/Export
 export {
 	exportToJson,
 	exportToCsv,
 	parseJsonImport,
 	parseCsvImport,
+	validateImportDocs,
 	type ExportFormat,
 	type ExportOptions,
 	type ExportResult,
 	type ImportOptions,
 	type ImportResult,
 	type ImportError,
+	type ImportValidationResult,
 } from './lib/import-export';

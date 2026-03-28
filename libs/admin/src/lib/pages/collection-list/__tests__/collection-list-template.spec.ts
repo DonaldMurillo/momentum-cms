@@ -189,11 +189,20 @@ describe('CollectionListPage - template expression coverage', () => {
 		it('should include delete action', () => {
 			const { component } = setup('posts');
 			const actions = component.bulkActions();
-			expect(actions).toHaveLength(1);
-			expect(actions[0].id).toBe('delete');
-			expect(actions[0].label).toBe('Delete');
-			expect(actions[0].variant).toBe('destructive');
-			expect(actions[0].requiresConfirmation).toBe(true);
+			expect(actions).toHaveLength(2);
+			const deleteAction = actions.find((a) => a.id === 'delete');
+			expect(deleteAction).toBeTruthy();
+			expect(deleteAction?.label).toBe('Delete');
+			expect(deleteAction?.variant).toBe('destructive');
+			expect(deleteAction?.requiresConfirmation).toBe(true);
+		});
+
+		it('should include export-selected action', () => {
+			const { component } = setup('posts');
+			const actions = component.bulkActions();
+			const exportAction = actions.find((a) => a.id === 'export-selected');
+			expect(exportAction).toBeTruthy();
+			expect(exportAction?.label).toBe('Export selected');
 		});
 	});
 
