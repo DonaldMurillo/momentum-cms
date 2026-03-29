@@ -244,6 +244,24 @@ describe('handleImportRequest', () => {
 		expect(result.status).toBe(404);
 	});
 
+	it('should return 403 for managed collection import', async () => {
+		const mockApi = createMockApi();
+		const result = await handleImportRequest(
+			importParams({
+				api: mockApi,
+				collectionSlug: 'users',
+				config: { collections: [testCollection, managedCollection] },
+				body: { docs: [{ email: 'evil@example.com' }] },
+			}),
+		);
+
+		expect(result.status).toBe(403);
+		const body = result.body as { error: string };
+		expect(body.error).toContain('read-only');
+		// Must NOT call create — no data written
+		expect(mockApi._collectionOps.create).not.toHaveBeenCalled();
+	});
+
 	it('should return 400 for empty docs', async () => {
 		const result = await handleImportRequest(importParams({ body: { docs: [] } }));
 

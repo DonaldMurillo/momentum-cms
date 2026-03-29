@@ -1164,7 +1164,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	router.get('/:collection/export', async (req: Request, res: Response) => {
 		const result = await handleExportRequest({
 			collectionSlug: req.params['collection'],
-			format: req.query['format'] === 'csv' ? 'csv' : 'json',
+			format: typeof req.query['format'] === 'string' ? req.query['format'] : 'json',
 			limit: req.query['limit'] ? Number(req.query['limit']) : undefined,
 			user: extractUserFromRequest(req),
 			config,

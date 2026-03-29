@@ -25,7 +25,7 @@ import { sanitizeErrorMessage, sanitizeFilename } from './shared-server-utils';
 
 export interface ExportHandlerParams {
 	collectionSlug: string;
-	format: ExportFormat;
+	format: string;
 	limit?: number;
 	where?: Record<string, unknown>;
 	user?: { id: string | number; role?: string };
@@ -147,6 +147,11 @@ export async function handleImportRequest(params: ImportHandlerParams): Promise<
 	const collectionConfig = config.collections.find((c) => c.slug === collectionSlug);
 	if (!collectionConfig) {
 		return { status: 404, body: { error: `Collection "${collectionSlug}" not found` } };
+	}
+
+	// Block import into managed (read-only) collections to prevent writing to auth tables
+	if (collectionConfig.managed) {
+		return { status: 403, body: { error: 'Managed collection is read-only' } };
 	}
 
 	// Parse input

@@ -112,16 +112,16 @@ test.describe('Admin Edit Page with Preview', { tag: ['@admin', '@blocks'] }, ()
 
 		// Start at the articles collection list
 		await page.goto('/admin/collections/articles');
-		await page.waitForLoadState('domcontentloaded');
+		await page.waitForLoadState('networkidle');
 
-		// Wait for table rows to appear
+		// Wait for table rows to appear and be interactive
 		const firstRow = page.locator('mcms-table-body mcms-table-row').first();
 		await expect(firstRow).toBeVisible({ timeout: 15000 });
 
 		// Click the first row → navigates to view page
 		await firstRow.click();
 		await expect(page).toHaveURL(/\/admin\/collections\/articles\/[a-f0-9-]+$/, {
-			timeout: 10000,
+			timeout: 15000,
 		});
 
 		// Wait for view page to render

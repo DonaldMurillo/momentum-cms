@@ -470,19 +470,20 @@ describe('Form API Router', () => {
 
 	describe('rate limiter IP resolution', () => {
 		it('should use socket remoteAddress when req.ip is undefined', async () => {
-			// When req.ip is undefined (proxy without trust-proxy), should use socket address
+			// When req.ip is undefined (proxy without trust-proxy), should use socket address.
+			// Use a persistent agent to guarantee all requests share the same TCP connection
+			// (and thus the same remote IP), avoiding IPv4/IPv6 flakiness under parallel load.
 			const mockApi = createMockApi();
 			const app = createApp(mockApi, { rateLimitPerMinute: 2 });
+			const agent = request.agent(app);
 
-			// supertest creates requests with socket.remoteAddress but req.ip can be undefined
-			// All requests should succeed since they share the same socket address
-			const res1 = await request(app)
+			const res1 = await agent
 				.post('/forms/contact-us/submit')
 				.send({ name: 'A', email: 'a@test.com' });
-			const res2 = await request(app)
+			const res2 = await agent
 				.post('/forms/contact-us/submit')
 				.send({ name: 'B', email: 'b@test.com' });
-			const res3 = await request(app)
+			const res3 = await agent
 				.post('/forms/contact-us/submit')
 				.send({ name: 'C', email: 'c@test.com' });
 

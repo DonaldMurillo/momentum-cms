@@ -1325,7 +1325,7 @@ export function createComprehensiveMomentumHandler(
 		if (seg1 === 'export' && !seg2 && method === 'GET') {
 			const result = await handleExportRequest({
 				collectionSlug: seg0,
-				format: queryParams['format'] === 'csv' ? 'csv' : 'json',
+				format: typeof queryParams['format'] === 'string' ? queryParams['format'] : 'json',
 				limit: queryParams['limit'] ? Number(queryParams['limit']) : undefined,
 				user,
 				config,
