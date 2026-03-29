@@ -358,45 +358,49 @@ test.describe('Import/Export', { tag: ['@api', '@crud'] }, () => {
 		expect([400, 413]).toContain(response.status());
 	});
 
-	test('import: accepts payload at exactly 5000 docs limit', async ({ request }) => {
-		// 5000 docs may exceed body parser limits, so we also accept 413.
-		// The key assertion: the server does NOT reject with "Import limit exceeded".
+	test('import: handler does not reject payload at exactly 5000 docs limit', async ({
+		request,
+	}) => {
+		// Use a small batch size that won't hit the body parser limit but validates the handler accepts MAX_IMPORT_DOCS
+		// We use dry-run so no actual docs are created — avoids cleanup and body parser size issues
 		const docs = Array.from({ length: 5000 }, (_, i) => ({
 			name: `Limit Cat ${i}`,
-			slug: `limit-cat-${i}-${Date.now()}`,
+			slug: `limit-cat-${i}`,
 		}));
 
 		const response = await request.post('/api/categories/import', {
 			headers: { 'Content-Type': 'application/json' },
 			data: {
 				format: 'json',
+				dryRun: true,
 				docs,
 			},
 		});
 
-		// Server may respond with 200 (accepted) or 413 (body parser limit).
-		// Both are valid — the key assertion is that the handler's own limit logic does NOT reject.
-		if (response.status() === 413) {
-			// 413 means body parser rejected before handler ran — assert it is NOT our handler's error
-			expect(response.status()).toBe(413);
-		} else {
-			// If it got past the body parser, it should NOT be rejected for our size limit
-			const body = (await response.json()) as { error?: string; imported?: number };
-			expect(body.error ?? '').not.toContain('Import limit exceeded');
-		}
+		// Dry-run at exactly 5000 docs must succeed — handler should not reject for size
+		expect(response.status()).toBe(200);
+		const body = (await response.json()) as { validation?: unknown[]; total?: number };
+		expect(body.total).toBe(5000);
+	});
 
-		// Cleanup: delete imported docs
-		const listResponse = await request.get('/api/categories?limit=10000');
-		if (listResponse.ok()) {
-			const listData = (await listResponse.json()) as {
-				docs: Array<{ id: string; slug?: string }>;
-			};
-			for (const doc of listData.docs) {
-				if (doc.slug?.startsWith('limit-cat-')) {
-					await request.delete(`/api/categories/${doc.id}`);
-				}
-			}
-		}
+	test('import: body parser rejects payload exceeding its size limit', async ({ request }) => {
+		// Very large payloads may be rejected by the body parser before the handler runs.
+		// This test verifies the server returns 413 (not a 500) for oversized request bodies.
+		const hugeDocs = Array.from({ length: 5001 }, (_, i) => ({
+			name: `Huge Cat ${i} ${'x'.repeat(200)}`,
+			slug: `huge-cat-${i}-${'x'.repeat(200)}`,
+		}));
+
+		const response = await request.post('/api/categories/import', {
+			headers: { 'Content-Type': 'application/json' },
+			data: {
+				format: 'json',
+				docs: hugeDocs,
+			},
+		});
+
+		// Either body parser rejects (413) or handler rejects (400) — both are valid, no 500
+		expect([400, 413]).toContain(response.status());
 	});
 });
 
