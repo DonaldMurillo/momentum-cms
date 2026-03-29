@@ -172,6 +172,26 @@ describe('exportToCsv', () => {
 		expect(exportToCsv(atDoc, testCollection).data).toContain("'@cmd");
 	});
 
+	// Issue #3: Formula-prefixed values MUST always be wrapped in double quotes
+	it('should always double-quote formula-prefixed values even without commas/newlines', () => {
+		// Use a formula that has no commas, newlines, or quotes — only the prefix triggers injection
+		const docs = [{ id: '1', title: '=SUM(A1)' }];
+		const result = exportToCsv(docs, testCollection);
+		const dataRow = (result.data ?? '').split('\n')[1];
+
+		// The value must be wrapped in double quotes after prefixing with '
+		expect(dataRow).toContain(`"'=SUM(A1)"`);
+	});
+
+	it('should double-quote tab-prefixed values for CSV injection safety', () => {
+		const docs = [{ id: '1', title: '\tcmd' }];
+		const result = exportToCsv(docs, testCollection);
+		const dataRow = (result.data ?? '').split('\n')[1];
+
+		// Tab-prefixed value must be quoted after injection prefix
+		expect(dataRow).toContain(`"'\tcmd"`);
+	});
+
 	it('should quote values containing commas', () => {
 		const docs = [{ id: '1', title: 'Hello, World' }];
 		const result = exportToCsv(docs, testCollection);
@@ -374,6 +394,15 @@ describe('parseCsvImport', () => {
 
 		expect(result.docs[0]['category']).toBe('electronics');
 		expect(typeof result.docs[0]['category']).toBe('string');
+	});
+
+	it('should not produce NaN for non-numeric strings in number fields', () => {
+		const csv = 'title,price\nWidget,not-a-number';
+		const result = parseCsvImport(csv, testCollection);
+
+		// The value should either be excluded or kept as the original string — never NaN
+		const price = result.docs[0]['price'];
+		expect(price).not.toBeNaN();
 	});
 });
 

@@ -72,15 +72,36 @@ describe('ImportExportMenu', () => {
 		expect(btn.textContent).toContain('Import / Export');
 	});
 
-	it('should call exportCollection and feedback for JSON export', () => {
+	it('should call exportCollection and show toast only after completion', () => {
+		const exportSubject = new Subject<void>();
+		mockImportExport.exportCollection = vi.fn().mockReturnValue(exportSubject.asObservable());
+
 		component.exportJson();
 		expect(mockImportExport.exportCollection).toHaveBeenCalledWith('products', 'json');
+
+		// Toast should NOT fire before the observable completes
+		expect(mockFeedback.exportSuccess).not.toHaveBeenCalled();
+
+		// Emit completion
+		exportSubject.next();
+		exportSubject.complete();
+
+		// Now the toast should fire
 		expect(mockFeedback.exportSuccess).toHaveBeenCalledWith('Products', 'json');
 	});
 
-	it('should call exportCollection and feedback for CSV export', () => {
+	it('should call exportCollection and show toast only after CSV completion', () => {
+		const exportSubject = new Subject<void>();
+		mockImportExport.exportCollection = vi.fn().mockReturnValue(exportSubject.asObservable());
+
 		component.exportCsv();
 		expect(mockImportExport.exportCollection).toHaveBeenCalledWith('products', 'csv');
+
+		expect(mockFeedback.exportSuccess).not.toHaveBeenCalled();
+
+		exportSubject.next();
+		exportSubject.complete();
+
 		expect(mockFeedback.exportSuccess).toHaveBeenCalledWith('Products', 'csv');
 	});
 

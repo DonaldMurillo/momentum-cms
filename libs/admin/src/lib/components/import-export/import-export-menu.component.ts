@@ -108,12 +108,14 @@ export class ImportExportMenu {
 	}
 
 	exportJson(): void {
-		this.importExport.exportCollection(this.collection().slug, 'json');
-		this.feedback.exportSuccess(this.collectionLabel(), 'json');
+		this.importExport.exportCollection(this.collection().slug, 'json').subscribe(() => {
+			this.feedback.exportSuccess(this.collectionLabel(), 'json');
+		});
 	}
 
 	exportCsv(): void {
-		this.importExport.exportCollection(this.collection().slug, 'csv');
-		this.feedback.exportSuccess(this.collectionLabel(), 'csv');
+		this.importExport.exportCollection(this.collection().slug, 'csv').subscribe(() => {
+			this.feedback.exportSuccess(this.collectionLabel(), 'csv');
+		});
 	}
 }

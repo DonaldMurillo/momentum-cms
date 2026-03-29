@@ -5,6 +5,7 @@ import {
 	handleExportRequest,
 	handleImportRequest,
 	MAX_IMPORT_DOCS,
+	MAX_EXPORT_DOCS,
 	type ExportHandlerParams,
 	type ImportHandlerParams,
 } from '../lib/import-export-handler';
@@ -20,6 +21,13 @@ const testCollection: CollectionConfig = {
 		{ name: 'title', type: 'text', required: true, label: 'Title' },
 		{ name: 'price', type: 'number', label: 'Price' },
 	],
+};
+
+const managedCollection: CollectionConfig = {
+	slug: 'users',
+	labels: { singular: 'User', plural: 'Users' },
+	fields: [{ name: 'email', type: 'text', required: true, label: 'Email' }],
+	managed: true,
 };
 
 const sampleDocs = [
@@ -141,12 +149,70 @@ describe('handleExportRequest', () => {
 		expect(mockApi.setContext).toHaveBeenCalledWith({ user: testUser });
 	});
 
-	it('should work without user (public export)', async () => {
+	it('should return 401 when no user is provided (matching import handler security)', async () => {
 		const mockApi = createMockApi();
 		const result = await handleExportRequest(exportParams({ api: mockApi, user: undefined }));
 
-		expect(result.status).toBe(200);
-		expect(mockApi.setContext).not.toHaveBeenCalled();
+		expect(result.status).toBe(401);
+		const body = result.body as { error: string };
+		expect(body.error).toContain('Authentication required');
+		// Must NOT call the API at all — no data leakage
+		expect(mockApi.collection).not.toHaveBeenCalled();
+	});
+
+	it('should cap limit to MAX_EXPORT_DOCS', async () => {
+		const mockApi = createMockApi();
+		await handleExportRequest(exportParams({ api: mockApi, limit: 999999 }));
+
+		const calledLimit = (mockApi._collectionOps.find as ReturnType<typeof vi.fn>).mock.calls[0][0]
+			.limit;
+		expect(calledLimit).toBeLessThanOrEqual(MAX_EXPORT_DOCS);
+	});
+
+	// Issue #2: NaN/negative limit must not bypass MAX_EXPORT_DOCS
+	it('should treat NaN limit as MAX_EXPORT_DOCS', async () => {
+		const mockApi = createMockApi();
+		await handleExportRequest(exportParams({ api: mockApi, limit: NaN }));
+
+		const calledLimit = (mockApi._collectionOps.find as ReturnType<typeof vi.fn>).mock.calls[0][0]
+			.limit;
+		expect(calledLimit).toBe(MAX_EXPORT_DOCS);
+	});
+
+	it('should treat negative limit as MAX_EXPORT_DOCS', async () => {
+		const mockApi = createMockApi();
+		await handleExportRequest(exportParams({ api: mockApi, limit: -1 }));
+
+		const calledLimit = (mockApi._collectionOps.find as ReturnType<typeof vi.fn>).mock.calls[0][0]
+			.limit;
+		expect(calledLimit).toBeGreaterThan(0);
+		expect(calledLimit).toBeLessThanOrEqual(MAX_EXPORT_DOCS);
+	});
+
+	it('should treat zero limit as MAX_EXPORT_DOCS', async () => {
+		const mockApi = createMockApi();
+		await handleExportRequest(exportParams({ api: mockApi, limit: 0 }));
+
+		const calledLimit = (mockApi._collectionOps.find as ReturnType<typeof vi.fn>).mock.calls[0][0]
+			.limit;
+		expect(calledLimit).toBeGreaterThan(0);
+		expect(calledLimit).toBeLessThanOrEqual(MAX_EXPORT_DOCS);
+	});
+
+	// Issue #4: Managed collections must be blocked from export
+	it('should return 403 for managed collection export', async () => {
+		const mockApi = createMockApi();
+		const result = await handleExportRequest(
+			exportParams({
+				api: mockApi,
+				collectionSlug: 'users',
+				config: { collections: [testCollection, managedCollection] },
+			}),
+		);
+
+		expect(result.status).toBe(403);
+		const body = result.body as { error: string };
+		expect(body.error).toContain('read-only');
 	});
 });
 

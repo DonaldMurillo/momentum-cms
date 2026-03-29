@@ -53,25 +53,42 @@ export interface HandlerResult {
 // Export Handler
 // ============================================
 
+/** Maximum number of documents that can be exported in a single request */
+export const MAX_EXPORT_DOCS = 10000;
+
 export async function handleExportRequest(params: ExportHandlerParams): Promise<HandlerResult> {
-	const { collectionSlug, format, limit = 10000, user, config, api } = params;
+	const { collectionSlug, format, limit = MAX_EXPORT_DOCS, user, config, api } = params;
+
+	// Auth check — mirror import handler to prevent unauthenticated bulk data exfiltration
+	if (!user) {
+		return { status: 401, body: { error: 'Authentication required to export data' } };
+	}
 
 	const collectionConfig = config.collections.find((c) => c.slug === collectionSlug);
 	if (!collectionConfig) {
 		return { status: 404, body: { error: `Collection "${collectionSlug}" not found` } };
 	}
 
+	// Block export of managed (read-only) collections to prevent leaking auth tables
+	if (collectionConfig.managed) {
+		return { status: 403, body: { error: 'Managed collection is read-only' } };
+	}
+
 	if (format !== 'json' && format !== 'csv') {
 		return { status: 400, body: { error: 'Invalid format. Use "json" or "csv"' } };
 	}
 
+	// Sanitize limit: must be a positive finite number, capped at MAX_EXPORT_DOCS
+	const safeLimit =
+		Number.isFinite(limit) && limit > 0 ? Math.min(limit, MAX_EXPORT_DOCS) : MAX_EXPORT_DOCS;
+
 	try {
-		const contextApi = user ? api.setContext({ user }) : api;
+		const contextApi = api.setContext({ user });
 		const result = await (
 			contextApi.collection(collectionSlug) as {
 				find(opts: { limit: number }): Promise<{ docs: Record<string, unknown>[] }>;
 			}
-		).find({ limit });
+		).find({ limit: safeLimit });
 		const docs = result.docs as Record<string, unknown>[];
 		const safeSlug = sanitizeFilename(collectionSlug);
 

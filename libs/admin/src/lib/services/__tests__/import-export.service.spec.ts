@@ -25,7 +25,7 @@ describe('ImportExportService', () => {
 
 	describe('exportCollection', () => {
 		it('should call GET /api/:slug/export?format=json for JSON export', () => {
-			service.exportCollection('posts', 'json');
+			service.exportCollection('posts', 'json').subscribe();
 
 			const req = httpMock.expectOne('/api/posts/export?format=json');
 			expect(req.request.method).toBe('GET');
@@ -33,7 +33,7 @@ describe('ImportExportService', () => {
 		});
 
 		it('should call GET /api/:slug/export?format=csv for CSV export', () => {
-			service.exportCollection('posts', 'csv');
+			service.exportCollection('posts', 'csv').subscribe();
 
 			const req = httpMock.expectOne('/api/posts/export?format=csv');
 			expect(req.request.method).toBe('GET');
@@ -74,7 +74,7 @@ describe('ImportExportService', () => {
 				{ id: '1', title: 'Widget' },
 				{ id: '2', title: 'Gadget' },
 			];
-			service.exportSelected('products', 'json', entities);
+			service.exportSelected('products', entities);
 
 			expect(clickSpy).toHaveBeenCalled();
 			expect(createElementSpy).toHaveBeenCalledWith('a');
@@ -83,6 +83,21 @@ describe('ImportExportService', () => {
 
 			createElementSpy.mockRestore();
 			revokeURLSpy.mockRestore();
+		});
+	});
+
+	describe('exportCollection - returns observable', () => {
+		it('should return an Observable so callers can react to completion/errors', () => {
+			const result = service.exportCollection('posts', 'json');
+
+			// exportCollection should return an Observable (not void)
+			expect(result).toBeDefined();
+			expect(typeof result.subscribe).toBe('function');
+
+			// Subscribe and flush to complete the request
+			result.subscribe();
+			const req = httpMock.expectOne('/api/posts/export?format=json');
+			req.flush({ collection: 'posts', format: 'json', totalDocs: 0, docs: [] });
 		});
 	});
 

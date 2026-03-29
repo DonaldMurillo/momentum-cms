@@ -257,7 +257,7 @@ describe('CollectionListPage', () => {
 				action: { id: 'export-selected', label: 'Export selected' },
 				entities,
 			});
-			expect(mockImportExport.exportSelected).toHaveBeenCalledWith('posts', 'json', entities);
+			expect(mockImportExport.exportSelected).toHaveBeenCalledWith('posts', entities);
 		});
 	});
 

@@ -91,8 +91,10 @@ function escapeCsvValue(value: unknown): string {
 	let str = String(value);
 
 	// Prevent CSV injection: prefix formula-triggering characters with a single quote
+	// and ALWAYS wrap in double quotes so spreadsheets treat it as a literal string
 	if (str.length > 0 && /^[=+\-@\t\r]/.test(str)) {
 		str = `'${str}`;
+		return `"${str.replace(/"/g, '""')}"`;
 	}
 
 	if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes('"')) {
@@ -443,8 +445,10 @@ function coerceAndValidateValue(value: unknown, field: Field): { value: unknown;
  */
 function coerceCsvValue(value: string, fieldType?: string): unknown {
 	switch (fieldType) {
-		case 'number':
-			return Number(value);
+		case 'number': {
+			const num = Number(value);
+			return Number.isNaN(num) ? value : num;
+		}
 		case 'checkbox':
 			return value.toLowerCase() === 'true' || value === '1';
 		case 'json':

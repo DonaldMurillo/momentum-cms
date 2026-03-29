@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Observable, tap } from 'rxjs';
 
 // ============================================
 // Types (browser-safe, mirrored from server-core)
@@ -51,32 +51,35 @@ export class ImportExportService {
 
 	/**
 	 * Trigger a browser download of exported collection data.
+	 * Returns an Observable so callers can react to completion/errors.
 	 */
-	exportCollection(slug: string, format: ExportFormat): void {
+	exportCollection(slug: string, format: ExportFormat): Observable<unknown> {
 		const params = new HttpParams().set('format', format);
 
 		if (format === 'csv') {
-			this.http.get(`/api/${slug}/export`, { params, responseType: 'text' }).subscribe((data) => {
-				this.downloadFile(data, `${slug}-export.csv`, 'text/csv');
-			});
-		} else {
-			this.http.get<{ docs: unknown[] }>(`/api/${slug}/export`, { params }).subscribe((data) => {
+			return this.http.get(`/api/${slug}/export`, { params, responseType: 'text' }).pipe(
+				tap((data) => {
+					this.downloadFile(data, `${slug}-export.csv`, 'text/csv');
+				}),
+			);
+		}
+
+		return this.http.get<{ docs: unknown[] }>(`/api/${slug}/export`, { params }).pipe(
+			tap((data) => {
 				const jsonStr = JSON.stringify(data, null, 2);
 				this.downloadFile(jsonStr, `${slug}-export.json`, 'application/json');
-			});
-		}
+			}),
+		);
 	}
 
 	/**
 	 * Export selected entities as a JSON download.
+	 * Only JSON is supported for client-side selected export since CSV serialization
+	 * requires collection field metadata only available server-side.
 	 */
-	exportSelected(slug: string, format: ExportFormat, entities: Record<string, unknown>[]): void {
+	exportSelected(slug: string, entities: Record<string, unknown>[]): void {
 		const jsonStr = JSON.stringify({ docs: entities }, null, 2);
-		this.downloadFile(
-			jsonStr,
-			`${slug}-selected.${format}`,
-			format === 'csv' ? 'text/csv' : 'application/json',
-		);
+		this.downloadFile(jsonStr, `${slug}-selected.json`, 'application/json');
 	}
 
 	/**

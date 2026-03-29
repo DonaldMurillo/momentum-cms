@@ -374,24 +374,22 @@ test.describe('Import/Export', { tag: ['@api', '@crud'] }, () => {
 			},
 		});
 
-		// 413 means body parser rejected it (not our limit check) — that's acceptable
-		if (response.status() === 413) {
-			expect(response.status()).toBe(413); // Body parser limit reached before handler — not a limit check failure
-		} else {
-			// If it got past the body parser, it should NOT be rejected for our size limit
-			const body = (await response.json()) as { error?: string; imported?: number };
-			expect(body.error ?? '').not.toContain('Import limit exceeded');
+		// 413 means body parser rejected before handler ran — can't test handler's limit logic
+		expect(response.status()).not.toBe(413);
 
-			// Cleanup: delete imported docs
-			const listResponse = await request.get('/api/categories?limit=10000');
-			if (listResponse.ok()) {
-				const listData = (await listResponse.json()) as {
-					docs: Array<{ id: string; slug?: string }>;
-				};
-				for (const doc of listData.docs) {
-					if (doc.slug?.startsWith('limit-cat-')) {
-						await request.delete(`/api/categories/${doc.id}`);
-					}
+		// If it got past the body parser, it should NOT be rejected for our size limit
+		const body = (await response.json()) as { error?: string; imported?: number };
+		expect(body.error ?? '').not.toContain('Import limit exceeded');
+
+		// Cleanup: delete imported docs
+		const listResponse = await request.get('/api/categories?limit=10000');
+		if (listResponse.ok()) {
+			const listData = (await listResponse.json()) as {
+				docs: Array<{ id: string; slug?: string }>;
+			};
+			for (const doc of listData.docs) {
+				if (doc.slug?.startsWith('limit-cat-')) {
+					await request.delete(`/api/categories/${doc.id}`);
 				}
 			}
 		}
@@ -416,16 +414,16 @@ test.describe('Import/Export Security', { tag: ['@security', '@api'] }, () => {
 		expect(response.status).toBe(401);
 	});
 
-	test('unauthenticated user can export public collection (read is allowAll)', async ({
+	test('unauthenticated user cannot export even public collections', async ({
 		request: _request,
 		baseURL,
 	}) => {
-		// Categories has allowAll read access — unauthenticated export should work
+		// Export always requires authentication to prevent bulk data exfiltration
 		const response = await fetch(`${baseURL}/api/categories/export?format=json`);
 
-		expect(response.ok).toBe(true);
-		const body = (await response.json()) as { docs: unknown[] };
-		expect(Array.isArray(body.docs)).toBe(true);
+		expect(response.status).toBe(401);
+		const body = (await response.json()) as { error: string };
+		expect(body.error).toContain('Authentication required');
 	});
 
 	test('viewer cannot import into articles (create requires admin/editor)', async ({ request }) => {

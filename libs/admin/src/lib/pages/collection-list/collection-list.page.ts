@@ -138,7 +138,7 @@ export class CollectionListPage {
 		}
 
 		if (event.action.id === 'export-selected') {
-			this.importExport.exportSelected(col.slug, 'json', event.entities);
+			this.importExport.exportSelected(col.slug, event.entities);
 			const label = col.labels?.plural ?? col.slug;
 			this.feedback.exportSuccess(label, 'json');
 		}

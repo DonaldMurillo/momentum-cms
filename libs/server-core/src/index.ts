@@ -156,6 +156,7 @@ export {
 	handleExportRequest,
 	handleImportRequest,
 	MAX_IMPORT_DOCS,
+	MAX_EXPORT_DOCS,
 	type ExportHandlerParams,
 	type ImportHandlerParams,
 	type HandlerResult,
