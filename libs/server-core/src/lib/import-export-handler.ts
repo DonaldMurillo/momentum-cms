@@ -204,7 +204,10 @@ export async function handleImportRequest(params: ImportHandlerParams): Promise<
 		};
 	}
 
-	// Execute import
+	// Validate docs before importing — skip invalid rows instead of sending them to create()
+	const validation = validateImportDocs(docsToImport, collectionConfig);
+
+	// Execute import (only valid docs)
 	try {
 		const contextApi = api.setContext({ user });
 		const result: ImportResult = {
@@ -214,18 +217,28 @@ export async function handleImportRequest(params: ImportHandlerParams): Promise<
 			docs: [],
 		};
 
-		for (let i = 0; i < docsToImport.length; i++) {
+		// Collect errors from validation (invalid rows are skipped)
+		for (const v of validation) {
+			if (!v.valid) {
+				const msgs = v.errors.map((e) => e.message).join('; ');
+				result.errors.push({ index: v.index, message: msgs || 'Validation failed' });
+			}
+		}
+
+		// Only attempt to create documents that passed validation
+		for (const v of validation) {
+			if (!v.valid) continue;
 			try {
 				const doc = await (
 					contextApi.collection(collectionSlug) as {
 						create(data: Record<string, unknown>): Promise<Record<string, unknown>>;
 					}
-				).create(docsToImport[i]);
+				).create(v.coerced);
 				result.docs.push(doc);
 				result.imported++;
 			} catch (err) {
 				const errMsg = sanitizeErrorMessage(err, 'Failed to import document');
-				result.errors.push({ index: i, message: errMsg });
+				result.errors.push({ index: v.index, message: errMsg });
 			}
 		}
 

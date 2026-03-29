@@ -404,6 +404,71 @@ describe('parseCsvImport', () => {
 		const price = result.docs[0]['price'];
 		expect(price).not.toBeNaN();
 	});
+
+	it('should strip CSV injection escape prefix on roundtrip', () => {
+		// Export adds a single-quote prefix to formula-triggering chars; import must strip it
+		const csv = 'title,price\n"\'=SUM(A1)","\'-10"';
+		const result = parseCsvImport(csv, testCollection);
+
+		expect(result.docs[0]['title']).toBe('=SUM(A1)');
+		expect(result.docs[0]['price']).toBe(-10);
+	});
+
+	it('should roundtrip negative numbers through CSV export→import', () => {
+		const docs = [{ id: '1', title: 'Widget', price: -10 }];
+		const exported = exportToCsv(docs, testCollection);
+		const reimported = parseCsvImport(exported.data ?? '', testCollection);
+
+		expect(reimported.docs[0]['price']).toBe(-10);
+	});
+
+	it('should roundtrip formula-prefixed text through CSV export→import', () => {
+		const docs = [{ id: '1', title: '=SUM(A1:A10)' }];
+		const exported = exportToCsv(docs, testCollection);
+		const reimported = parseCsvImport(exported.data ?? '', testCollection);
+
+		expect(reimported.docs[0]['title']).toBe('=SUM(A1:A10)');
+	});
+
+	it('should roundtrip plus/at/tab-prefixed values through CSV export→import', () => {
+		const docs = [
+			{ id: '1', title: '+cmd' },
+			{ id: '2', title: '@mention' },
+			{ id: '3', title: '\tindented' },
+		];
+		for (const doc of docs) {
+			const exported = exportToCsv([doc], testCollection);
+			const reimported = parseCsvImport(exported.data ?? '', testCollection);
+			expect(reimported.docs[0]['title']).toBe(doc.title);
+		}
+	});
+
+	it('should strip BOM (byte order mark) from CSV input', () => {
+		const csv = '\uFEFFtitle,price\nWidget,9.99';
+		const result = parseCsvImport(csv, testCollection);
+
+		expect(result.docs).toHaveLength(1);
+		expect(result.docs[0]['title']).toBe('Widget');
+		expect(result.docs[0]['price']).toBe(9.99);
+	});
+
+	it('should handle bare \\r (classic Mac) line endings', () => {
+		const csv = 'title,price\rWidget,9.99\rBook,14.99';
+		const result = parseCsvImport(csv, testCollection);
+
+		expect(result.docs).toHaveLength(2);
+		expect(result.docs[0]['title']).toBe('Widget');
+		expect(result.docs[1]['title']).toBe('Book');
+	});
+
+	it('should reject Infinity and -Infinity for number fields', () => {
+		const csv = 'title,price\nA,Infinity\nB,-Infinity';
+		const result = parseCsvImport(csv, testCollection);
+
+		// Infinity should NOT be treated as a valid number
+		expect(result.docs[0]['price']).not.toBe(Infinity);
+		expect(result.docs[1]['price']).not.toBe(-Infinity);
+	});
 });
 
 // ============================================
@@ -498,5 +563,20 @@ describe('validateImportDocs', () => {
 
 		expect(results[0].valid).toBe(true);
 		expect(results[0].coerced['metadata']).toEqual({ color: 'red' });
+	});
+
+	it('should reject Infinity and -Infinity for number fields', () => {
+		const docs = [
+			{ title: 'A', price: Infinity },
+			{ title: 'B', price: -Infinity },
+			{ title: 'C', price: 'Infinity' },
+			{ title: 'D', price: '-Infinity' },
+		];
+		const results = validateImportDocs(docs, testCollection);
+
+		for (const r of results) {
+			expect(r.valid).toBe(false);
+			expect(r.errors).toContainEqual(expect.objectContaining({ field: 'price' }));
+		}
 	});
 });

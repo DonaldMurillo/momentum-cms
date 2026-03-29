@@ -112,6 +112,7 @@ function parseCsv(csv: string): string[][] {
 	let currentRow: string[] = [];
 	let currentField = '';
 	let inQuotes = false;
+	let fieldStart = true; // tracks whether we're at the beginning of a field
 	let i = 0;
 
 	while (i < csv.length) {
@@ -133,23 +134,32 @@ function parseCsv(csv: string): string[][] {
 			currentField += char;
 			i++;
 		} else {
-			if (char === '"') {
+			if (char === '"' && fieldStart) {
+				// Only enter quoted mode at the start of a field (RFC 4180)
 				inQuotes = true;
+				fieldStart = false;
 				i++;
 			} else if (char === ',') {
 				currentRow.push(currentField);
 				currentField = '';
+				fieldStart = true;
 				i++;
-			} else if (char === '\n' || (char === '\r' && csv[i + 1] === '\n')) {
+			} else if (
+				char === '\n' ||
+				(char === '\r' && csv[i + 1] === '\n') ||
+				(char === '\r' && csv[i + 1] !== '\n')
+			) {
 				currentRow.push(currentField);
 				currentField = '';
+				fieldStart = true;
 				if (currentRow.length > 0 && currentRow.some((f) => f.length > 0)) {
 					rows.push(currentRow);
 				}
 				currentRow = [];
-				i += char === '\r' ? 2 : 1;
+				i += char === '\r' && csv[i + 1] === '\n' ? 2 : 1;
 			} else {
 				currentField += char;
+				fieldStart = false;
 				i++;
 			}
 		}
@@ -283,7 +293,13 @@ export function parseCsvImport(
 		return { docs: [], error: 'CSV data must be a non-empty string' };
 	}
 
-	const rows = parseCsv(csvData.trim());
+	// Strip BOM (byte order mark) — trim() does not remove it
+	let cleaned = csvData.trim();
+	if (cleaned.charCodeAt(0) === 0xfeff) {
+		cleaned = cleaned.slice(1);
+	}
+
+	const rows = parseCsv(cleaned);
 	if (rows.length < 2) {
 		return { docs: [], error: 'CSV must have a header row and at least one data row' };
 	}
@@ -408,9 +424,12 @@ function coerceAndValidateValue(value: unknown, field: Field): { value: unknown;
 
 	switch (field.type) {
 		case 'number': {
-			if (typeof value === 'number') return { value };
+			if (typeof value === 'number' && Number.isFinite(value)) return { value };
+			if (typeof value === 'number') {
+				return { value, error: `"${field.name}" must be a finite number, got "${String(value)}"` };
+			}
 			const num = Number(value);
-			if (Number.isNaN(num)) {
+			if (Number.isNaN(num) || !Number.isFinite(num)) {
 				return { value, error: `"${field.name}" must be a valid number, got "${String(value)}"` };
 			}
 			return { value: num };
@@ -441,13 +460,25 @@ function coerceAndValidateValue(value: unknown, field: Field): { value: unknown;
 }
 
 /**
+ * Strip the CSV injection escape prefix added during export.
+ * `escapeCsvValue` prepends `'` to values starting with `=+\-@\t\r` — undo that on import.
+ */
+function stripCsvEscapePrefix(value: string): string {
+	if (value.length > 1 && value[0] === "'" && /^[=+\-@\t\r]/.test(value[1])) {
+		return value.substring(1);
+	}
+	return value;
+}
+
+/**
  * Coerce a CSV string value to the appropriate type based on field type.
  */
 function coerceCsvValue(value: string, fieldType?: string): unknown {
+	value = stripCsvEscapePrefix(value);
 	switch (fieldType) {
 		case 'number': {
 			const num = Number(value);
-			return Number.isNaN(num) ? value : num;
+			return Number.isNaN(num) || !Number.isFinite(num) ? value : num;
 		}
 		case 'checkbox':
 			return value.toLowerCase() === 'true' || value === '1';

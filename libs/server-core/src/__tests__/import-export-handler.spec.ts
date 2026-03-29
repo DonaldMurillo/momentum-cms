@@ -390,6 +390,31 @@ describe('handleImportRequest', () => {
 		expect(body.error).toContain(String(MAX_IMPORT_DOCS));
 	});
 
+	it('should only create docs that passed validation (skip invalid rows)', async () => {
+		const mockApi = createMockApi();
+
+		const result = await handleImportRequest(
+			importParams({
+				api: mockApi,
+				body: {
+					docs: [
+						{ title: 'Good One', price: 9.99 },
+						{ price: 'not-valid' }, // missing required 'title'
+						{ title: 'Good Two', price: 5.99 },
+					],
+				},
+			}),
+		);
+
+		expect(result.status).toBe(200);
+		const body = result.body as ImportResult;
+		// Handler should only attempt to create valid docs (2), not all 3
+		expect(mockApi._collectionOps.create).toHaveBeenCalledTimes(2);
+		expect(body.imported).toBe(2);
+		expect(body.errors).toHaveLength(1);
+		expect(body.errors[0].index).toBe(1);
+	});
+
 	it('should accept import at exactly MAX_IMPORT_DOCS', async () => {
 		const exactDocs = Array.from({ length: MAX_IMPORT_DOCS }, (_, i) => ({
 			title: `Doc ${i}`,
