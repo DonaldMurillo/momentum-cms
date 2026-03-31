@@ -14,20 +14,15 @@ import {
 	executeGraphQL,
 	generateOpenAPISpec,
 	getSwaggerUIHTML,
-	exportToJson,
-	exportToCsv,
-	parseJsonImport,
-	parseCsvImport,
+	handleExportRequest,
+	handleImportRequest,
 	renderPreviewHTML,
 	type MomentumRequest,
 	type UploadRequest,
 	type GraphQLRequestBody,
 	type OpenAPIGeneratorOptions,
-	type ExportFormat,
-	type ImportResult,
 	sanitizeErrorMessage,
 	parseWhereParam,
-	sanitizeFilename,
 	validateMimeType,
 } from '@momentumcms/server-core';
 import type {
@@ -1167,146 +1162,46 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 	// Route: GET /:collection/export - Export collection documents
 	router.get('/:collection/export', async (req: Request, res: Response) => {
-		try {
-			const user = extractUserFromRequest(req);
-			const api = getMomentumAPI();
-			const contextApi = user ? api.setContext({ user }) : api;
-			const collectionSlug = req.params['collection'];
+		const result = await handleExportRequest({
+			collectionSlug: req.params['collection'],
+			format: typeof req.query['format'] === 'string' ? req.query['format'] : 'json',
+			limit: req.query['limit'] ? Number(req.query['limit']) : undefined,
+			user: extractUserFromRequest(req),
+			config,
+			api: getMomentumAPI(),
+		});
 
-			const collectionConfig = config.collections.find((c) => c.slug === collectionSlug);
-			if (!collectionConfig) {
-				res.status(404).json({ error: `Collection "${collectionSlug}" not found` });
-				return;
+		if (result.headers) {
+			for (const [key, value] of Object.entries(result.headers)) {
+				res.setHeader(key, value);
 			}
+		}
 
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Validated below
-			const format = (
-				typeof req.query['format'] === 'string' ? req.query['format'] : 'json'
-			) as ExportFormat;
-			if (format !== 'json' && format !== 'csv') {
-				res.status(400).json({ error: 'Invalid format. Use "json" or "csv"' });
-				return;
-			}
-
-			const limit = req.query['limit'] ? Number(req.query['limit']) : 10000;
-
-			// Fetch all documents (paginated to limit)
-			const result = await contextApi.collection(collectionSlug).find({
-				limit,
-			});
-
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-			const docs = result.docs as Record<string, unknown>[];
-
-			const safeSlug = sanitizeFilename(collectionSlug);
-			if (format === 'csv') {
-				const exportResult = exportToCsv(docs, collectionConfig);
-				res.setHeader('Content-Type', 'text/csv');
-				res.setHeader('Content-Disposition', `attachment; filename="${safeSlug}-export.csv"`);
-				res.send(exportResult.data);
-			} else {
-				const exportResult = exportToJson(docs, collectionConfig);
-				res.setHeader('Content-Disposition', `attachment; filename="${safeSlug}-export.json"`);
-				res.json({
-					collection: collectionSlug,
-					format: 'json',
-					totalDocs: exportResult.totalDocs,
-					docs: exportResult.docs,
-				});
-			}
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Export failed');
-			let status = 500;
-			if (error instanceof Error) {
-				if (error.name === 'AccessDeniedError') status = 403;
-				else if (error.name === 'ValidationError') status = 400;
-				else if (error.name === 'DocumentNotFoundError') status = 404;
-			}
-			res.status(status).json({ error: message });
+		if (typeof result.body === 'string') {
+			res.status(result.status).send(result.body);
+		} else {
+			res.status(result.status).json(result.body);
 		}
 	});
 
 	// Route: POST /:collection/import - Import documents into collection
 	router.post('/:collection/import', async (req: Request, res: Response) => {
-		if (isManagedCollection(req.params['collection'])) {
+		const body = getBody(req);
+		const collectionSlug = req.params['collection'];
+		if (isManagedCollection(collectionSlug)) {
 			res.status(403).json({ error: 'Managed collection is read-only' });
 			return;
 		}
-		try {
-			const user = extractUserFromRequest(req);
-			if (!user) {
-				res.status(401).json({ error: 'Authentication required to import data' });
-				return;
-			}
-
-			const api = getMomentumAPI();
-			const contextApi = api.setContext({ user });
-			const collectionSlug = req.params['collection'];
-
-			const collectionConfig = config.collections.find((c) => c.slug === collectionSlug);
-			if (!collectionConfig) {
-				res.status(404).json({ error: `Collection "${collectionSlug}" not found` });
-				return;
-			}
-
-			const body = getBody(req);
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Validated below
-			const format = (typeof body['format'] === 'string' ? body['format'] : 'json') as ExportFormat;
-
-			let docsToImport: Record<string, unknown>[];
-			let parseError: string | undefined;
-
-			if (format === 'csv') {
-				const csvData = body['data'];
-				if (typeof csvData !== 'string') {
-					res.status(400).json({ error: 'CSV import requires "data" field with CSV string' });
-					return;
-				}
-				const parsed = parseCsvImport(csvData, collectionConfig);
-				docsToImport = parsed.docs;
-				parseError = parsed.error;
-			} else {
-				const parsed = parseJsonImport(body['docs'] ?? body['data'] ?? body);
-				docsToImport = parsed.docs;
-				parseError = parsed.error;
-			}
-
-			if (parseError) {
-				res.status(400).json({ error: parseError });
-				return;
-			}
-
-			if (docsToImport.length === 0) {
-				res.status(400).json({ error: 'No documents to import' });
-				return;
-			}
-
-			// Import each document, collecting errors
-			const result: ImportResult = {
-				imported: 0,
-				total: docsToImport.length,
-				errors: [],
-				docs: [],
-			};
-
-			for (let i = 0; i < docsToImport.length; i++) {
-				try {
-					const doc = await contextApi.collection(collectionSlug).create(docsToImport[i]);
-					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-					result.docs.push(doc as Record<string, unknown>);
-					result.imported++;
-				} catch (err) {
-					const errMsg = sanitizeErrorMessage(err, 'Failed to import document');
-					result.errors.push({ index: i, message: errMsg });
-				}
-			}
-
-			const status = result.imported > 0 ? 200 : 400;
-			res.status(status).json(result);
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Import failed');
-			res.status(500).json({ error: message });
-		}
+		const result = await handleImportRequest({
+			collectionSlug,
+			format: body['format'] === 'csv' ? 'csv' : 'json',
+			body,
+			dryRun: body['dryRun'] === true,
+			user: extractUserFromRequest(req),
+			config: { collections: config.collections },
+			api: getMomentumAPI(),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: POST /:collection/:id/restore - Restore a soft-deleted document

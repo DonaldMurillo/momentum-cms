@@ -91,8 +91,10 @@ function escapeCsvValue(value: unknown): string {
 	let str = String(value);
 
 	// Prevent CSV injection: prefix formula-triggering characters with a single quote
+	// and ALWAYS wrap in double quotes so spreadsheets treat it as a literal string
 	if (str.length > 0 && /^[=+\-@\t\r]/.test(str)) {
 		str = `'${str}`;
+		return `"${str.replace(/"/g, '""')}"`;
 	}
 
 	if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes('"')) {
@@ -110,6 +112,7 @@ function parseCsv(csv: string): string[][] {
 	let currentRow: string[] = [];
 	let currentField = '';
 	let inQuotes = false;
+	let fieldStart = true; // tracks whether we're at the beginning of a field
 	let i = 0;
 
 	while (i < csv.length) {
@@ -131,23 +134,32 @@ function parseCsv(csv: string): string[][] {
 			currentField += char;
 			i++;
 		} else {
-			if (char === '"') {
+			if (char === '"' && fieldStart) {
+				// Only enter quoted mode at the start of a field (RFC 4180)
 				inQuotes = true;
+				fieldStart = false;
 				i++;
 			} else if (char === ',') {
 				currentRow.push(currentField);
 				currentField = '';
+				fieldStart = true;
 				i++;
-			} else if (char === '\n' || (char === '\r' && csv[i + 1] === '\n')) {
+			} else if (
+				char === '\n' ||
+				(char === '\r' && csv[i + 1] === '\n') ||
+				(char === '\r' && csv[i + 1] !== '\n')
+			) {
 				currentRow.push(currentField);
 				currentField = '';
+				fieldStart = true;
 				if (currentRow.length > 0 && currentRow.some((f) => f.length > 0)) {
 					rows.push(currentRow);
 				}
 				currentRow = [];
-				i += char === '\r' ? 2 : 1;
+				i += char === '\r' && csv[i + 1] === '\n' ? 2 : 1;
 			} else {
 				currentField += char;
+				fieldStart = false;
 				i++;
 			}
 		}
@@ -281,7 +293,13 @@ export function parseCsvImport(
 		return { docs: [], error: 'CSV data must be a non-empty string' };
 	}
 
-	const rows = parseCsv(csvData.trim());
+	// Strip BOM (byte order mark) — trim() does not remove it
+	let cleaned = csvData.trim();
+	if (cleaned.charCodeAt(0) === 0xfeff) {
+		cleaned = cleaned.slice(1);
+	}
+
+	const rows = parseCsv(cleaned);
 	if (rows.length < 2) {
 		return { docs: [], error: 'CSV must have a header row and at least one data row' };
 	}
@@ -323,13 +341,145 @@ export function parseCsvImport(
 	return { docs };
 }
 
+// ============================================
+// Validation Types
+// ============================================
+
+export interface ImportValidationResult {
+	/** Index of the document in the input array */
+	index: number;
+	/** Whether the document passed all validation checks */
+	valid: boolean;
+	/** Validation errors for this document */
+	errors: { field: string; message: string }[];
+	/** The document with coerced values */
+	coerced: Record<string, unknown>;
+}
+
+// ============================================
+// Validation Functions
+// ============================================
+
+/**
+ * Validate import documents against a collection schema without persisting.
+ * Returns per-document validation results with coerced values and errors.
+ */
+export function validateImportDocs(
+	docs: Record<string, unknown>[],
+	collection: CollectionConfig,
+): ImportValidationResult[] {
+	const dataFields = flattenDataFields(collection.fields);
+	const fieldMap = new Map<string, Field>();
+	for (const field of dataFields) {
+		fieldMap.set(field.name, field);
+	}
+
+	return docs.map((doc, index) => {
+		const errors: { field: string; message: string }[] = [];
+		const coerced: Record<string, unknown> = {};
+
+		// Copy all values, coercing known fields
+		for (const [key, value] of Object.entries(doc)) {
+			const field = fieldMap.get(key);
+			if (!field) {
+				// Unknown field — pass through without error
+				coerced[key] = value;
+				continue;
+			}
+
+			const coercedValue = coerceAndValidateValue(value, field);
+			if (coercedValue.error) {
+				errors.push({ field: key, message: coercedValue.error });
+			}
+			coerced[key] = coercedValue.value;
+		}
+
+		// Check required fields
+		for (const field of dataFields) {
+			if (
+				field.required &&
+				(doc[field.name] === undefined || doc[field.name] === null || doc[field.name] === '')
+			) {
+				errors.push({ field: field.name, message: `"${field.name}" is required` });
+			}
+		}
+
+		return {
+			index,
+			valid: errors.length === 0,
+			errors,
+			coerced,
+		};
+	});
+}
+
+/**
+ * Coerce and validate a single value against its field type.
+ * Returns the coerced value and an optional error message.
+ */
+function coerceAndValidateValue(value: unknown, field: Field): { value: unknown; error?: string } {
+	if (value === undefined || value === null || value === '') {
+		return { value };
+	}
+
+	switch (field.type) {
+		case 'number': {
+			if (typeof value === 'number' && Number.isFinite(value)) return { value };
+			if (typeof value === 'number') {
+				return { value, error: `"${field.name}" must be a finite number, got "${String(value)}"` };
+			}
+			const num = Number(value);
+			if (Number.isNaN(num) || !Number.isFinite(num)) {
+				return { value, error: `"${field.name}" must be a valid number, got "${String(value)}"` };
+			}
+			return { value: num };
+		}
+		case 'checkbox': {
+			if (typeof value === 'boolean') return { value };
+			const str = String(value).toLowerCase();
+			return { value: str === 'true' || str === '1' };
+		}
+		case 'json':
+		case 'array':
+		case 'group':
+		case 'blocks':
+		case 'point': {
+			if (typeof value === 'object') return { value };
+			if (typeof value === 'string') {
+				try {
+					return { value: JSON.parse(value) };
+				} catch {
+					return { value, error: `"${field.name}" contains invalid JSON: "${value}"` };
+				}
+			}
+			return { value };
+		}
+		default:
+			return { value };
+	}
+}
+
+/**
+ * Strip the CSV injection escape prefix added during export.
+ * `escapeCsvValue` prepends `'` to values starting with `=+\-@\t\r` — undo that on import.
+ */
+function stripCsvEscapePrefix(value: string): string {
+	if (value.length > 1 && value[0] === "'" && /^[=+\-@\t\r]/.test(value[1])) {
+		return value.substring(1);
+	}
+	return value;
+}
+
 /**
  * Coerce a CSV string value to the appropriate type based on field type.
  */
 function coerceCsvValue(value: string, fieldType?: string): unknown {
+	value = stripCsvEscapePrefix(value);
 	switch (fieldType) {
-		case 'number':
-			return Number(value);
+		case 'number': {
+			const num = Number(value);
+			return Number.isNaN(num) || !Number.isFinite(num) ? value : num;
+		}
 		case 'checkbox':
 			return value.toLowerCase() === 'true' || value === '1';
 		case 'json':
