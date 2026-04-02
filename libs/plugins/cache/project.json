@@ -1,0 +1,42 @@
+{
+	"name": "plugins-cache",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/plugins/cache/src",
+	"projectType": "library",
+	"tags": ["scope:plugin", "env:server"],
+	"targets": {
+		"test": {
+			"executor": "@nx/vitest:test",
+			"outputs": ["{workspaceRoot}/coverage/libs/plugins/cache"],
+			"options": {
+				"config": "libs/plugins/cache/vitest.config.ts"
+			}
+		},
+		"build": {
+			"executor": "@nx/esbuild:esbuild",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/libs/plugins/cache",
+				"main": "libs/plugins/cache/src/index.ts",
+				"additionalEntryPoints": ["libs/plugins/cache/src/lib/cache-admin-routes.ts"],
+				"tsConfig": "libs/plugins/cache/tsconfig.lib.json",
+				"generatePackageJson": false,
+				"assets": [
+					"libs/plugins/cache/package.json",
+					{
+						"input": "libs/plugins/cache/src/lib",
+						"glob": "cache-admin-routes.d.ts",
+						"output": "src/lib"
+					}
+				],
+				"external": ["@angular/*", "@ng-icons/*", "@momentumcms/ui", "ioredis"]
+			}
+		},
+		"nx-release-publish": {
+			"options": {
+				"packageRoot": "dist/{projectRoot}",
+				"access": "public"
+			}
+		}
+	}
+}
