@@ -2,7 +2,7 @@
  * Security Tests: Redis Adapter
  *
  * Tests for: H1 (cross-tag preservation), H2 (tag TTL max), H5 (JSON.parse safety),
- *            M3 (Lua pattern safety), M2 (entryCount)
+ *            M3 (Lua pattern safety), M2 (entryCount), M4 (entryCount TTL drift)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RedisCacheAdapter } from '../adapters/redis-adapter';
@@ -327,6 +327,55 @@ describe('Security: Redis Adapter', () => {
 			// Should not throw — should still delete valid entries
 			const count = await adapter.deleteByTag('posts');
 			expect(count).toBeGreaterThanOrEqual(1);
+		});
+	});
+
+	describe('M4: entryCount must not drift when Redis expires entries via TTL', () => {
+		it('should still accept new entries after previous entries expire in Redis', async () => {
+			// Configure adapter with maxKeys limit
+			const limitedAdapter = new RedisCacheAdapter({ redis: mockRedis, maxKeys: 3 });
+			await limitedAdapter.initialize();
+
+			// Fill to capacity
+			await limitedAdapter.set('a', makeEntry('A', { tags: ['t1'], ttl: 10 }));
+			await limitedAdapter.set('b', makeEntry('B', { tags: ['t2'], ttl: 10 }));
+			await limitedAdapter.set('c', makeEntry('C', { tags: ['t3'], ttl: 10 }));
+
+			// Simulate Redis TTL expiry — keys vanish from Redis but adapter doesn't know
+			mockRedis.simulateExpiry('momentum:cache:a');
+			mockRedis.simulateExpiry('momentum:cache:b');
+			mockRedis.simulateExpiry('momentum:cache:c');
+
+			// Adapter's entryCount is still 3 (the bug). New writes should still work
+			// because the expired entries are gone from Redis.
+			await limitedAdapter.set('d', makeEntry('D', { tags: ['t4'], ttl: 60 }));
+
+			// The new entry MUST be stored — entryCount must not block it
+			const result = await limitedAdapter.get('d');
+			expect(result).toBeDefined();
+			expect(result?.value).toBe('D');
+		});
+
+		it('should not allow entryCount to go negative via delete()', async () => {
+			// Adapter starts with entryCount = 0, but Redis may have pre-existing entries
+			// from a previous adapter instance
+			mockRedis.store.set(
+				'momentum:cache:preexisting',
+				JSON.stringify(makeEntry('old', { tags: ['t1'] })),
+			);
+
+			// Deleting a pre-existing entry should not cause entryCount to go below 0
+			const deleted = await adapter.delete('preexisting');
+			expect(deleted).toBe(true);
+
+			// Now add a new entry — if entryCount went negative, maxKeys check would be broken
+			const limited = new RedisCacheAdapter({ redis: mockRedis, maxKeys: 1 });
+			await limited.initialize();
+
+			// Even with maxKeys=1, adding should work since there are 0 real entries
+			await limited.set('new-entry', makeEntry('NEW', { tags: ['t2'], ttl: 60 }));
+			const result = await limited.get('new-entry');
+			expect(result).toBeDefined();
 		});
 	});
 

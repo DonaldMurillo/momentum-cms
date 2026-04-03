@@ -118,7 +118,14 @@ export class RedisCacheAdapter implements CacheAdapter {
 		const isNewKey = !existingRaw;
 
 		if (isNewKey && this.maxKeys !== undefined && this.entryCount >= this.maxKeys) {
-			return; // At capacity — silently skip
+			// M4: entryCount may have drifted upward from TTL-expired entries that
+			// Redis removed automatically (SETEX expiry doesn't notify the adapter).
+			// Reconcile by scanning actual entry count before giving up.
+			const actualStats = await this.stats();
+			this.entryCount = actualStats.size;
+			if (this.entryCount >= this.maxKeys) {
+				return; // Actually at capacity — silently skip
+			}
 		}
 
 		// Pass prefix to Lua so it can construct old tag keys dynamically.
@@ -163,7 +170,7 @@ export class RedisCacheAdapter implements CacheAdapter {
 
 		const result = await client.eval(LUA_DELETE_SCRIPT, numkeys, ...allKeys);
 
-		if (result) this.entryCount--;
+		if (result) this.entryCount = Math.max(0, this.entryCount - 1);
 		return !!result;
 	}
 

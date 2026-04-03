@@ -348,7 +348,7 @@ describe('createCacheMiddleware', () => {
 		expect(stats.misses).toBe(1);
 	});
 
-	it('should complete global invalidation before the write response is received (Bug #1)', async () => {
+	it('should fire global invalidation after the response is flushed (fire-and-forget)', async () => {
 		let invalidationComplete = false;
 
 		const customInvalidateGlobal = async (slug: string): Promise<void> => {
@@ -383,9 +383,14 @@ describe('createCacheMiddleware', () => {
 		await request(app).get('/api/globals/settings');
 		expect((await adapter.stats()).size).toBe(1);
 
-		// Write — by the time the response arrives, invalidation must be done
+		// Write — response arrives immediately, invalidation is fire-and-forget
 		await request(app).put('/api/globals/settings').send({ value: 'new' });
 
+		// Invalidation has been kicked off but the 50ms delay means it hasn't finished yet
+		expect(invalidationComplete).toBe(false);
+
+		// Wait for the fire-and-forget invalidation to complete
+		await new Promise((resolve) => setTimeout(resolve, 100));
 		expect(invalidationComplete).toBe(true);
 		expect((await adapter.stats()).size).toBe(0);
 	});

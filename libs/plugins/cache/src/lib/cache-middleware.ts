@@ -199,9 +199,9 @@ export function createCacheMiddleware(
 	// Invalidate globals cache on write operations (post-write)
 	// Intercepts res.end() (the lowest-level response method) so invalidation
 	// fires regardless of how the handler sends the response — res.json(),
-	// res.send(), res.status(204).end(), etc. Invalidation completes BEFORE
-	// the response is flushed to the client, eliminating the race window
-	// where a concurrent GET could re-cache stale data.
+	// res.send(), res.status(204).end(), etc. The response is flushed
+	// immediately; invalidation runs fire-and-forget so cache backend
+	// latency never delays the HTTP response.
 	if (invalidateGlobal) {
 		const invalidationTimeout = config.invalidationTimeout ?? 5000;
 		const writeHandler = (req: Request, res: Response, next: NextFunction): void => {
@@ -210,14 +210,21 @@ export function createCacheMiddleware(
 				const originalEnd = res.end;
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/consistent-type-assertions -- Express res.end() has complex overloads
 				(res as any).end = function (this: Response, ...args: any[]): Response {
-					// M1: Race invalidation against a timeout so hung Redis connections
-					// don't block the response indefinitely
-					// eslint-disable-next-line local/no-direct-browser-apis -- server-side Express middleware, not Angular
-					const timeout = new Promise<void>((resolve) => setTimeout(resolve, invalidationTimeout));
-					Promise.race([invalidateGlobal(slug), timeout]).finally(() => {
-						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- res.end() overloads make tuple typing impractical
-						(originalEnd as (...a: unknown[]) => void).apply(this, args);
-					});
+					// Flush the response immediately — never hold it hostage to cache backend latency
+					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- res.end() overloads make tuple typing impractical
+					(originalEnd as (...a: unknown[]) => void).apply(this, args);
+
+					// M6: Only invalidate on successful writes — failed auth/access
+					// returns 4xx/5xx which must NOT flush the cache (DoS prevention)
+					if (this.statusCode >= 200 && this.statusCode < 300) {
+						// M1: Race invalidation against a timeout so hung Redis connections
+						// don't leak promises indefinitely
+						// eslint-disable-next-line local/no-direct-browser-apis -- server-side Express middleware, not Angular
+						const timeout = new Promise<void>((resolve) =>
+							setTimeout(resolve, invalidationTimeout),
+						);
+						void Promise.race([invalidateGlobal(slug), timeout]);
+					}
 					return this;
 				};
 			}
