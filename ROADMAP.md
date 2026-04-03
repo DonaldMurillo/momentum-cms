@@ -133,10 +133,6 @@ Folder and tag organization, asset metadata search, and bulk upload UI. The curr
 
 CSV and JSON import UI in the admin panel, collection data export, and a data transfer tool for moving content between environments.
 
-#### API Response Caching
-
-Configurable cache layer (Redis or in-memory) with automatic invalidation on writes. Support for ETags and conditional requests. CDN integration for static assets.
-
 #### AI/MCP Integration
 
 MCP (Model Context Protocol) server that exposes CMS data to AI tools. Enables AI-assisted content creation, translation, and management through standard AI tool protocols.
@@ -176,6 +172,9 @@ These features were evaluated and explicitly decided against:
 
 ## Recently Shipped
 
+- API response caching plugin — in-memory LRU and Redis adapters, ETag/304 support, per-collection cache config, automatic invalidation on writes, CDN headers (Cache-Control, Surrogate-Control, Vary), admin dashboard with stats and manual purge
+- Media library enhancements — folder and tag organization, asset metadata search, bulk upload UI
+- Import/Export — CSV and JSON import UI in the admin panel, collection data export, data transfer tool
 - Version diff UI — deep diff engine with field-level change highlighting, side-by-side comparison, inline diff toggle, and version navigation with security access control
 - Live preview side panel — real-time in-memory Angular rendering with `LivePreviewService`, signals-based instant updates, per-collection preview components, and form builder plugin support
 - Client SDK generation (`--client` flag) — framework-agnostic, fetch-based TypeScript API client with typed CRUD, globals, auth modes, and error handling

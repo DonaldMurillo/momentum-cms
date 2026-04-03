@@ -117,7 +117,15 @@
 			"@momentumcms/plugins-media-organizer/modify-collections": [
 				"libs/plugins/media-organizer/src/lib/modify-collections.ts"
 			],
-			"@momentumcms/plugins/media-organizer": ["libs/plugins/media-organizer/src/index.ts"]
+			"@momentumcms/plugins/media-organizer": ["libs/plugins/media-organizer/src/index.ts"],
+			"@momentumcms/plugins/cache": ["libs/plugins/cache/src/index.ts"],
+			"@momentumcms/plugins/cache/admin-routes": [
+				"libs/plugins/cache/src/lib/cache-admin-routes.ts"
+			],
+			"@momentumcms/plugins-cache": ["libs/plugins/cache/src/index.ts"],
+			"@momentumcms/plugins-cache/admin-routes": [
+				"libs/plugins/cache/src/lib/cache-admin-routes.ts"
+			]
 		}
 	},
 	"exclude": ["node_modules", "tmp"]

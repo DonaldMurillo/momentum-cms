@@ -1,0 +1,52 @@
+{
+	"name": "@momentumcms/plugins-cache",
+	"version": "0.5.11",
+	"description": "API response caching plugin for Momentum CMS with ETag, Cache-Control, and CDN support",
+	"license": "MIT",
+	"author": "Momentum CMS Contributors",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/DonaldMurillo/momentum-cms.git",
+		"directory": "libs/plugins/cache"
+	},
+	"homepage": "https://github.com/DonaldMurillo/momentum-cms#readme",
+	"bugs": {
+		"url": "https://github.com/DonaldMurillo/momentum-cms/issues"
+	},
+	"keywords": [
+		"cms",
+		"momentum-cms",
+		"cache",
+		"etag",
+		"cdn",
+		"api-cache"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"main": "./index.cjs",
+	"types": "./src/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.d.ts",
+			"default": "./index.cjs"
+		},
+		"./admin-routes": {
+			"types": "./src/lib/cache-admin-routes.d.ts",
+			"default": "./lib/cache-admin-routes.cjs"
+		}
+	},
+	"dependencies": {
+		"@momentumcms/core": "0.5.11",
+		"@momentumcms/plugins-core": "0.5.11",
+		"express": "^4.21.0"
+	},
+	"peerDependencies": {
+		"ioredis": "^5.0.0"
+	},
+	"peerDependenciesMeta": {
+		"ioredis": {
+			"optional": true
+		}
+	}
+}
