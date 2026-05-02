@@ -52,7 +52,12 @@ Full documentation is available in the [docs/](docs/README.md) directory, coveri
 - **Full-text Search** — Built-in search via PostgreSQL `tsvector`/`tsquery`
 - **Headless UI Primitives** — 32 unstyled, accessible Angular interaction primitives built on Angular CDK and Angular Aria
 - **Admin Dashboard** — Auto-generated CRUD interface with rich text editing, visual block editor, bulk operations, relationships, file uploads, and dark mode
-- **Versioning & Drafts** — Document version history, draft/publish workflow, autosave, and scheduled publishing
+- **Live Preview** — Side-panel in-memory Angular rendering with signals-based instant updates (no iframes) and per-collection preview components
+- **Versioning & Drafts** — Document version history, draft/publish workflow, autosave, scheduled publishing, and a side-by-side version diff UI with field-level highlighting
+- **Media Library** — Folders, tags, asset metadata search, bulk upload, and image variant management
+- **Import / Export** — CSV and JSON import/export from the admin panel and a data transfer tool for moving content between environments
+- **API Response Caching** — In-memory LRU and Redis adapters with ETag/304, per-collection config, automatic invalidation on writes, and CDN-friendly headers
+- **AI / MCP Integration** — Built-in Model Context Protocol server exposing CMS data to AI tools (Claude Code, etc.) with security-first defaults
 - **Drizzle ORM** — Type-safe database access with PostgreSQL and SQLite adapters, full migration system with schema diffing
 - **Authentication** — Built-in auth via Better Auth with email/password, OAuth providers, sessions, role-based access, API keys, admin tools (ban/impersonation), and organization multi-tenancy
 - **Webhooks** — Per-collection webhooks with HMAC-SHA256 signature verification, retries, and custom headers
@@ -89,36 +94,40 @@ export const Posts = defineCollection({
 
 ## Packages
 
-| Package                             | npm                         | Description                                                                                             |
-| ----------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `@momentumcms/core`                 | `libs/core`                 | Collection config, fields, hooks, access control, and code generation (types, admin config, client SDK) |
-| `@momentumcms/db-drizzle`           | `libs/db-drizzle`           | Drizzle ORM database adapter (PostgreSQL + SQLite)                                                      |
-| `@momentumcms/auth`                 | `libs/auth`                 | Better Auth integration                                                                                 |
-| `@momentumcms/server-core`          | `libs/server-core`          | Framework-agnostic server handlers                                                                      |
-| `@momentumcms/server-express`       | `libs/server-express`       | Express adapter for Angular SSR                                                                         |
-| `@momentumcms/server-nestjs`        | `libs/server-nestjs`        | NestJS adapter for Angular SSR                                                                          |
-| `@momentumcms/server-analog`        | `libs/server-analog`        | Nitro/h3 adapter for Analog.js                                                                          |
-| `@momentumcms/admin`                | `libs/admin`                | Angular admin dashboard UI                                                                              |
-| `@momentumcms/ui`                   | `libs/ui`                   | Base UI component library                                                                               |
-| `@momentumcms/headless`             | `libs/headless`             | Unstyled Angular headless primitives                                                                    |
-| `@momentumcms/storage`              | `libs/storage`              | File storage adapters (local, S3)                                                                       |
-| `@momentumcms/migrations`           | `libs/migrations`           | Database migration system (generate, run, rollback)                                                     |
-| `@momentumcms/logger`               | `libs/logger`               | Structured logging                                                                                      |
-| `@momentumcms/plugins-core`         | `libs/plugins/core`         | Plugin system core (event bus)                                                                          |
-| `@momentumcms/plugins-analytics`    | `libs/plugins/analytics`    | Analytics and tracking plugin                                                                           |
-| `@momentumcms/plugins-seo`          | `libs/plugins/seo`          | SEO plugin (meta tags, sitemap, robots.txt)                                                             |
-| `@momentumcms/plugins-otel`         | `libs/plugins/otel`         | OpenTelemetry observability plugin                                                                      |
-| `@momentumcms/plugins-redirects`    | `libs/plugins/redirects`    | URL redirect management plugin                                                                          |
-| `@momentumcms/form-builder`         | `libs/form-builder`         | Angular form builder (schema-driven, Signal Forms)                                                      |
-| `@momentumcms/plugins-form-builder` | `libs/plugins/form-builder` | Form submissions, validation, and webhooks plugin                                                       |
-| `@momentumcms/email`                | `libs/email`                | Email rendering and transport                                                                           |
-| `@momentumcms/email-builder`        | `libs/email-builder`        | Visual email template editor                                                                            |
-| `@momentumcms/plugins-email`        | `libs/plugins/email`        | Email plugin (templates, sending, tracking)                                                             |
-| `@momentumcms/queue`                | `libs/queue`                | Background job queue infrastructure                                                                     |
-| `@momentumcms/plugins-queue`        | `libs/plugins/queue`        | Queue plugin (job processing, retries)                                                                  |
-| `@momentumcms/plugins-cron`         | `libs/plugins/cron`         | Scheduled task execution plugin                                                                         |
-| `@momentumcms/plugins-image`        | `libs/plugins/image`        | Image processing plugin (resize, variants, focal point)                                                 |
-| `create-momentum-app`               | `apps/create-momentum-app`  | CLI scaffolding tool                                                                                    |
+| Package                                | npm                            | Description                                                                                             |
+| -------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `@momentumcms/core`                    | `libs/core`                    | Collection config, fields, hooks, access control, and code generation (types, admin config, client SDK) |
+| `@momentumcms/db-drizzle`              | `libs/db-drizzle`              | Drizzle ORM database adapter (PostgreSQL + SQLite)                                                      |
+| `@momentumcms/auth`                    | `libs/auth`                    | Better Auth integration                                                                                 |
+| `@momentumcms/server-core`             | `libs/server-core`             | Framework-agnostic server handlers                                                                      |
+| `@momentumcms/server-express`          | `libs/server-express`          | Express adapter for Angular SSR                                                                         |
+| `@momentumcms/server-nestjs`           | `libs/server-nestjs`           | NestJS adapter for Angular SSR                                                                          |
+| `@momentumcms/server-analog`           | `libs/server-analog`           | Nitro/h3 adapter for Analog.js                                                                          |
+| `@momentumcms/admin`                   | `libs/admin`                   | Angular admin dashboard UI                                                                              |
+| `@momentumcms/ui`                      | `libs/ui`                      | Base UI component library                                                                               |
+| `@momentumcms/headless`                | `libs/headless`                | Unstyled Angular headless primitives                                                                    |
+| `@momentumcms/theme-editor`            | `libs/theme-editor`            | Visual CSS variable editor with presets and live preview                                                |
+| `@momentumcms/storage`                 | `libs/storage`                 | File storage adapters (local, S3)                                                                       |
+| `@momentumcms/migrations`              | `libs/migrations`              | Database migration system (generate, run, rollback)                                                     |
+| `@momentumcms/logger`                  | `libs/logger`                  | Structured logging                                                                                      |
+| `@momentumcms/plugins-core`            | `libs/plugins/core`            | Plugin system core (event bus)                                                                          |
+| `@momentumcms/plugins-analytics`       | `libs/plugins/analytics`       | Analytics and tracking plugin                                                                           |
+| `@momentumcms/plugins-seo`             | `libs/plugins/seo`             | SEO plugin (meta tags, sitemap, robots.txt)                                                             |
+| `@momentumcms/plugins-otel`            | `libs/plugins/otel`            | OpenTelemetry observability plugin                                                                      |
+| `@momentumcms/plugins-redirects`       | `libs/plugins/redirects`       | URL redirect management plugin                                                                          |
+| `@momentumcms/form-builder`            | `libs/form-builder`            | Angular form builder (schema-driven, Signal Forms)                                                      |
+| `@momentumcms/plugins-form-builder`    | `libs/plugins/form-builder`    | Form submissions, validation, and webhooks plugin                                                       |
+| `@momentumcms/email`                   | `libs/email`                   | Email rendering and transport                                                                           |
+| `@momentumcms/email-builder`           | `libs/email-builder`           | Visual email template editor                                                                            |
+| `@momentumcms/plugins-email`           | `libs/plugins/email`           | Email plugin (templates, sending, tracking)                                                             |
+| `@momentumcms/queue`                   | `libs/queue`                   | Background job queue infrastructure                                                                     |
+| `@momentumcms/plugins-queue`           | `libs/plugins/queue`           | Queue plugin (job processing, retries)                                                                  |
+| `@momentumcms/plugins-cron`            | `libs/plugins/cron`            | Scheduled task execution plugin                                                                         |
+| `@momentumcms/plugins-image`           | `libs/plugins/image`           | Image processing plugin (resize, variants, focal point)                                                 |
+| `@momentumcms/plugins-cache`           | `libs/plugins/cache`           | API response caching (LRU/Redis, ETag, invalidation)                                                    |
+| `@momentumcms/plugins-mcp`             | `libs/plugins/mcp`             | Model Context Protocol server for AI tool integration                                                   |
+| `@momentumcms/plugins-media-organizer` | `libs/plugins/media-organizer` | Media library folders, tags, and metadata search                                                        |
+| `create-momentum-app`                  | `apps/create-momentum-app`     | CLI scaffolding tool                                                                                    |
 
 ## Architecture
 
@@ -234,37 +243,32 @@ See [ROADMAP.md](ROADMAP.md) for the full detailed roadmap including current fea
 
 ### Recently Shipped
 
-- **Client SDK Generation** — Auto-generated, framework-agnostic fetch-based TypeScript API client via `--client` flag, with typed CRUD, globals, auth modes, and error handling
-- **Generator Decomposition** — Modular code generator architecture with dedicated modules for types, client, admin config, and serialization
-- **Security Hardening** — Unsafe object key quoting, path traversal prevention via `encodeURIComponent`, import path sanitization with `JSON.stringify`, and `softDelete.field` identifier validation
-- **Headless UI component library** — 32 accessible, unstyled Angular primitives with a global styling contract and example harness
-- **NestJS Adapter** — Full-featured NestJS server adapter with complete API parity, DI container, and Angular SSR integration
-- **Form Builder** — Schema-driven form builder plugin with conditional fields, server-side validation, submission storage, rate limiting, and webhook forwarding
-- **Email Builder** — Visual email template editor with live preview, Handlebars templating, and pluggable transport
-- **Queue & Cron** — Background job processing with configurable concurrency, retry policies, and scheduled task execution
+- **AI / MCP Integration** — MCP server plugin exposing CMS data to AI tools via Model Context Protocol with 12 tools (CRUD, search, schema introspection, globals), 4 resources, 2 prompts, and security-first defaults (write tools opt-in, API key required, auth collections auto-excluded)
+- **API Response Caching Plugin** — In-memory LRU and Redis adapters with ETag/304 support, per-collection cache config, automatic invalidation on writes, CDN headers (Cache-Control, Surrogate-Control, Vary), and an admin dashboard with stats and manual purge
+- **Media Library Enhancements** — Folder and tag organization, asset metadata search, and bulk upload UI
+- **Import / Export** — CSV and JSON import UI in the admin panel, collection data export, and a data transfer tool for moving content between environments
+- **Version Diff UI** — Deep diff engine with field-level change highlighting, side-by-side comparison, inline diff toggle, and version navigation with access control
+- **Live Preview Side Panel** — Real-time in-memory Angular rendering with signals-based `LivePreviewService` (no iframes), per-collection preview components, and form builder plugin support
+- **Client SDK Generation** — Framework-agnostic, fetch-based TypeScript API client via `--client` flag with typed CRUD, globals, auth modes, and error handling
+- **Headless UI Library** — 32 accessible, unstyled Angular primitives with a global styling contract and example harness
+- **Form Builder** — Schema-driven plugin with conditional fields, server-side validation, submission storage, rate limiting, and webhook forwarding
+- **Email Builder** — Visual template editor with live preview, Handlebars templating, and pluggable transport
+- **Queue & Cron** — Background job processing with configurable concurrency, retry policies, and scheduled execution
 - **Redirects** — Collection-based URL redirect management with server middleware
-- **Image Processing** — Automatic image resizing and variant generation using `@napi-rs/image` (Rust/NAPI), with focal point cropping and admin UI picker
-- **Versioning & Drafts** — Document versioning with draft/publish workflow, revision history, auto-versioning on update, role-based publish controls, and admin UI status filtering
-- **Swappable Admin** — Replace built-in admin pages (dashboard, list, edit, view) with custom components and inject content into layout slots (header, footer, sidebar, before/after) with per-collection overrides
+- **Image Processing** — `@napi-rs/image`-powered variant generation with focal point cropping (no Sharp dependency)
+- **Versioning & Drafts** — Revision history, draft/publish workflow, auto-versioning, scheduled publishing, role-based publish controls
+- **Swappable Admin** — Replace built-in pages and inject layout slots with per-collection overrides
 
 ### Planned
 
-**High priority:**
+**Tech debt (next up):**
 
-- **Live Preview** — In-memory Angular rendering of content previews directly in the admin (no iframes)
-- **Version Diff UI** — Side-by-side visual comparison of document versions
-
-**Medium priority:**
-
-- Media library enhancements (folders, tags, bulk upload)
-- Import/export UI (CSV/JSON)
-- API response caching layer
-- AI/MCP integration
+- **Server Adapter Consolidation** — Move duplicated route handler logic from Express and Analog into `@momentumcms/server-core`, and bring NestJS to full route parity (versioning, publishing, media, batch, search, import/export, preview, custom endpoints, GraphQL, globals)
 
 **Low priority:**
 
-- Review workflows (multi-stage approval)
-- Multi-tenancy plugin
+- **Review Workflows** — Multi-stage content approval beyond draft/published
+- **Multi-tenancy** — Tenant collection, scoped data isolation, per-tenant branding, tenant-aware storage
 
 **Ongoing:**
 
