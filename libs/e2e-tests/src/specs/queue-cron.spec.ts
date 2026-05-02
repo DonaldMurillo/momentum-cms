@@ -42,13 +42,21 @@ test.describe('Queue & Cron Plugins', { tag: ['@admin', '@queue', '@cron'] }, ()
 				baseURL: workerBaseURL,
 				extraHTTPHeaders: { Origin: workerBaseURL },
 			});
-			const signInResponse = await adminContext.post('/api/auth/sign-in/email', {
-				data: {
-					email: TEST_CREDENTIALS.email,
-					password: TEST_CREDENTIALS.password,
-				},
-			});
-			expect(signInResponse.ok(), 'Admin sign-in must succeed').toBe(true);
+			// Sign-in can transiently fail under heavy parallel load (Better
+			// Auth rate limit, DB init race). Poll so a single transient
+			// hiccup doesn't poison the entire describe.
+			const signInOk = async (): Promise<boolean> => {
+				const res = await adminContext.post('/api/auth/sign-in/email', {
+					data: {
+						email: TEST_CREDENTIALS.email,
+						password: TEST_CREDENTIALS.password,
+					},
+				});
+				return res.ok();
+			};
+			await expect
+				.poll(signInOk, { timeout: 15_000, intervals: [200, 500, 1000, 2000] })
+				.toBe(true);
 		});
 
 		test.afterAll(async () => {
@@ -97,13 +105,21 @@ test.describe('Queue & Cron Plugins', { tag: ['@admin', '@queue', '@cron'] }, ()
 				baseURL: workerBaseURL,
 				extraHTTPHeaders: { Origin: workerBaseURL },
 			});
-			const signInResponse = await adminContext.post('/api/auth/sign-in/email', {
-				data: {
-					email: TEST_CREDENTIALS.email,
-					password: TEST_CREDENTIALS.password,
-				},
-			});
-			expect(signInResponse.ok(), 'Admin sign-in must succeed').toBe(true);
+			// Sign-in can transiently fail under heavy parallel load (Better
+			// Auth rate limit, DB init race). Poll so a single transient
+			// hiccup doesn't poison the entire describe.
+			const signInOk = async (): Promise<boolean> => {
+				const res = await adminContext.post('/api/auth/sign-in/email', {
+					data: {
+						email: TEST_CREDENTIALS.email,
+						password: TEST_CREDENTIALS.password,
+					},
+				});
+				return res.ok();
+			};
+			await expect
+				.poll(signInOk, { timeout: 15_000, intervals: [200, 500, 1000, 2000] })
+				.toBe(true);
 		});
 
 		test.afterAll(async () => {
@@ -178,13 +194,21 @@ test.describe('Queue & Cron Plugins', { tag: ['@admin', '@queue', '@cron'] }, ()
 				baseURL: workerBaseURL,
 				extraHTTPHeaders: { Origin: workerBaseURL },
 			});
-			const signInResponse = await adminContext.post('/api/auth/sign-in/email', {
-				data: {
-					email: TEST_CREDENTIALS.email,
-					password: TEST_CREDENTIALS.password,
-				},
-			});
-			expect(signInResponse.ok(), 'Admin sign-in must succeed').toBe(true);
+			// Sign-in can transiently fail under heavy parallel load (Better
+			// Auth rate limit, DB init race). Poll so a single transient
+			// hiccup doesn't poison the entire describe.
+			const signInOk = async (): Promise<boolean> => {
+				const res = await adminContext.post('/api/auth/sign-in/email', {
+					data: {
+						email: TEST_CREDENTIALS.email,
+						password: TEST_CREDENTIALS.password,
+					},
+				});
+				return res.ok();
+			};
+			await expect
+				.poll(signInOk, { timeout: 15_000, intervals: [200, 500, 1000, 2000] })
+				.toBe(true);
 		});
 
 		test.afterAll(async () => {

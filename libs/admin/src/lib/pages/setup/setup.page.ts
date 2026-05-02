@@ -63,7 +63,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 							</div>
 						}
 
-						<mcms-form-field id="setup-name" [required]="true" [errors]="nameErrors()">
+						<mcms-form-field for="setup-name" [required]="true" [errors]="nameErrors()">
 							<span mcmsLabel>Full Name</span>
 							<mcms-input
 								type="text"
@@ -76,7 +76,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 							/>
 						</mcms-form-field>
 
-						<mcms-form-field id="setup-email" [required]="true" [errors]="emailErrors()">
+						<mcms-form-field for="setup-email" [required]="true" [errors]="emailErrors()">
 							<span mcmsLabel>Email Address</span>
 							<mcms-input
 								type="email"
@@ -89,7 +89,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 							/>
 						</mcms-form-field>
 
-						<mcms-form-field id="setup-password" [required]="true" [errors]="passwordErrors()">
+						<mcms-form-field for="setup-password" [required]="true" [errors]="passwordErrors()">
 							<span mcmsLabel>Password</span>
 							<mcms-input
 								type="password"
@@ -103,7 +103,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 						</mcms-form-field>
 
 						<mcms-form-field
-							id="setup-confirm-password"
+							for="setup-confirm-password"
 							[required]="true"
 							[errors]="confirmPasswordErrors()"
 						>

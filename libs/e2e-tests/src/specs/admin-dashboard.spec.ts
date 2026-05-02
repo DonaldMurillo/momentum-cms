@@ -311,12 +311,13 @@ test.describe('Admin Sidebar Navigation', { tag: ['@admin', '@smoke'] }, () => {
 			.getByRole('link', { name: 'Dashboard' });
 		// Ensure link is visible and stable before clicking
 		await expect(dashboardLink).toBeVisible();
-		// Use JavaScript navigation as a fallback for Angular router issues
+		// Use JavaScript navigation as a fallback for Angular router issues.
+		// Prefer href-based goto so the click() force-option workaround is never needed.
 		const dashboardHref = await dashboardLink.getAttribute('href');
 		if (dashboardHref) {
 			await authenticatedPage.goto(dashboardHref);
 		} else {
-			await dashboardLink.click({ force: true });
+			await dashboardLink.click();
 		}
 		// Wait for navigation to dashboard
 		await expect(authenticatedPage).toHaveURL(/\/admin\/?$/, { timeout: 10000 });

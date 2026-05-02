@@ -19,6 +19,7 @@ import { formBuilderPlugin } from '@momentumcms/plugins-form-builder';
 import { imagePlugin } from '@momentumcms/plugins/image';
 import { otelPlugin } from '@momentumcms/plugins/otel';
 import { mediaOrganizerPlugin } from '@momentumcms/plugins/media-organizer';
+import { mcpPlugin } from '@momentumcms/plugins/mcp';
 import { join } from 'node:path';
 import { collections } from '@momentumcms/example-config/collections';
 import { globals } from '@momentumcms/example-config/globals';
@@ -140,6 +141,22 @@ export const otel = otelPlugin({
  */
 export const mediaOrganizer = mediaOrganizerPlugin();
 
+// MCP server plugin — exposes CMS data to AI tools.
+//
+// SECURITY: This example enables `write: true` so the e2e suite can exercise
+// the destructive `create_document` / `update_document` / `delete_document`
+// tools against the live server. Do NOT copy this configuration verbatim into
+// a production deployment. For real workloads:
+//   - Leave `tools.write` at its default (`false`) unless writes are required.
+//   - Constrain `allowedCollections` to a small, explicit allow-list.
+//   - Use `deniedCollections` for anything sensitive (auth-* slugs are already excluded).
+//   - Pair MCP with a dedicated, role-scoped API key, not an admin key.
+export const mcp = mcpPlugin({
+	path: '/mcp',
+	apiKeyRequired: true,
+	tools: { read: true, write: true, globals: true },
+});
+
 export const seo = seoPlugin({
 	collections: ['categories', 'articles', 'pages'],
 	siteUrl: `http://localhost:${process.env['PORT'] || 4000}`,
@@ -197,6 +214,7 @@ const config = defineMomentumConfig({
 		images,
 		otel,
 		mediaOrganizer,
+		mcp,
 	],
 	seeding: {
 		...exampleSeedingConfig,

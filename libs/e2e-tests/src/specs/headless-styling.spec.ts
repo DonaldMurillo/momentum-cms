@@ -358,7 +358,7 @@ test.describe('Headless Styling Lab', { tag: ['@headless', '@styling'] }, () => 
 		await expect(page.getByTestId('command-group-people-label')).toHaveText('People');
 		await expect(page.getByTestId('command-separator')).toHaveCSS('display', 'block');
 		await page.getByTestId('command-input').fill('auth');
-		await expect(page.getByTestId('command-item-articles')).not.toBeVisible();
+		await expect(page.getByTestId('command-item-articles')).toBeHidden();
 		await expect(page.getByTestId('command-item-authors')).toBeVisible();
 		await page.getByTestId('command-item-authors').click();
 		await expect(page.getByTestId('command-state')).toContainText('authors');
@@ -462,7 +462,7 @@ test.describe('Headless Styling Lab', { tag: ['@headless', '@styling'] }, () => 
 			.locator('[data-slot="command-item"]')
 			.filter({ hasText: 'Settings' });
 		await expect(dashItem).toBeVisible();
-		await expect(settingsItem).not.toBeVisible();
+		await expect(settingsItem).toBeHidden();
 
 		// Clear and navigate with keyboard
 		await cmdInput.fill('');

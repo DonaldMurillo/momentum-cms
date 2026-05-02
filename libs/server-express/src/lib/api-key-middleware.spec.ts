@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import express from 'express';
 import request from 'supertest';
-import { createApiKeyRoutes } from './api-key-middleware';
+import { createApiKeyRoutes, createApiKeyResolverMiddleware } from './api-key-middleware';
+import { hashApiKey } from '@momentumcms/server-core';
 import type { ApiKeyStore } from '@momentumcms/server-core';
 
 /**
@@ -157,5 +158,78 @@ describe('createApiKeyRoutes - API key ID enumeration prevention', () => {
 		// Both should return identical status and body
 		expect(notFoundRes.status).toBe(forbiddenRes.status);
 		expect(notFoundRes.body).toEqual(forbiddenRes.body);
+	});
+});
+
+describe('createApiKeyResolverMiddleware - role normalization', () => {
+	function createResolverApp(store: ApiKeyStore): {
+		app: express.Application;
+		captured: { user?: { id: string; role?: string } };
+	} {
+		const captured: { user?: { id: string; role?: string } } = {};
+		const app = express();
+		app.use(createApiKeyResolverMiddleware({ store }));
+		app.get('/whoami', (req, res) => {
+			captured.user = (req as unknown as { user?: { id: string; role?: string } }).user;
+			res.status(200).json({ ok: true });
+		});
+		return { app, captured };
+	}
+
+	const validApiKey = `mcms_${'a'.repeat(40)}`;
+
+	function makeRecord(role: unknown) {
+		return {
+			id: 'rec-1',
+			name: 'test-key',
+			keyPrefix: 'mcms_aaaa',
+			keyHash: hashApiKey(validApiKey),
+
+			role: role as string,
+			createdBy: 'user-1',
+			createdAt: new Date(),
+			expiresAt: null,
+			lastUsedAt: null,
+		};
+	}
+
+	it('should pass through a valid string role', async () => {
+		const store = createMockStore();
+		vi.mocked(store.findByHash).mockResolvedValue(makeRecord('admin'));
+		const { app, captured } = createResolverApp(store);
+
+		await request(app).get('/whoami').set('x-api-key', validApiKey);
+
+		expect(captured.user?.role).toBe('admin');
+	});
+
+	it('should fall back to "user" when role is undefined', async () => {
+		const store = createMockStore();
+		vi.mocked(store.findByHash).mockResolvedValue(makeRecord(undefined));
+		const { app, captured } = createResolverApp(store);
+
+		await request(app).get('/whoami').set('x-api-key', validApiKey);
+
+		expect(captured.user?.role).toBe('user');
+	});
+
+	it('should fall back to "user" when role is null', async () => {
+		const store = createMockStore();
+		vi.mocked(store.findByHash).mockResolvedValue(makeRecord(null));
+		const { app, captured } = createResolverApp(store);
+
+		await request(app).get('/whoami').set('x-api-key', validApiKey);
+
+		expect(captured.user?.role).toBe('user');
+	});
+
+	it('should fall back to "user" when role is an empty string', async () => {
+		const store = createMockStore();
+		vi.mocked(store.findByHash).mockResolvedValue(makeRecord(''));
+		const { app, captured } = createResolverApp(store);
+
+		await request(app).get('/whoami').set('x-api-key', validApiKey);
+
+		expect(captured.user?.role).toBe('user');
 	});
 });

@@ -489,12 +489,15 @@ test.describe('Accessibility: Keyboard navigation', { tag: ['@a11y', '@admin'] }
 		await page.goto('/admin/login');
 		await page.waitForLoadState('domcontentloaded');
 
-		// Fill in form fields so the submit button becomes enabled (disabled buttons aren't tab-focusable)
-		const emailInput = page.locator('#login-email');
+		// Fill in form fields so the submit button becomes enabled (disabled buttons aren't tab-focusable).
+		// `#login-email` is set on the form-field wrapper, the input wrapper, and
+		// the underlying <input>, so target the actual <input> directly to
+		// avoid Playwright's strict-mode violation.
+		const emailInput = page.locator('input#login-email');
 		await expect(emailInput).toBeVisible({ timeout: 10000 });
 		await emailInput.fill('test@example.com');
 
-		const passwordInput = page.locator('#login-password');
+		const passwordInput = page.locator('input#login-password');
 		await passwordInput.fill('TestPassword123!');
 
 		// Focus the email input directly, then verify Tab moves through the form
@@ -598,7 +601,7 @@ test.describe('Accessibility: axe-core WCAG 2.1 AA scans', { tag: ['@a11y', '@ad
 	test('login page has no WCAG 2.1 AA violations', async ({ page }) => {
 		await page.goto('/admin/login');
 		await page.waitForLoadState('domcontentloaded');
-		await expect(page.locator('#login-email')).toBeVisible({ timeout: 10000 });
+		await expect(page.locator('input#login-email')).toBeVisible({ timeout: 10000 });
 
 		const results = await checkA11y(page);
 		expect(

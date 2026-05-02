@@ -58,7 +58,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 					Enter your email address and we'll send you a link to reset your password.
 				</p>
 
-				<mcms-form-field id="email" [required]="true" [errors]="emailErrors()">
+				<mcms-form-field for="email" [required]="true" [errors]="emailErrors()">
 					<span mcmsLabel>Email</span>
 					<mcms-input
 						type="email"

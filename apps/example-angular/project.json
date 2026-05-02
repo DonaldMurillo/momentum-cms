@@ -30,7 +30,7 @@
 				"ssr": {
 					"entry": "apps/example-angular/src/server.ts"
 				},
-				"externalDependencies": ["better-sqlite3", "@napi-rs/image"],
+				"externalDependencies": ["better-sqlite3", "@napi-rs/image", "@modelcontextprotocol/sdk"],
 				"outputMode": "server"
 			},
 			"configurations": {

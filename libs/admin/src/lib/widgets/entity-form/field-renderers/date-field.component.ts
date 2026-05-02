@@ -18,7 +18,7 @@ import { getFieldNodeState } from '../entity-form.types';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `
 		<mcms-form-field
-			[id]="fieldId()"
+			[for]="fieldId()"
 			[required]="required()"
 			[disabled]="isDisabled()"
 			[errors]="touchedErrors()"

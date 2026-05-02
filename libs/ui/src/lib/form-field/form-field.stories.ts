@@ -33,7 +33,7 @@ type Story = StoryObj<McmsFormField>;
 export const Default: Story = {
 	render: () => ({
 		template: `
-			<mcms-form-field id="email">
+			<mcms-form-field for="email">
 				<span mcmsLabel>Email</span>
 				<mcms-input type="email" placeholder="Enter your email" />
 			</mcms-form-field>
@@ -44,7 +44,7 @@ export const Default: Story = {
 export const Required: Story = {
 	render: () => ({
 		template: `
-			<mcms-form-field id="username" [required]="true">
+			<mcms-form-field for="username" [required]="true">
 				<span mcmsLabel>Username</span>
 				<mcms-input placeholder="Enter username" />
 			</mcms-form-field>
@@ -55,7 +55,7 @@ export const Required: Story = {
 export const WithHint: Story = {
 	render: () => ({
 		template: `
-			<mcms-form-field id="bio" hint="This will be your public display name.">
+			<mcms-form-field for="bio" hint="This will be your public display name.">
 				<span mcmsLabel>Bio</span>
 				<mcms-input placeholder="Enter bio" />
 			</mcms-form-field>
@@ -69,7 +69,7 @@ export const WithError: Story = {
 			errors: [{ kind: 'minLength', message: 'Password must be at least 8 characters.' }],
 		},
 		template: `
-			<mcms-form-field id="password" [errors]="errors">
+			<mcms-form-field for="password" [errors]="errors">
 				<span mcmsLabel>Password</span>
 				<mcms-input type="password" placeholder="Enter password" />
 			</mcms-form-field>
@@ -80,7 +80,7 @@ export const WithError: Story = {
 export const Disabled: Story = {
 	render: () => ({
 		template: `
-			<mcms-form-field id="locked" [disabled]="true">
+			<mcms-form-field for="locked" [disabled]="true">
 				<span mcmsLabel>Locked Field</span>
 				<mcms-input placeholder="Cannot edit" />
 			</mcms-form-field>
@@ -91,7 +91,7 @@ export const Disabled: Story = {
 export const WithTextarea: Story = {
 	render: () => ({
 		template: `
-			<mcms-form-field id="description" hint="You can use up to 500 characters.">
+			<mcms-form-field for="description" hint="You can use up to 500 characters.">
 				<span mcmsLabel>Description</span>
 				<mcms-textarea placeholder="Tell us about yourself" rows="4"></mcms-textarea>
 			</mcms-form-field>
@@ -110,22 +110,22 @@ export const CompleteForm: Story = {
 		},
 		template: `
 			<div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 400px;">
-				<mcms-form-field id="name" [required]="true">
+				<mcms-form-field for="name" [required]="true">
 					<span mcmsLabel>Full Name</span>
 					<mcms-input placeholder="John Doe" />
 				</mcms-form-field>
 
-				<mcms-form-field id="email" [required]="true" hint="We'll send a confirmation email.">
+				<mcms-form-field for="email" [required]="true" hint="We'll send a confirmation email.">
 					<span mcmsLabel>Email</span>
 					<mcms-input type="email" placeholder="john@example.com" />
 				</mcms-form-field>
 
-				<mcms-form-field id="role">
+				<mcms-form-field for="role">
 					<span mcmsLabel>Role</span>
 					<mcms-select [options]="roleOptions" placeholder="Select role" />
 				</mcms-form-field>
 
-				<mcms-form-field id="bio">
+				<mcms-form-field for="bio">
 					<span mcmsLabel>Bio</span>
 					<mcms-textarea placeholder="Tell us about yourself" rows="3"></mcms-textarea>
 				</mcms-form-field>

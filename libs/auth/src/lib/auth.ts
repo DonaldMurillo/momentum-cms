@@ -410,6 +410,16 @@ export function createMomentumAuth(
 			expiresIn: 60 * 60 * 24 * 7, // 7 days
 			updateAge: 60 * 60 * 24, // Update session every 24 hours
 		},
+
+		// Rate limiting: disabled in dev/test so highly-parallel e2e suites
+		// (which run dozens of `beforeAll` sign-ins per second per worker
+		// against a single shared in-memory rate-limit bucket) don't trip
+		// false-positive 429s. The example apps build/run as production, so
+		// `NODE_ENV` alone wouldn't catch e2e — the e2e fixture sets
+		// `MOMENTUM_E2E=true` for that case.
+		rateLimit: {
+			enabled: process.env['NODE_ENV'] === 'production' && process.env['MOMENTUM_E2E'] !== 'true',
+		},
 	});
 }
 

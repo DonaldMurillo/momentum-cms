@@ -165,9 +165,10 @@ export function initializeMomentum(
 						// API key store backed by the generic database adapter
 						const apiKeyStore = createAdapterApiKeyStore(config.db.adapter);
 
-						// Order matters: API key routes at /auth/api-keys must be mounted BEFORE
-						// the Better Auth catch-all at /auth/* to avoid being consumed by it.
-						pluginMiddleware.push(
+						// Order matters: auth middleware must run BEFORE plugin middleware
+						// (e.g., MCP checks req.user) and API key routes at /auth/api-keys
+						// must be mounted BEFORE the Better Auth catch-all at /auth/*.
+						pluginMiddleware.unshift(
 							{
 								path: '/',
 								handler: createApiKeyResolverMiddleware({ store: apiKeyStore }),

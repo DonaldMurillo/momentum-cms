@@ -152,14 +152,19 @@ test.describe('Bulk actions UI', { tag: ['@admin', '@crud'] }, () => {
 			.filter({ hasText: /Bulk UI Alpha/i });
 		await expect(alphaCell).toHaveCount(0, { timeout: 10000 });
 
-		// Verify via API that they're actually deleted
+		// Verify via API that they're actually deleted. The bulk delete UI
+		// confirmation completes before the DB commit propagates to a
+		// subsequent list-style query under load, so poll the slugs endpoint
+		// until none of the bulk-ui-* slugs remain.
 		const request = authenticatedPage.request;
-		const slugsResponse = await request.get('/api/categories/slugs');
-
-		const slugsData = (await slugsResponse.json()) as { slugs: string[] };
-		expect(slugsData.slugs).not.toContain('bulk-ui-alpha');
-		expect(slugsData.slugs).not.toContain('bulk-ui-beta');
-		expect(slugsData.slugs).not.toContain('bulk-ui-gamma');
+		const remainingBulkSlugs = async (): Promise<string[]> => {
+			const res = await request.get('/api/categories/slugs');
+			const body = (await res.json()) as { slugs: string[] };
+			return body.slugs.filter((s) => s.startsWith('bulk-ui-'));
+		};
+		await expect
+			.poll(remainingBulkSlugs, { timeout: 10_000, intervals: [200, 500, 1000, 2000] })
+			.toEqual([]);
 	});
 
 	test('cancelling bulk delete confirmation preserves items', async ({ authenticatedPage }) => {

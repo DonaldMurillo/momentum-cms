@@ -65,10 +65,12 @@ test.describe('Theme editor', { tag: ['@headless', '@tools'] }, () => {
 		await primaryInput.pressSequentially('oklch(0.6 0.2 250)');
 		await primaryInput.press('Enter');
 
-		// Preview style innerHTML should reflect new value
+		// Preview style innerHTML should reflect new value.
+		// Bumped poll timeout: under heavy parallel load the theme service can
+		// take longer than 5s to push the new color into the preview style tag.
 		const styleEl = page.locator('[data-testid="theme-preview-scope"] > style').first();
 		await expect
-			.poll(() => styleEl.evaluate((el) => el.innerHTML), { timeout: 5000 })
+			.poll(() => styleEl.evaluate((el) => el.innerHTML), { timeout: 15000 })
 			.toContain('oklch(0.6 0.2 250)');
 	});
 

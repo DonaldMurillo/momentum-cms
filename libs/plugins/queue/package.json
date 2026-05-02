@@ -37,6 +37,7 @@
 	},
 	"dependencies": {
 		"@momentumcms/core": "0.5.11",
+		"@momentumcms/queue": "0.5.11",
 		"express": "^4.21.0"
 	},
 	"peerDependencies": {

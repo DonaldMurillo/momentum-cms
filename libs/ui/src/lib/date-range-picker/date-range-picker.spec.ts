@@ -5,7 +5,7 @@ import { DateRangePicker } from './date-range-picker.component';
 import type { DateRangeValue } from './date-range-picker.types';
 
 @Component({
-	selector: 'test-host',
+	selector: 'mcms-test-host',
 	imports: [DateRangePicker],
 	template: `
 		<mcms-date-range-picker
