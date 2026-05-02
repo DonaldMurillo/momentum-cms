@@ -9,7 +9,7 @@ import { createFieldNodeSignals } from '../form-field-helpers';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `
 		<mcms-form-field
-			[id]="fieldId()"
+			[for]="fieldId()"
 			[required]="field().required ?? false"
 			[errors]="touchedErrors()"
 		>

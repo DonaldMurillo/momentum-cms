@@ -5,11 +5,19 @@ import type { ValidationError } from '../input/input.types';
 /**
  * Form field wrapper that combines label, input, and error display.
  *
+ * The wrapper accepts the inner input's id via the `for` input rather than
+ * `id`. Using `id` would duplicate the same DOM `id` on both the host
+ * `<mcms-form-field>` element and the inner `<input>`, breaking HTML's
+ * uniqueness invariant and confusing assistive tech (axe / Playwright
+ * strict-mode pick this up as a violation). `for` mirrors `<label for="…">`
+ * semantics — what the field labels — without colliding with the global
+ * `id` attribute.
+ *
  * Usage:
  * ```html
- * <mcms-form-field id="email" [required]="true" [errors]="loginForm.email().errors()">
+ * <mcms-form-field for="email" [required]="true" [errors]="loginForm.email().errors()">
  *   <span mcmsLabel>Email Address</span>
- *   <mcms-input [formField]="loginForm.email" />
+ *   <mcms-input id="email" [formField]="loginForm.email" />
  * </mcms-form-field>
  * ```
  */
@@ -18,11 +26,10 @@ import type { ValidationError } from '../input/input.types';
 	imports: [Label],
 	host: {
 		class: 'block space-y-2',
-		'[attr.id]': 'null', // Remove host id to prevent duplicate with inner input
 	},
 	template: `
 		@if (hasLabel()) {
-			<mcms-label [for]="id()" [required]="required()" [disabled]="disabled()">
+			<mcms-label [for]="for()" [required]="required()" [disabled]="disabled()">
 				<ng-content select="[mcmsLabel]" />
 			</mcms-label>
 		}
@@ -31,7 +38,7 @@ import type { ValidationError } from '../input/input.types';
 
 		<p
 			[id]="errorId()"
-			[attr.data-testid]="showError() ? 'field-error-' + id() : null"
+			[attr.data-testid]="showError() ? 'field-error-' + for() : null"
 			class="text-sm min-h-5"
 			[class.text-destructive]="showError()"
 			[class.text-muted-foreground]="!showError() && !!hint()"
@@ -49,14 +56,14 @@ import type { ValidationError } from '../input/input.types';
 	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class McmsFormField {
-	readonly id = input.required<string>();
+	readonly for = input.required<string>();
 	readonly required = input(false);
 	readonly disabled = input(false);
 	readonly errors = input<readonly ValidationError[]>([]);
 	readonly hint = input<string | undefined>(undefined);
 	readonly hasLabel = input(true);
 
-	readonly errorId = computed(() => `${this.id()}-error`);
+	readonly errorId = computed(() => `${this.for()}-error`);
 
 	readonly showError = computed(() => this.errors().length > 0);
 

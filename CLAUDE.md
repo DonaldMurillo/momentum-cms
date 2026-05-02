@@ -77,6 +77,7 @@ Domain-specific guidance lives in workflow elements, not here. Key ones:
 - `/admin-config` — Admin route wiring, plugin browser imports, field renderers
 - `/admin-customize` — Swappable pages, layout slots, per-collection overrides
 - `/momentum-api` — Angular API client usage (queries, CRUD, SSR hydration)
+- `/mcp-setup` — Set up MCP server plugin and generate Claude Code config for AI tool integration
 - `code-quality` agent — DRY/KISS/SRP + Angular anti-patterns (runs before completion)
 - `test-reviewer` agent — Catches lying tests (runs after writing tests)
 - `a11y-auditor` agent — WCAG 2.1 AA audit (runs on UI component changes)

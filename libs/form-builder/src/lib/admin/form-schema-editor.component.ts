@@ -63,7 +63,7 @@ const FIELD_TYPES: { value: FormFieldType; label: string }[] = [
 			<div class="mb-4 space-y-3 pb-4 border-b border-border">
 				<h3 class="text-sm font-medium text-foreground">Form Settings</h3>
 				<div class="grid grid-cols-2 gap-3">
-					<mcms-form-field id="formSettingsSubmitLabel">
+					<mcms-form-field for="formSettingsSubmitLabel">
 						<span mcmsLabel>Submit Button Label</span>
 						<mcms-input
 							id="formSettingsSubmitLabel"
@@ -72,7 +72,7 @@ const FIELD_TYPES: { value: FormFieldType; label: string }[] = [
 							placeholder="Submit"
 						/>
 					</mcms-form-field>
-					<mcms-form-field id="formSettingsSuccessMessage">
+					<mcms-form-field for="formSettingsSuccessMessage">
 						<span mcmsLabel>Success Message</span>
 						<mcms-input
 							id="formSettingsSuccessMessage"

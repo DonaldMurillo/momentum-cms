@@ -89,6 +89,18 @@ export function generateApiKeyId(): string {
 }
 
 /**
+ * Normalize an API key record's role into a non-empty string, defaulting to 'user'.
+ *
+ * Why: ApiKeyRecord.role is typed as string, but rows can come from older
+ * databases or migrations where the column was nullable, and we don't want
+ * undefined/null/'' to silently bypass role-based access checks downstream.
+ */
+export function normalizeApiKeyRole(role: unknown): string {
+	if (typeof role === 'string' && role.length > 0) return role;
+	return 'user';
+}
+
+/**
  * Database operations for API keys.
  * Uses raw SQL queries through the database adapter.
  */

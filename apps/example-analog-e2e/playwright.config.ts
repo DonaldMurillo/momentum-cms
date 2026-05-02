@@ -22,6 +22,15 @@ process.env['E2E_WORKSPACE_ROOT'] =
 export default defineConfig({
 	...nxE2EPreset(__filename, { testDir: path.join(E2E_TESTS_LIB, 'specs') }),
 
+	// Skip specs that target plugins/pages only present in the angular example
+	// app, so they don't show up as "skipped" in this suite's summary.
+	testIgnore: ['**/otel-observability.spec.ts', '**/headless-styling.spec.ts'],
+
+	// Filter out tests tagged @analog-skip — these target features known to
+	// be broken under Analog's SSR hydration (CDK overlay init, Signal Forms
+	// race) and would otherwise clutter the summary as "skipped".
+	grepInvert: /@analog-skip/,
+
 	// Fail the build if test.only is left in the source code on CI
 	forbidOnly: !!process.env['CI'],
 
@@ -63,6 +72,9 @@ export default defineConfig({
 			name: 'default',
 			testMatch: /\.spec\.ts$/,
 			testIgnore: [
+				// Plugins/pages only present in the angular example app
+				'**/otel-observability.spec.ts',
+				'**/headless-styling.spec.ts',
 				// Analog app doesn't have /articles frontend routes
 				'**/articles-page.spec.ts',
 				// Analog app doesn't have the same frontend shell layout (header/footer/nav)

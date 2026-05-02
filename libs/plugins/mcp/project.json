@@ -1,0 +1,33 @@
+{
+	"name": "plugins-mcp",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "libs/plugins/mcp/src",
+	"projectType": "library",
+	"tags": ["scope:plugin", "env:server"],
+	"targets": {
+		"test": {
+			"executor": "@nx/vitest:test",
+			"outputs": ["{workspaceRoot}/coverage/libs/plugins/mcp"],
+			"options": {
+				"config": "libs/plugins/mcp/vitest.config.ts"
+			}
+		},
+		"build": {
+			"executor": "@nx/esbuild:esbuild",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "dist/libs/plugins/mcp",
+				"main": "libs/plugins/mcp/src/index.ts",
+				"tsConfig": "libs/plugins/mcp/tsconfig.lib.json",
+				"generatePackageJson": false,
+				"assets": ["libs/plugins/mcp/package.json"]
+			}
+		},
+		"nx-release-publish": {
+			"options": {
+				"packageRoot": "dist/{projectRoot}",
+				"access": "public"
+			}
+		}
+	}
+}

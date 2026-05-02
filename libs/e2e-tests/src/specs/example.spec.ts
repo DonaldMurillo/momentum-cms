@@ -25,10 +25,6 @@ test.describe('App Routing', { tag: ['@smoke'] }, () => {
 		await page.goto('/admin');
 		await page.waitForLoadState('networkidle');
 
-		// Based on auth state, should be on one of these pages:
-		// - /admin/setup (no users exist)
-		// - /admin/login (users exist but not authenticated)
-		// - /admin (authenticated - shows dashboard)
 		const url = page.url();
 		const isOnValidPage =
 			url.includes('/admin/setup') || url.includes('/admin/login') || url.match(/\/admin\/?$/);

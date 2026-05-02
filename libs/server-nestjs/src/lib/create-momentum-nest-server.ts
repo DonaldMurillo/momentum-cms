@@ -199,7 +199,10 @@ export async function createMomentumNestServer(
 	// 5b. Add JSON body parser before any middleware.
 	// NestJS only registers body parsers during app.init() (step 15), but our CMS
 	// middleware and consumer callbacks need parsed bodies immediately.
-	expressApp.use(express.json());
+	// 10mb matches the import-export plugin's batch-import expectations
+	// (MAX_IMPORT_DOCS = 5000) without rejecting legitimate payloads via
+	// Express's 100kb default.
+	expressApp.use(express.json({ limit: '10mb' }));
 
 	// 6. Mount health endpoint (with ?checkSeeds=true support for E2E infrastructure)
 	if (health) {

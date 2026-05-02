@@ -7,7 +7,7 @@
  * Seeds messy data (NULLs, duplicates, orphaned FKs), generates migrations,
  * and verifies the clone-test-apply pipeline catches failures safely.
  */
-import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, rmSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -61,12 +61,7 @@ const ItemsV2Required = defineCollection({
 /** V2: adds a nullable field — always safe */
 const ItemsV2Safe = defineCollection({
 	slug: 'items',
-	fields: [
-		text('title', { required: true }),
-		text('description'),
-		number('quantity'),
-		text('sku'),
-	],
+	fields: [text('title', { required: true }), text('description'), number('quantity'), text('sku')],
 });
 
 /** V2: drops the items table entirely */
@@ -102,7 +97,12 @@ function generateAndWriteMigration(
 // Tests
 // ============================================
 
-describe('breaking-generate-run (PostgreSQL)', () => {
+// Hoist the PG availability check to a top-level constant so the entire
+// suite can be skipped via `describe.skipIf` without per-test bare `return`s
+// (which the local/no-silent-test-exit lint rule rightly forbids).
+const pgAvailable = await isPgAvailable();
+
+describe.skipIf(!pgAvailable)('breaking-generate-run (PostgreSQL)', () => {
 	let pool: Pool;
 	let dbName: string;
 	let connectionString: string;
@@ -110,12 +110,7 @@ describe('breaking-generate-run (PostgreSQL)', () => {
 	/** Track clone pools so we can end them before dropping databases */
 	let clonePools: Pool[];
 
-	beforeAll(async () => {
-		if (!(await isPgAvailable())) return;
-	});
-
 	beforeEach(async () => {
-		if (!(await isPgAvailable())) return;
 		clonePools = [];
 
 		const testDb = await createTestPgDb();
@@ -123,7 +118,9 @@ describe('breaking-generate-run (PostgreSQL)', () => {
 		connectionString = testDb.connectionString;
 		pool = new Pool({ connectionString, max: 5 });
 		// Suppress expected "terminating connection" errors from pg_terminate_backend during cloning
-		pool.on('error', () => { /* noop */ });
+		pool.on('error', () => {
+			/* noop */
+		});
 
 		migrationDir = join(
 			tmpdir(),
@@ -135,7 +132,11 @@ describe('breaking-generate-run (PostgreSQL)', () => {
 	afterEach(async () => {
 		// End clone pools first to avoid "terminating connection" errors
 		for (const p of clonePools ?? []) {
-			try { await p.end(); } catch { /* pool may already be dead */ }
+			try {
+				await p.end();
+			} catch {
+				/* pool may already be dead */
+			}
 		}
 		if (pool) await pool.end();
 		if (dbName) await dropTestPgDb(dbName);
@@ -150,7 +151,9 @@ describe('breaking-generate-run (PostgreSQL)', () => {
 	function trackedPoolForDb(name: string): Pool {
 		const p = pgPoolForDb(name);
 		// Suppress expected "terminating connection" errors during clone cleanup
-		p.on('error', () => { /* noop */ });
+		p.on('error', () => {
+			/* noop */
+		});
 		clonePools.push(p);
 		return p;
 	}
@@ -181,12 +184,10 @@ describe('breaking-generate-run (PostgreSQL)', () => {
 	}
 
 	it('should generate migration with NOT NULL column and detect danger', async () => {
-		if (!(await isPgAvailable())) return;
-
 		await setupInitialSchemaWithData();
 
 		// Generate V2 with required 'sku' field (NOT NULL, no default)
-		 
+
 		const snapshot = readSnapshot(migrationDir);
 		const desired = collectionsToSchema([ItemsV2Required], 'postgresql');
 		const diff = diffSchemas(desired, snapshot, 'postgresql');
@@ -198,19 +199,17 @@ describe('breaking-generate-run (PostgreSQL)', () => {
 			(w) => w.operation.type === 'addColumn' && w.severity === 'error',
 		);
 		expect(addColDanger).toBeDefined();
-		 
+
 		expect(addColDanger?.message).toContain('NOT NULL');
-		 
+
 		expect(addColDanger?.suggestion).toContain('nullable');
 	});
 
 	it('should block generate when DROP TABLE is detected', async () => {
-		if (!(await isPgAvailable())) return;
-
 		await setupInitialSchemaWithData();
 
 		// Diff that removes items table (replaced by other_table)
-		 
+
 		const snapshot = readSnapshot(migrationDir);
 		const desired = collectionsToSchema([NoItems], 'postgresql');
 		const diff = diffSchemas(desired, snapshot, 'postgresql');
@@ -221,13 +220,11 @@ describe('breaking-generate-run (PostgreSQL)', () => {
 			(w) => w.operation.type === 'dropTable' && w.severity === 'error',
 		);
 		expect(dropTableDanger).toBeDefined();
-		 
+
 		expect(dropTableDanger?.message).toContain('permanently delete');
 	});
 
 	it('should catch NOT NULL violation via clone-test-apply', async () => {
-		if (!(await isPgAvailable())) return;
-
 		await setupInitialSchemaWithData();
 
 		// Manually write a migration that tries to add NOT NULL column
@@ -276,8 +273,6 @@ export async function down(ctx) {
 	});
 
 	it('should catch type cast failure via clone-test-apply', async () => {
-		if (!(await isPgAvailable())) return;
-
 		await setupInitialSchemaWithData();
 		// Insert a non-numeric value
 		await pool.query(`INSERT INTO items (id, title, description, quantity, "createdAt", "updatedAt")
@@ -329,12 +324,10 @@ export async function down(ctx) {
 	});
 
 	it('should succeed with safe nullable column addition via clone-test-apply', async () => {
-		if (!(await isPgAvailable())) return;
-
 		await setupInitialSchemaWithData();
 
 		// Generate safe V2 migration (nullable sku column)
-		 
+
 		const snapshot = readSnapshot(migrationDir);
 		generateAndWriteMigration(migrationDir, [ItemsV2Safe], snapshot, 'add_nullable_sku');
 
@@ -354,7 +347,7 @@ export async function down(ctx) {
 		// Clone should succeed and apply to real DB
 		expect(result.phase).toBe('complete');
 		expect(result.applyResult).not.toBeNull();
-		 
+
 		expect(result.applyResult?.successCount).toBe(1);
 		const cols = await pool.query(
 			`SELECT column_name FROM information_schema.columns WHERE table_name = 'items' ORDER BY ordinal_position`,
@@ -364,11 +357,8 @@ export async function down(ctx) {
 	});
 
 	it('should not apply to real DB in testOnly mode even on success', async () => {
-		if (!(await isPgAvailable())) return;
-
 		await setupInitialSchemaWithData();
 
-		 
 		const snapshot = readSnapshot(migrationDir);
 		generateAndWriteMigration(migrationDir, [ItemsV2Safe], snapshot, 'add_sku_test');
 
@@ -397,8 +387,6 @@ export async function down(ctx) {
 	});
 
 	it('should generate suggestion for NOT NULL clone failure', async () => {
-		if (!(await isPgAvailable())) return;
-
 		await setupInitialSchemaWithData();
 
 		const migName = generateMigrationName('add_required_sku');
@@ -440,13 +428,11 @@ export async function down(ctx) {
 	});
 
 	it('full lifecycle: initial → break → fix → success', async () => {
-		if (!(await isPgAvailable())) return;
-
 		// 1. Setup initial schema + data
 		await setupInitialSchemaWithData();
 
 		// 2. Attempt dangerous migration (NOT NULL) → clone catches it
-		 
+
 		const snapshot1 = readSnapshot(migrationDir);
 		const desired2 = collectionsToSchema([ItemsV2Required], 'postgresql');
 		const diff2 = diffSchemas(desired2, snapshot1, 'postgresql');
@@ -472,7 +458,7 @@ export async function down(ctx) {
 		// 4. Safe migration succeeds
 		expect(result.phase).toBe('complete');
 		expect(result.applyResult).not.toBeNull();
-		 
+
 		expect(result.applyResult?.successCount).toBeGreaterThan(0);
 
 		// 5. Verify real DB has sku column

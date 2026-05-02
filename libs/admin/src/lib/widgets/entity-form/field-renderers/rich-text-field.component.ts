@@ -37,7 +37,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 	host: { class: 'block' },
 	template: `
 		<mcms-form-field
-			[id]="fieldId()"
+			[for]="fieldId()"
 			[required]="required()"
 			[disabled]="isDisabled()"
 			[errors]="touchedErrors()"

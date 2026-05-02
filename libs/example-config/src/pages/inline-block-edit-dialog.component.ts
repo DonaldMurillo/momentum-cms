@@ -78,7 +78,7 @@ const EDITABLE_FIELD_TYPES = new Set([
 			<mcms-dialog-content>
 				<div class="space-y-4 max-h-[60vh] overflow-y-auto p-1">
 					@for (field of visibleFields; track field.name) {
-						<mcms-form-field [id]="field.name" [required]="!!field.required">
+						<mcms-form-field [for]="field.name" [required]="!!field.required">
 							<span mcmsLabel>{{ field.label || field.name }}</span>
 							@switch (field.type) {
 								@case ('textarea') {

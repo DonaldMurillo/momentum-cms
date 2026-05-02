@@ -12,7 +12,7 @@ describe('McmsFormField', () => {
 
 		fixture = TestBed.createComponent(McmsFormField);
 		component = fixture.componentInstance;
-		fixture.componentRef.setInput('id', 'test-field');
+		fixture.componentRef.setInput('for', 'test-field');
 		await fixture.whenStable();
 	});
 

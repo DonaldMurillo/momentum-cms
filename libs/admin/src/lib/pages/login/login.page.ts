@@ -69,7 +69,7 @@ import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-o
 							</div>
 						}
 
-						<mcms-form-field id="login-email" [required]="true" [errors]="emailErrors()">
+						<mcms-form-field for="login-email" [required]="true" [errors]="emailErrors()">
 							<span mcmsLabel>Email</span>
 							<mcms-input
 								type="email"
@@ -82,7 +82,7 @@ import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-o
 							/>
 						</mcms-form-field>
 
-						<mcms-form-field id="login-password" [required]="true" [errors]="passwordErrors()">
+						<mcms-form-field for="login-password" [required]="true" [errors]="passwordErrors()">
 							<span mcmsLabel>Password</span>
 							<mcms-input
 								type="password"

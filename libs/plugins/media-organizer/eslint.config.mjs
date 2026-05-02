@@ -13,6 +13,7 @@ export default [
 						'{projectRoot}/esbuild.config.{js,ts,mjs,mts}',
 						'{projectRoot}/vite.config.{js,ts,mjs,mts}',
 					],
+					ignoredDependencies: ['vitest'],
 				},
 			],
 		},

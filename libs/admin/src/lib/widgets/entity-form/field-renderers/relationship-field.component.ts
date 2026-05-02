@@ -43,7 +43,7 @@ interface RelationshipOption {
 	host: { class: 'block' },
 	template: `
 		<mcms-form-field
-			[id]="fieldId()"
+			[for]="fieldId()"
 			[required]="required()"
 			[disabled]="isDisabled()"
 			[errors]="touchedErrors()"

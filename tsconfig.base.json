@@ -125,7 +125,9 @@
 			"@momentumcms/plugins-cache": ["libs/plugins/cache/src/index.ts"],
 			"@momentumcms/plugins-cache/admin-routes": [
 				"libs/plugins/cache/src/lib/cache-admin-routes.ts"
-			]
+			],
+			"@momentumcms/plugins/mcp": ["libs/plugins/mcp/src/index.ts"],
+			"@momentumcms/plugins-mcp": ["libs/plugins/mcp/src/index.ts"]
 		}
 	},
 	"exclude": ["node_modules", "tmp"]

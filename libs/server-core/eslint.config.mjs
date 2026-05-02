@@ -20,6 +20,7 @@ export default [
             '{projectRoot}/esbuild.config.{js,ts,mjs,mts}',
             '{projectRoot}/vitest.config.{js,ts,mjs,mts}',
           ],
+          ignoredDependencies: ['vitest'],
         },
       ],
     },

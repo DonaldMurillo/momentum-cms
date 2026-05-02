@@ -41,12 +41,22 @@ export interface MailpitMessageDetail {
  * Returns true if Mailpit is reachable, false otherwise.
  */
 export async function isMailpitAvailable(): Promise<boolean> {
-	try {
-		const response = await fetch(`${MAILPIT_API}/messages`);
-		return response.ok;
-	} catch {
-		return false;
+	// Bound with a generous timeout so test beforeAll hooks fail fast when
+	// Mailpit isn't running locally, but tolerate transient slowness when it
+	// IS running (under heavy parallel e2e load, even a 12ms-baseline fetch
+	// can spike past 2s and cause a false-negative that skips every test in
+	// the describe). Up to 3 attempts, each with a 5s window.
+	for (let attempt = 0; attempt < 3; attempt++) {
+		try {
+			const response = await fetch(`${MAILPIT_API}/messages`, {
+				signal: AbortSignal.timeout(5000),
+			});
+			if (response.ok) return true;
+		} catch {
+			// fall through to retry
+		}
 	}
+	return false;
 }
 
 /**
@@ -115,7 +125,7 @@ export async function waitForEmail(
 			return email;
 		}
 
-		 
+		// eslint-disable-next-line local/no-direct-browser-apis -- Node test helper, not Angular code
 		await new Promise((resolve) => setTimeout(resolve, 500));
 	}
 

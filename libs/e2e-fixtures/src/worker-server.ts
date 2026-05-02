@@ -263,6 +263,10 @@ export function createWorkerFixture(config: WorkerServerConfig): ReturnType<type
 					env['MOMENTUM_ALLOW_PRIVATE_WEBHOOKS'] = 'true';
 					env['MOMENTUM_DISABLE_BACKGROUND_WORKERS'] = 'true';
 					env['MOMENTUM_DB_MAX_CLIENTS'] = process.env['MOMENTUM_DB_MAX_CLIENTS'] ?? '2';
+					// Tell the auth layer it's running under e2e so it can disable
+					// rate limiting (the example apps build and run as production
+					// so a NODE_ENV check alone wouldn't catch this).
+					env['MOMENTUM_E2E'] = 'true';
 
 					serverProcess = spawn('node', [config.serverBinary], {
 						env,

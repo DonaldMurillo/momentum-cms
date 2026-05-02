@@ -95,7 +95,7 @@ const WIDTH_OPTIONS: SelectOption[] = [
 				<div class="space-y-4 max-h-[60vh] overflow-y-auto p-1">
 					<!-- Field Type (only for new fields) -->
 					@if (isNew) {
-						<mcms-form-field id="fieldType" [required]="true">
+						<mcms-form-field for="fieldType" [required]="true">
 							<span mcmsLabel>Type</span>
 							<mcms-select
 								id="fieldType"
@@ -108,7 +108,7 @@ const WIDTH_OPTIONS: SelectOption[] = [
 					}
 
 					<!-- Name -->
-					<mcms-form-field id="fieldName" [required]="true">
+					<mcms-form-field for="fieldName" [required]="true">
 						<span mcmsLabel>Name</span>
 						<mcms-input
 							id="fieldName"
@@ -122,7 +122,7 @@ const WIDTH_OPTIONS: SelectOption[] = [
 					</mcms-form-field>
 
 					<!-- Label -->
-					<mcms-form-field id="fieldLabel">
+					<mcms-form-field for="fieldLabel">
 						<span mcmsLabel>Label</span>
 						<mcms-input
 							id="fieldLabel"
@@ -134,7 +134,7 @@ const WIDTH_OPTIONS: SelectOption[] = [
 
 					<!-- Placeholder -->
 					@if (showPlaceholder()) {
-						<mcms-form-field id="fieldPlaceholder">
+						<mcms-form-field for="fieldPlaceholder">
 							<span mcmsLabel>Placeholder</span>
 							<mcms-input
 								id="fieldPlaceholder"
@@ -146,7 +146,7 @@ const WIDTH_OPTIONS: SelectOption[] = [
 					}
 
 					<!-- Width -->
-					<mcms-form-field id="fieldWidth">
+					<mcms-form-field for="fieldWidth">
 						<span mcmsLabel>Width</span>
 						<mcms-select
 							id="fieldWidth"
@@ -178,7 +178,7 @@ const WIDTH_OPTIONS: SelectOption[] = [
 					<!-- Text-specific: minLength, maxLength -->
 					@if (showTextConstraints()) {
 						<div class="grid grid-cols-2 gap-3">
-							<mcms-form-field id="fieldMinLength">
+							<mcms-form-field for="fieldMinLength">
 								<span mcmsLabel>Min Length</span>
 								<mcms-input
 									id="fieldMinLength"
@@ -187,7 +187,7 @@ const WIDTH_OPTIONS: SelectOption[] = [
 									(valueChange)="fieldMinLength.set($event)"
 								/>
 							</mcms-form-field>
-							<mcms-form-field id="fieldMaxLength">
+							<mcms-form-field for="fieldMaxLength">
 								<span mcmsLabel>Max Length</span>
 								<mcms-input
 									id="fieldMaxLength"
@@ -201,7 +201,7 @@ const WIDTH_OPTIONS: SelectOption[] = [
 
 					<!-- Textarea-specific: rows -->
 					@if (fieldType() === 'textarea') {
-						<mcms-form-field id="fieldRows">
+						<mcms-form-field for="fieldRows">
 							<span mcmsLabel>Rows</span>
 							<mcms-input
 								id="fieldRows"
@@ -215,7 +215,7 @@ const WIDTH_OPTIONS: SelectOption[] = [
 					<!-- Number-specific: min, max, step -->
 					@if (fieldType() === 'number') {
 						<div class="grid grid-cols-3 gap-3">
-							<mcms-form-field id="fieldMin">
+							<mcms-form-field for="fieldMin">
 								<span mcmsLabel>Min</span>
 								<mcms-input
 									id="fieldMin"
@@ -224,7 +224,7 @@ const WIDTH_OPTIONS: SelectOption[] = [
 									(valueChange)="fieldMin.set($event)"
 								/>
 							</mcms-form-field>
-							<mcms-form-field id="fieldMax">
+							<mcms-form-field for="fieldMax">
 								<span mcmsLabel>Max</span>
 								<mcms-input
 									id="fieldMax"
@@ -233,7 +233,7 @@ const WIDTH_OPTIONS: SelectOption[] = [
 									(valueChange)="fieldMax.set($event)"
 								/>
 							</mcms-form-field>
-							<mcms-form-field id="fieldStep">
+							<mcms-form-field for="fieldStep">
 								<span mcmsLabel>Step</span>
 								<mcms-input
 									id="fieldStep"
@@ -247,7 +247,7 @@ const WIDTH_OPTIONS: SelectOption[] = [
 
 					<!-- Validation pattern (text-like fields) -->
 					@if (showPatternValidation()) {
-						<mcms-form-field id="fieldPattern">
+						<mcms-form-field for="fieldPattern">
 							<span mcmsLabel>Validation Pattern (Regex)</span>
 							<mcms-input
 								id="fieldPattern"
@@ -256,7 +256,7 @@ const WIDTH_OPTIONS: SelectOption[] = [
 								placeholder="e.g. ^[A-Za-z]+$"
 							/>
 						</mcms-form-field>
-						<mcms-form-field id="fieldPatternMessage">
+						<mcms-form-field for="fieldPatternMessage">
 							<span mcmsLabel>Pattern Error Message</span>
 							<mcms-input
 								id="fieldPatternMessage"

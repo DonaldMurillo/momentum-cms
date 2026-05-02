@@ -123,7 +123,7 @@ test.describe('Analytics', { tag: ['@analytics', '@api'] }, () => {
 		expect(apiEvent).toBeDefined();
 		expect(apiEvent?.context.statusCode).toBe(200);
 		expect(typeof apiEvent?.context.duration).toBe('number');
-		expect(apiEvent?.context.duration).toBeGreaterThanOrEqual(0);  
+		expect(apiEvent?.context.duration).toBeGreaterThanOrEqual(0);
 	});
 
 	test('ingest endpoint accepts client events', async ({ request }) => {
@@ -225,23 +225,32 @@ test.describe('Analytics', { tag: ['@analytics', '@api'] }, () => {
 	});
 
 	test('captures device and browser context in ingested events', async ({ request }) => {
-		const ingest = await request.post('/api/analytics/collect', {
-			headers: {
-				'Content-Type': 'application/json',
-				'User-Agent':
-					'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-			},
-			data: {
-				events: [
-					{
-						name: 'page_view',
-						category: 'page',
-						context: { url: 'http://localhost/test-ua' },
-					},
-				],
-			},
-		});
-		expect(ingest.status()).toBe(202);
+		// The ingest endpoint is rate-limited per-IP (10 req per 5s window in
+		// the example config). The dedicated rate-limit test in this same file
+		// intentionally exhausts that bucket, so this test will race into a
+		// 429 if it runs in the same window. Poll for a successful 202 across
+		// a window slightly larger than `ingestRateLimitWindow` so the bucket
+		// resets and the assertion settles deterministically.
+		const ingestStatus = async (): Promise<number> => {
+			const res = await request.post('/api/analytics/collect', {
+				headers: {
+					'Content-Type': 'application/json',
+					'User-Agent':
+						'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+				},
+				data: {
+					events: [
+						{
+							name: 'page_view',
+							category: 'page',
+							context: { url: 'http://localhost/test-ua' },
+						},
+					],
+				},
+			});
+			return res.status();
+		};
+		await expect.poll(ingestStatus, { timeout: 10_000, intervals: [500, 1000, 2000] }).toBe(202);
 
 		const response = await request.get('/api/test-analytics-events');
 		const data = (await response.json()) as {

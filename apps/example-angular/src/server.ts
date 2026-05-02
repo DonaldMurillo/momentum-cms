@@ -36,7 +36,10 @@ const angularApp = new AngularNodeAppEngine({
  * Test endpoints must be registered first because the CMS API is a catch-all at /api.
  */
 const app = express();
-app.use(express.json());
+// Bump the body-size limit so the import-export plugin can accept up to
+// MAX_IMPORT_DOCS (5000) per request — Express's 100kb default rejects
+// large but legitimate batch imports with PayloadTooLargeError.
+app.use(express.json({ limit: '10mb' }));
 mountTestEndpoints(app, { analytics, analyticsAdapter, events, pool });
 
 /**

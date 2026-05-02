@@ -2,6 +2,16 @@ import { defineEventHandler, readBody, type EventHandler } from 'h3';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { parse as parseQueryString } from 'node:querystring';
 import { getPluginMiddleware, getAuth } from '../utils/momentum-init';
+import { createAdapterApiKeyStore } from '@momentumcms/server-core';
+import momentumConfig from '../../momentum.config';
+import { resolveApiKeyFromHeaders } from '../utils/api-key-resolver';
+
+/**
+ * API key store used in user resolution. Constructed at module load so all
+ * requests share a single instance (Nitro evaluates this module exactly once
+ * per worker).
+ */
+const apiKeyStore = createAdapterApiKeyStore(momentumConfig.db.adapter);
 
 /**
  * Nitro middleware that delegates plugin-registered Express middleware to h3.
@@ -126,34 +136,55 @@ function wrapExpressHandler(handler: unknown): EventHandler {
 		// Set req.originalUrl (Express uses this to track the original URL before rewriting)
 		patched.originalUrl = patched.originalUrl ?? req.url ?? '/';
 
-		// Resolve Better Auth session and set req.user for access control checks.
-		// Plugin handlers (SEO, analytics) check req['user'] for authentication.
-		const auth = getAuth();
-		if (auth && !patched.user) {
-			try {
-				const headers = new Headers();
-				for (const [key, value] of Object.entries(req.headers)) {
-					if (value != null) {
-						if (Array.isArray(value)) {
-							for (const v of value) headers.append(key, v);
-						} else {
-							headers.set(key, value);
+		// Resolve user identity: try API key first, then session cookie.
+		// Plugin handlers (MCP, SEO, analytics) check req['user'] for authentication.
+		if (!patched.user) {
+			// 1. Try API key authentication (X-API-Key header).
+			// If the header is present but the key is invalid/missing/expired,
+			// reject with 401 immediately (matches createApiKeyResolverMiddleware
+			// in server-express). Silently falling through would mask leaked or
+			// stale keys and let session auth paper over the failure.
+			const apiKeyResult = await resolveApiKeyFromHeaders(req.headers, apiKeyStore);
+			if (apiKeyResult.status === 'rejected') {
+				res.statusCode = apiKeyResult.code;
+				res.setHeader('Content-Type', 'application/json');
+				res.end(JSON.stringify({ error: apiKeyResult.error }));
+				return;
+			}
+			if (apiKeyResult.status === 'ok') {
+				patched.user = apiKeyResult.user;
+			}
+
+			// 2. Try session cookie authentication
+			if (!patched.user) {
+				const auth = getAuth();
+				if (auth) {
+					try {
+						const headers = new Headers();
+						for (const [key, value] of Object.entries(req.headers)) {
+							if (value != null) {
+								if (Array.isArray(value)) {
+									for (const v of value) headers.append(key, v);
+								} else {
+									headers.set(key, value);
+								}
+							}
 						}
+						const session = await auth.api.getSession({ headers });
+						if (session) {
+							// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Better Auth user type
+							const userRecord = session.user as Record<string, unknown>;
+							const role = typeof userRecord['role'] === 'string' ? userRecord['role'] : 'user';
+							patched.user = {
+								id: session.user.id,
+								email: session.user.email,
+								role,
+							};
+						}
+					} catch {
+						// Session validation failed — continue without auth
 					}
 				}
-				const session = await auth.api.getSession({ headers });
-				if (session) {
-					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Better Auth user type
-					const userRecord = session.user as Record<string, unknown>;
-					const role = typeof userRecord['role'] === 'string' ? userRecord['role'] : 'user';
-					patched.user = {
-						id: session.user.id,
-						email: session.user.email,
-						role,
-					};
-				}
-			} catch {
-				// Session validation failed — continue without auth
 			}
 		}
 

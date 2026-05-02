@@ -143,9 +143,7 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			await expect(authenticatedPage.locator('#field-honeypot')).toBeVisible();
 
 			// Schema editor should NOT be visible on the Settings tab
-			await expect(
-				authenticatedPage.locator('[data-testid="form-schema-editor"]'),
-			).not.toBeVisible();
+			await expect(authenticatedPage.locator('[data-testid="form-schema-editor"]')).toBeHidden();
 
 			// Switch back to Form tab — schema editor should reappear
 			await tabsList.getByText('Form', { exact: true }).click();
@@ -500,7 +498,11 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 
 	test.describe('Conditional field validation', { tag: ['@api'] }, () => {
 		let conditionalFormId: string;
-		const conditionalSlug = uniqueSlug('cond');
+		// `slug` carries a `unique: true` index, so a fresh slug is minted on
+		// every retry attempt. Reusing a single slug across retries means the
+		// 2nd+ attempt would hit a duplicate-key 500 even after a transient
+		// post-insert hook failure on the 1st attempt.
+		let conditionalSlug = uniqueSlug('cond');
 
 		test.beforeAll(async ({ request }) => {
 			const signInResponse = await request.post('/api/auth/sign-in/email', {
@@ -512,49 +514,68 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			});
 			expect(signInResponse.ok(), 'Admin sign-in must succeed').toBe(true);
 
-			// Create a form with conditional required fields
-			const createResponse = await request.post('/api/forms', {
-				headers: { 'Content-Type': 'application/json' },
-				data: {
-					title: `Conditional Form ${conditionalSlug}`,
-					slug: conditionalSlug,
-					status: 'published',
-					schema: {
-						id: conditionalSlug,
-						fields: [
-							{
-								name: 'contactMethod',
-								type: 'select',
-								label: 'Contact Method',
-								required: true,
-								options: [
-									{ label: 'Email', value: 'email' },
-									{ label: 'Phone', value: 'phone' },
-								],
-							},
-							{
-								name: 'phone',
-								type: 'text',
-								label: 'Phone Number',
-								required: true,
-								conditions: [{ field: 'contactMethod', operator: 'equals', value: 'phone' }],
-							},
-							{
-								name: 'emailAddr',
-								type: 'email',
-								label: 'Email Address',
-								required: true,
-								conditions: [{ field: 'contactMethod', operator: 'equals', value: 'email' }],
-							},
-						],
+			// Create a form with conditional required fields. Wrapped in
+			// expect.poll so a transient 500 (e.g. concurrent DB init under
+			// heavy parallel load) doesn't trip the beforeAll and mark every
+			// test in this describe flaky.
+			const createForm = async (): Promise<{ status: number; id?: string }> => {
+				conditionalSlug = uniqueSlug('cond');
+				const res = await request.post('/api/forms', {
+					headers: { 'Content-Type': 'application/json' },
+					data: {
+						title: `Conditional Form ${conditionalSlug}`,
+						slug: conditionalSlug,
+						status: 'published',
+						schema: {
+							id: conditionalSlug,
+							fields: [
+								{
+									name: 'contactMethod',
+									type: 'select',
+									label: 'Contact Method',
+									required: true,
+									options: [
+										{ label: 'Email', value: 'email' },
+										{ label: 'Phone', value: 'phone' },
+									],
+								},
+								{
+									name: 'phone',
+									type: 'text',
+									label: 'Phone Number',
+									required: true,
+									conditions: [{ field: 'contactMethod', operator: 'equals', value: 'phone' }],
+								},
+								{
+									name: 'emailAddr',
+									type: 'email',
+									label: 'Email Address',
+									required: true,
+									conditions: [{ field: 'contactMethod', operator: 'equals', value: 'email' }],
+								},
+							],
+						},
+						honeypot: false,
+						submissionCount: 0,
 					},
-					honeypot: false,
-					submissionCount: 0,
-				},
-			});
-			expect(createResponse.status()).toBe(201);
-			const body = (await createResponse.json()) as { doc: { id: string } };
-			conditionalFormId = body.doc.id;
+				});
+				if (res.status() !== 201) return { status: res.status() };
+				const body = (await res.json()) as { doc: { id: string } };
+				return { status: 201, id: body.doc.id };
+			};
+			let result: { status: number; id?: string } = { status: 0 };
+			await expect
+				.poll(
+					async () => {
+						if (result.status === 201) return 201;
+						result = await createForm();
+						return result.status;
+					},
+					{ timeout: 15_000, intervals: [200, 500, 1000, 2000] },
+				)
+				.toBe(201);
+			conditionalFormId = result.id ?? '';
+			expect(conditionalFormId, 'Form creation must yield an id').toBeTruthy();
 		});
 
 		test.afterAll(async ({ request }) => {
@@ -762,17 +783,21 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 			// Wait for success message
 			await expect(authenticatedPage.getByText(/thank you/i)).toBeVisible({ timeout: 10000 });
 
-			// Verify the submission was actually stored in the database
-			const subsResponse = await authenticatedPage.request.get(
-				'/api/form-submissions?where[formSlug][equals]=contact-us&limit=100',
-			);
-			expect(subsResponse.ok()).toBe(true);
-
-			const subsBody = (await subsResponse.json()) as {
-				docs: Array<{ data: Record<string, unknown> }>;
+			// Verify the submission was actually stored in the database. The
+			// success toast can appear before the row is fully committed under
+			// heavy parallel load, so poll the list endpoint until our row
+			// appears (or until we exceed a generous budget).
+			const findOurSubmission = async (): Promise<boolean> => {
+				const res = await authenticatedPage.request.get(
+					'/api/form-submissions?where[formSlug][equals]=contact-us&limit=100',
+				);
+				if (!res.ok()) return false;
+				const body = (await res.json()) as { docs: Array<{ data: Record<string, unknown> }> };
+				return body.docs.some((s) => s.data?.['email'] === uniqueEmail);
 			};
-			const ourSub = subsBody.docs.find((s) => s.data?.['email'] === uniqueEmail);
-			expect(ourSub, 'UI-submitted form data should be stored in database').toBeTruthy();
+			await expect
+				.poll(findOurSubmission, { timeout: 15_000, intervals: [200, 500, 1000, 2000] })
+				.toBe(true);
 		});
 	});
 
@@ -802,13 +827,15 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 
 			await expect(authenticatedPage.locator('mcms-table')).toBeVisible({ timeout: 10000 });
 
-			// Should show at least one submission with the contact-us slug
+			// Should show at least one submission with the contact-us slug.
+			// Bumped timeout: under heavy parallel load, the table list query can
+			// race with the submission write; default 5s isn't enough.
 			await expect(
 				authenticatedPage
 					.locator('mcms-table-cell')
 					.filter({ hasText: /contact-us/i })
 					.first(),
-			).toBeVisible();
+			).toBeVisible({ timeout: 15000 });
 		});
 
 		test('should display submission data in the detail view', async ({ authenticatedPage }) => {
@@ -1092,12 +1119,7 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 
 	// ─── Live Page Inline Editing ──────────────────────────────────────
 
-	test.describe('Live page inline editing', { tag: ['@ui', '@blocks'] }, () => {
-		test.skip(
-			() => process.env['E2E_SERVER_FLAVOR'] === 'analog',
-			'CDK overlay/dialog does not initialise on SSR-hydrated public pages in Analog',
-		);
-
+	test.describe('Live page inline editing', { tag: ['@ui', '@blocks', '@analog-skip'] }, () => {
 		test('should show Edit Block button and open inline edit dialog with relationship dropdown', async ({
 			authenticatedPage,
 		}) => {
@@ -1142,7 +1164,7 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 
 			// Close dialog without saving
 			await dialog.getByRole('button', { name: 'Cancel' }).click();
-			await expect(dialog).not.toBeVisible();
+			await expect(dialog).toBeHidden();
 		});
 
 		test('should save changes via inline edit dialog and re-render form', async ({

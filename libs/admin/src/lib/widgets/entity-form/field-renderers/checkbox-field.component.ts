@@ -17,7 +17,7 @@ import { getFieldNodeState } from '../entity-form.types';
 	imports: [McmsFormField, Checkbox],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `
-		<mcms-form-field [id]="fieldId()" [hasLabel]="false" [errors]="touchedErrors()">
+		<mcms-form-field [for]="fieldId()" [hasLabel]="false" [errors]="touchedErrors()">
 			<mcms-checkbox
 				[id]="fieldId()"
 				[value]="boolValue()"

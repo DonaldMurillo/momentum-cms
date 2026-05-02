@@ -218,9 +218,10 @@ export function createCacheMiddleware(
 					// returns 4xx/5xx which must NOT flush the cache (DoS prevention)
 					if (this.statusCode >= 200 && this.statusCode < 300) {
 						// M1: Race invalidation against a timeout so hung Redis connections
-						// don't leak promises indefinitely
-						// eslint-disable-next-line local/no-direct-browser-apis -- server-side Express middleware, not Angular
+						// don't leak promises indefinitely. setTimeout is the Node global here
+						// (server-side Express middleware), not the browser API.
 						const timeout = new Promise<void>((resolve) =>
+							// eslint-disable-next-line local/no-direct-browser-apis -- server-side Express middleware, not Angular
 							setTimeout(resolve, invalidationTimeout),
 						);
 						void Promise.race([invalidateGlobal(slug), timeout]);

@@ -2,7 +2,7 @@
 
 This document tracks the feature roadmap for Momentum CMS — what we've built, what's next, and what we've explicitly decided not to build.
 
-Last updated: March 2026
+Last updated: April 2026
 
 ## What We Already Have
 
@@ -133,10 +133,6 @@ Folder and tag organization, asset metadata search, and bulk upload UI. The curr
 
 CSV and JSON import UI in the admin panel, collection data export, and a data transfer tool for moving content between environments.
 
-#### AI/MCP Integration
-
-MCP (Model Context Protocol) server that exposes CMS data to AI tools. Enables AI-assisted content creation, translation, and management through standard AI tool protocols.
-
 ### P2 — Low Priority
 
 #### Review Workflows
@@ -172,6 +168,7 @@ These features were evaluated and explicitly decided against:
 
 ## Recently Shipped
 
+- AI/MCP integration — MCP server plugin exposing CMS data to AI tools via Model Context Protocol, 12 tools (CRUD, search, schema introspection, globals), 4 resources (momentum:// URI scheme), 2 prompts (content creation, translation), security-first defaults (write tools opt-in, API key required, auth collections auto-excluded, limit/depth clamping), end-to-end verified with Claude Code CLI E2E tests
 - API response caching plugin — in-memory LRU and Redis adapters, ETag/304 support, per-collection cache config, automatic invalidation on writes, CDN headers (Cache-Control, Surrogate-Control, Vary), admin dashboard with stats and manual purge
 - Media library enhancements — folder and tag organization, asset metadata search, bulk upload UI
 - Import/Export — CSV and JSON import UI in the admin panel, collection data export, data transfer tool

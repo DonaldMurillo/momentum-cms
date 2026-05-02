@@ -171,7 +171,10 @@ export async function createMomentumServer(
 	// 1. Create or reuse Express app
 	const app = options.app ?? express();
 	if (!options.app) {
-		app.use(express.json());
+		// 10mb accommodates the import-export plugin's batch-import payloads
+		// (MAX_IMPORT_DOCS = 5000) without rejecting legitimate requests via
+		// Express's 100kb default.
+		app.use(express.json({ limit: '10mb' }));
 	}
 
 	// 2. Register webhook hooks

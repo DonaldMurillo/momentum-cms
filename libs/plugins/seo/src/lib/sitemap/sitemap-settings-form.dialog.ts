@@ -71,7 +71,7 @@ const CHANGE_FREQ_OPTIONS = [
 
 			<mcms-dialog-content>
 				<div class="space-y-4">
-					<mcms-form-field id="setting-collection">
+					<mcms-form-field for="setting-collection">
 						<span mcmsLabel>Collection</span>
 						<mcms-input [value]="data.entry.collection" [disabled]="true" id="setting-collection" />
 					</mcms-form-field>
@@ -81,7 +81,7 @@ const CHANGE_FREQ_OPTIONS = [
 					</div>
 
 					<mcms-form-field
-						id="setting-priority"
+						for="setting-priority"
 						[hint]="'Value between 0.0 and 1.0. Leave empty for default.'"
 					>
 						<span mcmsLabel>Priority</span>
@@ -93,7 +93,7 @@ const CHANGE_FREQ_OPTIONS = [
 						/>
 					</mcms-form-field>
 
-					<mcms-form-field id="setting-change-freq">
+					<mcms-form-field for="setting-change-freq">
 						<span mcmsLabel>Change Frequency</span>
 						<mcms-select
 							[(value)]="changeFreq"

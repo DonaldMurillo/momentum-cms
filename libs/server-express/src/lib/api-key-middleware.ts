@@ -7,6 +7,7 @@ import {
 	getKeyPrefix,
 	isValidApiKeyFormat,
 	generateApiKeyId,
+	normalizeApiKeyRole,
 } from '@momentumcms/server-core';
 import type { AuthenticatedRequest } from './auth-middleware';
 
@@ -72,7 +73,7 @@ export function createApiKeyResolverMiddleware(
 				id: `apikey:${record.id}`,
 				email: `apikey-${record.name}@system`,
 				name: `API Key: ${record.name}`,
-				role: record.role,
+				role: normalizeApiKeyRole(record.role),
 			};
 
 			// Update last used (fire and forget)

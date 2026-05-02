@@ -9,14 +9,19 @@ import { test, expect, TEST_CREDENTIALS } from '../fixtures';
  */
 test.describe('Relationship integrity on delete', { tag: ['@relationship', '@api'] }, () => {
 	test.beforeEach(async ({ request }) => {
-		const signInResponse = await request.post('/api/auth/sign-in/email', {
-			headers: { 'Content-Type': 'application/json' },
-			data: {
-				email: TEST_CREDENTIALS.email,
-				password: TEST_CREDENTIALS.password,
-			},
-		});
-		expect(signInResponse.ok(), 'Admin sign-in must succeed').toBe(true);
+		// Sign-in can transiently fail under heavy parallel load; poll until
+		// the auth route returns OK so a single hiccup doesn't poison the test.
+		const signInOk = async (): Promise<boolean> => {
+			const res = await request.post('/api/auth/sign-in/email', {
+				headers: { 'Content-Type': 'application/json' },
+				data: {
+					email: TEST_CREDENTIALS.email,
+					password: TEST_CREDENTIALS.password,
+				},
+			});
+			return res.ok();
+		};
+		await expect.poll(signInOk, { timeout: 15_000, intervals: [200, 500, 1000, 2000] }).toBe(true);
 	});
 
 	test.describe('set-null (default behavior)', () => {

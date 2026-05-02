@@ -36,7 +36,8 @@
 					"@nestjs/microservices",
 					"@nestjs/websockets",
 					"class-validator",
-					"class-transformer"
+					"class-transformer",
+					"@modelcontextprotocol/sdk"
 				],
 				"outputMode": "server"
 			},

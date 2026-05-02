@@ -110,6 +110,7 @@ export default defineConfig(({ mode: _mode }) => {
 							__dirname,
 							'../../libs/plugins/media-organizer/src/index.ts',
 						),
+						'@momentumcms/plugins/mcp': resolve(__dirname, '../../libs/plugins/mcp/src/index.ts'),
 						'@momentumcms/plugins-media-organizer/modify-collections': resolve(
 							__dirname,
 							'../../libs/plugins/media-organizer/src/lib/modify-collections.ts',
@@ -150,7 +151,7 @@ export default defineConfig(({ mode: _mode }) => {
 					// Externalize juice so Rollup leaves it as a runtime import.
 					// juice is a CJS package that causes OOM if bundled into the Nitro server.
 					rollupConfig: {
-						external: ['juice'],
+						external: ['juice', /^@modelcontextprotocol\/sdk/],
 					},
 				},
 			}),

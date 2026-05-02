@@ -69,7 +69,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 				} @else {
 					<p class="text-sm text-muted-foreground">Enter your new password below.</p>
 
-					<mcms-form-field id="password" [required]="true" [errors]="passwordErrors()">
+					<mcms-form-field for="password" [required]="true" [errors]="passwordErrors()">
 						<span mcmsLabel>New Password</span>
 						<mcms-input
 							type="password"
@@ -83,7 +83,7 @@ import { MomentumAuthService } from '../../services/auth.service';
 					</mcms-form-field>
 
 					<mcms-form-field
-						id="confirmPassword"
+						for="confirmPassword"
 						[required]="true"
 						[errors]="confirmPasswordErrors()"
 					>

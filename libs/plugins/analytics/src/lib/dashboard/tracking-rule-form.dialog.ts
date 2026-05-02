@@ -86,7 +86,7 @@ const EVENT_TYPE_OPTIONS = [
 
 			<mcms-dialog-content>
 				<div class="space-y-4">
-					<mcms-form-field id="rule-name" [required]="true">
+					<mcms-form-field for="rule-name" [required]="true">
 						<span mcmsLabel>Rule Name</span>
 						<mcms-input
 							[(value)]="name"
@@ -104,7 +104,7 @@ const EVENT_TYPE_OPTIONS = [
 						}
 					</mcms-form-field>
 
-					<mcms-form-field id="rule-selector" [required]="true">
+					<mcms-form-field for="rule-selector" [required]="true">
 						<span mcmsLabel>CSS Selector</span>
 						<mcms-input
 							[(value)]="selector"
@@ -122,12 +122,12 @@ const EVENT_TYPE_OPTIONS = [
 						}
 					</mcms-form-field>
 
-					<mcms-form-field id="rule-event-type" [required]="true">
+					<mcms-form-field for="rule-event-type" [required]="true">
 						<span mcmsLabel>Event Type</span>
 						<mcms-select [(value)]="eventType" [options]="eventTypeOptions" id="rule-event-type" />
 					</mcms-form-field>
 
-					<mcms-form-field id="rule-event-name" [required]="true">
+					<mcms-form-field for="rule-event-name" [required]="true">
 						<span mcmsLabel>Event Name</span>
 						<mcms-input
 							[(value)]="eventName"
@@ -145,13 +145,13 @@ const EVENT_TYPE_OPTIONS = [
 						}
 					</mcms-form-field>
 
-					<mcms-form-field id="rule-url-pattern" [hint]="'Use * for wildcards, e.g. /blog/*'">
+					<mcms-form-field for="rule-url-pattern" [hint]="'Use * for wildcards, e.g. /blog/*'">
 						<span mcmsLabel>URL Pattern</span>
 						<mcms-input [(value)]="urlPattern" placeholder="*" id="rule-url-pattern" />
 					</mcms-form-field>
 
 					<mcms-form-field
-						id="rule-rate-limit"
+						for="rule-rate-limit"
 						[hint]="'Max events per minute per visitor. Leave empty for unlimited.'"
 					>
 						<span mcmsLabel>Rate Limit</span>
@@ -164,7 +164,7 @@ const EVENT_TYPE_OPTIONS = [
 					</mcms-form-field>
 
 					<mcms-form-field
-						id="rule-properties"
+						for="rule-properties"
 						[hint]="'JSON object, e.g. {&quot;category&quot;: &quot;cta&quot;}'"
 					>
 						<span mcmsLabel>Static Properties</span>
