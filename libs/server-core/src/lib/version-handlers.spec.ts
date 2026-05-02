@@ -72,6 +72,7 @@ describe('handleGetVersionRequest', () => {
 			user: adminUser,
 		});
 		expect(result.status).toBe(400);
+		expect(result.body).toMatchObject({ error: 'Versioning not enabled' });
 	});
 
 	// 404 paths through findVersionById are exercised by version-operations.spec.ts.

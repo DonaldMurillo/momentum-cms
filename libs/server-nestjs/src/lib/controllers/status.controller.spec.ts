@@ -74,6 +74,7 @@ describe('StatusController', () => {
 
 		const res = await request(app.getHttpServer()).get(`/posts/${created['id']}/status`);
 		expect(res.status).toBe(200);
-		expect(res.body).toHaveProperty('status');
+		expect(typeof res.body.status).toBe('string');
+		expect(['draft', 'published']).toContain(res.body.status);
 	});
 });

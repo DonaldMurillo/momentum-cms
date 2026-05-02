@@ -115,7 +115,9 @@ describe('handleStatusRequest', () => {
 		});
 
 		expect(result.status).toBe(200);
-		expect(result.body).toHaveProperty('status');
+		const statusValue = (result.body as { status: unknown }).status;
+		expect(typeof statusValue).toBe('string');
+		expect(['draft', 'published']).toContain(statusValue);
 	});
 
 	it('returns 403 when access is denied', async () => {
