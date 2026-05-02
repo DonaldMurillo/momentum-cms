@@ -14,6 +14,7 @@ import {
 	handleSaveDraftRequest,
 	handleSchedulePublishRequest,
 	handleCancelScheduledPublishRequest,
+	handleBatchRequest,
 	buildGraphQLSchema,
 	executeGraphQL,
 	handleUpload,
@@ -340,8 +341,6 @@ export function createSimpleMomentumHandler(config: MomentumConfig | ResolvedMom
 // ============================================
 // Comprehensive Handler
 // ============================================
-
-const MAX_BATCH_SIZE = 100;
 
 /**
  * Creates a comprehensive h3 event handler that mirrors all Express API routes.
@@ -1076,71 +1075,15 @@ export function createComprehensiveMomentumHandler(
 		// Batch: POST /:collection/batch
 		// ============================================
 		if (seg1 === 'batch' && !seg2 && method === 'POST') {
-			const collectionSlug = seg0;
-			if (isManagedCollection(collectionSlug)) {
-				utils.setResponseStatus(event, 403);
-				return { error: 'Managed collection is read-only' };
-			}
-			try {
-				const contextApi = getContextualAPI(user);
-				const body = await safeReadBody(event, utils, method);
-				const operation = body['operation'];
-
-				if (operation === 'create') {
-					const items = body['items'];
-					if (!Array.isArray(items)) {
-						utils.setResponseStatus(event, 400);
-						return { error: 'items must be an array' };
-					}
-					if (items.length > MAX_BATCH_SIZE) {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} items`,
-						};
-					}
-					const docs = await contextApi.collection(collectionSlug).batchCreate(items);
-					utils.setResponseStatus(event, 201);
-					return { docs, message: `${docs.length} documents created` };
-				} else if (operation === 'update') {
-					const items = body['items'];
-					if (!Array.isArray(items)) {
-						utils.setResponseStatus(event, 400);
-						return { error: 'items must be an array' };
-					}
-					if (items.length > MAX_BATCH_SIZE) {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} items`,
-						};
-					}
-					const docs = await contextApi.collection(collectionSlug).batchUpdate(items);
-					return { docs, message: `${docs.length} documents updated` };
-				} else if (operation === 'delete') {
-					const ids = body['ids'];
-					if (!Array.isArray(ids)) {
-						utils.setResponseStatus(event, 400);
-						return { error: 'ids must be an array' };
-					}
-					if (ids.length > MAX_BATCH_SIZE) {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} items`,
-						};
-					}
-					const results = await contextApi.collection(collectionSlug).batchDelete(ids);
-					return { results, message: `${results.length} documents deleted` };
-				} else {
-					utils.setResponseStatus(event, 400);
-					return {
-						error: 'Invalid operation',
-						message: 'operation must be "create", "update", or "delete"',
-					};
-				}
-			} catch (error) {
-				const status = error instanceof Error && error.name === 'ValidationError' ? 400 : 500;
-				utils.setResponseStatus(event, status);
-				return { error: sanitizeErrorMessage(error, 'Batch operation failed') };
-			}
+			const body = await safeReadBody(event, utils, method);
+			const result = await handleBatchRequest({
+				config,
+				collectionSlug: seg0,
+				body,
+				user,
+			});
+			utils.setResponseStatus(event, result.status);
+			return result.body;
 		}
 
 		// ============================================

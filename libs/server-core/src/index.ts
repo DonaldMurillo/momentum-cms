@@ -178,6 +178,10 @@ export type {
 	UpdateGlobalParams,
 } from './lib/admin-handlers';
 
+// Batch Handler
+export { handleBatchRequest, MAX_BATCH_SIZE } from './lib/batch-handler';
+export type { BatchHandlerParams } from './lib/batch-handler';
+
 // Version Route Handlers
 export {
 	handleListVersionsRequest,
