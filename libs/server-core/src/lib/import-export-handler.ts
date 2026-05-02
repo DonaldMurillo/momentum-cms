@@ -43,9 +43,9 @@ export interface ImportHandlerParams {
 	api: MomentumAPI;
 }
 
-export interface HandlerResult {
+export interface HandlerResult<TBody = unknown> {
 	status: number;
-	body: unknown;
+	body: TBody;
 	headers?: Record<string, string>;
 }
 

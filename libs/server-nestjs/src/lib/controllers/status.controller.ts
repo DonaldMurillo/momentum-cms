@@ -1,6 +1,6 @@
-import { Controller, Get, Patch, Param, Body, Req, Res, Inject, Query } from '@nestjs/common';
-import { handleGetGlobalRequest, handleUpdateGlobalRequest } from '@momentumcms/server-core';
+import { Controller, Get, Param, Req, Res, Inject } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { handleStatusRequest } from '@momentumcms/server-core';
 import type { UserContext } from '@momentumcms/core';
 import { MomentumApiService } from '../momentum-api.service';
 
@@ -11,32 +11,28 @@ function extractUser(req: Request): UserContext | undefined {
 	return user?.id ? (user as UserContext) : undefined;
 }
 
-@Controller('globals')
-export class GlobalsController {
+/**
+ * Optional NestJS controller exposing GET /:collection/:id/status.
+ *
+ * Returns the document version status (current draft/published state).
+ * The default `createMomentumNestServer` mounts this route via Express
+ * middleware; this controller is provided for users who wire their own
+ * NestJS module and prefer DI-based controllers.
+ */
+@Controller(':collection/:id/status')
+export class StatusController {
 	constructor(@Inject(MomentumApiService) private readonly _apiService: MomentumApiService) {}
 
-	@Get(':slug')
-	async findOne(
-		@Param('slug') slug: string,
-		@Query('depth') depthParam: string | undefined,
+	@Get()
+	async getStatus(
+		@Param('collection') collectionSlug: string,
+		@Param('id') id: string,
 		@Req() req: Request,
 		@Res() res: Response,
 	): Promise<void> {
-		const depth = depthParam ? parseInt(depthParam, 10) || 0 : 0;
-		const result = await handleGetGlobalRequest({ slug, depth, user: extractUser(req) });
-		res.status(result.status).json(result.body);
-	}
-
-	@Patch(':slug')
-	async update(
-		@Param('slug') slug: string,
-		@Body() body: Record<string, unknown>,
-		@Req() req: Request,
-		@Res() res: Response,
-	): Promise<void> {
-		const result = await handleUpdateGlobalRequest({
-			slug,
-			data: body,
+		const result = await handleStatusRequest({
+			collectionSlug,
+			id,
 			user: extractUser(req),
 		});
 		res.status(result.status).json(result.body);

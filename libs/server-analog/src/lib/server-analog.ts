@@ -1,8 +1,10 @@
 import {
 	createMomentumHandlers,
 	getMomentumAPI,
-	getCollectionPermissions,
-	GlobalNotFoundError,
+	handleAccessRequest,
+	handleStatusRequest,
+	handleGetGlobalRequest,
+	handleUpdateGlobalRequest,
 	buildGraphQLSchema,
 	executeGraphQL,
 	handleUpload,
@@ -504,8 +506,9 @@ export function createComprehensiveMomentumHandler(
 		// GET /access
 		// ============================================
 		if (seg0 === 'access' && method === 'GET') {
-			const permissions = await getCollectionPermissions(config, user);
-			return { collections: permissions };
+			const result = await handleAccessRequest({ config, user });
+			utils.setResponseStatus(event, result.status);
+			return result.body;
 		}
 
 		// ============================================
@@ -695,49 +698,20 @@ export function createComprehensiveMomentumHandler(
 		// ============================================
 		if (seg0 === 'globals' && seg1) {
 			const slug = seg1;
-			const contextApi = getContextualAPI(user);
 
 			if (method === 'GET') {
-				try {
-					const depthParam = queryParams['depth'];
-					const depth = typeof depthParam === 'string' ? parseInt(depthParam, 10) || 0 : 0;
-					const doc = await contextApi.global(slug).findOne({ depth });
-					return { doc };
-				} catch (error) {
-					if (error instanceof GlobalNotFoundError) {
-						utils.setResponseStatus(event, 404);
-						return { error: sanitizeErrorMessage(error, 'Global not found') };
-					}
-					if (error instanceof Error && error.name === 'AccessDeniedError') {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-					utils.setResponseStatus(event, 500);
-					return { error: sanitizeErrorMessage(error, 'Failed to read global') };
-				}
+				const depthParam = queryParams['depth'];
+				const depth = typeof depthParam === 'string' ? parseInt(depthParam, 10) || 0 : 0;
+				const result = await handleGetGlobalRequest({ slug, depth, user });
+				utils.setResponseStatus(event, result.status);
+				return result.body;
 			}
 
 			if (method === 'PATCH') {
-				try {
-					const data = await safeReadBody(event, utils, method);
-					const doc = await contextApi.global(slug).update(data);
-					return { doc };
-				} catch (error) {
-					if (error instanceof GlobalNotFoundError) {
-						utils.setResponseStatus(event, 404);
-						return { error: sanitizeErrorMessage(error, 'Global not found') };
-					}
-					if (error instanceof Error && error.name === 'AccessDeniedError') {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-					if (error instanceof Error && error.name === 'ValidationError') {
-						utils.setResponseStatus(event, 400);
-						return { error: sanitizeErrorMessage(error, 'Validation failed') };
-					}
-					utils.setResponseStatus(event, 500);
-					return { error: sanitizeErrorMessage(error, 'Failed to update global') };
-				}
+				const data = await safeReadBody(event, utils, method);
+				const result = await handleUpdateGlobalRequest({ slug, data, user });
+				utils.setResponseStatus(event, result.status);
+				return result.body;
 			}
 		}
 
@@ -1172,32 +1146,13 @@ export function createComprehensiveMomentumHandler(
 		// Status: GET /:collection/:id/status
 		// ============================================
 		if (seg2 === 'status' && seg1 && method === 'GET') {
-			const collectionSlug = seg0;
-			const docId = seg1;
-			const contextApi = getContextualAPI(user);
-
-			try {
-				const versionOps = contextApi.collection(collectionSlug).versions();
-				if (!versionOps) {
-					utils.setResponseStatus(event, 400);
-					return {
-						error: 'Versioning not enabled',
-						message: `Collection "${collectionSlug}" does not have versioning enabled`,
-					};
-				}
-				const status = await versionOps.getStatus(docId);
-				return { status };
-			} catch (error) {
-				if (error instanceof Error && error.name === 'AccessDeniedError') {
-					utils.setResponseStatus(event, 403);
-					return { error: 'Access denied' };
-				}
-				utils.setResponseStatus(event, 500);
-				return {
-					error: 'Failed to get status',
-					message: sanitizeErrorMessage(error, 'Unknown error'),
-				};
-			}
+			const result = await handleStatusRequest({
+				collectionSlug: seg0,
+				id: seg1,
+				user,
+			});
+			utils.setResponseStatus(event, result.status);
+			return result.body;
 		}
 
 		// ============================================

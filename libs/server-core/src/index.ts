@@ -163,6 +163,21 @@ export {
 	type HandlerResult,
 } from './lib/import-export-handler';
 
+// Admin Route Handlers (Access, Status, Globals)
+export {
+	handleAccessRequest,
+	handleStatusRequest,
+	handleGetGlobalRequest,
+	handleUpdateGlobalRequest,
+} from './lib/admin-handlers';
+export type {
+	AccessHandlerParams,
+	AccessResponseBody,
+	StatusHandlerParams,
+	GetGlobalParams,
+	UpdateGlobalParams,
+} from './lib/admin-handlers';
+
 // Import/Export
 export {
 	exportToJson,
