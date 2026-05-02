@@ -2,7 +2,7 @@
 
 This document tracks the feature roadmap for Momentum CMS — what we've built, what's next, and what we've explicitly decided not to build.
 
-Last updated: April 2026
+Last updated: May 2026
 
 ## What We Already Have
 
@@ -123,16 +123,6 @@ Momentum CMS ships with a comprehensive feature set today:
 
 ## Planned Features
 
-### P1 — Medium Priority
-
-#### Media Library Enhancements
-
-Folder and tag organization, asset metadata search, and bulk upload UI. The current media library handles uploads and basic browsing but lacks organizational features.
-
-#### Import/Export
-
-CSV and JSON import UI in the admin panel, collection data export, and a data transfer tool for moving content between environments.
-
 ### P2 — Low Priority
 
 #### Review Workflows
@@ -147,9 +137,9 @@ Dedicated tenant system beyond the current `defaultWhere` scoping. Tenant collec
 
 ## Tech Debt
 
-| Area                | Issue                                                                                                                                                                                                              | Impact                                                                                                                                       |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Server adapters** | Express, Analog, and NestJS adapters duplicate route handler logic (validation, error handling, status codes). Each adapter should be a thin request/response translator calling shared handlers in `server-core`. | Bug parity drift — e.g., Analog was missing `parentId` in version compare while Express had it. Every new route must be copy-pasted 3 times. |
+| Area                | Issue                                                                                                                                                                                                                                                                                                                                                                                                                           | Impact                                                                                                                                                                                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Server adapters** | Express (`server-express.ts` ~1.6k lines) and Analog (`server-analog.ts` ~1.6k lines) reimplement route handler logic inline (validation, error handling, status codes, response shaping) instead of calling shared handlers in `server-core`. NestJS uses `createMomentumHandlers` correctly but is missing routes (versioning, publishing, media, batch, search, import/export, preview, custom endpoints, GraphQL, globals). | Every new route is copy-pasted across 2-3 adapters. NestJS lacks API parity. Bug fixes have to be replicated. The fix: move all request handling into `server-core`, leave only request/response translation in adapters, and bring NestJS to full parity. |
 
 ---
 
@@ -178,7 +168,7 @@ These features were evaluated and explicitly decided against:
 - Generator decomposition into focused modules (types, client, admin config, serialization)
 - Security hardening: unsafe object key quoting, path traversal prevention, import path sanitization, `softDelete.field` identifier validation
 - Headless UI component library (32 accessible, unstyled Angular primitives)
-- NestJS adapter with full API parity
+- NestJS adapter (CRUD parity; remaining routes tracked under tech debt)
 - Form builder plugin with conditional fields, validation, submissions, webhooks
 - Email builder with visual editor, live preview, Handlebars, pluggable transport
 - Queue and cron plugins for background processing
