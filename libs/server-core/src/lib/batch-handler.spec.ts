@@ -94,4 +94,69 @@ describe('handleBatchRequest', () => {
 			error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} items`,
 		});
 	});
+
+	it('returns 201 with created docs for a successful create', async () => {
+		const result = await handleBatchRequest({
+			config,
+			collectionSlug: 'posts',
+			body: {
+				operation: 'create',
+				items: [{ title: 'one' }, { title: 'two' }, { title: 'three' }],
+			},
+			user: adminUser,
+		});
+		expect(result.status).toBe(201);
+		expect(result.body).toMatchObject({ message: '3 documents created' });
+
+		const body = result.body as { docs: Record<string, unknown>[] };
+		expect(body.docs).toHaveLength(3);
+		expect(body.docs[0]?.['title']).toBe('one');
+		expect(body.docs[0]?.['id']).toBeDefined();
+	});
+
+	it('returns 200 with deleted results for a successful delete', async () => {
+		// Seed docs first
+		const seed = await handleBatchRequest({
+			config,
+			collectionSlug: 'posts',
+			body: { operation: 'create', items: [{ title: 'a' }, { title: 'b' }] },
+			user: adminUser,
+		});
+
+		const seeded = seed.body as { docs: { id: string }[] };
+		const ids = seeded.docs.map((d) => d.id);
+
+		const result = await handleBatchRequest({
+			config,
+			collectionSlug: 'posts',
+			body: { operation: 'delete', ids },
+			user: adminUser,
+		});
+		expect(result.status).toBe(200);
+		expect(result.body).toMatchObject({ message: '2 documents deleted' });
+	});
+
+	it('returns 200 with updated docs for a successful update', async () => {
+		const seed = await handleBatchRequest({
+			config,
+			collectionSlug: 'posts',
+			body: { operation: 'create', items: [{ title: 'old-1' }, { title: 'old-2' }] },
+			user: adminUser,
+		});
+
+		const seeded = seed.body as { docs: { id: string }[] };
+		const items = seeded.docs.map((d) => ({ id: d.id, data: { title: `new-${d.id}` } }));
+
+		const result = await handleBatchRequest({
+			config,
+			collectionSlug: 'posts',
+			body: { operation: 'update', items },
+			user: adminUser,
+		});
+		expect(result.status).toBe(200);
+		expect(result.body).toMatchObject({ message: '2 documents updated' });
+
+		const body = result.body as { docs: Record<string, unknown>[] };
+		expect(body.docs[0]?.['title']).toMatch(/^new-/);
+	});
 });

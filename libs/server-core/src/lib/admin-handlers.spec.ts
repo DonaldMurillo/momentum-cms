@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type {
 	CollectionConfig,
+	DatabaseAdapter,
 	GlobalConfig,
 	MomentumConfig,
 	UserContext,
@@ -13,6 +14,29 @@ import {
 } from './admin-handlers';
 import { initializeMomentumAPI, resetMomentumAPI } from './momentum-api';
 import { createInMemoryAdapter } from './server-core';
+
+/**
+ * Test adapter that adds global storage on top of the in-memory CRUD adapter.
+ * Lets us drive the full update path including validation hooks.
+ */
+function createGlobalsSupportingAdapter(): DatabaseAdapter {
+	const base = createInMemoryAdapter();
+	const globals = new Map<string, Record<string, unknown>>();
+	return {
+		...base,
+		async findGlobal(slug: string): Promise<Record<string, unknown> | null> {
+			return globals.get(slug) ?? null;
+		},
+		async updateGlobal(
+			slug: string,
+			data: Record<string, unknown>,
+		): Promise<Record<string, unknown>> {
+			const merged = { ...(globals.get(slug) ?? {}), ...data, slug };
+			globals.set(slug, merged);
+			return merged;
+		},
+	};
+}
 
 const adminUser: UserContext = { id: 'u-admin', role: 'admin' };
 const regularUser: UserContext = { id: 'u-1', role: 'editor' };
@@ -192,8 +216,59 @@ describe('handleGetGlobalRequest / handleUpdateGlobalRequest', () => {
 		expect(result.body).toMatchObject({ error: 'Access denied' });
 	});
 
-	// Success and validation cases are exercised by global-operations.spec.ts
-	// against a real adapter. The in-memory adapter does not implement
-	// global storage, so we test the negative paths that short-circuit
-	// before the adapter is invoked.
+	it('maps ValidationError thrown from global update to 400', async () => {
+		// Trip the built-in number constraint validator (max=100) — globals
+		// run validateFieldConstraints inside update(); the handler must map
+		// the resulting ValidationError to 400.
+		const validatedConfig: MomentumConfig = {
+			collections: [],
+			globals: [
+				{
+					slug: 'limits',
+					fields: [{ name: 'cap', type: 'number', max: 100 }],
+					access: {
+						read: () => true,
+						update: () => true,
+					},
+				},
+			],
+			db: { adapter: createGlobalsSupportingAdapter() },
+		};
+		resetMomentumAPI();
+		initializeMomentumAPI(validatedConfig);
+
+		const result = await handleUpdateGlobalRequest({
+			slug: 'limits',
+			data: { cap: 9999 },
+			user: adminUser,
+		});
+		expect(result.status).toBe(400);
+		expect(result.body).toMatchObject({ error: expect.stringMatching(/validation/i) });
+	});
+
+	it('returns 200 with the doc on a successful global update', async () => {
+		const adapter = createGlobalsSupportingAdapter();
+		resetMomentumAPI();
+		initializeMomentumAPI({
+			collections: [],
+			globals: [
+				{
+					slug: 'site',
+					fields: [{ name: 'title', type: 'text' }],
+					access: { read: () => true, update: () => true },
+				},
+			],
+			db: { adapter },
+		});
+
+		const result = await handleUpdateGlobalRequest({
+			slug: 'site',
+			data: { title: 'Hello' },
+			user: adminUser,
+		});
+		expect(result.status).toBe(200);
+
+		const body = result.body as { doc: { title: string } };
+		expect(body.doc.title).toBe('Hello');
+	});
 });

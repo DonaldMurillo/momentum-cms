@@ -78,3 +78,55 @@ describe('StatusController', () => {
 		expect(['draft', 'published']).toContain(res.body.status);
 	});
 });
+
+describe('StatusController access control', () => {
+	let app: INestApplication;
+	let docId: string;
+
+	const restrictedCollection: CollectionConfig = {
+		slug: 'restricted',
+		fields: [{ name: 'data', type: 'text' }],
+		versions: { drafts: true },
+		access: {
+			// Allow admin to seed
+			read: ({ req }) => req.user?.role === 'admin',
+			// Deny readVersions for everyone in this test (anonymous request from supertest)
+			readVersions: ({ req }) => req.user?.role === 'admin',
+		},
+	};
+
+	beforeEach(async () => {
+		resetMomentumAPI();
+		const config = createTestConfig([restrictedCollection]);
+		initializeMomentumAPI(config);
+
+		// Seed a doc as admin so the access-denied test has a real id to fetch
+		const created = await getMomentumAPI()
+			.setContext({ user: { id: 'admin', role: 'admin' } })
+			.collection<{ data: string }>('restricted')
+			.create({ data: 'classified' });
+		docId = String(created['id']);
+
+		const module = await Test.createTestingModule({
+			controllers: [StatusController],
+			providers: [MomentumApiService, { provide: MOMENTUM_CONFIG, useValue: config }],
+		}).compile();
+
+		app = module.createNestApplication();
+		await app.init();
+	});
+
+	afterEach(async () => {
+		await app.close();
+		resetMomentumAPI();
+	});
+
+	it('returns 403 when the anonymous request is denied readVersions access', async () => {
+		// Supertest sends no auth header → req.user is undefined → readVersions
+		// access function receives `{ req: { user: undefined } }` → returns false
+		// → AccessDeniedError → 403 via handleStatusRequest's mapping.
+		const res = await request(app.getHttpServer()).get(`/restricted/${docId}/status`);
+		expect(res.status).toBe(403);
+		expect(res.body.error).toBe('Access denied');
+	});
+});
