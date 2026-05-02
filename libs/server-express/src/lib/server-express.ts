@@ -21,9 +21,9 @@ import {
 	handleGraphQLPostRequest,
 	handleGraphQLGetRequest,
 	handlePreviewRequest,
-	handleUpload,
-	handleCollectionUpload,
-	handleFileGet,
+	handleMediaServeRequest,
+	handleMediaUploadRequest,
+	handleMediaCollectionUploadRequest,
 	getUploadConfig,
 	buildGraphQLSchema,
 	generateOpenAPISpec,
@@ -31,7 +31,6 @@ import {
 	handleExportRequest,
 	handleImportRequest,
 	type MomentumRequest,
-	type UploadRequest,
 	type OpenAPIGeneratorOptions,
 	sanitizeErrorMessage,
 	parseWhereParam,
@@ -455,34 +454,20 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	);
 
 	/**
-	 * Handle POST for an upload collection: extract file + fields, delegate to handleCollectionUpload.
+	 * Handle POST for an upload collection: extract file + fields, delegate to the shared handler.
 	 */
 	async function handleUploadCollectionPost(req: Request, res: Response): Promise<void> {
 		const slug = req.params['collection'];
 		const collectionConfig = config.collections.find((c) => c.slug === slug);
-		if (!collectionConfig?.upload) {
-			res.status(400).json({ error: 'Not an upload collection' });
-			return;
-		}
-
-		const uploadConfig = getUploadConfig(config);
-		if (!uploadConfig) {
-			res.status(500).json({ error: 'Storage not configured' });
-			return;
-		}
-
 		const multerFile = req.file;
-		if (!multerFile) {
-			res.status(400).json({ error: 'No file provided' });
-			return;
-		}
-
-		const file: UploadedFile = {
-			originalName: multerFile.originalname,
-			mimeType: multerFile.mimetype,
-			size: multerFile.size,
-			buffer: multerFile.buffer,
-		};
+		const file: UploadedFile | null = multerFile
+			? {
+					originalName: multerFile.originalname,
+					mimeType: multerFile.mimetype,
+					size: multerFile.size,
+					buffer: multerFile.buffer,
+				}
+			: null;
 
 		// Extract non-file fields from multipart body
 		const fields: Record<string, unknown> = {};
@@ -495,15 +480,15 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			}
 		}
 
-		const response = await handleCollectionUpload(uploadConfig, {
-			file,
-			user: extractUserFromRequest(req),
-			fields,
+		const result = await handleMediaCollectionUploadRequest({
+			uploadConfig: getUploadConfig(config),
 			collectionSlug: slug,
-			collectionUpload: collectionConfig.upload,
+			collectionUpload: collectionConfig?.upload,
+			file,
+			fields,
+			user: extractUserFromRequest(req),
 		});
-
-		res.status(response.status).json(response);
+		res.status(result.status).json(result.body);
 	}
 
 	// Route: POST /media/upload - Upload a file (legacy endpoint)
@@ -520,92 +505,45 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		},
 		upload.single('file'),
 		async (req: Request, res: Response) => {
-			const uploadConfig = getUploadConfig(config);
-			if (!uploadConfig) {
-				res.status(500).json({ error: 'Storage not configured' });
-				return;
-			}
-
 			const multerFile = req.file;
-			if (!multerFile) {
-				res.status(400).json({ error: 'No file provided' });
-				return;
-			}
+			const file: UploadedFile | null = multerFile
+				? {
+						originalName: multerFile.originalname,
+						mimeType: multerFile.mimetype,
+						size: multerFile.size,
+						buffer: multerFile.buffer,
+					}
+				: null;
 
-			// Convert multer file to UploadedFile
-			const file: UploadedFile = {
-				originalName: multerFile.originalname,
-				mimeType: multerFile.mimetype,
-				size: multerFile.size,
-				buffer: multerFile.buffer,
-			};
-
-			// Get alt text from body if provided
-			const alt = typeof req.body?.alt === 'string' ? req.body.alt : undefined;
-
-			const uploadRequest: UploadRequest = {
+			const result = await handleMediaUploadRequest({
+				uploadConfig: getUploadConfig(config),
 				file,
 				user: extractUserFromRequest(req),
-				alt,
-			};
-
-			const response = await handleUpload(uploadConfig, uploadRequest);
-			res.status(response.status).json(response);
+				alt: typeof req.body?.alt === 'string' ? req.body.alt : undefined,
+			});
+			res.status(result.status).json(result.body);
 		},
 	);
 
 	// Route: GET /media/file/:path(*) - Serve uploaded files (public)
 	router.get('/media/file/*', async (req: Request, res: Response) => {
-		const uploadConfig = getUploadConfig(config);
-		if (!uploadConfig) {
-			res.status(500).json({ error: 'Storage not configured' });
+		const result = await handleMediaServeRequest({
+			uploadConfig: getUploadConfig(config),
+			rawPath: req.params[0],
+		});
+		if (result.status !== 200) {
+			res.status(result.status).json(result.body);
 			return;
 		}
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- handler success body is the file payload
+		const fileResult = result.body as { buffer: Uint8Array; mimeType?: string };
 
-		// Extract path from URL (everything after /media/file/)
-		const rawPath = req.params[0];
-		if (!rawPath) {
-			res.status(400).json({ error: 'File path required' });
-			return;
+		if (fileResult.mimeType) {
+			res.setHeader('Content-Type', fileResult.mimeType);
 		}
-
-		// Sanitize path to prevent directory traversal
-		const { normalize, isAbsolute, resolve, sep } = await import('node:path');
-		let decodedPath: string;
-		try {
-			decodedPath = decodeURIComponent(rawPath);
-		} catch {
-			res.status(400).json({ error: 'Invalid path encoding' });
-			return;
-		}
-		const filePath = normalize(decodedPath);
-		if (isAbsolute(filePath) || filePath.includes('..') || filePath.includes(`${sep}..`)) {
-			res.status(403).json({ error: 'Invalid file path' });
-			return;
-		}
-		// Double-check: resolve against a fake root and verify we stay inside it
-		const fakeRoot = resolve('/safe-root');
-		const resolved = resolve(fakeRoot, filePath);
-		if (!resolved.startsWith(fakeRoot + sep) && resolved !== fakeRoot) {
-			res.status(403).json({ error: 'Invalid file path' });
-			return;
-		}
-
-		const result = await handleFileGet(uploadConfig.adapter, filePath);
-		if (!result) {
-			res.status(404).json({ error: 'File not found' });
-			return;
-		}
-
-		// Set content type if known
-		if (result.mimeType) {
-			res.setHeader('Content-Type', result.mimeType);
-		}
-
 		// Enable caching for static files
 		res.setHeader('Cache-Control', 'public, max-age=31536000');
-
-		res.send(result.buffer);
+		res.send(Buffer.from(fileResult.buffer));
 	});
 
 	// ============================================

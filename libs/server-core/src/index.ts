@@ -192,6 +192,20 @@ export type { BatchHandlerParams } from './lib/batch-handler';
 export { handlePreviewRequest } from './lib/preview-handler';
 export type { PreviewHandlerParams } from './lib/preview-handler';
 
+// Media Handlers (path validation, serve, upload, collection upload)
+export {
+	validateMediaFilePath,
+	handleMediaServeRequest,
+	handleMediaUploadRequest,
+	handleMediaCollectionUploadRequest,
+} from './lib/media-handlers';
+export type {
+	MediaServeParams,
+	MediaServeBody,
+	MediaUploadParams,
+	MediaCollectionUploadParams,
+} from './lib/media-handlers';
+
 // Version Route Handlers
 export {
 	handleListVersionsRequest,

@@ -18,10 +18,10 @@ import {
 	handleGraphQLPostRequest,
 	handleGraphQLGetRequest,
 	handlePreviewRequest,
+	handleMediaServeRequest,
+	handleMediaUploadRequest,
+	handleMediaCollectionUploadRequest,
 	buildGraphQLSchema,
-	handleUpload,
-	handleFileGet,
-	handleCollectionUpload,
 	getUploadConfig,
 	handleExportRequest,
 	handleImportRequest,
@@ -36,8 +36,6 @@ import {
 	type OpenAPIDocument,
 	type MomentumRequest,
 	type MomentumResponse,
-	type UploadRequest,
-	type CollectionUploadRequest,
 	sanitizeErrorMessage,
 	parseWhereParam,
 	validateMimeType,
@@ -700,100 +698,49 @@ export function createComprehensiveMomentumHandler(
 		// Media: POST /media/upload
 		// ============================================
 		if (seg0 === 'media' && seg1 === 'upload' && method === 'POST') {
-			if (!user) {
-				utils.setResponseStatus(event, 401);
-				return { error: 'Authentication required to upload files' };
-			}
-
-			const uploadConfig = getUploadConfig(config);
-			if (!uploadConfig) {
-				utils.setResponseStatus(event, 500);
-				return { error: 'Storage not configured' };
-			}
-
-			const formData = await utils.readMultipartFormData(event);
-			if (!formData || formData.length === 0) {
-				utils.setResponseStatus(event, 400);
-				return { error: 'No file provided' };
-			}
-
-			// Find the file field
+			const formData = (await utils.readMultipartFormData(event)) ?? [];
 			const fileField = formData.find((f) => f.name === 'file');
-			if (!fileField || !fileField.filename) {
-				utils.setResponseStatus(event, 400);
-				return { error: 'No file provided' };
-			}
-
-			const file: UploadedFile = {
-				originalName: fileField.filename,
-				mimeType: fileField.type ?? 'application/octet-stream',
-				size: fileField.data.length,
-				buffer: fileField.data,
-			};
-
-			// Get alt text from form data if provided
+			const file: UploadedFile | null =
+				fileField && fileField.filename
+					? {
+							originalName: fileField.filename,
+							mimeType: fileField.type ?? 'application/octet-stream',
+							size: fileField.data.length,
+							buffer: fileField.data,
+						}
+					: null;
 			const altField = formData.find((f) => f.name === 'alt');
 			const alt = altField ? altField.data.toString('utf-8') : undefined;
 
-			const uploadRequest: UploadRequest = { file, user, alt };
-			const response = await handleUpload(uploadConfig, uploadRequest);
-			utils.setResponseStatus(event, response.status);
-			return response;
+			const result = await handleMediaUploadRequest({
+				uploadConfig: getUploadConfig(config),
+				file,
+				user,
+				alt,
+			});
+			utils.setResponseStatus(event, result.status);
+			return result.body;
 		}
 
 		// ============================================
 		// Media: GET /media/file/*
 		// ============================================
 		if (seg0 === 'media' && seg1 === 'file' && method === 'GET') {
-			const uploadConfig = getUploadConfig(config);
-			if (!uploadConfig) {
-				utils.setResponseStatus(event, 500);
-				return { error: 'Storage not configured' };
+			const result = await handleMediaServeRequest({
+				uploadConfig: getUploadConfig(config),
+				rawPath: pathSegments.slice(2).join('/'),
+			});
+			if (result.status !== 200) {
+				utils.setResponseStatus(event, result.status);
+				return result.body;
 			}
-
-			const rawPath = pathSegments.slice(2).join('/');
-			if (!rawPath) {
-				utils.setResponseStatus(event, 400);
-				return { error: 'File path required' };
-			}
-
-			// Sanitize path to prevent directory traversal
-			const { normalize, isAbsolute, resolve, sep } = await import('node:path');
-			let decodedPath: string;
-			try {
-				decodedPath = decodeURIComponent(rawPath);
-			} catch {
-				utils.setResponseStatus(event, 400);
-				return { error: 'Invalid path encoding' };
-			}
-			// Reject any path containing traversal sequences before normalization
-			if (decodedPath.includes('..')) {
-				utils.setResponseStatus(event, 403);
-				return { error: 'Invalid file path' };
-			}
-			const filePath = normalize(decodedPath);
-			if (isAbsolute(filePath)) {
-				utils.setResponseStatus(event, 403);
-				return { error: 'Invalid file path' };
-			}
-			const fakeRoot = resolve('/safe-root');
-			const resolved = resolve(fakeRoot, filePath);
-			if (!resolved.startsWith(fakeRoot + sep) && resolved !== fakeRoot) {
-				utils.setResponseStatus(event, 403);
-				return { error: 'Invalid file path' };
-			}
-
-			const result = await handleFileGet(uploadConfig.adapter, filePath);
-			if (!result) {
-				utils.setResponseStatus(event, 404);
-				return { error: 'File not found' };
-			}
-
-			if (result.mimeType) {
-				utils.setResponseHeader(event, 'Content-Type', result.mimeType);
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- handler success body is the file payload
+			const fileResult = result.body as { buffer: Uint8Array; mimeType?: string };
+			if (fileResult.mimeType) {
+				utils.setResponseHeader(event, 'Content-Type', fileResult.mimeType);
 			}
 			utils.setResponseHeader(event, 'Cache-Control', 'public, max-age=31536000');
-			return utils.send(event, result.buffer);
+			return utils.send(event, Buffer.from(fileResult.buffer));
 		}
 
 		// ============================================
@@ -1095,44 +1042,33 @@ export function createComprehensiveMomentumHandler(
 				utils.setResponseStatus(event, 401);
 				return { error: 'Authentication required to upload files' };
 			}
-			const uploadConfig = getUploadConfig(config);
-			if (!uploadConfig) {
-				utils.setResponseStatus(event, 500);
-				return { error: 'Storage not configured' };
-			}
-			const formData = await utils.readMultipartFormData(event);
-			if (!formData || formData.length === 0) {
-				utils.setResponseStatus(event, 400);
-				return { error: 'No file provided' };
-			}
+			const formData = (await utils.readMultipartFormData(event)) ?? [];
 			const fileField = formData.find((f) => f.name === 'file');
-			if (!fileField || !fileField.filename) {
-				utils.setResponseStatus(event, 400);
-				return { error: 'No file provided' };
-			}
-			const file: UploadedFile = {
-				originalName: fileField.filename,
-				mimeType: fileField.type ?? 'application/octet-stream',
-				size: fileField.data.length,
-				buffer: fileField.data,
-			};
+			const file: UploadedFile | null =
+				fileField && fileField.filename
+					? {
+							originalName: fileField.filename,
+							mimeType: fileField.type ?? 'application/octet-stream',
+							size: fileField.data.length,
+							buffer: fileField.data,
+						}
+					: null;
 			const fields: Record<string, unknown> = {};
 			for (const field of formData) {
 				if (field.name !== 'file' && field.name) {
 					fields[field.name] = field.data.toString('utf-8');
 				}
 			}
-			const collectionUpload = postUploadCol.upload ?? {};
-			const uploadRequest: CollectionUploadRequest = {
-				file,
-				user,
-				fields,
+			const result = await handleMediaCollectionUploadRequest({
+				uploadConfig: getUploadConfig(config),
 				collectionSlug: seg0,
-				collectionUpload,
-			};
-			const response = await handleCollectionUpload(uploadConfig, uploadRequest);
-			utils.setResponseStatus(event, response.status);
-			return response;
+				collectionUpload: postUploadCol.upload ?? true,
+				file,
+				fields,
+				user,
+			});
+			utils.setResponseStatus(event, result.status);
+			return result.body;
 		}
 
 		// ============================================
