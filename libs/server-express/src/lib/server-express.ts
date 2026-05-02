@@ -541,7 +541,7 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		}
 		// Enable caching for static files
 		res.setHeader('Cache-Control', 'public, max-age=31536000');
-		res.send(Buffer.from(fileResult.buffer));
+		res.send(fileResult.buffer);
 	});
 
 	// ============================================

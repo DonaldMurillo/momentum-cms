@@ -696,6 +696,13 @@ export function createComprehensiveMomentumHandler(
 		// Media: POST /media/upload
 		// ============================================
 		if (seg0 === 'media' && seg1 === 'upload' && method === 'POST') {
+			// Reject unauthenticated requests BEFORE consuming the multipart body —
+			// otherwise an attacker can force the server to allocate up to the body
+			// limit per request just to receive a 401.
+			if (!user) {
+				utils.setResponseStatus(event, 401);
+				return { error: 'Authentication required to upload files' };
+			}
 			const formData = (await utils.readMultipartFormData(event)) ?? [];
 			const fileField = formData.find((f) => f.name === 'file');
 			const file: UploadedFile | null =
@@ -738,7 +745,7 @@ export function createComprehensiveMomentumHandler(
 				utils.setResponseHeader(event, 'Content-Type', fileResult.mimeType);
 			}
 			utils.setResponseHeader(event, 'Cache-Control', 'public, max-age=31536000');
-			return utils.send(event, Buffer.from(fileResult.buffer));
+			return utils.send(event, fileResult.buffer);
 		}
 
 		// ============================================
@@ -809,6 +816,12 @@ export function createComprehensiveMomentumHandler(
 		// Must be checked BEFORE the publishing guard, which catches all 3-segment POSTs.
 		// ============================================
 		if (seg2 === 'preview' && seg1 && (method === 'GET' || method === 'POST')) {
+			// Reject unauthenticated requests BEFORE consuming the JSON body for the
+			// same DoS reason as /media/upload above.
+			if (!user) {
+				utils.setResponseStatus(event, 401);
+				return { error: 'Authentication required to access preview' };
+			}
 			const postBody = method === 'POST' ? await safeReadBody(event, utils, method) : undefined;
 			const result = await handlePreviewRequest({
 				config,
