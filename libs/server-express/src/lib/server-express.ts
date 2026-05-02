@@ -20,6 +20,7 @@ import {
 	handleBatchRequest,
 	handleGraphQLPostRequest,
 	handleGraphQLGetRequest,
+	handlePreviewRequest,
 	handleUpload,
 	handleCollectionUpload,
 	handleFileGet,
@@ -29,7 +30,6 @@ import {
 	getSwaggerUIHTML,
 	handleExportRequest,
 	handleImportRequest,
-	renderPreviewHTML,
 	type MomentumRequest,
 	type UploadRequest,
 	type OpenAPIGeneratorOptions,
@@ -44,22 +44,10 @@ import type {
 	UploadedFile,
 	DatabaseAdapter,
 	EndpointQueryHelper,
-	CollectionConfig,
 } from '@momentumcms/core';
 import { isUploadCollection } from '@momentumcms/core';
 import { createLogger } from '@momentumcms/logger';
 import { getPluginMiddleware } from './plugin-middleware-registry';
-
-/**
- * Find the email-builder json field in a collection, if any.
- * Returns the field name or undefined.
- */
-function getEmailBuilderFieldName(collection: CollectionConfig): string | undefined {
-	const field = collection.fields.find(
-		(f) => f.type === 'json' && f.admin?.editor === 'email-builder',
-	);
-	return field?.name;
-}
 
 /**
  * Render a full email preview HTML from the doc's email blocks.
@@ -421,68 +409,32 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	// Must be defined BEFORE generic /:collection/:id routes
 	// ============================================
 
-	/** Shared handler for preview rendering (GET loads from DB, POST uses request body). */
-	async function handlePreviewRequest(req: Request, res: Response): Promise<void> {
-		try {
-			const slug = req.params['collection'];
-			const id = req.params['id'];
-			const user = extractUserFromRequest(req);
-			if (!user) {
-				res.status(401).json({ error: 'Authentication required to access preview' });
-				return;
+	/** Adapter-side dispatch into the shared preview handler. */
+	async function dispatchPreview(req: Request, res: Response): Promise<void> {
+		const result = await handlePreviewRequest({
+			config,
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			method: req.method === 'POST' ? 'POST' : 'GET',
+			postBody: req.method === 'POST' ? getBody(req) : undefined,
+			user: extractUserFromRequest(req),
+			renderEmail: renderEmailPreviewHTML,
+		});
+		if (result.headers) {
+			for (const [key, value] of Object.entries(result.headers)) {
+				res.setHeader(key, value);
 			}
-
-			const collectionConfig = config.collections.find((c) => c.slug === slug);
-			if (!collectionConfig) {
-				res.status(404).json({ error: 'Collection not found' });
-				return;
-			}
-
-			// Enforce collection-level access.read before rendering
-			const accessFn = collectionConfig.access?.read;
-			if (accessFn) {
-				const allowed = await Promise.resolve(accessFn({ req: { user } }));
-				if (!allowed) {
-					res.status(403).json({ error: 'Access denied' });
-					return;
-				}
-			}
-
-			let doc: Record<string, unknown>;
-			if (req.method === 'POST' && req.body?.data) {
-				// Live preview: render from form data sent by the client
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- POST body contains form data
-				doc = req.body.data as Record<string, unknown>;
-			} else {
-				// Initial load: render from database
-				const api = getMomentumAPI();
-				const contextApi = user ? api.setContext({ user }) : api;
-				doc = await contextApi.collection(slug).findById(id);
-			}
-
-			// For collections with an email-builder field, render the email directly
-			const emailField = getEmailBuilderFieldName(collectionConfig);
-			const html = emailField
-				? await renderEmailPreviewHTML(doc, emailField)
-				: renderPreviewHTML({ doc, collection: collectionConfig });
-			res.setHeader('Content-Type', 'text/html; charset=utf-8');
-			res.send(html);
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (message.includes('Access denied')) {
-				res.status(403).json({ error: message });
-				return;
-			}
-			if (message.includes('not found')) {
-				res.status(404).json({ error: message });
-				return;
-			}
-			res.status(500).json({ error: 'Preview failed', message });
+		}
+		res.status(result.status);
+		if (typeof result.body === 'string') {
+			res.send(result.body);
+		} else {
+			res.json(result.body);
 		}
 	}
 
-	router.get('/:collection/:id/preview', handlePreviewRequest);
-	router.post('/:collection/:id/preview', handlePreviewRequest);
+	router.get('/:collection/:id/preview', dispatchPreview);
+	router.post('/:collection/:id/preview', dispatchPreview);
 
 	// ============================================
 	// Media Upload Routes

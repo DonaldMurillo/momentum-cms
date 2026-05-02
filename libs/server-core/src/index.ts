@@ -188,6 +188,10 @@ export type {
 export { handleBatchRequest, MAX_BATCH_SIZE } from './lib/batch-handler';
 export type { BatchHandlerParams } from './lib/batch-handler';
 
+// Preview Handler
+export { handlePreviewRequest } from './lib/preview-handler';
+export type { PreviewHandlerParams } from './lib/preview-handler';
+
 // Version Route Handlers
 export {
 	handleListVersionsRequest,

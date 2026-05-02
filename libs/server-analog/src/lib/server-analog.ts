@@ -17,6 +17,7 @@ import {
 	handleBatchRequest,
 	handleGraphQLPostRequest,
 	handleGraphQLGetRequest,
+	handlePreviewRequest,
 	buildGraphQLSchema,
 	handleUpload,
 	handleFileGet,
@@ -24,7 +25,6 @@ import {
 	getUploadConfig,
 	handleExportRequest,
 	handleImportRequest,
-	renderPreviewHTML,
 	generateOpenAPISpec,
 	getSwaggerUIHTML,
 	createAdapterApiKeyStore,
@@ -49,20 +49,8 @@ import type {
 	UploadedFile,
 	EndpointQueryHelper,
 	DatabaseAdapter,
-	CollectionConfig,
 } from '@momentumcms/core';
 import { isUploadCollection } from '@momentumcms/core';
-
-/**
- * Find the email-builder json field in a collection, if any.
- * Returns the field name or undefined.
- */
-function getEmailBuilderFieldName(collection: CollectionConfig): string | undefined {
-	const field = collection.fields.find(
-		(f) => f.type === 'json' && f.admin?.editor === 'email-builder',
-	);
-	return field?.name;
-}
 
 /**
  * Render a full email preview HTML from the doc's email blocks.
@@ -876,68 +864,26 @@ export function createComprehensiveMomentumHandler(
 		// Must be checked BEFORE the publishing guard, which catches all 3-segment POSTs.
 		// ============================================
 		if (seg2 === 'preview' && seg1 && (method === 'GET' || method === 'POST')) {
-			if (!user) {
-				utils.setResponseStatus(event, 401);
-				return { error: 'Authentication required to access preview' };
+			const postBody = method === 'POST' ? await safeReadBody(event, utils, method) : undefined;
+			const result = await handlePreviewRequest({
+				config,
+				collectionSlug: seg0,
+				id: seg1,
+				method,
+				postBody,
+				user,
+				renderEmail: renderEmailPreviewHTML,
+			});
+			if (result.headers) {
+				for (const [key, value] of Object.entries(result.headers)) {
+					utils.setResponseHeader(event, key, value);
+				}
 			}
-			try {
-				const collectionSlug = seg0;
-				const docId = seg1;
-
-				const collectionConfig = config.collections.find((c) => c.slug === collectionSlug);
-				if (!collectionConfig) {
-					utils.setResponseStatus(event, 404);
-					return { error: 'Collection not found' };
-				}
-
-				// Enforce collection-level access.read before rendering
-				const accessFn = collectionConfig.access?.read;
-				if (accessFn) {
-					const allowed = await Promise.resolve(accessFn({ req: { user } }));
-					if (!allowed) {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-				}
-
-				let docRecord: Record<string, unknown>;
-				if (method === 'POST') {
-					const body = await safeReadBody(event, utils, method);
-					if (body['data'] && typeof body['data'] === 'object') {
-						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- POST body contains form data
-						docRecord = body['data'] as Record<string, unknown>;
-					} else {
-						utils.setResponseStatus(event, 400);
-						return { error: 'POST preview requires { data: ... } body' };
-					}
-				} else {
-					const contextApi = getContextualAPI(user);
-					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- doc type from API
-					docRecord = (await contextApi.collection(collectionSlug).findById(docId)) as Record<
-						string,
-						unknown
-					>;
-				}
-
-				const emailField = getEmailBuilderFieldName(collectionConfig);
-				const html = emailField
-					? await renderEmailPreviewHTML(docRecord, emailField)
-					: renderPreviewHTML({ doc: docRecord, collection: collectionConfig });
-				utils.setResponseHeader(event, 'Content-Type', 'text/html; charset=utf-8');
-				return utils.send(event, html);
-			} catch (error) {
-				const message = sanitizeErrorMessage(error, 'Unknown error');
-				if (message.includes('Access denied')) {
-					utils.setResponseStatus(event, 403);
-					return { error: message };
-				}
-				if (message.includes('not found')) {
-					utils.setResponseStatus(event, 404);
-					return { error: message };
-				}
-				utils.setResponseStatus(event, 500);
-				return { error: 'Preview failed', message };
+			utils.setResponseStatus(event, result.status);
+			if (typeof result.body === 'string') {
+				return utils.send(event, result.body);
 			}
+			return result.body;
 		}
 
 		// ============================================
