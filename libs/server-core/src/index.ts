@@ -90,7 +90,13 @@ export {
 
 // GraphQL
 export { buildGraphQLSchema, type GraphQLContext } from './lib/graphql-schema';
-export { executeGraphQL, type GraphQLRequestBody, type GraphQLResult } from './lib/graphql-handler';
+export {
+	executeGraphQL,
+	handleGraphQLPostRequest,
+	handleGraphQLGetRequest,
+	type GraphQLRequestBody,
+	type GraphQLResult,
+} from './lib/graphql-handler';
 export { GraphQLJSON } from './lib/graphql-scalars';
 
 // API Keys

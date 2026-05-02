@@ -18,12 +18,13 @@ import {
 	handleSchedulePublishRequest,
 	handleCancelScheduledPublishRequest,
 	handleBatchRequest,
+	handleGraphQLPostRequest,
+	handleGraphQLGetRequest,
 	handleUpload,
 	handleCollectionUpload,
 	handleFileGet,
 	getUploadConfig,
 	buildGraphQLSchema,
-	executeGraphQL,
 	generateOpenAPISpec,
 	getSwaggerUIHTML,
 	handleExportRequest,
@@ -31,7 +32,6 @@ import {
 	renderPreviewHTML,
 	type MomentumRequest,
 	type UploadRequest,
-	type GraphQLRequestBody,
 	type OpenAPIGeneratorOptions,
 	sanitizeErrorMessage,
 	parseWhereParam,
@@ -253,43 +253,21 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 	// Route: POST /graphql - GraphQL API
 	router.post('/graphql', async (req: Request, res: Response) => {
-		const user = extractUserFromRequest(req);
-
-		const rawBody = getBody(req);
-		const body: GraphQLRequestBody = {
-			query: typeof rawBody['query'] === 'string' ? rawBody['query'] : '',
-			variables:
-				typeof rawBody['variables'] === 'object' && rawBody['variables'] !== null
-					? // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-						(rawBody['variables'] as Record<string, unknown>)
-					: undefined,
-			operationName:
-				typeof rawBody['operationName'] === 'string' ? rawBody['operationName'] : undefined,
-		};
-
-		const result = await executeGraphQL(graphqlSchema, body, {
-			user,
-		});
-
+		const result = await handleGraphQLPostRequest(
+			graphqlSchema,
+			getBody(req),
+			extractUserFromRequest(req),
+		);
 		res.status(result.status).json(result.body);
 	});
 
 	// Route: GET /graphql - GraphQL introspection (for tools like GraphiQL)
 	router.get('/graphql', async (req: Request, res: Response) => {
-		const user = extractUserFromRequest(req);
-		const queryParam = req.query['query'];
-		if (typeof queryParam !== 'string') {
-			res.status(400).json({ errors: [{ message: 'Query parameter required' }] });
-			return;
-		}
-
-		const result = await executeGraphQL(
+		const result = await handleGraphQLGetRequest(
 			graphqlSchema,
-			{ query: queryParam },
-			{ user },
-			{ readOnly: true },
+			req.query['query'],
+			extractUserFromRequest(req),
 		);
-
 		res.status(result.status).json(result.body);
 	});
 

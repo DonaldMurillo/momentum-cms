@@ -15,8 +15,9 @@ import {
 	handleSchedulePublishRequest,
 	handleCancelScheduledPublishRequest,
 	handleBatchRequest,
+	handleGraphQLPostRequest,
+	handleGraphQLGetRequest,
 	buildGraphQLSchema,
-	executeGraphQL,
 	handleUpload,
 	handleFileGet,
 	handleCollectionUpload,
@@ -35,7 +36,6 @@ import {
 	type OpenAPIDocument,
 	type MomentumRequest,
 	type MomentumResponse,
-	type GraphQLRequestBody,
 	type UploadRequest,
 	type CollectionUploadRequest,
 	sanitizeErrorMessage,
@@ -675,27 +675,12 @@ export function createComprehensiveMomentumHandler(
 		if (seg0 === 'graphql') {
 			if (method === 'POST') {
 				const rawBody = await safeReadBody(event, utils, method);
-				const body: GraphQLRequestBody = {
-					query: typeof rawBody['query'] === 'string' ? rawBody['query'] : '',
-					variables:
-						typeof rawBody['variables'] === 'object' && rawBody['variables'] !== null
-							? // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-								(rawBody['variables'] as Record<string, unknown>)
-							: undefined,
-					operationName:
-						typeof rawBody['operationName'] === 'string' ? rawBody['operationName'] : undefined,
-				};
-				const result = await executeGraphQL(graphqlSchema, body, { user });
+				const result = await handleGraphQLPostRequest(graphqlSchema, rawBody, user);
 				utils.setResponseStatus(event, result.status);
 				return result.body;
 			}
 			if (method === 'GET') {
-				const queryParam = queryParams['query'];
-				if (typeof queryParam !== 'string') {
-					utils.setResponseStatus(event, 400);
-					return { errors: [{ message: 'Query parameter required' }] };
-				}
-				const result = await executeGraphQL(graphqlSchema, { query: queryParam }, { user });
+				const result = await handleGraphQLGetRequest(graphqlSchema, queryParams['query'], user);
 				utils.setResponseStatus(event, result.status);
 				return result.body;
 			}
