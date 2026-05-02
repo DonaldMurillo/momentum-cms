@@ -352,10 +352,8 @@ describe('version handler success and error mapping', () => {
 			publishAt: new Date(Date.now() + 86400000).toISOString(),
 			user: adminUser,
 		});
-		expect([200, 500]).toContain(result.status);
-		if (result.status === 500) {
-			expect(result.body).toMatchObject({ error: 'Failed to schedule publish' });
-		}
+		expect(result.status).toBe(500);
+		expect(result.body).toMatchObject({ error: 'Failed to schedule publish' });
 	});
 
 	it('handle403: AccessDeniedError on a restricted collection maps to 403', async () => {
