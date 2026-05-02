@@ -8,6 +8,15 @@ import {
 	handleStatusRequest,
 	handleGetGlobalRequest,
 	handleUpdateGlobalRequest,
+	handleListVersionsRequest,
+	handleGetVersionRequest,
+	handleRestoreVersionRequest,
+	handleCompareVersionsRequest,
+	handlePublishRequest,
+	handleUnpublishRequest,
+	handleSaveDraftRequest,
+	handleSchedulePublishRequest,
+	handleCancelScheduledPublishRequest,
 	handleUpload,
 	handleCollectionUpload,
 	handleFileGet,
@@ -317,336 +326,104 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 	// Route: GET /:collection/:id/versions - List versions for a document
 	router.get('/:collection/:id/versions', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			const result = await versionOps.findVersions(req.params['id'], {
-				limit: req.query['limit'] ? Number(req.query['limit']) : undefined,
-				page: req.query['page'] ? Number(req.query['page']) : undefined,
-				includeAutosave: req.query['includeAutosave'] === 'true',
-			});
-
-			res.json(result);
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to fetch versions', message });
-		}
+		const result = await handleListVersionsRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			limit: req.query['limit'] ? Number(req.query['limit']) : undefined,
+			page: req.query['page'] ? Number(req.query['page']) : undefined,
+			includeAutosave: req.query['includeAutosave'] === 'true',
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: GET /:collection/:id/versions/:versionId - Get specific version
 	router.get('/:collection/:id/versions/:versionId', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			const version = await versionOps.findVersionById(req.params['versionId']);
-
-			if (!version) {
-				res.status(404).json({
-					error: 'Version not found',
-					message: `Version "${req.params['versionId']}" not found`,
-				});
-				return;
-			}
-
-			res.json(version);
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to fetch version', message });
-		}
+		const result = await handleGetVersionRequest({
+			collectionSlug: req.params['collection'],
+			versionId: req.params['versionId'],
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: POST /:collection/:id/versions/restore - Restore a version
 	router.post('/:collection/:id/versions/restore', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			const body = getBody(req);
-			const versionId = body['versionId'];
-
-			if (typeof versionId !== 'string') {
-				res.status(400).json({
-					error: 'Invalid request',
-					message: 'versionId is required in request body',
-				});
-				return;
-			}
-
-			const restored = await versionOps.restore({
-				versionId,
-				docId: req.params['id'],
-				publish: body['publish'] === true,
-			});
-
-			res.json({ doc: restored, message: 'Version restored successfully' });
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.message.includes('mismatch')) {
-				res.status(400).json({ error: 'Version parent mismatch', message });
-				return;
-			}
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to restore version', message });
-		}
+		const body = getBody(req);
+		const result = await handleRestoreVersionRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			versionId: body['versionId'],
+			publish: body['publish'],
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: POST /:collection/:id/publish - Publish a document
 	router.post('/:collection/:id/publish', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			const published = await versionOps.publish(req.params['id']);
-
-			res.json({ doc: published, message: 'Document published successfully' });
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to publish document', message });
-		}
+		const result = await handlePublishRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
-	// Route: POST /:collection/:id/schedule-publish - Schedule a document for future publishing
+	// Route: POST /:collection/:id/schedule-publish - Schedule for future publishing
 	router.post('/:collection/:id/schedule-publish', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- req.body type unknown
-			const { publishAt } = req.body as { publishAt?: string };
-			if (!publishAt) {
-				res.status(400).json({
-					error: 'Missing publishAt',
-					message: 'A publishAt ISO date string is required',
-				});
-				return;
-			}
-
-			const result = await versionOps.schedulePublish(req.params['id'], publishAt);
-			res.json(result);
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to schedule publish', message });
-		}
+		const body = getBody(req);
+		const result = await handleSchedulePublishRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			publishAt: body['publishAt'],
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: POST /:collection/:id/cancel-scheduled-publish - Cancel scheduled publish
 	router.post('/:collection/:id/cancel-scheduled-publish', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			await versionOps.cancelScheduledPublish(req.params['id']);
-			res.json({ message: 'Scheduled publish cancelled' });
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to cancel scheduled publish', message });
-		}
+		const result = await handleCancelScheduledPublishRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: POST /:collection/:id/unpublish - Unpublish a document
 	router.post('/:collection/:id/unpublish', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			const unpublished = await versionOps.unpublish(req.params['id']);
-
-			res.json({ doc: unpublished, message: 'Document unpublished successfully' });
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to unpublish document', message });
-		}
+		const result = await handleUnpublishRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: POST /:collection/:id/draft - Save a draft (autosave)
 	router.post('/:collection/:id/draft', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			const body = getBody(req);
-			const draft = await versionOps.saveDraft(req.params['id'], body);
-
-			res.json({ version: draft, message: 'Draft saved successfully' });
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to save draft', message });
-		}
+		const result = await handleSaveDraftRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			data: getBody(req),
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: POST /:collection/:id/versions/compare - Compare two versions
 	router.post('/:collection/:id/versions/compare', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Request body typing
-			const { versionId1, versionId2 } = req.body as {
-				versionId1: string;
-				versionId2: string;
-			};
-
-			if (!versionId1 || !versionId2) {
-				res.status(400).json({
-					error: 'Missing version IDs',
-					message: 'Both versionId1 and versionId2 are required',
-				});
-				return;
-			}
-
-			const parentId = req.params['id'];
-			const differences = await versionOps.compare(versionId1, versionId2, parentId);
-
-			res.json({ differences });
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to compare versions', message });
-		}
+		const body = getBody(req);
+		const result = await handleCompareVersionsRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			versionId1: body['versionId1'],
+			versionId2: body['versionId2'],
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: GET /:collection/:id/status - Get document status

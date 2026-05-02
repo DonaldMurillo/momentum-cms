@@ -75,3 +75,4 @@ docs/visuals/.auth-state.json
 
 # Skill eval workspace outputs (regenerable via /skill-eval)
 .claude/skill-evals/
+.claude/scheduled_tasks.lock

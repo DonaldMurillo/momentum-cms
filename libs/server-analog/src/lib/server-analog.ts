@@ -5,6 +5,15 @@ import {
 	handleStatusRequest,
 	handleGetGlobalRequest,
 	handleUpdateGlobalRequest,
+	handleListVersionsRequest,
+	handleGetVersionRequest,
+	handleRestoreVersionRequest,
+	handleCompareVersionsRequest,
+	handlePublishRequest,
+	handleUnpublishRequest,
+	handleSaveDraftRequest,
+	handleSchedulePublishRequest,
+	handleCancelScheduledPublishRequest,
 	buildGraphQLSchema,
 	executeGraphQL,
 	handleUpload,
@@ -822,155 +831,58 @@ export function createComprehensiveMomentumHandler(
 		if (seg2 === 'versions' && seg1) {
 			const collectionSlug = seg0;
 			const docId = seg1;
-			const contextApi = getContextualAPI(user);
 
 			// POST /:collection/:id/versions/restore
 			if (seg3 === 'restore' && method === 'POST') {
-				try {
-					const versionOps = contextApi.collection(collectionSlug).versions();
-					if (!versionOps) {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: 'Versioning not enabled',
-							message: `Collection "${collectionSlug}" does not have versioning enabled`,
-						};
-					}
-					const body = await safeReadBody(event, utils, method);
-					const versionId = body['versionId'];
-					if (typeof versionId !== 'string') {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: 'Invalid request',
-							message: 'versionId is required in request body',
-						};
-					}
-					const restored = await versionOps.restore({
-						versionId,
-						docId,
-						publish: body['publish'] === true,
-					});
-					return { doc: restored, message: 'Version restored successfully' };
-				} catch (error) {
-					if (error instanceof Error && error.name === 'AccessDeniedError') {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-					const message = sanitizeErrorMessage(error, 'Unknown error');
-					if (error instanceof Error && error.message.includes('mismatch')) {
-						utils.setResponseStatus(event, 400);
-						return { error: 'Version parent mismatch', message };
-					}
-					utils.setResponseStatus(event, 500);
-					return {
-						error: 'Failed to restore version',
-						message,
-					};
-				}
+				const body = await safeReadBody(event, utils, method);
+				const result = await handleRestoreVersionRequest({
+					collectionSlug,
+					id: docId,
+					versionId: body['versionId'],
+					publish: body['publish'],
+					user,
+				});
+				utils.setResponseStatus(event, result.status);
+				return result.body;
 			}
 
 			// POST /:collection/:id/versions/compare
 			if (seg3 === 'compare' && method === 'POST') {
-				try {
-					const versionOps = contextApi.collection(collectionSlug).versions();
-					if (!versionOps) {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: 'Versioning not enabled',
-							message: `Collection "${collectionSlug}" does not have versioning enabled`,
-						};
-					}
-					const body = await safeReadBody(event, utils, method);
-					const versionId1 = body['versionId1'];
-					const versionId2 = body['versionId2'];
-					if (typeof versionId1 !== 'string' || typeof versionId2 !== 'string') {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: 'Missing version IDs',
-							message: 'Both versionId1 and versionId2 are required',
-						};
-					}
-					const differences = await versionOps.compare(
-						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- string validated above
-						versionId1 as string,
-						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- string validated above
-						versionId2 as string,
-						seg1,
-					);
-					return { differences };
-				} catch (error) {
-					if (error instanceof Error && error.name === 'AccessDeniedError') {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-					utils.setResponseStatus(event, 500);
-					return {
-						error: 'Failed to compare versions',
-						message: sanitizeErrorMessage(error, 'Unknown error'),
-					};
-				}
+				const body = await safeReadBody(event, utils, method);
+				const result = await handleCompareVersionsRequest({
+					collectionSlug,
+					id: docId,
+					versionId1: body['versionId1'],
+					versionId2: body['versionId2'],
+					user,
+				});
+				utils.setResponseStatus(event, result.status);
+				return result.body;
 			}
 
 			// GET /:collection/:id/versions/:versionId
 			if (seg3 && method === 'GET') {
-				try {
-					const versionOps = contextApi.collection(collectionSlug).versions();
-					if (!versionOps) {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: 'Versioning not enabled',
-							message: `Collection "${collectionSlug}" does not have versioning enabled`,
-						};
-					}
-					const version = await versionOps.findVersionById(seg3);
-					if (!version) {
-						utils.setResponseStatus(event, 404);
-						return {
-							error: 'Version not found',
-							message: `Version "${seg3}" not found`,
-						};
-					}
-					return version;
-				} catch (error) {
-					if (error instanceof Error && error.name === 'AccessDeniedError') {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-					utils.setResponseStatus(event, 500);
-					return {
-						error: 'Failed to fetch version',
-						message: sanitizeErrorMessage(error, 'Unknown error'),
-					};
-				}
+				const result = await handleGetVersionRequest({
+					collectionSlug,
+					versionId: seg3,
+					user,
+				});
+				utils.setResponseStatus(event, result.status);
+				return result.body;
 			}
 
 			// GET /:collection/:id/versions (list)
 			if (!seg3 && method === 'GET') {
-				try {
-					const versionOps = contextApi.collection(collectionSlug).versions();
-					if (!versionOps) {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: 'Versioning not enabled',
-							message: `Collection "${collectionSlug}" does not have versioning enabled`,
-						};
-					}
-					const result = await versionOps.findVersions(docId, {
-						limit: queryParams['limit'] ? Number(queryParams['limit']) : undefined,
-						page: queryParams['page'] ? Number(queryParams['page']) : undefined,
-						includeAutosave: queryParams['includeAutosave'] === 'true',
-					});
-					return result;
-				} catch (error) {
-					if (error instanceof Error && error.name === 'AccessDeniedError') {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-					utils.setResponseStatus(event, 500);
-					return {
-						error: 'Failed to fetch versions',
-						message: sanitizeErrorMessage(error, 'Unknown error'),
-					};
-				}
+				const result = await handleListVersionsRequest({
+					collectionSlug,
+					id: docId,
+					limit: queryParams['limit'] ? Number(queryParams['limit']) : undefined,
+					page: queryParams['page'] ? Number(queryParams['page']) : undefined,
+					includeAutosave: queryParams['includeAutosave'] === 'true',
+					user,
+				});
+				utils.setResponseStatus(event, result.status);
+				return result.body;
 			}
 		}
 
@@ -1051,73 +963,51 @@ export function createComprehensiveMomentumHandler(
 			const collectionSlug = seg0;
 			const docId = seg1;
 			const action = seg2;
-			const contextApi = getContextualAPI(user);
 
-			if (
-				action === 'publish' ||
-				action === 'unpublish' ||
-				action === 'draft' ||
-				action === 'schedule-publish' ||
-				action === 'cancel-scheduled-publish'
-			) {
-				try {
-					const versionOps = contextApi.collection(collectionSlug).versions();
-					if (!versionOps) {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: 'Versioning not enabled',
-							message: `Collection "${collectionSlug}" does not have versioning enabled`,
-						};
-					}
+			if (action === 'publish') {
+				const result = await handlePublishRequest({ collectionSlug, id: docId, user });
+				utils.setResponseStatus(event, result.status);
+				return result.body;
+			}
 
-					if (action === 'publish') {
-						const published = await versionOps.publish(docId);
-						return { doc: published, message: 'Document published successfully' };
-					}
+			if (action === 'unpublish') {
+				const result = await handleUnpublishRequest({ collectionSlug, id: docId, user });
+				utils.setResponseStatus(event, result.status);
+				return result.body;
+			}
 
-					if (action === 'unpublish') {
-						const unpublished = await versionOps.unpublish(docId);
-						return {
-							doc: unpublished,
-							message: 'Document unpublished successfully',
-						};
-					}
+			if (action === 'draft') {
+				const body = await safeReadBody(event, utils, method);
+				const result = await handleSaveDraftRequest({
+					collectionSlug,
+					id: docId,
+					data: body,
+					user,
+				});
+				utils.setResponseStatus(event, result.status);
+				return result.body;
+			}
 
-					if (action === 'draft') {
-						const body = await safeReadBody(event, utils, method);
-						const draft = await versionOps.saveDraft(docId, body);
-						return { version: draft, message: 'Draft saved successfully' };
-					}
+			if (action === 'schedule-publish') {
+				const body = await safeReadBody(event, utils, method);
+				const result = await handleSchedulePublishRequest({
+					collectionSlug,
+					id: docId,
+					publishAt: body['publishAt'],
+					user,
+				});
+				utils.setResponseStatus(event, result.status);
+				return result.body;
+			}
 
-					if (action === 'schedule-publish') {
-						const body = await safeReadBody(event, utils, method);
-						const publishAt = body['publishAt'];
-						if (typeof publishAt !== 'string') {
-							utils.setResponseStatus(event, 400);
-							return {
-								error: 'Missing publishAt',
-								message: 'A publishAt ISO date string is required',
-							};
-						}
-						const result = await versionOps.schedulePublish(docId, publishAt);
-						return result;
-					}
-
-					if (action === 'cancel-scheduled-publish') {
-						await versionOps.cancelScheduledPublish(docId);
-						return { message: 'Scheduled publish cancelled' };
-					}
-				} catch (error) {
-					if (error instanceof Error && error.name === 'AccessDeniedError') {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-					utils.setResponseStatus(event, 500);
-					return {
-						error: `Failed to ${action.replace(/-/g, ' ')}`,
-						message: sanitizeErrorMessage(error, 'Unknown error'),
-					};
-				}
+			if (action === 'cancel-scheduled-publish') {
+				const result = await handleCancelScheduledPublishRequest({
+					collectionSlug,
+					id: docId,
+					user,
+				});
+				utils.setResponseStatus(event, result.status);
+				return result.body;
 			}
 
 			// POST /:collection/:id/restore (soft-delete restore)

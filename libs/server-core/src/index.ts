@@ -178,6 +178,28 @@ export type {
 	UpdateGlobalParams,
 } from './lib/admin-handlers';
 
+// Version Route Handlers
+export {
+	handleListVersionsRequest,
+	handleGetVersionRequest,
+	handleRestoreVersionRequest,
+	handleCompareVersionsRequest,
+	handlePublishRequest,
+	handleUnpublishRequest,
+	handleSaveDraftRequest,
+	handleSchedulePublishRequest,
+	handleCancelScheduledPublishRequest,
+} from './lib/version-handlers';
+export type {
+	ListVersionsParams,
+	GetVersionParams,
+	RestoreVersionParams,
+	CompareVersionsParams,
+	PublishParams,
+	SaveDraftParams,
+	SchedulePublishParams,
+} from './lib/version-handlers';
+
 // Import/Export
 export {
 	exportToJson,
