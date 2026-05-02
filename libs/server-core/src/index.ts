@@ -90,7 +90,13 @@ export {
 
 // GraphQL
 export { buildGraphQLSchema, type GraphQLContext } from './lib/graphql-schema';
-export { executeGraphQL, type GraphQLRequestBody, type GraphQLResult } from './lib/graphql-handler';
+export {
+	executeGraphQL,
+	handleGraphQLPostRequest,
+	handleGraphQLGetRequest,
+	type GraphQLRequestBody,
+	type GraphQLResult,
+} from './lib/graphql-handler';
 export { GraphQLJSON } from './lib/graphql-scalars';
 
 // API Keys
@@ -162,6 +168,65 @@ export {
 	type ImportHandlerParams,
 	type HandlerResult,
 } from './lib/import-export-handler';
+
+// Admin Route Handlers (Access, Status, Globals)
+export {
+	handleAccessRequest,
+	handleStatusRequest,
+	handleGetGlobalRequest,
+	handleUpdateGlobalRequest,
+} from './lib/admin-handlers';
+export type {
+	AccessHandlerParams,
+	AccessResponseBody,
+	StatusHandlerParams,
+	GetGlobalParams,
+	UpdateGlobalParams,
+} from './lib/admin-handlers';
+
+// Batch Handler
+export { handleBatchRequest, MAX_BATCH_SIZE } from './lib/batch-handler';
+export type { BatchHandlerParams } from './lib/batch-handler';
+
+// Preview Handler
+export { handlePreviewRequest } from './lib/preview-handler';
+export type { PreviewHandlerParams } from './lib/preview-handler';
+
+// Media Handlers (path validation, serve, upload, collection upload)
+export {
+	validateMediaFilePath,
+	handleMediaServeRequest,
+	handleMediaUploadRequest,
+	handleMediaCollectionUploadRequest,
+} from './lib/media-handlers';
+export type {
+	MediaServeParams,
+	MediaServeBody,
+	MediaUploadParams,
+	MediaCollectionUploadParams,
+} from './lib/media-handlers';
+
+// Version Route Handlers
+export {
+	handleListVersionsRequest,
+	handleGetVersionRequest,
+	handleRestoreVersionRequest,
+	handleCompareVersionsRequest,
+	handlePublishRequest,
+	handleUnpublishRequest,
+	handleSaveDraftRequest,
+	handleSchedulePublishRequest,
+	handleCancelScheduledPublishRequest,
+} from './lib/version-handlers';
+export type {
+	ListVersionsParams,
+	GetVersionParams,
+	RestoreVersionParams,
+	CompareVersionsParams,
+	PublishParams,
+	SaveDraftParams,
+	SchedulePublishParams,
+} from './lib/version-handlers';
 
 // Import/Export
 export {

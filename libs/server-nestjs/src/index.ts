@@ -22,6 +22,7 @@ export { HealthController } from './lib/controllers/health.controller';
 export { AccessController } from './lib/controllers/access.controller';
 export { CollectionController } from './lib/controllers/collection.controller';
 export { GlobalsController } from './lib/controllers/globals.controller';
+export { StatusController } from './lib/controllers/status.controller';
 
 // Guards & Middleware
 export { MomentumAuthGuard } from './lib/guards/auth.guard';

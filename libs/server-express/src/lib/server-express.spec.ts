@@ -3,7 +3,12 @@ import express from 'express';
 import request from 'supertest';
 import { momentumApiMiddleware } from './server-express';
 import { createInMemoryAdapter, resetMomentumAPI } from '@momentumcms/server-core';
-import type { CollectionConfig, MomentumConfig, DatabaseAdapter } from '@momentumcms/core';
+import type {
+	CollectionConfig,
+	MomentumConfig,
+	DatabaseAdapter,
+	StorageAdapter,
+} from '@momentumcms/core';
 
 // Mock collections for testing
 const mockPostsCollection: CollectionConfig = {
@@ -267,6 +272,54 @@ describe('momentumApiMiddleware', () => {
 		it('should include X-Permitted-Cross-Domain-Policies: none', async () => {
 			const res = await request(app).get('/api/posts');
 			expect(res.headers['x-permitted-cross-domain-policies']).toBe('none');
+		});
+	});
+
+	/**
+	 * Defends against an unnecessary buffer copy regression in
+	 * `GET /api/media/file/*`: the storage adapter returns a buffer; the
+	 * adapter should pass that buffer straight to `res.send` without
+	 * wrapping it in `Buffer.from(...)`, which allocates and copies the
+	 * entire payload on every media request.
+	 */
+	describe('GET /media/file/* serves without copying', () => {
+		it('passes the storage buffer to res.send by reference (no Buffer.from copy)', async () => {
+			const storedBuffer = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 5, 6, 7, 8]);
+			const storageAdapter: StorageAdapter = {
+				upload: async () => ({
+					path: 'photo.jpg',
+					url: '/photo.jpg',
+					size: storedBuffer.length,
+				}),
+				delete: async () => true,
+				getUrl: () => '/photo.jpg',
+				exists: async () => true,
+				read: async () => storedBuffer,
+			};
+			const mediaConfig: MomentumConfig = {
+				collections: [mockPostsCollection],
+				db: { adapter: createInMemoryAdapter() },
+				server: { port: 4000 },
+				storage: { adapter: storageAdapter },
+			};
+			resetMomentumAPI();
+			const mediaApp = express();
+			let capturedSendArg: unknown = null;
+			mediaApp.use((_req, res, next) => {
+				const originalSend = res.send.bind(res);
+				res.send = (body: unknown) => {
+					capturedSendArg = body;
+					return originalSend(body);
+				};
+				next();
+			});
+			mediaApp.use('/api', momentumApiMiddleware(mediaConfig));
+
+			const res = await request(mediaApp).get('/api/media/file/photo.jpg');
+
+			expect(res.status).toBe(200);
+			// Same reference — no copy. `Buffer.from(buffer)` would produce a new Buffer.
+			expect(capturedSendArg).toBe(storedBuffer);
 		});
 	});
 

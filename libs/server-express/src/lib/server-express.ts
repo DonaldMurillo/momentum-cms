@@ -3,23 +3,34 @@ import type { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import {
 	createMomentumHandlers,
-	getCollectionPermissions,
 	getMomentumAPI,
-	GlobalNotFoundError,
-	handleUpload,
-	handleCollectionUpload,
-	handleFileGet,
+	handleAccessRequest,
+	handleStatusRequest,
+	handleGetGlobalRequest,
+	handleUpdateGlobalRequest,
+	handleListVersionsRequest,
+	handleGetVersionRequest,
+	handleRestoreVersionRequest,
+	handleCompareVersionsRequest,
+	handlePublishRequest,
+	handleUnpublishRequest,
+	handleSaveDraftRequest,
+	handleSchedulePublishRequest,
+	handleCancelScheduledPublishRequest,
+	handleBatchRequest,
+	handleGraphQLPostRequest,
+	handleGraphQLGetRequest,
+	handlePreviewRequest,
+	handleMediaServeRequest,
+	handleMediaUploadRequest,
+	handleMediaCollectionUploadRequest,
 	getUploadConfig,
 	buildGraphQLSchema,
-	executeGraphQL,
 	generateOpenAPISpec,
 	getSwaggerUIHTML,
 	handleExportRequest,
 	handleImportRequest,
-	renderPreviewHTML,
 	type MomentumRequest,
-	type UploadRequest,
-	type GraphQLRequestBody,
 	type OpenAPIGeneratorOptions,
 	sanitizeErrorMessage,
 	parseWhereParam,
@@ -32,22 +43,10 @@ import type {
 	UploadedFile,
 	DatabaseAdapter,
 	EndpointQueryHelper,
-	CollectionConfig,
 } from '@momentumcms/core';
 import { isUploadCollection } from '@momentumcms/core';
 import { createLogger } from '@momentumcms/logger';
 import { getPluginMiddleware } from './plugin-middleware-registry';
-
-/**
- * Find the email-builder json field in a collection, if any.
- * Returns the field name or undefined.
- */
-function getEmailBuilderFieldName(collection: CollectionConfig): string | undefined {
-	const field = collection.fields.find(
-		(f) => f.type === 'json' && f.admin?.editor === 'email-builder',
-	);
-	return field?.name;
-}
 
 /**
  * Render a full email preview HTML from the doc's email blocks.
@@ -65,8 +64,6 @@ async function renderEmailPreviewHTML(
 	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- email blocks stored as unknown[]
 	return renderEmailFromBlocks({ blocks: blocks as never[] });
 }
-
-// sanitizeErrorMessage and parseWhereParam are imported from @momentumcms/server-core
 
 /**
  * Extended Express Request with user context from auth middleware.
@@ -229,8 +226,8 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	// Must be defined BEFORE /:collection routes to avoid matching "access" as a collection slug
 	router.get('/access', async (req: Request, res: Response) => {
 		const user = extractUserFromRequest(req);
-		const permissions = await getCollectionPermissions(config, user);
-		res.json({ collections: permissions });
+		const result = await handleAccessRequest({ config, user });
+		res.status(result.status).json(result.body);
 	});
 
 	// ============================================
@@ -241,43 +238,21 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 	// Route: POST /graphql - GraphQL API
 	router.post('/graphql', async (req: Request, res: Response) => {
-		const user = extractUserFromRequest(req);
-
-		const rawBody = getBody(req);
-		const body: GraphQLRequestBody = {
-			query: typeof rawBody['query'] === 'string' ? rawBody['query'] : '',
-			variables:
-				typeof rawBody['variables'] === 'object' && rawBody['variables'] !== null
-					? // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-						(rawBody['variables'] as Record<string, unknown>)
-					: undefined,
-			operationName:
-				typeof rawBody['operationName'] === 'string' ? rawBody['operationName'] : undefined,
-		};
-
-		const result = await executeGraphQL(graphqlSchema, body, {
-			user,
-		});
-
+		const result = await handleGraphQLPostRequest(
+			graphqlSchema,
+			getBody(req),
+			extractUserFromRequest(req),
+		);
 		res.status(result.status).json(result.body);
 	});
 
 	// Route: GET /graphql - GraphQL introspection (for tools like GraphiQL)
 	router.get('/graphql', async (req: Request, res: Response) => {
-		const user = extractUserFromRequest(req);
-		const queryParam = req.query['query'];
-		if (typeof queryParam !== 'string') {
-			res.status(400).json({ errors: [{ message: 'Query parameter required' }] });
-			return;
-		}
-
-		const result = await executeGraphQL(
+		const result = await handleGraphQLGetRequest(
 			graphqlSchema,
-			{ query: queryParam },
-			{ user },
-			{ readOnly: true },
+			req.query['query'],
+			extractUserFromRequest(req),
 		);
-
 		res.status(result.status).json(result.body);
 	});
 
@@ -288,49 +263,24 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 	// Route: GET /globals/:slug - Read a global document
 	router.get('/globals/:slug', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const depthParam = req.query['depth'];
-			const depth = typeof depthParam === 'string' ? parseInt(depthParam, 10) || 0 : 0;
-			const slug = req.params['slug'];
-			const doc = await contextApi.global(slug).findOne({ depth });
-			res.json({ doc });
-		} catch (error) {
-			if (error instanceof GlobalNotFoundError) {
-				res.status(404).json({ error: sanitizeErrorMessage(error, 'Global not found') });
-			} else if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-			} else {
-				res.status(500).json({ error: sanitizeErrorMessage(error, 'Failed to read global') });
-			}
-		}
+		const depthParam = req.query['depth'];
+		const depth = typeof depthParam === 'string' ? parseInt(depthParam, 10) || 0 : 0;
+		const result = await handleGetGlobalRequest({
+			slug: req.params['slug'],
+			depth,
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: PATCH /globals/:slug - Update a global document
 	router.patch('/globals/:slug', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const slug = req.params['slug'];
-			const data = getBody(req);
-			const doc = await contextApi.global(slug).update(data);
-			res.json({ doc });
-		} catch (error) {
-			if (error instanceof GlobalNotFoundError) {
-				res.status(404).json({ error: sanitizeErrorMessage(error, 'Global not found') });
-			} else if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-			} else if (error instanceof Error && error.name === 'ValidationError') {
-				res.status(400).json({ error: sanitizeErrorMessage(error, 'Validation failed') });
-			} else {
-				res.status(500).json({ error: sanitizeErrorMessage(error, 'Failed to update global') });
-			}
-		}
+		const result = await handleUpdateGlobalRequest({
+			slug: req.params['slug'],
+			data: getBody(req),
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// ============================================
@@ -340,370 +290,114 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 
 	// Route: GET /:collection/:id/versions - List versions for a document
 	router.get('/:collection/:id/versions', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			const result = await versionOps.findVersions(req.params['id'], {
-				limit: req.query['limit'] ? Number(req.query['limit']) : undefined,
-				page: req.query['page'] ? Number(req.query['page']) : undefined,
-				includeAutosave: req.query['includeAutosave'] === 'true',
-			});
-
-			res.json(result);
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to fetch versions', message });
-		}
+		const result = await handleListVersionsRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			limit: req.query['limit'] ? Number(req.query['limit']) : undefined,
+			page: req.query['page'] ? Number(req.query['page']) : undefined,
+			includeAutosave: req.query['includeAutosave'] === 'true',
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: GET /:collection/:id/versions/:versionId - Get specific version
 	router.get('/:collection/:id/versions/:versionId', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			const version = await versionOps.findVersionById(req.params['versionId']);
-
-			if (!version) {
-				res.status(404).json({
-					error: 'Version not found',
-					message: `Version "${req.params['versionId']}" not found`,
-				});
-				return;
-			}
-
-			res.json(version);
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to fetch version', message });
-		}
+		const result = await handleGetVersionRequest({
+			collectionSlug: req.params['collection'],
+			versionId: req.params['versionId'],
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: POST /:collection/:id/versions/restore - Restore a version
 	router.post('/:collection/:id/versions/restore', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			const body = getBody(req);
-			const versionId = body['versionId'];
-
-			if (typeof versionId !== 'string') {
-				res.status(400).json({
-					error: 'Invalid request',
-					message: 'versionId is required in request body',
-				});
-				return;
-			}
-
-			const restored = await versionOps.restore({
-				versionId,
-				docId: req.params['id'],
-				publish: body['publish'] === true,
-			});
-
-			res.json({ doc: restored, message: 'Version restored successfully' });
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.message.includes('mismatch')) {
-				res.status(400).json({ error: 'Version parent mismatch', message });
-				return;
-			}
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to restore version', message });
-		}
+		const body = getBody(req);
+		const result = await handleRestoreVersionRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			versionId: body['versionId'],
+			publish: body['publish'],
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: POST /:collection/:id/publish - Publish a document
 	router.post('/:collection/:id/publish', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			const published = await versionOps.publish(req.params['id']);
-
-			res.json({ doc: published, message: 'Document published successfully' });
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to publish document', message });
-		}
+		const result = await handlePublishRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
-	// Route: POST /:collection/:id/schedule-publish - Schedule a document for future publishing
+	// Route: POST /:collection/:id/schedule-publish - Schedule for future publishing
 	router.post('/:collection/:id/schedule-publish', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- req.body type unknown
-			const { publishAt } = req.body as { publishAt?: string };
-			if (!publishAt) {
-				res.status(400).json({
-					error: 'Missing publishAt',
-					message: 'A publishAt ISO date string is required',
-				});
-				return;
-			}
-
-			const result = await versionOps.schedulePublish(req.params['id'], publishAt);
-			res.json(result);
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to schedule publish', message });
-		}
+		const body = getBody(req);
+		const result = await handleSchedulePublishRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			publishAt: body['publishAt'],
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: POST /:collection/:id/cancel-scheduled-publish - Cancel scheduled publish
 	router.post('/:collection/:id/cancel-scheduled-publish', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			await versionOps.cancelScheduledPublish(req.params['id']);
-			res.json({ message: 'Scheduled publish cancelled' });
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to cancel scheduled publish', message });
-		}
+		const result = await handleCancelScheduledPublishRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: POST /:collection/:id/unpublish - Unpublish a document
 	router.post('/:collection/:id/unpublish', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			const unpublished = await versionOps.unpublish(req.params['id']);
-
-			res.json({ doc: unpublished, message: 'Document unpublished successfully' });
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to unpublish document', message });
-		}
+		const result = await handleUnpublishRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: POST /:collection/:id/draft - Save a draft (autosave)
 	router.post('/:collection/:id/draft', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			const body = getBody(req);
-			const draft = await versionOps.saveDraft(req.params['id'], body);
-
-			res.json({ version: draft, message: 'Draft saved successfully' });
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to save draft', message });
-		}
+		const result = await handleSaveDraftRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			data: getBody(req),
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: POST /:collection/:id/versions/compare - Compare two versions
 	router.post('/:collection/:id/versions/compare', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Request body typing
-			const { versionId1, versionId2 } = req.body as {
-				versionId1: string;
-				versionId2: string;
-			};
-
-			if (!versionId1 || !versionId2) {
-				res.status(400).json({
-					error: 'Missing version IDs',
-					message: 'Both versionId1 and versionId2 are required',
-				});
-				return;
-			}
-
-			const parentId = req.params['id'];
-			const differences = await versionOps.compare(versionId1, versionId2, parentId);
-
-			res.json({ differences });
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (error instanceof Error && error.name === 'AccessDeniedError') {
-				res.status(403).json({ error: 'Access denied' });
-				return;
-			}
-			res.status(500).json({ error: 'Failed to compare versions', message });
-		}
+		const body = getBody(req);
+		const result = await handleCompareVersionsRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			versionId1: body['versionId1'],
+			versionId2: body['versionId2'],
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// Route: GET /:collection/:id/status - Get document status
 	router.get('/:collection/:id/status', async (req: Request, res: Response) => {
-		try {
-			const api = getMomentumAPI();
-			const user = extractUserFromRequest(req);
-			const contextApi = user ? api.setContext({ user }) : api;
-
-			const collectionOps = contextApi.collection(req.params['collection']);
-			const versionOps = collectionOps.versions();
-
-			if (!versionOps) {
-				res.status(400).json({
-					error: 'Versioning not enabled',
-					message: `Collection "${req.params['collection']}" does not have versioning enabled`,
-				});
-				return;
-			}
-
-			const status = await versionOps.getStatus(req.params['id']);
-
-			res.json({ status });
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			let status = 500;
-			if (error instanceof Error) {
-				if (error.name === 'AccessDeniedError') status = 403;
-				else if (error.name === 'DocumentNotFoundError') status = 404;
-			}
-			res
-				.status(status)
-				.json({ error: status === 403 ? 'Access denied' : 'Failed to get status', message });
-		}
+		const result = await handleStatusRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// ============================================
@@ -712,68 +406,32 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	// Must be defined BEFORE generic /:collection/:id routes
 	// ============================================
 
-	/** Shared handler for preview rendering (GET loads from DB, POST uses request body). */
-	async function handlePreviewRequest(req: Request, res: Response): Promise<void> {
-		try {
-			const slug = req.params['collection'];
-			const id = req.params['id'];
-			const user = extractUserFromRequest(req);
-			if (!user) {
-				res.status(401).json({ error: 'Authentication required to access preview' });
-				return;
+	/** Adapter-side dispatch into the shared preview handler. */
+	async function dispatchPreview(req: Request, res: Response): Promise<void> {
+		const result = await handlePreviewRequest({
+			config,
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			method: req.method === 'POST' ? 'POST' : 'GET',
+			postBody: req.method === 'POST' ? getBody(req) : undefined,
+			user: extractUserFromRequest(req),
+			renderEmail: renderEmailPreviewHTML,
+		});
+		if (result.headers) {
+			for (const [key, value] of Object.entries(result.headers)) {
+				res.setHeader(key, value);
 			}
-
-			const collectionConfig = config.collections.find((c) => c.slug === slug);
-			if (!collectionConfig) {
-				res.status(404).json({ error: 'Collection not found' });
-				return;
-			}
-
-			// Enforce collection-level access.read before rendering
-			const accessFn = collectionConfig.access?.read;
-			if (accessFn) {
-				const allowed = await Promise.resolve(accessFn({ req: { user } }));
-				if (!allowed) {
-					res.status(403).json({ error: 'Access denied' });
-					return;
-				}
-			}
-
-			let doc: Record<string, unknown>;
-			if (req.method === 'POST' && req.body?.data) {
-				// Live preview: render from form data sent by the client
-				// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- POST body contains form data
-				doc = req.body.data as Record<string, unknown>;
-			} else {
-				// Initial load: render from database
-				const api = getMomentumAPI();
-				const contextApi = user ? api.setContext({ user }) : api;
-				doc = await contextApi.collection(slug).findById(id);
-			}
-
-			// For collections with an email-builder field, render the email directly
-			const emailField = getEmailBuilderFieldName(collectionConfig);
-			const html = emailField
-				? await renderEmailPreviewHTML(doc, emailField)
-				: renderPreviewHTML({ doc, collection: collectionConfig });
-			res.setHeader('Content-Type', 'text/html; charset=utf-8');
-			res.send(html);
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Unknown error');
-			if (message.includes('Access denied')) {
-				res.status(403).json({ error: message });
-				return;
-			}
-			if (message.includes('not found')) {
-				res.status(404).json({ error: message });
-				return;
-			}
-			res.status(500).json({ error: 'Preview failed', message });
+		}
+		res.status(result.status);
+		if (typeof result.body === 'string') {
+			res.send(result.body);
+		} else {
+			res.json(result.body);
 		}
 	}
 
-	router.get('/:collection/:id/preview', handlePreviewRequest);
-	router.post('/:collection/:id/preview', handlePreviewRequest);
+	router.get('/:collection/:id/preview', dispatchPreview);
+	router.post('/:collection/:id/preview', dispatchPreview);
 
 	// ============================================
 	// Media Upload Routes
@@ -794,34 +452,20 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	);
 
 	/**
-	 * Handle POST for an upload collection: extract file + fields, delegate to handleCollectionUpload.
+	 * Handle POST for an upload collection: extract file + fields, delegate to the shared handler.
 	 */
 	async function handleUploadCollectionPost(req: Request, res: Response): Promise<void> {
 		const slug = req.params['collection'];
 		const collectionConfig = config.collections.find((c) => c.slug === slug);
-		if (!collectionConfig?.upload) {
-			res.status(400).json({ error: 'Not an upload collection' });
-			return;
-		}
-
-		const uploadConfig = getUploadConfig(config);
-		if (!uploadConfig) {
-			res.status(500).json({ error: 'Storage not configured' });
-			return;
-		}
-
 		const multerFile = req.file;
-		if (!multerFile) {
-			res.status(400).json({ error: 'No file provided' });
-			return;
-		}
-
-		const file: UploadedFile = {
-			originalName: multerFile.originalname,
-			mimeType: multerFile.mimetype,
-			size: multerFile.size,
-			buffer: multerFile.buffer,
-		};
+		const file: UploadedFile | null = multerFile
+			? {
+					originalName: multerFile.originalname,
+					mimeType: multerFile.mimetype,
+					size: multerFile.size,
+					buffer: multerFile.buffer,
+				}
+			: null;
 
 		// Extract non-file fields from multipart body
 		const fields: Record<string, unknown> = {};
@@ -834,15 +478,15 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 			}
 		}
 
-		const response = await handleCollectionUpload(uploadConfig, {
-			file,
-			user: extractUserFromRequest(req),
-			fields,
+		const result = await handleMediaCollectionUploadRequest({
+			uploadConfig: getUploadConfig(config),
 			collectionSlug: slug,
-			collectionUpload: collectionConfig.upload,
+			collectionUpload: collectionConfig?.upload,
+			file,
+			fields,
+			user: extractUserFromRequest(req),
 		});
-
-		res.status(response.status).json(response);
+		res.status(result.status).json(result.body);
 	}
 
 	// Route: POST /media/upload - Upload a file (legacy endpoint)
@@ -859,92 +503,45 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		},
 		upload.single('file'),
 		async (req: Request, res: Response) => {
-			const uploadConfig = getUploadConfig(config);
-			if (!uploadConfig) {
-				res.status(500).json({ error: 'Storage not configured' });
-				return;
-			}
-
 			const multerFile = req.file;
-			if (!multerFile) {
-				res.status(400).json({ error: 'No file provided' });
-				return;
-			}
+			const file: UploadedFile | null = multerFile
+				? {
+						originalName: multerFile.originalname,
+						mimeType: multerFile.mimetype,
+						size: multerFile.size,
+						buffer: multerFile.buffer,
+					}
+				: null;
 
-			// Convert multer file to UploadedFile
-			const file: UploadedFile = {
-				originalName: multerFile.originalname,
-				mimeType: multerFile.mimetype,
-				size: multerFile.size,
-				buffer: multerFile.buffer,
-			};
-
-			// Get alt text from body if provided
-			const alt = typeof req.body?.alt === 'string' ? req.body.alt : undefined;
-
-			const uploadRequest: UploadRequest = {
+			const result = await handleMediaUploadRequest({
+				uploadConfig: getUploadConfig(config),
 				file,
 				user: extractUserFromRequest(req),
-				alt,
-			};
-
-			const response = await handleUpload(uploadConfig, uploadRequest);
-			res.status(response.status).json(response);
+				alt: typeof req.body?.alt === 'string' ? req.body.alt : undefined,
+			});
+			res.status(result.status).json(result.body);
 		},
 	);
 
 	// Route: GET /media/file/:path(*) - Serve uploaded files (public)
 	router.get('/media/file/*', async (req: Request, res: Response) => {
-		const uploadConfig = getUploadConfig(config);
-		if (!uploadConfig) {
-			res.status(500).json({ error: 'Storage not configured' });
+		const result = await handleMediaServeRequest({
+			uploadConfig: getUploadConfig(config),
+			rawPath: req.params[0],
+		});
+		if (result.status !== 200) {
+			res.status(result.status).json(result.body);
 			return;
 		}
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- handler success body is the file payload
+		const fileResult = result.body as { buffer: Uint8Array; mimeType?: string };
 
-		// Extract path from URL (everything after /media/file/)
-		const rawPath = req.params[0];
-		if (!rawPath) {
-			res.status(400).json({ error: 'File path required' });
-			return;
+		if (fileResult.mimeType) {
+			res.setHeader('Content-Type', fileResult.mimeType);
 		}
-
-		// Sanitize path to prevent directory traversal
-		const { normalize, isAbsolute, resolve, sep } = await import('node:path');
-		let decodedPath: string;
-		try {
-			decodedPath = decodeURIComponent(rawPath);
-		} catch {
-			res.status(400).json({ error: 'Invalid path encoding' });
-			return;
-		}
-		const filePath = normalize(decodedPath);
-		if (isAbsolute(filePath) || filePath.includes('..') || filePath.includes(`${sep}..`)) {
-			res.status(403).json({ error: 'Invalid file path' });
-			return;
-		}
-		// Double-check: resolve against a fake root and verify we stay inside it
-		const fakeRoot = resolve('/safe-root');
-		const resolved = resolve(fakeRoot, filePath);
-		if (!resolved.startsWith(fakeRoot + sep) && resolved !== fakeRoot) {
-			res.status(403).json({ error: 'Invalid file path' });
-			return;
-		}
-
-		const result = await handleFileGet(uploadConfig.adapter, filePath);
-		if (!result) {
-			res.status(404).json({ error: 'File not found' });
-			return;
-		}
-
-		// Set content type if known
-		if (result.mimeType) {
-			res.setHeader('Content-Type', result.mimeType);
-		}
-
 		// Enable caching for static files
 		res.setHeader('Cache-Control', 'public, max-age=31536000');
-
-		res.send(result.buffer);
+		res.send(fileResult.buffer);
 	});
 
 	// ============================================
@@ -1063,72 +660,14 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	// ============================================
 
 	// Route: POST /:collection/batch - Batch create/update/delete
-	const MAX_BATCH_SIZE = 100;
 	router.post('/:collection/batch', async (req: Request, res: Response) => {
-		if (isManagedCollection(req.params['collection'])) {
-			res.status(403).json({ error: 'Managed collection is read-only' });
-			return;
-		}
-		try {
-			const user = extractUserFromRequest(req);
-			const api = getMomentumAPI();
-			const contextApi = user ? api.setContext({ user }) : api;
-			const body = getBody(req);
-			const operation = body['operation'];
-			const collectionSlug = req.params['collection'];
-
-			if (operation === 'create') {
-				const items = body['items'];
-				if (!Array.isArray(items)) {
-					res.status(400).json({ error: 'items must be an array' });
-					return;
-				}
-				if (items.length > MAX_BATCH_SIZE) {
-					res.status(400).json({ error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} items` });
-					return;
-				}
-				const docs = await contextApi.collection(collectionSlug).batchCreate(items);
-				res.status(201).json({ docs, message: `${docs.length} documents created` });
-			} else if (operation === 'update') {
-				const items = body['items'];
-				if (!Array.isArray(items)) {
-					res.status(400).json({ error: 'items must be an array' });
-					return;
-				}
-				if (items.length > MAX_BATCH_SIZE) {
-					res.status(400).json({ error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} items` });
-					return;
-				}
-				const docs = await contextApi.collection(collectionSlug).batchUpdate(items);
-				res.json({ docs, message: `${docs.length} documents updated` });
-			} else if (operation === 'delete') {
-				const ids = body['ids'];
-				if (!Array.isArray(ids)) {
-					res.status(400).json({ error: 'ids must be an array' });
-					return;
-				}
-				if (ids.length > MAX_BATCH_SIZE) {
-					res.status(400).json({ error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} items` });
-					return;
-				}
-				const results = await contextApi.collection(collectionSlug).batchDelete(ids);
-				res.json({ results, message: `${results.length} documents deleted` });
-			} else {
-				res.status(400).json({
-					error: 'Invalid operation',
-					message: 'operation must be "create", "update", or "delete"',
-				});
-			}
-		} catch (error) {
-			const message = sanitizeErrorMessage(error, 'Batch operation failed');
-			let status = 500;
-			if (error instanceof Error) {
-				if (error.name === 'ValidationError') status = 400;
-				else if (error.name === 'DocumentNotFoundError') status = 404;
-				else if (error.name === 'AccessDeniedError') status = 403;
-			}
-			res.status(status).json({ error: message });
-		}
+		const result = await handleBatchRequest({
+			config,
+			collectionSlug: req.params['collection'],
+			body: getBody(req),
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
 	});
 
 	// ============================================

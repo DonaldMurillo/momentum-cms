@@ -1,17 +1,30 @@
 import {
 	createMomentumHandlers,
 	getMomentumAPI,
-	getCollectionPermissions,
-	GlobalNotFoundError,
+	handleAccessRequest,
+	handleStatusRequest,
+	handleGetGlobalRequest,
+	handleUpdateGlobalRequest,
+	handleListVersionsRequest,
+	handleGetVersionRequest,
+	handleRestoreVersionRequest,
+	handleCompareVersionsRequest,
+	handlePublishRequest,
+	handleUnpublishRequest,
+	handleSaveDraftRequest,
+	handleSchedulePublishRequest,
+	handleCancelScheduledPublishRequest,
+	handleBatchRequest,
+	handleGraphQLPostRequest,
+	handleGraphQLGetRequest,
+	handlePreviewRequest,
+	handleMediaServeRequest,
+	handleMediaUploadRequest,
+	handleMediaCollectionUploadRequest,
 	buildGraphQLSchema,
-	executeGraphQL,
-	handleUpload,
-	handleFileGet,
-	handleCollectionUpload,
 	getUploadConfig,
 	handleExportRequest,
 	handleImportRequest,
-	renderPreviewHTML,
 	generateOpenAPISpec,
 	getSwaggerUIHTML,
 	createAdapterApiKeyStore,
@@ -23,9 +36,6 @@ import {
 	type OpenAPIDocument,
 	type MomentumRequest,
 	type MomentumResponse,
-	type GraphQLRequestBody,
-	type UploadRequest,
-	type CollectionUploadRequest,
 	sanitizeErrorMessage,
 	parseWhereParam,
 	validateMimeType,
@@ -37,20 +47,8 @@ import type {
 	UploadedFile,
 	EndpointQueryHelper,
 	DatabaseAdapter,
-	CollectionConfig,
 } from '@momentumcms/core';
 import { isUploadCollection } from '@momentumcms/core';
-
-/**
- * Find the email-builder json field in a collection, if any.
- * Returns the field name or undefined.
- */
-function getEmailBuilderFieldName(collection: CollectionConfig): string | undefined {
-	const field = collection.fields.find(
-		(f) => f.type === 'json' && f.admin?.editor === 'email-builder',
-	);
-	return field?.name;
-}
 
 /**
  * Render a full email preview HTML from the doc's email blocks.
@@ -154,8 +152,6 @@ export interface MomentumH3Utils {
 // ============================================
 // Shared Helpers
 // ============================================
-
-// sanitizeErrorMessage and parseWhereParam are imported from @momentumcms/server-core
 
 /**
  * Convert flat bracket-style query params from h3/ufo into nested objects.
@@ -330,8 +326,6 @@ export function createSimpleMomentumHandler(config: MomentumConfig | ResolvedMom
 // Comprehensive Handler
 // ============================================
 
-const MAX_BATCH_SIZE = 100;
-
 /**
  * Creates a comprehensive h3 event handler that mirrors all Express API routes.
  * Handles: access control, GraphQL, globals, versioning, publishing, media,
@@ -504,8 +498,9 @@ export function createComprehensiveMomentumHandler(
 		// GET /access
 		// ============================================
 		if (seg0 === 'access' && method === 'GET') {
-			const permissions = await getCollectionPermissions(config, user);
-			return { collections: permissions };
+			const result = await handleAccessRequest({ config, user });
+			utils.setResponseStatus(event, result.status);
+			return result.body;
 		}
 
 		// ============================================
@@ -664,27 +659,12 @@ export function createComprehensiveMomentumHandler(
 		if (seg0 === 'graphql') {
 			if (method === 'POST') {
 				const rawBody = await safeReadBody(event, utils, method);
-				const body: GraphQLRequestBody = {
-					query: typeof rawBody['query'] === 'string' ? rawBody['query'] : '',
-					variables:
-						typeof rawBody['variables'] === 'object' && rawBody['variables'] !== null
-							? // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-								(rawBody['variables'] as Record<string, unknown>)
-							: undefined,
-					operationName:
-						typeof rawBody['operationName'] === 'string' ? rawBody['operationName'] : undefined,
-				};
-				const result = await executeGraphQL(graphqlSchema, body, { user });
+				const result = await handleGraphQLPostRequest(graphqlSchema, rawBody, user);
 				utils.setResponseStatus(event, result.status);
 				return result.body;
 			}
 			if (method === 'GET') {
-				const queryParam = queryParams['query'];
-				if (typeof queryParam !== 'string') {
-					utils.setResponseStatus(event, 400);
-					return { errors: [{ message: 'Query parameter required' }] };
-				}
-				const result = await executeGraphQL(graphqlSchema, { query: queryParam }, { user });
+				const result = await handleGraphQLGetRequest(graphqlSchema, queryParams['query'], user);
 				utils.setResponseStatus(event, result.status);
 				return result.body;
 			}
@@ -695,49 +675,20 @@ export function createComprehensiveMomentumHandler(
 		// ============================================
 		if (seg0 === 'globals' && seg1) {
 			const slug = seg1;
-			const contextApi = getContextualAPI(user);
 
 			if (method === 'GET') {
-				try {
-					const depthParam = queryParams['depth'];
-					const depth = typeof depthParam === 'string' ? parseInt(depthParam, 10) || 0 : 0;
-					const doc = await contextApi.global(slug).findOne({ depth });
-					return { doc };
-				} catch (error) {
-					if (error instanceof GlobalNotFoundError) {
-						utils.setResponseStatus(event, 404);
-						return { error: sanitizeErrorMessage(error, 'Global not found') };
-					}
-					if (error instanceof Error && error.name === 'AccessDeniedError') {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-					utils.setResponseStatus(event, 500);
-					return { error: sanitizeErrorMessage(error, 'Failed to read global') };
-				}
+				const depthParam = queryParams['depth'];
+				const depth = typeof depthParam === 'string' ? parseInt(depthParam, 10) || 0 : 0;
+				const result = await handleGetGlobalRequest({ slug, depth, user });
+				utils.setResponseStatus(event, result.status);
+				return result.body;
 			}
 
 			if (method === 'PATCH') {
-				try {
-					const data = await safeReadBody(event, utils, method);
-					const doc = await contextApi.global(slug).update(data);
-					return { doc };
-				} catch (error) {
-					if (error instanceof GlobalNotFoundError) {
-						utils.setResponseStatus(event, 404);
-						return { error: sanitizeErrorMessage(error, 'Global not found') };
-					}
-					if (error instanceof Error && error.name === 'AccessDeniedError') {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-					if (error instanceof Error && error.name === 'ValidationError') {
-						utils.setResponseStatus(event, 400);
-						return { error: sanitizeErrorMessage(error, 'Validation failed') };
-					}
-					utils.setResponseStatus(event, 500);
-					return { error: sanitizeErrorMessage(error, 'Failed to update global') };
-				}
+				const data = await safeReadBody(event, utils, method);
+				const result = await handleUpdateGlobalRequest({ slug, data, user });
+				utils.setResponseStatus(event, result.status);
+				return result.body;
 			}
 		}
 
@@ -745,100 +696,56 @@ export function createComprehensiveMomentumHandler(
 		// Media: POST /media/upload
 		// ============================================
 		if (seg0 === 'media' && seg1 === 'upload' && method === 'POST') {
+			// Reject unauthenticated requests BEFORE consuming the multipart body —
+			// otherwise an attacker can force the server to allocate up to the body
+			// limit per request just to receive a 401.
 			if (!user) {
 				utils.setResponseStatus(event, 401);
 				return { error: 'Authentication required to upload files' };
 			}
-
-			const uploadConfig = getUploadConfig(config);
-			if (!uploadConfig) {
-				utils.setResponseStatus(event, 500);
-				return { error: 'Storage not configured' };
-			}
-
-			const formData = await utils.readMultipartFormData(event);
-			if (!formData || formData.length === 0) {
-				utils.setResponseStatus(event, 400);
-				return { error: 'No file provided' };
-			}
-
-			// Find the file field
+			const formData = (await utils.readMultipartFormData(event)) ?? [];
 			const fileField = formData.find((f) => f.name === 'file');
-			if (!fileField || !fileField.filename) {
-				utils.setResponseStatus(event, 400);
-				return { error: 'No file provided' };
-			}
-
-			const file: UploadedFile = {
-				originalName: fileField.filename,
-				mimeType: fileField.type ?? 'application/octet-stream',
-				size: fileField.data.length,
-				buffer: fileField.data,
-			};
-
-			// Get alt text from form data if provided
+			const file: UploadedFile | null =
+				fileField && fileField.filename
+					? {
+							originalName: fileField.filename,
+							mimeType: fileField.type ?? 'application/octet-stream',
+							size: fileField.data.length,
+							buffer: fileField.data,
+						}
+					: null;
 			const altField = formData.find((f) => f.name === 'alt');
 			const alt = altField ? altField.data.toString('utf-8') : undefined;
 
-			const uploadRequest: UploadRequest = { file, user, alt };
-			const response = await handleUpload(uploadConfig, uploadRequest);
-			utils.setResponseStatus(event, response.status);
-			return response;
+			const result = await handleMediaUploadRequest({
+				uploadConfig: getUploadConfig(config),
+				file,
+				user,
+				alt,
+			});
+			utils.setResponseStatus(event, result.status);
+			return result.body;
 		}
 
 		// ============================================
 		// Media: GET /media/file/*
 		// ============================================
 		if (seg0 === 'media' && seg1 === 'file' && method === 'GET') {
-			const uploadConfig = getUploadConfig(config);
-			if (!uploadConfig) {
-				utils.setResponseStatus(event, 500);
-				return { error: 'Storage not configured' };
+			const result = await handleMediaServeRequest({
+				uploadConfig: getUploadConfig(config),
+				rawPath: pathSegments.slice(2).join('/'),
+			});
+			if (result.status !== 200) {
+				utils.setResponseStatus(event, result.status);
+				return result.body;
 			}
-
-			const rawPath = pathSegments.slice(2).join('/');
-			if (!rawPath) {
-				utils.setResponseStatus(event, 400);
-				return { error: 'File path required' };
-			}
-
-			// Sanitize path to prevent directory traversal
-			const { normalize, isAbsolute, resolve, sep } = await import('node:path');
-			let decodedPath: string;
-			try {
-				decodedPath = decodeURIComponent(rawPath);
-			} catch {
-				utils.setResponseStatus(event, 400);
-				return { error: 'Invalid path encoding' };
-			}
-			// Reject any path containing traversal sequences before normalization
-			if (decodedPath.includes('..')) {
-				utils.setResponseStatus(event, 403);
-				return { error: 'Invalid file path' };
-			}
-			const filePath = normalize(decodedPath);
-			if (isAbsolute(filePath)) {
-				utils.setResponseStatus(event, 403);
-				return { error: 'Invalid file path' };
-			}
-			const fakeRoot = resolve('/safe-root');
-			const resolved = resolve(fakeRoot, filePath);
-			if (!resolved.startsWith(fakeRoot + sep) && resolved !== fakeRoot) {
-				utils.setResponseStatus(event, 403);
-				return { error: 'Invalid file path' };
-			}
-
-			const result = await handleFileGet(uploadConfig.adapter, filePath);
-			if (!result) {
-				utils.setResponseStatus(event, 404);
-				return { error: 'File not found' };
-			}
-
-			if (result.mimeType) {
-				utils.setResponseHeader(event, 'Content-Type', result.mimeType);
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- handler success body is the file payload
+			const fileResult = result.body as { buffer: Uint8Array; mimeType?: string };
+			if (fileResult.mimeType) {
+				utils.setResponseHeader(event, 'Content-Type', fileResult.mimeType);
 			}
 			utils.setResponseHeader(event, 'Cache-Control', 'public, max-age=31536000');
-			return utils.send(event, result.buffer);
+			return utils.send(event, fileResult.buffer);
 		}
 
 		// ============================================
@@ -848,155 +755,58 @@ export function createComprehensiveMomentumHandler(
 		if (seg2 === 'versions' && seg1) {
 			const collectionSlug = seg0;
 			const docId = seg1;
-			const contextApi = getContextualAPI(user);
 
 			// POST /:collection/:id/versions/restore
 			if (seg3 === 'restore' && method === 'POST') {
-				try {
-					const versionOps = contextApi.collection(collectionSlug).versions();
-					if (!versionOps) {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: 'Versioning not enabled',
-							message: `Collection "${collectionSlug}" does not have versioning enabled`,
-						};
-					}
-					const body = await safeReadBody(event, utils, method);
-					const versionId = body['versionId'];
-					if (typeof versionId !== 'string') {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: 'Invalid request',
-							message: 'versionId is required in request body',
-						};
-					}
-					const restored = await versionOps.restore({
-						versionId,
-						docId,
-						publish: body['publish'] === true,
-					});
-					return { doc: restored, message: 'Version restored successfully' };
-				} catch (error) {
-					if (error instanceof Error && error.name === 'AccessDeniedError') {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-					const message = sanitizeErrorMessage(error, 'Unknown error');
-					if (error instanceof Error && error.message.includes('mismatch')) {
-						utils.setResponseStatus(event, 400);
-						return { error: 'Version parent mismatch', message };
-					}
-					utils.setResponseStatus(event, 500);
-					return {
-						error: 'Failed to restore version',
-						message,
-					};
-				}
+				const body = await safeReadBody(event, utils, method);
+				const result = await handleRestoreVersionRequest({
+					collectionSlug,
+					id: docId,
+					versionId: body['versionId'],
+					publish: body['publish'],
+					user,
+				});
+				utils.setResponseStatus(event, result.status);
+				return result.body;
 			}
 
 			// POST /:collection/:id/versions/compare
 			if (seg3 === 'compare' && method === 'POST') {
-				try {
-					const versionOps = contextApi.collection(collectionSlug).versions();
-					if (!versionOps) {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: 'Versioning not enabled',
-							message: `Collection "${collectionSlug}" does not have versioning enabled`,
-						};
-					}
-					const body = await safeReadBody(event, utils, method);
-					const versionId1 = body['versionId1'];
-					const versionId2 = body['versionId2'];
-					if (typeof versionId1 !== 'string' || typeof versionId2 !== 'string') {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: 'Missing version IDs',
-							message: 'Both versionId1 and versionId2 are required',
-						};
-					}
-					const differences = await versionOps.compare(
-						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- string validated above
-						versionId1 as string,
-						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- string validated above
-						versionId2 as string,
-						seg1,
-					);
-					return { differences };
-				} catch (error) {
-					if (error instanceof Error && error.name === 'AccessDeniedError') {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-					utils.setResponseStatus(event, 500);
-					return {
-						error: 'Failed to compare versions',
-						message: sanitizeErrorMessage(error, 'Unknown error'),
-					};
-				}
+				const body = await safeReadBody(event, utils, method);
+				const result = await handleCompareVersionsRequest({
+					collectionSlug,
+					id: docId,
+					versionId1: body['versionId1'],
+					versionId2: body['versionId2'],
+					user,
+				});
+				utils.setResponseStatus(event, result.status);
+				return result.body;
 			}
 
 			// GET /:collection/:id/versions/:versionId
 			if (seg3 && method === 'GET') {
-				try {
-					const versionOps = contextApi.collection(collectionSlug).versions();
-					if (!versionOps) {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: 'Versioning not enabled',
-							message: `Collection "${collectionSlug}" does not have versioning enabled`,
-						};
-					}
-					const version = await versionOps.findVersionById(seg3);
-					if (!version) {
-						utils.setResponseStatus(event, 404);
-						return {
-							error: 'Version not found',
-							message: `Version "${seg3}" not found`,
-						};
-					}
-					return version;
-				} catch (error) {
-					if (error instanceof Error && error.name === 'AccessDeniedError') {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-					utils.setResponseStatus(event, 500);
-					return {
-						error: 'Failed to fetch version',
-						message: sanitizeErrorMessage(error, 'Unknown error'),
-					};
-				}
+				const result = await handleGetVersionRequest({
+					collectionSlug,
+					versionId: seg3,
+					user,
+				});
+				utils.setResponseStatus(event, result.status);
+				return result.body;
 			}
 
 			// GET /:collection/:id/versions (list)
 			if (!seg3 && method === 'GET') {
-				try {
-					const versionOps = contextApi.collection(collectionSlug).versions();
-					if (!versionOps) {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: 'Versioning not enabled',
-							message: `Collection "${collectionSlug}" does not have versioning enabled`,
-						};
-					}
-					const result = await versionOps.findVersions(docId, {
-						limit: queryParams['limit'] ? Number(queryParams['limit']) : undefined,
-						page: queryParams['page'] ? Number(queryParams['page']) : undefined,
-						includeAutosave: queryParams['includeAutosave'] === 'true',
-					});
-					return result;
-				} catch (error) {
-					if (error instanceof Error && error.name === 'AccessDeniedError') {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-					utils.setResponseStatus(event, 500);
-					return {
-						error: 'Failed to fetch versions',
-						message: sanitizeErrorMessage(error, 'Unknown error'),
-					};
-				}
+				const result = await handleListVersionsRequest({
+					collectionSlug,
+					id: docId,
+					limit: queryParams['limit'] ? Number(queryParams['limit']) : undefined,
+					page: queryParams['page'] ? Number(queryParams['page']) : undefined,
+					includeAutosave: queryParams['includeAutosave'] === 'true',
+					user,
+				});
+				utils.setResponseStatus(event, result.status);
+				return result.body;
 			}
 		}
 
@@ -1006,68 +816,32 @@ export function createComprehensiveMomentumHandler(
 		// Must be checked BEFORE the publishing guard, which catches all 3-segment POSTs.
 		// ============================================
 		if (seg2 === 'preview' && seg1 && (method === 'GET' || method === 'POST')) {
+			// Reject unauthenticated requests BEFORE consuming the JSON body for the
+			// same DoS reason as /media/upload above.
 			if (!user) {
 				utils.setResponseStatus(event, 401);
 				return { error: 'Authentication required to access preview' };
 			}
-			try {
-				const collectionSlug = seg0;
-				const docId = seg1;
-
-				const collectionConfig = config.collections.find((c) => c.slug === collectionSlug);
-				if (!collectionConfig) {
-					utils.setResponseStatus(event, 404);
-					return { error: 'Collection not found' };
+			const postBody = method === 'POST' ? await safeReadBody(event, utils, method) : undefined;
+			const result = await handlePreviewRequest({
+				config,
+				collectionSlug: seg0,
+				id: seg1,
+				method,
+				postBody,
+				user,
+				renderEmail: renderEmailPreviewHTML,
+			});
+			if (result.headers) {
+				for (const [key, value] of Object.entries(result.headers)) {
+					utils.setResponseHeader(event, key, value);
 				}
-
-				// Enforce collection-level access.read before rendering
-				const accessFn = collectionConfig.access?.read;
-				if (accessFn) {
-					const allowed = await Promise.resolve(accessFn({ req: { user } }));
-					if (!allowed) {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-				}
-
-				let docRecord: Record<string, unknown>;
-				if (method === 'POST') {
-					const body = await safeReadBody(event, utils, method);
-					if (body['data'] && typeof body['data'] === 'object') {
-						// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- POST body contains form data
-						docRecord = body['data'] as Record<string, unknown>;
-					} else {
-						utils.setResponseStatus(event, 400);
-						return { error: 'POST preview requires { data: ... } body' };
-					}
-				} else {
-					const contextApi = getContextualAPI(user);
-					// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- doc type from API
-					docRecord = (await contextApi.collection(collectionSlug).findById(docId)) as Record<
-						string,
-						unknown
-					>;
-				}
-
-				const emailField = getEmailBuilderFieldName(collectionConfig);
-				const html = emailField
-					? await renderEmailPreviewHTML(docRecord, emailField)
-					: renderPreviewHTML({ doc: docRecord, collection: collectionConfig });
-				utils.setResponseHeader(event, 'Content-Type', 'text/html; charset=utf-8');
-				return utils.send(event, html);
-			} catch (error) {
-				const message = sanitizeErrorMessage(error, 'Unknown error');
-				if (message.includes('Access denied')) {
-					utils.setResponseStatus(event, 403);
-					return { error: message };
-				}
-				if (message.includes('not found')) {
-					utils.setResponseStatus(event, 404);
-					return { error: message };
-				}
-				utils.setResponseStatus(event, 500);
-				return { error: 'Preview failed', message };
 			}
+			utils.setResponseStatus(event, result.status);
+			if (typeof result.body === 'string') {
+				return utils.send(event, result.body);
+			}
+			return result.body;
 		}
 
 		// ============================================
@@ -1077,73 +851,51 @@ export function createComprehensiveMomentumHandler(
 			const collectionSlug = seg0;
 			const docId = seg1;
 			const action = seg2;
-			const contextApi = getContextualAPI(user);
 
-			if (
-				action === 'publish' ||
-				action === 'unpublish' ||
-				action === 'draft' ||
-				action === 'schedule-publish' ||
-				action === 'cancel-scheduled-publish'
-			) {
-				try {
-					const versionOps = contextApi.collection(collectionSlug).versions();
-					if (!versionOps) {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: 'Versioning not enabled',
-							message: `Collection "${collectionSlug}" does not have versioning enabled`,
-						};
-					}
+			if (action === 'publish') {
+				const result = await handlePublishRequest({ collectionSlug, id: docId, user });
+				utils.setResponseStatus(event, result.status);
+				return result.body;
+			}
 
-					if (action === 'publish') {
-						const published = await versionOps.publish(docId);
-						return { doc: published, message: 'Document published successfully' };
-					}
+			if (action === 'unpublish') {
+				const result = await handleUnpublishRequest({ collectionSlug, id: docId, user });
+				utils.setResponseStatus(event, result.status);
+				return result.body;
+			}
 
-					if (action === 'unpublish') {
-						const unpublished = await versionOps.unpublish(docId);
-						return {
-							doc: unpublished,
-							message: 'Document unpublished successfully',
-						};
-					}
+			if (action === 'draft') {
+				const body = await safeReadBody(event, utils, method);
+				const result = await handleSaveDraftRequest({
+					collectionSlug,
+					id: docId,
+					data: body,
+					user,
+				});
+				utils.setResponseStatus(event, result.status);
+				return result.body;
+			}
 
-					if (action === 'draft') {
-						const body = await safeReadBody(event, utils, method);
-						const draft = await versionOps.saveDraft(docId, body);
-						return { version: draft, message: 'Draft saved successfully' };
-					}
+			if (action === 'schedule-publish') {
+				const body = await safeReadBody(event, utils, method);
+				const result = await handleSchedulePublishRequest({
+					collectionSlug,
+					id: docId,
+					publishAt: body['publishAt'],
+					user,
+				});
+				utils.setResponseStatus(event, result.status);
+				return result.body;
+			}
 
-					if (action === 'schedule-publish') {
-						const body = await safeReadBody(event, utils, method);
-						const publishAt = body['publishAt'];
-						if (typeof publishAt !== 'string') {
-							utils.setResponseStatus(event, 400);
-							return {
-								error: 'Missing publishAt',
-								message: 'A publishAt ISO date string is required',
-							};
-						}
-						const result = await versionOps.schedulePublish(docId, publishAt);
-						return result;
-					}
-
-					if (action === 'cancel-scheduled-publish') {
-						await versionOps.cancelScheduledPublish(docId);
-						return { message: 'Scheduled publish cancelled' };
-					}
-				} catch (error) {
-					if (error instanceof Error && error.name === 'AccessDeniedError') {
-						utils.setResponseStatus(event, 403);
-						return { error: 'Access denied' };
-					}
-					utils.setResponseStatus(event, 500);
-					return {
-						error: `Failed to ${action.replace(/-/g, ' ')}`,
-						message: sanitizeErrorMessage(error, 'Unknown error'),
-					};
-				}
+			if (action === 'cancel-scheduled-publish') {
+				const result = await handleCancelScheduledPublishRequest({
+					collectionSlug,
+					id: docId,
+					user,
+				});
+				utils.setResponseStatus(event, result.status);
+				return result.body;
 			}
 
 			// POST /:collection/:id/restore (soft-delete restore)
@@ -1172,32 +924,13 @@ export function createComprehensiveMomentumHandler(
 		// Status: GET /:collection/:id/status
 		// ============================================
 		if (seg2 === 'status' && seg1 && method === 'GET') {
-			const collectionSlug = seg0;
-			const docId = seg1;
-			const contextApi = getContextualAPI(user);
-
-			try {
-				const versionOps = contextApi.collection(collectionSlug).versions();
-				if (!versionOps) {
-					utils.setResponseStatus(event, 400);
-					return {
-						error: 'Versioning not enabled',
-						message: `Collection "${collectionSlug}" does not have versioning enabled`,
-					};
-				}
-				const status = await versionOps.getStatus(docId);
-				return { status };
-			} catch (error) {
-				if (error instanceof Error && error.name === 'AccessDeniedError') {
-					utils.setResponseStatus(event, 403);
-					return { error: 'Access denied' };
-				}
-				utils.setResponseStatus(event, 500);
-				return {
-					error: 'Failed to get status',
-					message: sanitizeErrorMessage(error, 'Unknown error'),
-				};
-			}
+			const result = await handleStatusRequest({
+				collectionSlug: seg0,
+				id: seg1,
+				user,
+			});
+			utils.setResponseStatus(event, result.status);
+			return result.body;
 		}
 
 		// ============================================
@@ -1231,71 +964,15 @@ export function createComprehensiveMomentumHandler(
 		// Batch: POST /:collection/batch
 		// ============================================
 		if (seg1 === 'batch' && !seg2 && method === 'POST') {
-			const collectionSlug = seg0;
-			if (isManagedCollection(collectionSlug)) {
-				utils.setResponseStatus(event, 403);
-				return { error: 'Managed collection is read-only' };
-			}
-			try {
-				const contextApi = getContextualAPI(user);
-				const body = await safeReadBody(event, utils, method);
-				const operation = body['operation'];
-
-				if (operation === 'create') {
-					const items = body['items'];
-					if (!Array.isArray(items)) {
-						utils.setResponseStatus(event, 400);
-						return { error: 'items must be an array' };
-					}
-					if (items.length > MAX_BATCH_SIZE) {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} items`,
-						};
-					}
-					const docs = await contextApi.collection(collectionSlug).batchCreate(items);
-					utils.setResponseStatus(event, 201);
-					return { docs, message: `${docs.length} documents created` };
-				} else if (operation === 'update') {
-					const items = body['items'];
-					if (!Array.isArray(items)) {
-						utils.setResponseStatus(event, 400);
-						return { error: 'items must be an array' };
-					}
-					if (items.length > MAX_BATCH_SIZE) {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} items`,
-						};
-					}
-					const docs = await contextApi.collection(collectionSlug).batchUpdate(items);
-					return { docs, message: `${docs.length} documents updated` };
-				} else if (operation === 'delete') {
-					const ids = body['ids'];
-					if (!Array.isArray(ids)) {
-						utils.setResponseStatus(event, 400);
-						return { error: 'ids must be an array' };
-					}
-					if (ids.length > MAX_BATCH_SIZE) {
-						utils.setResponseStatus(event, 400);
-						return {
-							error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} items`,
-						};
-					}
-					const results = await contextApi.collection(collectionSlug).batchDelete(ids);
-					return { results, message: `${results.length} documents deleted` };
-				} else {
-					utils.setResponseStatus(event, 400);
-					return {
-						error: 'Invalid operation',
-						message: 'operation must be "create", "update", or "delete"',
-					};
-				}
-			} catch (error) {
-				const status = error instanceof Error && error.name === 'ValidationError' ? 400 : 500;
-				utils.setResponseStatus(event, status);
-				return { error: sanitizeErrorMessage(error, 'Batch operation failed') };
-			}
+			const body = await safeReadBody(event, utils, method);
+			const result = await handleBatchRequest({
+				config,
+				collectionSlug: seg0,
+				body,
+				user,
+			});
+			utils.setResponseStatus(event, result.status);
+			return result.body;
 		}
 
 		// ============================================
@@ -1376,44 +1053,33 @@ export function createComprehensiveMomentumHandler(
 				utils.setResponseStatus(event, 401);
 				return { error: 'Authentication required to upload files' };
 			}
-			const uploadConfig = getUploadConfig(config);
-			if (!uploadConfig) {
-				utils.setResponseStatus(event, 500);
-				return { error: 'Storage not configured' };
-			}
-			const formData = await utils.readMultipartFormData(event);
-			if (!formData || formData.length === 0) {
-				utils.setResponseStatus(event, 400);
-				return { error: 'No file provided' };
-			}
+			const formData = (await utils.readMultipartFormData(event)) ?? [];
 			const fileField = formData.find((f) => f.name === 'file');
-			if (!fileField || !fileField.filename) {
-				utils.setResponseStatus(event, 400);
-				return { error: 'No file provided' };
-			}
-			const file: UploadedFile = {
-				originalName: fileField.filename,
-				mimeType: fileField.type ?? 'application/octet-stream',
-				size: fileField.data.length,
-				buffer: fileField.data,
-			};
+			const file: UploadedFile | null =
+				fileField && fileField.filename
+					? {
+							originalName: fileField.filename,
+							mimeType: fileField.type ?? 'application/octet-stream',
+							size: fileField.data.length,
+							buffer: fileField.data,
+						}
+					: null;
 			const fields: Record<string, unknown> = {};
 			for (const field of formData) {
 				if (field.name !== 'file' && field.name) {
 					fields[field.name] = field.data.toString('utf-8');
 				}
 			}
-			const collectionUpload = postUploadCol.upload ?? {};
-			const uploadRequest: CollectionUploadRequest = {
-				file,
-				user,
-				fields,
+			const result = await handleMediaCollectionUploadRequest({
+				uploadConfig: getUploadConfig(config),
 				collectionSlug: seg0,
-				collectionUpload,
-			};
-			const response = await handleCollectionUpload(uploadConfig, uploadRequest);
-			utils.setResponseStatus(event, response.status);
-			return response;
+				collectionUpload: postUploadCol.upload ?? true,
+				file,
+				fields,
+				user,
+			});
+			utils.setResponseStatus(event, result.status);
+			return result.body;
 		}
 
 		// ============================================

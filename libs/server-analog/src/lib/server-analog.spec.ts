@@ -6,7 +6,12 @@ import {
 	type MomentumH3Utils,
 } from './server-analog';
 import { createInMemoryAdapter, resetMomentumAPI } from '@momentumcms/server-core';
-import type { CollectionConfig, DatabaseAdapter, MomentumConfig } from '@momentumcms/core';
+import type {
+	CollectionConfig,
+	DatabaseAdapter,
+	MomentumConfig,
+	StorageAdapter,
+} from '@momentumcms/core';
 
 // Mock collections for testing
 const mockPostsCollection: CollectionConfig = {
@@ -281,5 +286,131 @@ describe('createComprehensiveMomentumHandler — versioning AccessDeniedError ha
 
 		expect(statusCapture).toBe(403);
 		expect((result as Record<string, unknown>)['error']).toBe('Access denied');
+	});
+});
+
+/**
+ * These tests defend against a DoS regression: when authentication fails,
+ * the adapter must reject the request BEFORE consuming the request body.
+ * Reading multipart / JSON bodies for unauthenticated requests lets an
+ * attacker force the server to allocate up to the body limit per request
+ * just to receive a 401.
+ */
+describe('createComprehensiveMomentumHandler — auth gates input parsing', () => {
+	let comprehensiveHandler: ReturnType<typeof createComprehensiveMomentumHandler>;
+	let mockUtils: MomentumH3Utils;
+	let statusCapture: number;
+
+	const previewableCollection: CollectionConfig = {
+		slug: 'posts',
+		fields: [{ name: 'title', type: 'text' }],
+		access: { read: () => true },
+	};
+
+	beforeEach(() => {
+		resetMomentumAPI();
+		const adapter = createInMemoryAdapter();
+		const config: MomentumConfig = {
+			db: { adapter },
+			collections: [previewableCollection],
+		};
+		comprehensiveHandler = createComprehensiveMomentumHandler(config);
+		statusCapture = 200;
+		mockUtils = {
+			readBody: vi.fn().mockResolvedValue({}),
+			getQuery: vi.fn().mockReturnValue({}),
+			getRouterParams: vi.fn().mockReturnValue({ momentum: '' }),
+			setResponseStatus: vi.fn((_event: H3Event, status: number) => {
+				statusCapture = status;
+			}),
+			setResponseHeader: vi.fn(),
+			readMultipartFormData: vi.fn().mockResolvedValue([]),
+			send: vi.fn(),
+		};
+	});
+
+	function createMockEvent(method: string): H3Event {
+		return { method, path: '/api', context: { params: {} } };
+	}
+
+	it('returns 401 for /media/upload without ever reading multipart body', async () => {
+		(mockUtils.getRouterParams as ReturnType<typeof vi.fn>).mockReturnValue({
+			momentum: 'media/upload',
+		});
+
+		const result = await comprehensiveHandler(createMockEvent('POST'), mockUtils);
+
+		expect(statusCapture).toBe(401);
+		expect((result as Record<string, unknown>)['error']).toBe(
+			'Authentication required to upload files',
+		);
+		expect(mockUtils.readMultipartFormData).not.toHaveBeenCalled();
+	});
+
+	it('returns 401 for POST /:collection/:id/preview without ever reading the JSON body', async () => {
+		(mockUtils.getRouterParams as ReturnType<typeof vi.fn>).mockReturnValue({
+			momentum: 'posts/abc/preview',
+		});
+
+		const result = await comprehensiveHandler(createMockEvent('POST'), mockUtils);
+
+		expect(statusCapture).toBe(401);
+		expect((result as Record<string, unknown>)['error']).toBe(
+			'Authentication required to access preview',
+		);
+		expect(mockUtils.readBody).not.toHaveBeenCalled();
+	});
+});
+
+/**
+ * Defends against an unnecessary buffer copy regression: the storage
+ * adapter returns a buffer; the handler should pipe that buffer straight
+ * through to `utils.send` without wrapping it in a fresh `Buffer.from(...)`,
+ * which allocates and copies the entire payload on every media request.
+ */
+describe('createComprehensiveMomentumHandler — /media/file/* serves without copying', () => {
+	let comprehensiveHandler: ReturnType<typeof createComprehensiveMomentumHandler>;
+	let mockUtils: MomentumH3Utils;
+	let storedBuffer: Uint8Array;
+
+	beforeEach(() => {
+		resetMomentumAPI();
+		storedBuffer = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 5, 6, 7, 8]);
+		const storageAdapter: StorageAdapter = {
+			upload: async () => ({ path: 'photo.jpg', url: '/photo.jpg', size: storedBuffer.length }),
+			delete: async () => true,
+			getUrl: () => '/photo.jpg',
+			exists: async () => true,
+			read: async () => storedBuffer,
+		};
+		const config: MomentumConfig = {
+			db: { adapter: createInMemoryAdapter() },
+			collections: [{ slug: 'posts', fields: [{ name: 'title', type: 'text' }] }],
+			storage: { adapter: storageAdapter },
+		};
+		comprehensiveHandler = createComprehensiveMomentumHandler(config);
+		mockUtils = {
+			readBody: vi.fn().mockResolvedValue({}),
+			getQuery: vi.fn().mockReturnValue({}),
+			getRouterParams: vi.fn().mockReturnValue({ momentum: 'media/file/photo.jpg' }),
+			setResponseStatus: vi.fn(),
+			setResponseHeader: vi.fn(),
+			readMultipartFormData: vi.fn().mockResolvedValue([]),
+			send: vi.fn(),
+		};
+	});
+
+	function createMockEvent(method: string): H3Event {
+		return { method, path: '/api/media/file/photo.jpg', context: { params: {} } };
+	}
+
+	it('passes the storage buffer to utils.send by reference (no Buffer.from copy)', async () => {
+		await comprehensiveHandler(createMockEvent('GET'), mockUtils);
+
+		const sendMock = mockUtils.send as ReturnType<typeof vi.fn>;
+		expect(sendMock).toHaveBeenCalledTimes(1);
+		const sentArg = sendMock.mock.calls[0]?.[1];
+		// Same reference — no copy. `Buffer.from(uint8Array)` would produce a new Buffer.
+		expect(sentArg).toBe(storedBuffer);
 	});
 });

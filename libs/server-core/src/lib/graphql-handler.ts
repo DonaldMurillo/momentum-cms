@@ -141,3 +141,44 @@ export async function executeGraphQL(
 
 	return { status: 200, body: result };
 }
+
+/**
+ * Parse a raw POST body into a {@link GraphQLRequestBody} and execute it.
+ * Centralises the typed extraction of query/variables/operationName so all
+ * adapters use identical validation.
+ */
+export async function handleGraphQLPostRequest(
+	schema: GraphQLSchema,
+	rawBody: Record<string, unknown>,
+	user: UserContext | undefined,
+): Promise<GraphQLResult> {
+	const body: GraphQLRequestBody = {
+		query: typeof rawBody['query'] === 'string' ? rawBody['query'] : '',
+		variables:
+			typeof rawBody['variables'] === 'object' && rawBody['variables'] !== null
+				? // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- runtime-checked record narrowing
+					(rawBody['variables'] as Record<string, unknown>)
+				: undefined,
+		operationName:
+			typeof rawBody['operationName'] === 'string' ? rawBody['operationName'] : undefined,
+	};
+	return executeGraphQL(schema, body, { user });
+}
+
+/**
+ * Execute a GraphQL query supplied via the `query` URL parameter (GET).
+ * Mutations are rejected (read-only enforcement).
+ */
+export async function handleGraphQLGetRequest(
+	schema: GraphQLSchema,
+	queryParam: unknown,
+	user: UserContext | undefined,
+): Promise<GraphQLResult> {
+	if (typeof queryParam !== 'string') {
+		return {
+			status: 400,
+			body: { errors: [{ message: 'Query parameter required' }] },
+		};
+	}
+	return executeGraphQL(schema, { query: queryParam }, { user }, { readOnly: true });
+}
