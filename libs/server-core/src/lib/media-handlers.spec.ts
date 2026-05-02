@@ -53,7 +53,6 @@ describe('handleMediaServeRequest', () => {
 
 	it('returns 400 when no path is supplied', async () => {
 		const result = await handleMediaServeRequest({
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- minimal stub for branch
 			uploadConfig: { adapter: { read: async () => null } } as never,
 			rawPath: undefined,
 		});
@@ -62,7 +61,6 @@ describe('handleMediaServeRequest', () => {
 
 	it('returns 403 on path traversal attempt', async () => {
 		const result = await handleMediaServeRequest({
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- minimal stub for branch
 			uploadConfig: { adapter: { read: async () => null } } as never,
 			rawPath: '../secret',
 		});
@@ -71,7 +69,6 @@ describe('handleMediaServeRequest', () => {
 
 	it('returns 404 when the file does not exist', async () => {
 		const result = await handleMediaServeRequest({
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- adapter stub returns null for missing files
 			uploadConfig: { adapter: { read: async () => null } } as never,
 			rawPath: 'nonexistent.jpg',
 		});
@@ -81,7 +78,6 @@ describe('handleMediaServeRequest', () => {
 	it('returns the buffer with content-type when the file exists', async () => {
 		const buffer = new Uint8Array([1, 2, 3]);
 		const result = await handleMediaServeRequest({
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- adapter stub returns the configured buffer
 			uploadConfig: { adapter: { read: async () => buffer } } as never,
 			rawPath: 'photo.jpg',
 		});
@@ -112,7 +108,6 @@ describe('handleMediaUploadRequest', () => {
 
 	it('returns 400 when no file is supplied', async () => {
 		const result = await handleMediaUploadRequest({
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- minimal stub
 			uploadConfig: { adapter: {} } as never,
 			file: null,
 			user: { id: 'u-1' },
@@ -150,7 +145,6 @@ describe('handleMediaCollectionUploadRequest', () => {
 
 	it('returns 400 when no file is supplied', async () => {
 		const result = await handleMediaCollectionUploadRequest({
-			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- minimal stub
 			uploadConfig: { adapter: {} } as never,
 			collectionSlug: 'media',
 			collectionUpload: true,

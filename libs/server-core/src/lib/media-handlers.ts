@@ -11,11 +11,7 @@
  * resulting HandlerResult into their native response.
  */
 
-import type {
-	UploadedFile,
-	UploadCollectionConfig,
-	UserContext,
-} from '@momentumcms/core';
+import type { UploadedFile, UploadCollectionConfig, UserContext } from '@momentumcms/core';
 import type { HandlerResult } from './import-export-handler';
 import {
 	handleUpload,
@@ -34,10 +30,7 @@ import {
  */
 export async function validateMediaFilePath(
 	rawPath: string,
-): Promise<
-	| { ok: true; path: string }
-	| { ok: false; status: number; error: string }
-> {
+): Promise<{ ok: true; path: string } | { ok: false; status: number; error: string }> {
 	const { normalize, isAbsolute, resolve, sep } = await import('node:path');
 
 	let decoded: string;
@@ -48,11 +41,7 @@ export async function validateMediaFilePath(
 	}
 
 	const normalized = normalize(decoded);
-	if (
-		isAbsolute(normalized) ||
-		normalized.includes('..') ||
-		normalized.includes(`${sep}..`)
-	) {
+	if (isAbsolute(normalized) || normalized.includes('..') || normalized.includes(`${sep}..`)) {
 		return { ok: false, status: 403, error: 'Invalid file path' };
 	}
 
@@ -85,9 +74,7 @@ export interface MediaServeBody {
  * On success the body contains the buffer + mime type for the adapter to
  * write directly to the response stream.
  */
-export async function handleMediaServeRequest(
-	params: MediaServeParams,
-): Promise<HandlerResult> {
+export async function handleMediaServeRequest(params: MediaServeParams): Promise<HandlerResult> {
 	if (!params.uploadConfig) {
 		return { status: 500, body: { error: 'Storage not configured' } };
 	}
@@ -123,9 +110,7 @@ export interface MediaUploadParams {
 	alt?: string;
 }
 
-export async function handleMediaUploadRequest(
-	params: MediaUploadParams,
-): Promise<HandlerResult> {
+export async function handleMediaUploadRequest(params: MediaUploadParams): Promise<HandlerResult> {
 	if (!params.user) {
 		return {
 			status: 401,

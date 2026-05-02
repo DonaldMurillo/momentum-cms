@@ -153,8 +153,6 @@ export interface MomentumH3Utils {
 // Shared Helpers
 // ============================================
 
-// sanitizeErrorMessage and parseWhereParam are imported from @momentumcms/server-core
-
 /**
  * Convert flat bracket-style query params from h3/ufo into nested objects.
  * h3's getQuery returns { "where[title][equals]": "foo" } for bracket-style params,
