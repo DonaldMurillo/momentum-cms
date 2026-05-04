@@ -58,6 +58,7 @@ test-results/
 **/playwright/
 **/*-debug.png
 **/example-angular-e2e/apps/
+.playwright-mcp/
 
 # Data directory (seeded/local data)
 data/
