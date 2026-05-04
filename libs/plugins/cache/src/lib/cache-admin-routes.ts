@@ -14,7 +14,8 @@ export const cacheAdminRoutes: PluginAdminRouteDescriptor[] = [
 	{
 		path: 'cache',
 		label: 'Cache',
-		icon: 'heroBolt',
+		// Server-stack icon reads as a cache layer; heroBolt was generic and overloaded.
+		icon: 'heroServerStack',
 		loadComponent: (): Promise<unknown> =>
 			import('./admin/cache-dashboard.page').then((m) => m.CacheDashboardPage),
 		group: 'System',

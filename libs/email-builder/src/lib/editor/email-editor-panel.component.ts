@@ -40,7 +40,8 @@ import { BlockInserterComponent } from './block-inserter.component';
 
 			@if (state.blockCount() === 0) {
 				<div class="eml-empty-state">
-					<p>No blocks yet. Click + to add your first block.</p>
+					<p class="mcms-eyebrow mb-2">Empty canvas</p>
+					<p>Pick a starter block above to begin composing your email.</p>
 				</div>
 			}
 		</div>
@@ -48,14 +49,14 @@ import { BlockInserterComponent } from './block-inserter.component';
 	styles: `
 		:host {
 			display: block;
-			padding: 16px;
+			padding: 24px;
 			color: hsl(var(--mcms-card-foreground));
 		}
 
 		.eml-block-list {
 			display: flex;
 			flex-direction: column;
-			gap: 4px;
+			gap: 2px;
 			min-height: 200px;
 		}
 
@@ -67,23 +68,27 @@ import { BlockInserterComponent } from './block-inserter.component';
 			cursor: grabbing;
 		}
 
+		/* Drag placeholder — soft brand tint, no aggressive dashed border */
 		.eml-drag-placeholder {
 			height: 48px;
-			border-radius: 8px;
-			border: 2px dashed hsl(var(--mcms-primary) / 0.4);
-			background: hsl(var(--mcms-primary) / 0.05);
+			border-radius: var(--mcms-radius);
+			background: hsl(var(--mcms-primary) / 0.06);
 			transition: all 0.2s;
 		}
 
+		/* Empty canvas — quiet typography, hairline border-y instead of dashed box */
 		.eml-empty-state {
 			display: flex;
+			flex-direction: column;
 			align-items: center;
 			justify-content: center;
 			min-height: 200px;
-			border-radius: 8px;
-			border: 2px dashed hsl(var(--mcms-border));
+			padding: 2.5rem 1rem;
+			border-top: 1px solid hsl(var(--mcms-border));
+			border-bottom: 1px solid hsl(var(--mcms-border));
 			color: hsl(var(--mcms-muted-foreground));
-			font-size: 14px;
+			font-size: 13px;
+			text-align: center;
 		}
 
 		.cdk-drag-animating {

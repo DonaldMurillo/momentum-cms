@@ -45,8 +45,10 @@ export class TableHead {
 	readonly class = input('');
 
 	readonly hostClasses = computed(() => {
+		/* Editorial header — short uppercase eyebrow, lots of tracking, low weight.
+		 * Reads as labels rather than as "click-to-sort" buttons. */
 		const base =
-			'h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>mcms-checkbox]:translate-y-[2px]';
+			'h-8 px-3 text-left align-middle text-2xs font-semibold uppercase tracking-mcms-wider text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>mcms-checkbox]:translate-y-[2px]';
 
 		return `${base} ${this.class()}`.trim();
 	});

@@ -25,11 +25,14 @@ export interface EntityListColumn<T = Entity> extends DataTableColumn<T> {
 		| 'group'
 		| 'json';
 	/** Badge variant for 'badge' type columns */
-	badgeVariant?: 'default' | 'secondary' | 'destructive' | 'outline';
+	badgeVariant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning';
 	/** Badge color mapping for 'badge' type columns */
 	badgeMap?: Record<
 		string,
-		{ label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
+		{
+			label: string;
+			variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning';
+		}
 	>;
 }
 

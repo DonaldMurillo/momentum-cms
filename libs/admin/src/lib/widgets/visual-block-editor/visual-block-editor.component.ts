@@ -58,19 +58,28 @@ import { BlockInserterComponent } from './block-inserter.component';
 		'(keydown)': 'onKeydown($event)',
 	},
 	template: `
-		<!-- Header -->
-		<div class="mb-4">
-			<h3 class="text-sm font-medium text-foreground">{{ label() }}</h3>
-			@if (description()) {
-				<p class="text-sm text-muted-foreground mt-1">{{ description() }}</p>
-			}
+		<!-- Header — label + description + count, matches the new dashboard rhythm -->
+		<div class="mb-4 flex items-baseline justify-between gap-4">
+			<div class="flex flex-col gap-0.5 min-w-0">
+				<span class="text-sm font-medium text-foreground">{{ label() }}</span>
+				@if (description()) {
+					<p class="text-xs text-muted-foreground">{{ description() }}</p>
+				}
+			</div>
+			<span class="mcms-mono text-2xs text-muted-foreground tabular-nums">
+				{{ blocks().length }}{{ maxRows() ? ' / ' + maxRows() : '' }}
+				{{ blocks().length === 1 ? 'block' : 'blocks' }}
+			</span>
 		</div>
 
 		<!-- Block list with drag-drop -->
 		@if (blocks().length === 0 && !isDisabled()) {
-			<!-- Empty state with single inserter -->
-			<div class="rounded-lg border-2 border-dashed border-border p-8 text-center">
-				<p class="text-sm text-muted-foreground mb-3">No content blocks yet.</p>
+			<!-- Empty canvas — quiet hairline border-y, inviting microcopy. No dashed boxes. -->
+			<div class="border-y border-border py-12 text-center flex flex-col items-center gap-4">
+				<div class="flex flex-col gap-1.5">
+					<p class="mcms-eyebrow">Empty canvas</p>
+					<p class="text-sm text-muted-foreground">Pick a starter to begin composing.</p>
+				</div>
 				<mcms-block-inserter
 					[insertIndex]="0"
 					[blockDefinitions]="blockDefinitions()"
@@ -83,7 +92,7 @@ import { BlockInserterComponent } from './block-inserter.component';
 				cdkDropList
 				(cdkDropListDropped)="onDrop($event)"
 				[cdkDropListDisabled]="isDisabled()"
-				class="space-y-0"
+				class="flex flex-col gap-0"
 				role="list"
 				[attr.aria-label]="label() + ' blocks'"
 			>
@@ -99,11 +108,8 @@ import { BlockInserterComponent } from './block-inserter.component';
 				@for (block of blocks(); track $index; let i = $index) {
 					<!-- Block with drag handle -->
 					<div cdkDrag [cdkDragDisabled]="isDisabled()">
-						<!-- Drag preview placeholder -->
-						<div
-							*cdkDragPlaceholder
-							class="rounded-lg border-2 border-dashed border-primary/50 bg-primary/5 h-16"
-						></div>
+						<!-- Drag preview placeholder — soft brand tint, no dashed border -->
+						<div *cdkDragPlaceholder class="rounded-[var(--mcms-radius)] bg-primary/10 h-16"></div>
 
 						<!-- Block content with integrated header and controls -->
 						<mcms-block-wrapper
@@ -144,11 +150,6 @@ import { BlockInserterComponent } from './block-inserter.component';
 				}
 			</div>
 		}
-
-		<!-- Block count -->
-		<div class="mt-2 text-xs text-muted-foreground text-right">
-			{{ blocks().length }}{{ maxRows() ? ' / ' + maxRows() : '' }} blocks
-		</div>
 	`,
 })
 export class VisualBlockEditorComponent {

@@ -17,9 +17,6 @@ import {
 	isUploadCollection,
 } from '@momentumcms/core';
 import {
-	Card,
-	CardContent,
-	CardFooter,
 	Button,
 	Alert,
 	Skeleton,
@@ -67,9 +64,6 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 @Component({
 	selector: 'mcms-entity-view',
 	imports: [
-		Card,
-		CardContent,
-		CardFooter,
 		Button,
 		Alert,
 		Skeleton,
@@ -105,11 +99,12 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 				</mcms-alert>
 			}
 
-			<!-- Page Header -->
-			<div class="mb-8 flex items-start justify-between">
-				<div>
-					<div class="flex items-center gap-3">
-						<h1 class="text-2xl font-semibold tracking-tight">{{ entityTitle() }}</h1>
+			<!-- Page Header — eyebrow + title + subtitle, matches dashboard/list/edit -->
+			<div class="mb-8 flex items-start justify-between gap-4">
+				<div class="flex flex-col gap-1.5 min-w-0">
+					<span class="mcms-eyebrow">{{ isDeleted() ? 'Trashed' : 'Viewing' }}</span>
+					<div class="flex items-center gap-3 flex-wrap">
+						<h1 class="mcms-page-title truncate">{{ entityTitle() }}</h1>
 						@if (hasVersioning() && entity()) {
 							<mcms-publish-controls
 								[collection]="collection().slug"
@@ -120,9 +115,7 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 							/>
 						}
 					</div>
-					<p class="mt-1 text-muted-foreground">
-						Viewing {{ collectionLabelSingular().toLowerCase() }} details
-					</p>
+					<p class="mcms-page-subtitle">{{ collectionLabelSingular() }} details — read only.</p>
 					<ng-content select="[entityViewHeaderExtra]" />
 				</div>
 				<div class="flex items-center gap-3">
@@ -158,80 +151,123 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 				</div>
 			</div>
 
-			<mcms-card>
-				<mcms-card-content>
-					@if (isLoading()) {
-						<div class="grid gap-6 md:grid-cols-2">
-							@for (_ of [1, 2, 3, 4]; track $index) {
-								<div class="space-y-2">
-									<mcms-skeleton class="h-4 w-24" />
-									<mcms-skeleton class="h-6 w-full" />
-								</div>
-							}
-						</div>
-					} @else if (loadError()) {
-						<mcms-alert variant="destructive">
-							{{ loadError() }}
-						</mcms-alert>
-					} @else if (entity()) {
-						@if (isUploadCol() && entityMediaUrl()) {
-							<div class="mb-6">
-								@if (isEntityImage()) {
-									<div class="pointer-events-none">
-										<mcms-focal-point-picker
-											[imageUrl]="entityMediaUrl()"
-											[focalPoint]="entityFocalPoint()"
-											[naturalWidth]="entityDimensions().width"
-											[naturalHeight]="entityDimensions().height"
-											[imageSizes]="viewImageSizes()"
-										/>
-									</div>
-								} @else {
-									<mcms-media-preview [media]="entityMediaPreview()" size="xl" />
-								}
-							</div>
-						}
-						@if (isUploadCol() && entitySizes()) {
-							<div class="mb-6">
-								<mcms-image-variants-display [sizes]="entitySizes()" />
-							</div>
-						}
-						<div class="grid gap-6 md:grid-cols-2">
-							@for (field of visibleFields(); track field.name) {
-								<mcms-field-display
-									[value]="getFieldValue(field.name)"
-									[type]="getFieldDisplayType(field)"
-									[label]="field.label || field.name"
-									[fieldMeta]="getFieldMeta(field)"
-									[numberFormat]="getNumberFormat(field)"
-									[dateFormat]="getDateFormat(field)"
-								/>
-							}
-
-							@if (hasTimestamps()) {
-								<mcms-field-display
-									[value]="entity()!['createdAt']"
-									type="datetime"
-									label="Created At"
-								/>
-								<mcms-field-display
-									[value]="entity()!['updatedAt']"
-									type="datetime"
-									label="Updated At"
-								/>
-							}
+			@if (isLoading()) {
+				<div class="border-t border-border">
+					@for (_ of [1, 2, 3, 4, 5]; track $index) {
+						<div
+							class="grid grid-cols-[14rem_1fr] items-baseline gap-x-8 gap-y-1 border-b border-border py-4"
+						>
+							<mcms-skeleton class="h-3 w-24" />
+							<mcms-skeleton class="h-4 w-3/4" />
 						</div>
 					}
-				</mcms-card-content>
+				</div>
+			} @else if (loadError()) {
+				<mcms-alert variant="destructive">
+					{{ loadError() }}
+				</mcms-alert>
+			} @else if (entity()) {
+				@if (isUploadCol() && entityMediaUrl()) {
+					<div class="mb-8">
+						@if (isEntityImage()) {
+							<div class="pointer-events-none">
+								<mcms-focal-point-picker
+									[imageUrl]="entityMediaUrl()"
+									[focalPoint]="entityFocalPoint()"
+									[naturalWidth]="entityDimensions().width"
+									[naturalHeight]="entityDimensions().height"
+									[imageSizes]="viewImageSizes()"
+								/>
+							</div>
+						} @else {
+							<mcms-media-preview [media]="entityMediaPreview()" size="xl" />
+						}
+					</div>
+				}
+				@if (isUploadCol() && entitySizes()) {
+					<div class="mb-8">
+						<mcms-image-variants-display [sizes]="entitySizes()" />
+					</div>
+				}
+
+				<!-- Definition list — narrow label column on the left, value on the right.
+				     Each row has a hairline divider; long-form values (rich text, JSON) span
+				     the value column and wrap naturally. No card chrome. -->
+				<dl class="border-t border-border">
+					@for (field of visibleFields(); track field.name) {
+						<div
+							class="grid grid-cols-1 md:grid-cols-[14rem_minmax(0,1fr)] items-baseline gap-x-8 gap-y-1 border-b border-border py-4"
+						>
+							<dt class="mcms-eyebrow pt-0.5">{{ field.label || field.name }}</dt>
+							<dd class="min-w-0 text-sm text-foreground">
+								@if (field.type === 'blocks') {
+									<!-- Block array summary — show each block's type and a one-line preview.
+									     Avoids the meaningless "[object Object],[object Object]" you get from
+									     coercing a block array to text. -->
+									@let blockSummary = getBlocksSummary(field.name);
+									@if (blockSummary.length === 0) {
+										<span class="text-muted-foreground">No blocks</span>
+									} @else {
+										<ol class="flex flex-col gap-2 mcms-mono text-2xs">
+											@for (b of blockSummary; track $index) {
+												<li class="flex items-baseline gap-2 text-foreground/80">
+													<span class="text-muted-foreground/70">{{ $index + 1 }}.</span>
+													<span class="uppercase tracking-mcms-wide">{{ b.label }}</span>
+													@if (b.preview) {
+														<span class="font-sans normal-case text-muted-foreground truncate">
+															— {{ b.preview }}
+														</span>
+													}
+												</li>
+											}
+										</ol>
+									}
+								} @else {
+									<mcms-field-display
+										[value]="getFieldValue(field.name)"
+										[type]="getFieldDisplayType(field)"
+										[fieldMeta]="getFieldMeta(field)"
+										[numberFormat]="getNumberFormat(field)"
+										[dateFormat]="getDateFormat(field)"
+									/>
+								}
+							</dd>
+						</div>
+					}
+
+					@if (hasTimestamps()) {
+						<div
+							class="grid grid-cols-1 md:grid-cols-[14rem_minmax(0,1fr)] items-baseline gap-x-8 gap-y-1 border-b border-border py-4"
+						>
+							<dt class="mcms-eyebrow pt-0.5">Created</dt>
+							<dd class="min-w-0 text-sm text-foreground">
+								<mcms-field-display [value]="entity()!['createdAt']" type="datetime" />
+							</dd>
+						</div>
+						<div
+							class="grid grid-cols-1 md:grid-cols-[14rem_minmax(0,1fr)] items-baseline gap-x-8 gap-y-1 border-b border-border py-4"
+						>
+							<dt class="mcms-eyebrow pt-0.5">Updated</dt>
+							<dd class="min-w-0 text-sm text-foreground">
+								<mcms-field-display [value]="entity()!['updatedAt']" type="datetime" />
+							</dd>
+						</div>
+					}
+				</dl>
 
 				@if (!suppressNavigation()) {
-					<mcms-card-footer class="flex justify-start border-t bg-muted/50 px-6 py-4">
-						<button mcms-button variant="outline" (click)="navigateBack()">
-							← Back to {{ collectionLabel() }}
+					<div class="mt-8">
+						<button
+							type="button"
+							class="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors bg-transparent border-0 p-0 cursor-pointer"
+							(click)="navigateBack()"
+						>
+							<span aria-hidden="true">←</span>
+							Back to {{ collectionLabel() }}
 						</button>
-					</mcms-card-footer>
+					</div>
 				}
-			</mcms-card>
+			}
 
 			@if (hasVersioning() && entity() && showVersionHistory()) {
 				<div class="mt-8">
@@ -612,6 +648,46 @@ export class EntityViewWidget<T extends Entity = Entity> {
 			return field.displayFormat;
 		}
 		return undefined;
+	}
+
+	/**
+	 * Render a blocks-array field as a typed list. Each entry shows the block's type
+	 * label plus a one-line preview (first text-ish field's value, truncated). Replaces
+	 * the meaningless `[object Object],[object Object]` you'd get from coercing a block
+	 * array to text. Returns [] for fields that aren't blocks or have no data.
+	 */
+	getBlocksSummary(fieldName: string): Array<{ label: string; preview: string }> {
+		const field = this.visibleFields().find((f) => f.name === fieldName);
+		if (!field || field.type !== 'blocks') return [];
+		const value = this.getFieldValue(fieldName);
+		if (!Array.isArray(value)) return [];
+
+		const blockDefs = new Map<string, { label: string; previewField?: string }>();
+		for (const def of field.blocks) {
+			const previewField = def.fields.find(
+				(f) => f.type === 'text' || f.type === 'textarea' || f.type === 'richText',
+			)?.name;
+			blockDefs.set(def.slug, {
+				label: def.labels?.singular || humanizeFieldName(def.slug),
+				previewField,
+			});
+		}
+
+		return value.map((item: unknown) => {
+			if (!isRecord(item) || typeof item['blockType'] !== 'string') {
+				return { label: 'Unknown block', preview: '' };
+			}
+			const blockType = item['blockType'];
+			const def = blockDefs.get(blockType);
+			const label = def?.label ?? blockType;
+			const rawPreview = def?.previewField ? item[def.previewField] : undefined;
+			let preview = '';
+			if (typeof rawPreview === 'string') {
+				preview = rawPreview.replace(/<[^>]+>/g, '').trim();
+			}
+			if (preview.length > 80) preview = preview.slice(0, 77) + '…';
+			return { label, preview };
+		});
 	}
 
 	/**

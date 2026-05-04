@@ -80,7 +80,11 @@ describe('AdminSidebarWidget', () => {
 
 	it('should render default title when no branding', () => {
 		const title = fixture.nativeElement.querySelector('h1');
-		expect(title.textContent).toContain('Momentum CMS');
+		// Default brand splits into a "CMS" eyebrow + "Momentum" h1.
+		// Both halves are asserted so removing either silently fails the test.
+		expect(title.textContent).toContain('Momentum');
+		const eyebrow = fixture.nativeElement.querySelector('.mcms-eyebrow');
+		expect(eyebrow?.textContent).toContain('CMS');
 	});
 
 	it('should render custom branding title', async () => {
@@ -90,6 +94,26 @@ describe('AdminSidebarWidget', () => {
 
 		const title = fixture.nativeElement.querySelector('h1');
 		expect(title.textContent).toContain('Test CMS');
+	});
+
+	it('should hide the default "CMS" eyebrow when a custom branding title is set', async () => {
+		// White-label deployments shouldn't read "CMS / Acme" — the hardcoded
+		// eyebrow above a custom title leaks the underlying product name.
+		fixture.componentRef.setInput('branding', { title: 'Acme' });
+		fixture.detectChanges();
+		await fixture.whenStable();
+
+		const eyebrow = fixture.nativeElement.querySelector('.mcms-eyebrow');
+		expect(eyebrow).toBeFalsy();
+	});
+
+	it('should render a custom eyebrow when branding.eyebrow is provided', async () => {
+		fixture.componentRef.setInput('branding', { title: 'Acme', eyebrow: 'Studio' });
+		fixture.detectChanges();
+		await fixture.whenStable();
+
+		const eyebrow = fixture.nativeElement.querySelector('.mcms-eyebrow');
+		expect(eyebrow?.textContent?.trim()).toBe('Studio');
 	});
 
 	it('should render logo when provided', async () => {

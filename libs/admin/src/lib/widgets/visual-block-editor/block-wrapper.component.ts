@@ -15,7 +15,6 @@ import {
 	heroTrash,
 } from '@ng-icons/heroicons/outline';
 import type { BlockConfig, Field } from '@momentumcms/core';
-import { Badge, Button } from '@momentumcms/ui';
 import { getSubNode } from '../entity-form/entity-form.types';
 import type { EntityFormMode } from '../entity-form/entity-form.types';
 import type { BlockItem } from './visual-editor.types';
@@ -23,13 +22,14 @@ import { FieldRenderer } from '../entity-form/field-renderers/field-renderer.com
 
 @Component({
 	selector: 'mcms-block-wrapper',
-	imports: [FieldRenderer, NgIcon, Badge, Button],
+	imports: [FieldRenderer, NgIcon],
 	providers: [provideIcons({ heroChevronUp, heroChevronDown, heroChevronRight, heroTrash })],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: {
-		class: 'block relative rounded-lg border transition-colors overflow-hidden',
-		'[class.border-primary]': 'isSelected()',
+		class: 'block relative rounded-[var(--mcms-radius)] border bg-background transition-colors',
+		'[class.border-ring]': 'isSelected()',
 		'[class.border-border]': '!isSelected()',
+		'[class.shadow-mcms-sm]': 'isSelected()',
 		'[attr.data-testid]': '"block-wrapper"',
 		'[attr.data-block-index]': 'blockIndex()',
 		'[attr.data-block-type]': 'block().blockType',
@@ -42,16 +42,17 @@ import { FieldRenderer } from '../entity-form/field-renderers/field-renderer.com
 		'(focus)': 'selected.emit()',
 	},
 	template: `
-		<!-- Header: always visible -->
+		<!-- Block bar — flush hairline below, no muted bg. The block-type label is an
+		     editorial eyebrow with a position number; controls sit inline. -->
 		<!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
 		<div
-			class="flex items-center gap-2 px-3 py-2 bg-muted/30"
+			class="flex items-center gap-2.5 px-3 py-2 border-b border-border"
 			data-testid="block-header"
 			(click)="$event.stopPropagation()"
 		>
-			<!-- Collapse toggle -->
 			<button
-				class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors"
+				type="button"
+				class="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
 				(click)="toggleCollapse.emit(); $event.stopPropagation()"
 				[attr.aria-label]="isCollapsed() ? 'Expand block' : 'Collapse block'"
 				[attr.aria-expanded]="!isCollapsed()"
@@ -59,20 +60,18 @@ import { FieldRenderer } from '../entity-form/field-renderers/field-renderer.com
 			>
 				<ng-icon
 					[name]="isCollapsed() ? 'heroChevronRight' : 'heroChevronDown'"
-					size="14"
+					size="13"
 					aria-hidden="true"
 				/>
 			</button>
 
-			<!-- Block type badge -->
-			<mcms-badge variant="secondary" class="text-xs" data-testid="block-type-label">
-				{{ blockLabel() }}
-			</mcms-badge>
+			<span class="mcms-eyebrow" data-testid="block-type-label">{{ blockLabel() }}</span>
+			<span class="mcms-mono text-2xs text-muted-foreground/60 tabular-nums">
+				#{{ blockIndex() + 1 }}
+			</span>
 
-			<!-- Spacer -->
 			<div class="flex-1"></div>
 
-			<!-- Action buttons (only when not disabled) -->
 			@if (!isDisabled()) {
 				<div
 					class="flex items-center gap-0.5"
@@ -80,45 +79,38 @@ import { FieldRenderer } from '../entity-form/field-renderers/field-renderer.com
 					[attr.aria-label]="blockLabel() + ' block actions'"
 				>
 					<button
-						mcms-button
-						variant="ghost"
-						size="icon"
-						class="h-6 w-6"
+						type="button"
+						class="flex h-6 w-6 items-center justify-center rounded-sm text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground/70"
 						[disabled]="!canMoveUp()"
 						(click)="moveUp.emit(); $event.stopPropagation()"
 						aria-label="Move block up"
 					>
-						<ng-icon name="heroChevronUp" size="14" aria-hidden="true" />
+						<ng-icon name="heroChevronUp" size="13" aria-hidden="true" />
 					</button>
 					<button
-						mcms-button
-						variant="ghost"
-						size="icon"
-						class="h-6 w-6"
+						type="button"
+						class="flex h-6 w-6 items-center justify-center rounded-sm text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground/70"
 						[disabled]="!canMoveDown()"
 						(click)="moveDown.emit(); $event.stopPropagation()"
 						aria-label="Move block down"
 					>
-						<ng-icon name="heroChevronDown" size="14" aria-hidden="true" />
+						<ng-icon name="heroChevronDown" size="13" aria-hidden="true" />
 					</button>
 					<button
-						mcms-button
-						variant="ghost"
-						size="icon"
-						class="h-6 w-6 text-destructive hover:text-destructive"
+						type="button"
+						class="flex h-6 w-6 items-center justify-center rounded-sm text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
 						[disabled]="!canDelete()"
 						(click)="deleteBlock.emit(); $event.stopPropagation()"
 						aria-label="Delete block"
 					>
-						<ng-icon name="heroTrash" size="14" aria-hidden="true" />
+						<ng-icon name="heroTrash" size="13" aria-hidden="true" />
 					</button>
 				</div>
 			}
 		</div>
 
-		<!-- Fields content: hidden when collapsed -->
 		@if (!isCollapsed()) {
-			<div class="p-4 space-y-3" data-testid="block-fields">
+			<div class="px-4 py-4 flex flex-col gap-5" data-testid="block-fields">
 				@for (field of visibleFields(); track field.name) {
 					<mcms-field-renderer
 						[field]="field"

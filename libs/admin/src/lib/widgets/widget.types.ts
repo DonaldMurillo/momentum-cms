@@ -14,6 +14,12 @@ export interface AdminBranding {
 	title?: string;
 	/** URL to the logo image */
 	logo?: string;
+	/**
+	 * Small uppercase eyebrow label rendered above `title`. Defaults to `'CMS'`
+	 * only when no custom `title` is set — white-label deployments that supply
+	 * their own title get no eyebrow unless they explicitly provide one.
+	 */
+	eyebrow?: string;
 }
 
 /**

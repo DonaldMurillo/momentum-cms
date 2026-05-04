@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/consistent-type-assertions -- Type assertions needed to narrow Field union to TextField/TextareaField after type guard */
 
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { McmsFormField, Input, Textarea } from '@momentumcms/ui';
 import type { ValidationError } from '@momentumcms/ui';
 import { humanizeFieldName } from '@momentumcms/core';
@@ -29,7 +29,7 @@ import { getFieldNodeState } from '../entity-form.types';
 			@if (isTextarea()) {
 				<mcms-textarea
 					[id]="fieldId()"
-					[value]="stringValue()"
+					[value]="displayValue()"
 					[placeholder]="placeholder()"
 					[disabled]="isDisabled()"
 					[rows]="rows()"
@@ -41,7 +41,7 @@ import { getFieldNodeState } from '../entity-form.types';
 				<mcms-input
 					[id]="fieldId()"
 					[type]="inputType()"
-					[value]="stringValue()"
+					[value]="displayValue()"
 					[placeholder]="placeholder()"
 					[disabled]="isDisabled()"
 					[errors]="touchedErrors()"
@@ -105,9 +105,14 @@ export class TextFieldRenderer {
 		return this.mode() === 'view' || (this.field().admin?.readOnly ?? false);
 	});
 
-	/** Whether to use textarea */
+	/** Whether to use textarea — true for explicit textarea fields, JSON/object fields,
+	 * and any field whose serialized value spans multiple lines. */
 	readonly isTextarea = computed(() => {
-		return this.field().type === 'textarea';
+		if (this.field().type === 'textarea' || this.field().type === 'json') return true;
+		const state = this.nodeState();
+		const val = state?.value();
+		if (val && typeof val === 'object') return true;
+		return false;
 	});
 
 	/** Input type (text, email, etc.) */
@@ -120,12 +125,34 @@ export class TextFieldRenderer {
 		return 4;
 	});
 
-	/** String value from FieldState */
+	/** String value from FieldState. Objects/arrays are serialized to JSON so they
+	 * don't render as the useless "[object Object]" coercion. */
 	readonly stringValue = computed(() => {
 		const state = this.nodeState();
 		if (!state) return '';
 		const val = state.value();
-		return val === null || val === undefined ? '' : String(val);
+		if (val === null || val === undefined) return '';
+		if (typeof val === 'object') {
+			try {
+				return JSON.stringify(val, null, 2);
+			} catch {
+				return '';
+			}
+		}
+		return String(val);
+	});
+
+	/** Holds the user's exact text while editing a JSON/object field. Without it,
+	 * each successful parse round-trips through JSON.stringify and rewrites the
+	 * textarea (jumping the caret, erasing whitespace) on every keystroke. The
+	 * buffer is cleared on blur once the text parses cleanly. */
+	private readonly editBuffer = signal<string | null>(null);
+
+	/** What the input/textarea actually shows. Prefers the in-flight edit buffer
+	 * (set during JSON editing) over the canonical pretty-printed stringValue. */
+	readonly displayValue = computed(() => {
+		const buf = this.editBuffer();
+		return buf !== null ? buf : this.stringValue();
 	});
 
 	/** Field description */
@@ -160,18 +187,46 @@ export class TextFieldRenderer {
 	});
 
 	/**
-	 * Handle value change from input/textarea.
+	 * Handle value change from input/textarea. For JSON fields and fields whose
+	 * underlying value is an object, parse the string back into the form model so
+	 * the saved payload preserves shape. The user's exact typed text is held in
+	 * the editBuffer so the textarea isn't reformatted mid-edit. If parse fails,
+	 * the last-parsed object remains in state — partial strings never demote the
+	 * field's value.
 	 */
 	onValueChange(value: string): void {
 		const state = this.nodeState();
-		if (state) state.value.set(value);
+		if (!state) return;
+		const f = this.field();
+		const wasObject = typeof state.value() === 'object' && state.value() !== null;
+		if (f.type === 'json' || wasObject) {
+			this.editBuffer.set(value);
+			try {
+				state.value.set(JSON.parse(value));
+			} catch {
+				/* keep last-parsed value in state until input parses cleanly */
+			}
+			return;
+		}
+		state.value.set(value);
 	}
 
 	/**
-	 * Handle blur from input/textarea.
+	 * Handle blur from input/textarea. Marks the field as touched and, for JSON
+	 * fields, drops the edit buffer so the textarea reverts to canonical
+	 * pretty-printed output — but only if the buffer is valid JSON. Invalid text
+	 * is preserved on blur so the user can see and fix what they typed.
 	 */
 	onBlur(): void {
 		const state = this.nodeState();
 		if (state) state.markAsTouched();
+		const buf = this.editBuffer();
+		if (buf === null) return;
+		try {
+			JSON.parse(buf);
+			this.editBuffer.set(null);
+		} catch {
+			/* keep showing the user's invalid text so they can correct it */
+		}
 	}
 }

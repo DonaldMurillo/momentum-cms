@@ -22,15 +22,6 @@ import {
 	heroChevronRight,
 	heroChevronDown,
 } from '@ng-icons/heroicons/outline';
-import {
-	Card,
-	CardHeader,
-	CardTitle,
-	CardContent,
-	CardFooter,
-	Button,
-	Badge,
-} from '@momentumcms/ui';
 import { humanizeFieldName } from '@momentumcms/core';
 import type { Field, BlockConfig } from '@momentumcms/core';
 import type { EntityFormMode } from '../entity-form.types';
@@ -62,124 +53,126 @@ interface BlockItem {
  */
 @Component({
 	selector: 'mcms-blocks-field-renderer',
-	imports: [
-		Card,
-		CardHeader,
-		CardTitle,
-		CardContent,
-		CardFooter,
-		Button,
-		Badge,
-		NgIcon,
-		CdkDropList,
-		CdkDrag,
-		CdkDragHandle,
-		FieldRenderer,
-	],
+	imports: [NgIcon, CdkDropList, CdkDrag, CdkDragHandle, FieldRenderer],
 	providers: [provideIcons({ heroPlus, heroTrash, heroBars2, heroChevronRight, heroChevronDown })],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `
-		<mcms-card>
-			<mcms-card-header>
-				<div class="flex items-center justify-between">
-					<div>
-						<mcms-card-title>{{ label() }}</mcms-card-title>
-						@if (description()) {
-							<p class="text-sm text-muted-foreground mt-1">{{ description() }}</p>
-						}
-					</div>
-					<span class="text-sm text-muted-foreground">
-						{{ blocks().length }}{{ maxRows() ? ' / ' + maxRows() : '' }} blocks
-					</span>
+		<div class="flex flex-col gap-3">
+			<div class="flex items-baseline justify-between gap-4">
+				<div class="flex flex-col gap-0.5">
+					<span class="text-sm font-medium text-foreground">{{ label() }}</span>
+					@if (description()) {
+						<p class="text-xs text-muted-foreground">{{ description() }}</p>
+					}
 				</div>
-			</mcms-card-header>
-			<mcms-card-content>
-				@if (blocks().length === 0) {
-					<p class="text-sm text-muted-foreground py-4 text-center">
-						No blocks yet. Add a block to get started.
+				<span class="mcms-mono text-2xs text-muted-foreground tabular-nums">
+					{{ blocks().length }}{{ maxRows() ? ' / ' + maxRows() : '' }}
+					{{ blocks().length === 1 ? 'block' : 'blocks' }}
+				</span>
+			</div>
+
+			@if (blocks().length === 0) {
+				<!-- Empty state — quiet and inviting, not a dashed-border placeholder -->
+				<div class="border-y border-border py-10 text-center">
+					<p class="text-sm text-muted-foreground">
+						No blocks yet. Pick a starter below to begin composing.
 					</p>
-				} @else {
-					<div
-						cdkDropList
-						(cdkDropListDropped)="onDrop($event)"
-						class="space-y-3"
-						role="list"
-						aria-label="Content blocks"
-					>
-						@for (block of blocks(); track $index; let i = $index) {
-							<div cdkDrag class="border rounded-lg bg-card" [cdkDragDisabled]="isDisabled()">
-								<div class="flex items-center gap-3 px-4 py-2 border-b bg-muted/50 rounded-t-lg">
-									<button
-										class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors"
-										(click)="toggleBlockCollapse(i)"
-										[attr.aria-label]="isBlockCollapsed(i) ? 'Expand block' : 'Collapse block'"
-										[attr.aria-expanded]="!isBlockCollapsed(i)"
-										data-testid="block-collapse-toggle"
-									>
-										<ng-icon
-											[name]="isBlockCollapsed(i) ? 'heroChevronRight' : 'heroChevronDown'"
-											size="14"
-											aria-hidden="true"
-										/>
-									</button>
-									<div
-										cdkDragHandle
-										class="cursor-grab text-muted-foreground hover:text-foreground"
-										[class.hidden]="isDisabled()"
-										role="button"
-										tabindex="0"
-										[attr.aria-label]="'Reorder ' + getBlockLabel(block.blockType) + ' block'"
-										aria-roledescription="sortable"
-									>
-										<ng-icon name="heroBars2" size="16" aria-hidden="true" />
-									</div>
-									<mcms-badge>{{ getBlockLabel(block.blockType) }}</mcms-badge>
-									<div class="flex-1"></div>
-									@if (canRemoveBlock()) {
-										<button
-											mcms-button
-											variant="ghost"
-											size="icon"
-											class="h-7 w-7 text-destructive hover:text-destructive"
-											(click)="removeBlock(i)"
-											[attr.aria-label]="'Remove ' + getBlockLabel(block.blockType) + ' block'"
-										>
-											<ng-icon name="heroTrash" size="14" aria-hidden="true" />
-										</button>
-									}
+				</div>
+			} @else {
+				<div
+					cdkDropList
+					(cdkDropListDropped)="onDrop($event)"
+					class="flex flex-col gap-2.5"
+					role="list"
+					aria-label="Content blocks"
+				>
+					@for (block of blocks(); track $index; let i = $index) {
+						<div
+							cdkDrag
+							class="border border-border rounded-[var(--mcms-radius)] bg-background"
+							[cdkDragDisabled]="isDisabled()"
+						>
+							<!-- Block bar — flush, hairline below, no muted bg. The block-type
+							     name reads as an editorial eyebrow; controls sit inline. -->
+							<div class="flex items-center gap-2.5 px-3 py-2 border-b border-border">
+								<button
+									type="button"
+									class="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+									(click)="toggleBlockCollapse(i)"
+									[attr.aria-label]="isBlockCollapsed(i) ? 'Expand block' : 'Collapse block'"
+									[attr.aria-expanded]="!isBlockCollapsed(i)"
+									data-testid="block-collapse-toggle"
+								>
+									<ng-icon
+										[name]="isBlockCollapsed(i) ? 'heroChevronRight' : 'heroChevronDown'"
+										size="14"
+										aria-hidden="true"
+									/>
+								</button>
+								<div
+									cdkDragHandle
+									class="cursor-grab text-muted-foreground/70 hover:text-foreground transition-colors"
+									[class.hidden]="isDisabled()"
+									role="button"
+									tabindex="0"
+									[attr.aria-label]="'Reorder ' + getBlockLabel(block.blockType) + ' block'"
+									aria-roledescription="sortable"
+								>
+									<ng-icon name="heroBars2" size="14" aria-hidden="true" />
 								</div>
-								@if (!isBlockCollapsed(i)) {
-									<div class="p-4 space-y-3" data-testid="block-fields">
-										@for (subField of getBlockFields(block.blockType); track subField.name) {
-											<mcms-field-renderer
-												[field]="subField"
-												[formNode]="getBlockSubNode(i, subField.name)"
-												[formTree]="formTree()"
-												[formModel]="formModel()"
-												[mode]="mode()"
-												[path]="getBlockSubFieldPath(i, subField.name)"
-											/>
-										}
-									</div>
+								<span class="mcms-eyebrow">{{ getBlockLabel(block.blockType) }}</span>
+								<span class="mcms-mono text-2xs text-muted-foreground/60 tabular-nums">
+									#{{ i + 1 }}
+								</span>
+								<div class="flex-1"></div>
+								@if (canRemoveBlock()) {
+									<button
+										type="button"
+										class="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
+										(click)="removeBlock(i)"
+										[attr.aria-label]="'Remove ' + getBlockLabel(block.blockType) + ' block'"
+									>
+										<ng-icon name="heroTrash" size="13" aria-hidden="true" />
+									</button>
 								}
 							</div>
-						}
-					</div>
-				}
-			</mcms-card-content>
-			@if (canAddBlock()) {
-				<mcms-card-footer>
-					<div class="flex gap-2">
-						@for (blockDef of blockDefinitions(); track blockDef.slug) {
-							<button mcms-button variant="outline" (click)="addBlock(blockDef.slug)">
-								<ng-icon name="heroPlus" size="16" aria-hidden="true" />
-								{{ blockDef.labels?.singular || blockDef.slug }}
-							</button>
-						}
-					</div>
-				</mcms-card-footer>
+							@if (!isBlockCollapsed(i)) {
+								<div class="px-4 py-4 flex flex-col gap-5" data-testid="block-fields">
+									@for (subField of getBlockFields(block.blockType); track subField.name) {
+										<mcms-field-renderer
+											[field]="subField"
+											[formNode]="getBlockSubNode(i, subField.name)"
+											[formTree]="formTree()"
+											[formModel]="formModel()"
+											[mode]="mode()"
+											[path]="getBlockSubFieldPath(i, subField.name)"
+										/>
+									}
+								</div>
+							}
+						</div>
+					}
+				</div>
 			}
-		</mcms-card>
+
+			@if (canAddBlock()) {
+				<!-- Block inserter — a hairline-bordered row of ghost actions. Reads as
+				     "what can I add next" without competing with the form's primary CTA. -->
+				<div class="flex flex-wrap items-center gap-1 border-t border-border pt-3">
+					<span class="mcms-eyebrow mr-2">Insert</span>
+					@for (blockDef of blockDefinitions(); track blockDef.slug) {
+						<button
+							type="button"
+							class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+							(click)="addBlock(blockDef.slug)"
+						>
+							<ng-icon name="heroPlus" size="12" aria-hidden="true" />
+							{{ blockDef.labels?.singular || blockDef.slug }}
+						</button>
+					}
+				</div>
+			}
+		</div>
 	`,
 })
 export class BlocksFieldRenderer {

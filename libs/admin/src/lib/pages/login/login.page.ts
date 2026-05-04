@@ -17,7 +17,6 @@ import {
 	CardTitle,
 	CardDescription,
 	CardContent,
-	CardFooter,
 } from '@momentumcms/ui';
 import { MomentumAuthService } from '../../services/auth.service';
 import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-outlet.component';
@@ -39,18 +38,25 @@ import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-o
 		CardTitle,
 		CardDescription,
 		CardContent,
-		CardFooter,
 		AdminSlotOutlet,
 	],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: {
-		class: 'flex min-h-screen items-center justify-center bg-background p-4',
+		class: 'flex min-h-screen items-center justify-center bg-background p-6',
 	},
 	template: `
-		<main>
+		<main class="w-full max-w-sm flex flex-col gap-8">
 			<mcms-admin-slot slot="login:before" />
-			<mcms-card class="w-full max-w-md">
-				<mcms-card-header class="text-center">
+
+			<!-- Brand block — sits above the form, no card chrome around it. -->
+			<header class="flex flex-col gap-2 text-left">
+				<span class="mcms-eyebrow">Momentum CMS</span>
+				<h1 class="text-2xl font-semibold -tracking-[0.02em]">Sign in</h1>
+				<p class="text-sm text-muted-foreground">Enter your workspace credentials to continue.</p>
+			</header>
+
+			<mcms-card class="w-full">
+				<mcms-card-header class="sr-only">
 					<mcms-card-title>Sign In</mcms-card-title>
 					<mcms-card-description>
 						Enter your credentials to access the admin dashboard
@@ -107,12 +113,7 @@ import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-o
 							class="w-full"
 							[disabled]="!hydrated() || isSubmitting() || !isValid()"
 						>
-							@if (isSubmitting()) {
-								<span class="animate-spin" aria-hidden="true">⏳</span>
-								Signing in...
-							} @else {
-								Sign In
-							}
+							{{ isSubmitting() ? 'Signing in…' : 'Sign in' }}
 						</button>
 					</form>
 
@@ -181,10 +182,6 @@ import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-o
 						</div>
 					}
 				</mcms-card-content>
-
-				<mcms-card-footer class="justify-center">
-					<p class="text-sm text-muted-foreground">Momentum CMS</p>
-				</mcms-card-footer>
 			</mcms-card>
 			<mcms-admin-slot slot="login:after" />
 		</main>

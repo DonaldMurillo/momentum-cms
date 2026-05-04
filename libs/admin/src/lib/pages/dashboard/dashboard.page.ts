@@ -8,66 +8,57 @@ import { groupCollections } from '../../utils/group-collections';
 import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-outlet.component';
 
 /**
- * Dashboard Page Component
- *
- * The main dashboard showing an overview of all collections.
+ * Dashboard Page Component — overview of workspace collections, grouped by
+ * `admin.group`, rendered as editorial list-rows rather than a templated tile
+ * grid (impeccable: avoid identical card grids).
  */
 @Component({
 	selector: 'mcms-dashboard',
 	imports: [CollectionCardWidget, AdminSlotOutlet],
 	changeDetection: ChangeDetectionStrategy.OnPush,
-	host: { class: 'block max-w-6xl' },
+	host: { class: 'block max-w-5xl' },
 	template: `
 		<mcms-admin-slot slot="dashboard:before" />
 
-		<header class="mb-10">
-			<h1 class="text-4xl font-bold tracking-tight text-foreground">Dashboard</h1>
-			<p class="text-muted-foreground mt-3 text-lg">Manage your content and collections</p>
+		<header class="mb-12 flex flex-col gap-2">
+			<span class="mcms-eyebrow">Workspace</span>
+			<h1 class="text-2xl font-semibold -tracking-[0.02em]">Dashboard</h1>
+			<p class="mcms-page-subtitle">
+				A snapshot of every collection in this workspace and how much content lives in each.
+			</p>
 		</header>
 
 		@if (collectionGroups().length === 0) {
-			<section aria-label="Collections">
-				<div
-					class="flex flex-col items-center justify-center p-16 bg-card/50 rounded-xl border border-dashed border-border/60"
-				>
-					<div class="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-						<svg
-							aria-hidden="true"
-							class="w-8 h-8 text-muted-foreground"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="1.5"
-								d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-							/>
-						</svg>
-					</div>
-					<p class="text-foreground font-medium text-lg">No collections configured</p>
-					<p class="text-sm text-muted-foreground mt-2 text-center max-w-sm">
-						Add collections to your configuration to start managing content.
-					</p>
-				</div>
+			<section aria-label="Collections" class="border-t border-border pt-10">
+				<p class="text-base font-medium text-foreground">No collections yet</p>
+				<p class="mcms-page-subtitle mt-1.5">
+					Add a collection to your <code class="mcms-mono">momentum.config.ts</code> and restart the
+					dev server. The dashboard will pick it up automatically.
+				</p>
 			</section>
 		} @else {
-			@for (group of collectionGroups(); track group.id) {
-				<section class="mb-10" [attr.aria-labelledby]="group.id">
-					<h2
-						[id]="group.id"
-						class="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4"
-					>
-						{{ group.name }}
-					</h2>
-					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-						@for (collection of group.collections; track collection.slug) {
-							<mcms-collection-card [collection]="collection" [basePath]="basePath" />
-						}
-					</div>
-				</section>
-			}
+			<div class="flex flex-col gap-12">
+				@for (group of collectionGroups(); track group.id) {
+					<section [attr.aria-labelledby]="group.id" class="flex flex-col gap-3">
+						<div class="flex items-baseline justify-between">
+							<h2 [id]="group.id" class="mcms-eyebrow">
+								{{ group.name }}
+							</h2>
+							<span class="mcms-mono text-2xs">
+								{{ group.collections.length }}
+								{{ group.collections.length === 1 ? 'collection' : 'collections' }}
+							</span>
+						</div>
+						<ul class="flex flex-col border-t border-border">
+							@for (collection of group.collections; track collection.slug) {
+								<li>
+									<mcms-collection-card [collection]="collection" [basePath]="basePath" />
+								</li>
+							}
+						</ul>
+					</section>
+				}
+			</div>
 		}
 
 		<mcms-admin-slot slot="dashboard:after" />
@@ -79,25 +70,18 @@ export class DashboardPage {
 
 	readonly basePath = '/admin/collections';
 
-	/** All collections from route data (unfiltered) */
 	private readonly allCollections = computed((): CollectionConfig[] => {
 		return getCollectionsFromRouteData(this.route.parent?.snapshot.data);
 	});
 
-	/** Collections filtered by visibility and access permissions */
 	readonly collections = computed((): CollectionConfig[] => {
 		const all = this.allCollections();
 		const accessible = this.collectionAccess.accessibleCollections();
-
-		// If permissions not loaded yet, show all non-hidden (will be filtered after load)
 		if (!this.collectionAccess.initialized()) {
 			return all.filter((c) => !c.admin?.hidden);
 		}
-
-		// Filter to only accessible, non-hidden collections
 		return all.filter((c) => !c.admin?.hidden && accessible.includes(c.slug));
 	});
 
-	/** Visible collections grouped by admin.group. Named groups first, default last. */
 	readonly collectionGroups = computed(() => groupCollections(this.collections()));
 }

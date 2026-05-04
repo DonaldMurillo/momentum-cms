@@ -35,7 +35,7 @@ import { SidebarService } from './sidebar.service';
 		@if (href()) {
 			<a
 				[routerLink]="href()"
-				routerLinkActive="bg-sidebar-accent text-sidebar-accent-foreground before:absolute before:left-0 before:top-1 before:bottom-1 before:w-1 before:bg-sidebar-primary before:rounded-full"
+				routerLinkActive="active bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
 				ariaCurrentWhenActive="page"
 				[routerLinkActiveOptions]="{ exact: exact() }"
 				[class]="linkClasses()"
@@ -53,7 +53,12 @@ import { SidebarService } from './sidebar.service';
 
 		<ng-template #content>
 			@if (icon()) {
-				<ng-icon [name]="icon()!" class="shrink-0" size="20" aria-hidden="true" />
+				<ng-icon
+					[name]="icon()!"
+					class="shrink-0 text-sidebar-foreground/55 group-[.active]:text-sidebar-foreground"
+					size="16"
+					aria-hidden="true"
+				/>
 			}
 			<span class="flex-1 truncate">{{ label() }}</span>
 			@if (badge() !== undefined) {
@@ -98,13 +103,16 @@ export class SidebarNavItem {
 	});
 
 	readonly linkClasses = computed(() => {
+		/* Tighter rhythm than before: 28px row height, 13px label, 16px icon. The active
+		 * state is conveyed by background tint + semibold weight + foreground color shift —
+		 * no side-stripe (impeccable BAN 1) and no animated indicator. */
 		const base =
-			'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full relative';
+			'group flex items-center gap-2.5 px-2.5 py-1.5 rounded-[var(--mcms-radius)] text-sm font-medium text-sidebar-foreground/80 transition-colors w-full';
 		const interactive = this.disabled()
 			? 'opacity-50 cursor-not-allowed'
 			: 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground';
 		const activeClass = this.active()
-			? 'bg-sidebar-accent text-sidebar-accent-foreground before:absolute before:left-0 before:top-1 before:bottom-1 before:w-1 before:bg-sidebar-primary before:rounded-full'
+			? 'active bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
 			: '';
 		return `${base} ${interactive} ${activeClass}`.trim();
 	});

@@ -33,7 +33,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	},
 	template: `
 		@if (label()) {
-			<div class="text-sm font-medium text-muted-foreground mb-1.5">{{ label() }}</div>
+			<!-- Editorial micro-label: 11px uppercase tracked muted, matches the eyebrow rhythm. -->
+			<div class="mcms-eyebrow mb-2">{{ label() }}</div>
 		}
 		<div class="text-sm">
 			@switch (type()) {
@@ -63,7 +64,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 								stroke-width="2"
 								stroke-linecap="round"
 								stroke-linejoin="round"
-								class="text-green-600"
+								class="text-success"
 							>
 								<path d="M20 6 9 17l-5-5" />
 							</svg>

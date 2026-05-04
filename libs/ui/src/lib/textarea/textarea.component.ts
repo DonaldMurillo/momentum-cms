@@ -33,9 +33,10 @@ import type { ValidationError } from '../input/input.types';
 			[attr.aria-required]="required() || null"
 			(input)="value.set(textareaEl.value)"
 			(blur)="blurred.emit()"
-			class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm
-			       text-foreground placeholder:text-muted-foreground
-			       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+			class="flex min-h-[5rem] w-full rounded-[var(--mcms-radius)] border border-input bg-background px-2.5 py-2 font-sans text-sm
+			       leading-snug text-foreground placeholder:text-muted-foreground
+			       hover:not-disabled:not-focus-visible:border-foreground/25
+			       focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background
 			       disabled:cursor-not-allowed disabled:opacity-50
 			       aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-destructive"
 		></textarea>

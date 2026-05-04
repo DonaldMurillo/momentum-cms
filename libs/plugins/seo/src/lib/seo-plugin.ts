@@ -77,7 +77,8 @@ function resolveAdminRoutes(
 	const robotsRoute: PluginAdminRouteDescriptor = {
 		path: 'seo/robots',
 		label: 'Robots',
-		icon: 'heroDocumentText',
+		// Distinct from content-perf (also heroDocumentText). Robots.txt = machine read.
+		icon: 'heroCpuChip',
 		loadComponent: (): Promise<unknown> =>
 			import(robotsModule).then((m: Record<string, unknown>) => m['RobotsSettingsPage']),
 		group: 'SEO',

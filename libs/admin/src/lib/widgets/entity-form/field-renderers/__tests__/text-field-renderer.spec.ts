@@ -166,6 +166,49 @@ describe('TextFieldRenderer', () => {
 		});
 	});
 
+	describe('JSON field editing', () => {
+		it('should parse JSON string into object on a json-typed field', () => {
+			const mock = setup('json', {}, { a: 1 });
+			component.onValueChange('{"a":2}');
+			expect(mock.state.value()).toEqual({ a: 2 });
+		});
+
+		it('should keep user typed text exactly while editing a json field', () => {
+			setup('json', {}, { a: 1 });
+			component.onValueChange('{"a":2}');
+			expect(component.displayValue()).toBe('{"a":2}');
+		});
+
+		it('should preserve user text when JSON parse fails mid-edit', () => {
+			const mock = setup('json', {}, { a: 1 });
+			component.onValueChange('{"a":');
+			expect(component.displayValue()).toBe('{"a":');
+			expect(mock.state.value()).toEqual({ a: 1 });
+		});
+
+		it('should fall back to canonical formatting when not editing', () => {
+			setup('json', {}, { a: 1, b: 2 });
+			expect(component.displayValue()).toContain('"a": 1');
+			expect(component.displayValue()).toContain('"b": 2');
+		});
+
+		it('should drop edit buffer on blur when buffer parses cleanly', () => {
+			setup('json', {}, { a: 1 });
+			component.onValueChange('{"a":2}');
+			expect(component.displayValue()).toBe('{"a":2}');
+			component.onBlur();
+			expect(component.displayValue()).toContain('"a": 2');
+			expect(component.displayValue()).toContain('\n');
+		});
+
+		it('should keep edit buffer on blur when buffer is invalid JSON', () => {
+			setup('json', {}, { a: 1 });
+			component.onValueChange('{"a":');
+			component.onBlur();
+			expect(component.displayValue()).toBe('{"a":');
+		});
+	});
+
 	describe('touchedErrors', () => {
 		it('should return empty array when not touched', () => {
 			setup('text', {}, '');

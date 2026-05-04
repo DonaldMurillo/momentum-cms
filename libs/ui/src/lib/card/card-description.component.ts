@@ -7,7 +7,8 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 	styles: `
 		:host {
 			display: block;
-			font-size: 0.875rem;
+			font-size: var(--mcms-text-sm);
+			line-height: 1.5;
 			color: hsl(var(--mcms-muted-foreground));
 		}
 	`,

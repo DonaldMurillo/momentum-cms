@@ -70,11 +70,31 @@ describe('Badge', () => {
 		expect(style.getPropertyValue('--badge-border')).toContain('--mcms-border');
 	});
 
-	it('should have transparent border for non-outline variants', () => {
+	it('should have a tinted hairline border for status variants', () => {
 		fixture.componentRef.setInput('variant', 'success');
+		fixture.detectChanges();
+
+		// Status variants render as soft chips with a faint tinted border
+		// derived from their semantic color (sage for success, etc.).
+		const style = fixture.nativeElement.style;
+		expect(style.getPropertyValue('--badge-border')).toContain('--mcms-success');
+	});
+
+	it('should have a transparent border for the secondary variant', () => {
+		fixture.componentRef.setInput('variant', 'secondary');
 		fixture.detectChanges();
 
 		const style = fixture.nativeElement.style;
 		expect(style.getPropertyValue('--badge-border')).toBe('transparent');
+	});
+
+	it('should expose data-tone for status variants and null otherwise', () => {
+		fixture.componentRef.setInput('variant', 'success');
+		fixture.detectChanges();
+		expect(fixture.nativeElement.getAttribute('data-tone')).toBe('success');
+
+		fixture.componentRef.setInput('variant', 'default');
+		fixture.detectChanges();
+		expect(fixture.nativeElement.getAttribute('data-tone')).toBeNull();
 	});
 });

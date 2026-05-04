@@ -1,95 +1,329 @@
+/* ============================================================================
+ * Momentum CMS Admin — Design System
+ *
+ * Editorial Workshop aesthetic. Warm-tinted neutrals, deep ultramarine accent,
+ * type-driven hierarchy. Colors picked in OKLCH for perceptual uniformity, then
+ * translated to HSL triplets so existing component code (hsl(var(--…)) / Tailwind
+ * <alpha-value>) keeps working without a 47-file refactor.
+ * ========================================================================== */
+
+/* Self-hosted variable fonts via @fontsource. Avoids leaking admin user IPs to
+ * fonts.googleapis.com on every page load, works under privacy-mode browsers
+ * and strict default-src CSPs, and stays render-stable when the network is slow
+ * or the Google CDN is blocked by corporate proxies. Recursive's `full.css`
+ * exposes the slnt + wght + CASL + MONO axes used by `.mcms-mono`. */
+@import '@fontsource-variable/public-sans/index.css';
+@import '@fontsource-variable/recursive/full.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Momentum CMS Admin Theme - CSS Variables */
 @layer base {
 	:root {
-		--mcms-radius: 0.5rem;
-		--mcms-background: 0 0% 100%;
-		--mcms-foreground: 222 47% 11%;
-		--mcms-card: 0 0% 100%;
-		--mcms-card-foreground: 222 47% 11%;
-		--mcms-popover: 0 0% 100%;
-		--mcms-popover-foreground: 222 47% 11%;
-		--mcms-primary: 221 83% 48%; /* Darkened from 53% for better contrast */
-		--mcms-primary-foreground: 210 40% 98%;
-		--mcms-secondary: 210 40% 96%;
-		--mcms-secondary-foreground: 222 47% 11%;
-		--mcms-muted: 210 40% 96%;
-		--mcms-muted-foreground: 215 16% 40%; /* Darkened from 47% for better contrast */
-		--mcms-accent: 210 40% 96%;
-		--mcms-accent-foreground: 222 47% 11%;
-		--mcms-destructive: 0 84% 60%;
-		--mcms-destructive-foreground: 210 40% 98%;
-		--mcms-success: 142 76% 36%;
-		--mcms-success-foreground: 0 0% 100%;
-		--mcms-warning: 38 92% 50%;
-		--mcms-warning-foreground: 48 96% 5%;
-		--mcms-info: 199 89% 48%;
-		--mcms-info-foreground: 0 0% 100%;
-		--mcms-border: 214 32% 85%;
-		--mcms-input: 214 32% 85%;
-		--mcms-ring: 221 83% 48%; /* Match primary color */
-		--mcms-sidebar: 210 40% 98%; /* Light sidebar in light mode */
-		--mcms-sidebar-foreground: 222 47% 11%;
-		--mcms-sidebar-primary: 221 83% 48%;
-		--mcms-sidebar-primary-foreground: 210 40% 98%;
-		--mcms-sidebar-accent: 210 40% 94%;
-		--mcms-sidebar-accent-foreground: 222 47% 11%;
-		--mcms-sidebar-border: 214 32% 85%;
-		--mcms-sidebar-ring: 221 83% 48%;
+		/* ── Surfaces & ink ──────────────────────────────────────────────── */
+		/* paper:  oklch(0.99 0.004 75)  — warm off-white, hint of vellum   */
+		--mcms-background: 48 25% 99%;
+		/* ink:    oklch(0.18 0.012 75)  — warm near-black                   */
+		--mcms-foreground: 30 12% 12%;
+
+		/* Cards intentionally share the page background — chrome comes from
+		 * borders and rhythm, not from raised "tile" surfaces.             */
+		--mcms-card: 48 25% 99%;
+		--mcms-card-foreground: 30 12% 12%;
+
+		--mcms-popover: 48 25% 99%;
+		--mcms-popover-foreground: 30 12% 12%;
+
+		/* ── Brand: deep ultramarine ─────────────────────────────────────── */
+		/* oklch(0.42 0.17 265) → ~hsl(228 60% 32%) — a real, considered blue */
+		--mcms-primary: 228 60% 32%;
+		--mcms-primary-foreground: 48 25% 99%;
+
+		/* ── Working surfaces (subtle, warm-tinted) ──────────────────────── */
+		--mcms-secondary: 40 14% 92%;
+		--mcms-secondary-foreground: 30 12% 18%;
+
+		--mcms-muted: 40 14% 95%;
+		/* WCAG AA on paper bg: ~5.2:1 */
+		--mcms-muted-foreground: 30 6% 38%;
+
+		--mcms-accent: 40 14% 90%;
+		--mcms-accent-foreground: 30 12% 12%;
+
+		/* ── Semantic ────────────────────────────────────────────────────── */
+		/* clay red:  oklch(0.55 0.16 25) */
+		--mcms-destructive: 12 55% 46%;
+		--mcms-destructive-foreground: 48 25% 99%;
+		/* sage:      oklch(0.55 0.10 145) */
+		--mcms-success: 148 28% 38%;
+		--mcms-success-foreground: 48 25% 99%;
+		/* amber:     oklch(0.72 0.13 70) */
+		--mcms-warning: 38 65% 56%;
+		--mcms-warning-foreground: 30 18% 14%;
+		/* info reuses brand — no generic cyan in this product */
+		--mcms-info: 228 60% 32%;
+		--mcms-info-foreground: 48 25% 99%;
+
+		--mcms-overlay: 30 12% 8%;
+
+		/* ── Hairlines ───────────────────────────────────────────────────── */
+		--mcms-border: 40 14% 86%;
+		--mcms-input: 40 14% 82%;
+		--mcms-ring: 228 60% 38%;
+
+		/* ── Sidebar (intentionally low-contrast in light mode — recedes) ── */
+		--mcms-sidebar: 40 14% 96%;
+		--mcms-sidebar-foreground: 30 12% 14%;
+		--mcms-sidebar-primary: 228 60% 32%;
+		--mcms-sidebar-primary-foreground: 48 25% 99%;
+		--mcms-sidebar-accent: 40 14% 88%;
+		--mcms-sidebar-accent-foreground: 30 12% 12%;
+		--mcms-sidebar-border: 40 14% 86%;
+		--mcms-sidebar-ring: 228 60% 38%;
+
+		/* ── Radius (sharper than default — feels more considered) ──────── */
+		--mcms-radius: 0.3125rem; /* 5px */
+
+		/* ── Typography ──────────────────────────────────────────────────── */
+		--mcms-font-sans:
+			'Public Sans Variable', 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+			system-ui, sans-serif;
+		--mcms-font-mono:
+			'Recursive Variable', 'Recursive', ui-monospace, 'SF Mono', 'Monaco', 'Cascadia Code',
+			monospace;
+
+		/* Modular type scale (1.20 ratio) — fixed rem, not fluid (admin UI) */
+		--mcms-text-2xs: 0.6875rem; /* 11px — micro labels */
+		--mcms-text-xs: 0.75rem; /* 12px — meta */
+		--mcms-text-sm: 0.8125rem; /* 13px — UI default */
+		--mcms-text-base: 0.875rem; /* 14px — body */
+		--mcms-text-md: 0.9375rem; /* 15px */
+		--mcms-text-lg: 1.0625rem; /* 17px — section heads */
+		--mcms-text-xl: 1.375rem; /* 22px — page headers */
+		--mcms-text-2xl: 1.875rem; /* 30px — display */
+
+		--mcms-leading-tight: 1.25;
+		--mcms-leading-snug: 1.375;
+		--mcms-leading-normal: 1.5;
+		--mcms-leading-relaxed: 1.65;
+
+		/* Letter spacing for editorial micro-labels */
+		--mcms-tracking-wide: 0.08em;
+		--mcms-tracking-wider: 0.14em;
+		--mcms-tracking-widest: 0.22em;
+
+		/* ── Spacing scale (4pt base, semantic) ──────────────────────────── */
+		--mcms-space-2xs: 0.25rem; /* 4 */
+		--mcms-space-xs: 0.5rem; /* 8 */
+		--mcms-space-sm: 0.75rem; /* 12 */
+		--mcms-space-md: 1rem; /* 16 */
+		--mcms-space-lg: 1.5rem; /* 24 */
+		--mcms-space-xl: 2rem; /* 32 */
+		--mcms-space-2xl: 3rem; /* 48 */
+		--mcms-space-3xl: 4rem; /* 64 */
+
+		/* ── Elevation (used sparingly — most surfaces are flat) ─────────── */
+		--mcms-shadow-sm: 0 1px 2px hsl(30 12% 12% / 0.04);
+		--mcms-shadow-md: 0 4px 12px hsl(30 12% 12% / 0.06);
+		--mcms-shadow-lg: 0 12px 32px hsl(30 12% 12% / 0.08);
 	}
 
 	.dark {
-		--mcms-radius: 0.5rem;
-		--mcms-background: 222 47% 11%;
-		--mcms-foreground: 210 40% 98%;
-		--mcms-card: 217 33% 15%;
-		--mcms-card-foreground: 210 40% 98%;
-		--mcms-popover: 222 47% 11%;
-		--mcms-popover-foreground: 210 40% 98%;
-		--mcms-primary: 217 91% 60%;
-		--mcms-primary-foreground: 222 47% 11%;
-		--mcms-secondary: 215 28% 25%;
-		--mcms-secondary-foreground: 210 40% 98%;
-		--mcms-muted: 217 33% 20%;
-		--mcms-muted-foreground: 215 20% 65%;
-		--mcms-accent: 217 33% 22%;
-		--mcms-accent-foreground: 210 40% 98%;
-		--mcms-destructive: 0 62% 50%;
-		--mcms-destructive-foreground: 210 40% 98%;
-		--mcms-success: 142 71% 45%;
-		--mcms-success-foreground: 0 0% 100%;
-		--mcms-warning: 38 92% 50%;
-		--mcms-warning-foreground: 48 96% 5%;
-		--mcms-info: 199 89% 48%;
-		--mcms-info-foreground: 0 0% 100%;
-		--mcms-border: 217 33% 22%;
-		--mcms-input: 217 33% 22%;
-		--mcms-ring: 224 76% 48%;
-		--mcms-sidebar: 224 71% 4%;
-		--mcms-sidebar-foreground: 210 40% 98%;
-		--mcms-sidebar-primary: 217 91% 60%;
-		--mcms-sidebar-primary-foreground: 222 47% 11%;
-		--mcms-sidebar-accent: 217 33% 20%;
-		--mcms-sidebar-accent-foreground: 210 40% 98%;
-		--mcms-sidebar-border: 217 33% 12%;
-		--mcms-sidebar-ring: 224 76% 48%;
+		/* ink-deep: bg, paper-soft: fg */
+		--mcms-background: 30 10% 8%;
+		--mcms-foreground: 48 18% 96%;
+
+		--mcms-card: 30 8% 11%;
+		--mcms-card-foreground: 48 18% 96%;
+
+		--mcms-popover: 30 10% 8%;
+		--mcms-popover-foreground: 48 18% 96%;
+
+		/* Lifted ultramarine for dark — needs more luminance to read */
+		--mcms-primary: 225 70% 62%;
+		--mcms-primary-foreground: 30 10% 8%;
+
+		--mcms-secondary: 30 8% 16%;
+		--mcms-secondary-foreground: 48 18% 96%;
+
+		--mcms-muted: 30 8% 14%;
+		--mcms-muted-foreground: 40 8% 64%;
+
+		--mcms-accent: 30 8% 18%;
+		--mcms-accent-foreground: 48 18% 96%;
+
+		--mcms-destructive: 12 50% 56%;
+		--mcms-destructive-foreground: 48 18% 96%;
+		--mcms-success: 148 26% 50%;
+		--mcms-success-foreground: 30 10% 8%;
+		--mcms-warning: 38 65% 60%;
+		--mcms-warning-foreground: 30 18% 12%;
+		--mcms-info: 225 70% 62%;
+		--mcms-info-foreground: 30 10% 8%;
+
+		--mcms-overlay: 0 0% 0%;
+
+		--mcms-border: 30 6% 20%;
+		--mcms-input: 30 6% 24%;
+		--mcms-ring: 225 70% 62%;
+
+		--mcms-sidebar: 30 10% 6%;
+		--mcms-sidebar-foreground: 48 18% 92%;
+		--mcms-sidebar-primary: 225 70% 62%;
+		--mcms-sidebar-primary-foreground: 30 10% 8%;
+		--mcms-sidebar-accent: 30 8% 14%;
+		--mcms-sidebar-accent-foreground: 48 18% 96%;
+		--mcms-sidebar-border: 30 6% 16%;
+		--mcms-sidebar-ring: 225 70% 62%;
+
+		--mcms-shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.4);
+		--mcms-shadow-md: 0 4px 12px hsl(0 0% 0% / 0.5);
+		--mcms-shadow-lg: 0 12px 32px hsl(0 0% 0% / 0.6);
 	}
 }
 
-/* Apply base styles */
+/* ─── Global base ─────────────────────────────────────────────────────────── */
+
 @layer base {
 	* {
 		border-color: hsl(var(--mcms-border));
 	}
 
+	html {
+		font-family: var(--mcms-font-sans);
+		/* Public Sans optical features for crisper UI */
+		font-feature-settings:
+			'cv11' on,
+			'ss03' on,
+			'ss04' on;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+		text-rendering: optimizeLegibility;
+		/* View transitions enabled by default for free progressive enhancement */
+		view-transition-name: root;
+	}
+
+	@view-transition {
+		navigation: auto;
+	}
+
 	body {
 		background-color: hsl(var(--mcms-background));
 		color: hsl(var(--mcms-foreground));
+		font-size: var(--mcms-text-sm);
+		line-height: var(--mcms-leading-normal);
+		font-weight: 400;
 	}
 
+	code,
+	kbd,
+	samp,
+	pre {
+		font-family: var(--mcms-font-mono);
+		font-feature-settings:
+			'ss01' on,
+			'ss02' on;
+	}
+
+	/* Headings: tighter leading, slightly tightened tracking */
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		font-weight: 600;
+		line-height: var(--mcms-leading-tight);
+		letter-spacing: -0.011em;
+		color: hsl(var(--mcms-foreground));
+	}
+
+	/* Selection uses brand */
+	::selection {
+		background-color: hsl(var(--mcms-primary) / 0.18);
+		color: hsl(var(--mcms-foreground));
+	}
+
+	/* Native focus baseline — primitives override with their own ring */
+	:focus-visible {
+		outline: 2px solid hsl(var(--mcms-ring));
+		outline-offset: 2px;
+		border-radius: var(--mcms-radius);
+	}
+
+	/* Defer to native overlay scrollbars: macOS auto-hides them, modern Win/Linux use
+	 * thin variants. We previously forced always-visible 10px webkit bars which
+	 * rendered alongside macOS overlay scrollbars during scroll, producing a visible
+	 * "double scrollbar" artifact. Use the modern cross-browser properties only. */
+	html {
+		scrollbar-color: hsl(var(--mcms-border)) transparent;
+		scrollbar-width: thin;
+	}
+}
+
+/* ─── Editorial primitives — used by admin pages directly ──────────────── */
+
+@layer components {
+	/* Eyebrow label — small uppercase tracked label that introduces a section.
+	 * Replaces the "icon + heading" template; pure typography does the work. */
+	.mcms-eyebrow {
+		font-size: var(--mcms-text-2xs);
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: var(--mcms-tracking-widest);
+		color: hsl(var(--mcms-muted-foreground));
+		line-height: 1;
+	}
+
+	/* Page title — used at the top of every primary admin page */
+	.mcms-page-title {
+		font-size: var(--mcms-text-xl);
+		font-weight: 600;
+		letter-spacing: -0.015em;
+		line-height: var(--mcms-leading-tight);
+		color: hsl(var(--mcms-foreground));
+	}
+
+	/* Page subtitle / description */
+	.mcms-page-subtitle {
+		font-size: var(--mcms-text-sm);
+		color: hsl(var(--mcms-muted-foreground));
+		line-height: var(--mcms-leading-normal);
+		max-width: 65ch;
+	}
+
+	/* Section heading — for groups within a page */
+	.mcms-section-title {
+		font-size: var(--mcms-text-md);
+		font-weight: 600;
+		letter-spacing: -0.005em;
+		color: hsl(var(--mcms-foreground));
+	}
+
+	/* IDs / slugs / monospace meta — feels intentional, not decorative */
+	.mcms-mono {
+		font-family: var(--mcms-font-mono);
+		font-variation-settings:
+			'MONO' 1,
+			'CASL' 0.4;
+		font-size: 0.78125rem; /* 12.5px so x-height matches body 13px */
+		color: hsl(var(--mcms-muted-foreground));
+	}
+
+	/* Hairline divider — a single 1px rule, full-bleed in its container */
+	.mcms-rule {
+		display: block;
+		width: 100%;
+		height: 1px;
+		background: hsl(var(--mcms-border));
+		border: 0;
+	}
+}
+
+/* ─── Headless primitives demo theme (preserved verbatim — separate lab) ── */
+
+@layer base {
 	:root {
 		--hdl-lab-surface: #fff7ed;
 		--hdl-lab-panel: #ffffff;

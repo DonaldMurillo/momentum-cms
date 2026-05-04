@@ -78,31 +78,28 @@ interface PluginRouteGroup {
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	template: `
 		<mcms-sidebar [collapsed]="collapsed()" [width]="width()">
-			<!-- Header -->
-			<div mcmsSidebarHeader>
-				<div class="flex items-center gap-3">
+			<!-- Header — typographic wordmark, no brand-color "logo box". Subtle accent
+			       comes from a single tracked uppercase eyebrow above the title. -->
+			<div mcmsSidebarHeader class="px-2.5">
+				<div class="flex items-center gap-2.5">
 					@if (branding()?.logo) {
 						<img
 							[src]="branding()!.logo"
 							[alt]="(branding()?.title || 'Momentum CMS') + ' logo'"
-							class="h-8 w-8"
+							class="h-7 w-7 shrink-0"
 						/>
 					} @else {
-						<!-- Default logo icon -->
-						<div
-							class="h-9 w-9 rounded-lg bg-sidebar-primary flex items-center justify-center shrink-0"
-						>
-							<ng-icon
-								name="heroBolt"
-								class="text-sidebar-primary-foreground"
-								size="20"
-								aria-hidden="true"
-							/>
-						</div>
+						<!-- Default mark: a single ultramarine glyph, no chrome -->
+						<ng-icon name="heroBolt" class="text-primary shrink-0" size="18" aria-hidden="true" />
 					}
-					<h1 class="text-lg font-bold tracking-tight">
-						{{ branding()?.title || 'Momentum CMS' }}
-					</h1>
+					<div class="flex flex-col min-w-0 leading-tight">
+						@if (eyebrowLabel()) {
+							<span class="mcms-eyebrow">{{ eyebrowLabel() }}</span>
+						}
+						<h1 class="text-base font-semibold -tracking-[0.015em] truncate">
+							{{ branding()?.title || 'Momentum' }}
+						</h1>
+					</div>
 				</div>
 			</div>
 
@@ -227,6 +224,15 @@ export class AdminSidebarWidget {
 	/** Branding configuration (logo, title) */
 	readonly branding = input<AdminBranding>();
 
+	/** Resolved eyebrow label. Defaults to `'CMS'` only when no custom title is
+	 * provided — otherwise white-label deployments would read "CMS / Acme". A
+	 * consumer can pass `branding.eyebrow` to opt back in with their own label. */
+	readonly eyebrowLabel = computed((): string => {
+		const b = this.branding();
+		if (b?.eyebrow !== undefined) return b.eyebrow;
+		return b?.title ? '' : 'CMS';
+	});
+
 	/** Collections to display in navigation */
 	readonly collections = input<CollectionConfig[]>([]);
 
@@ -301,36 +307,60 @@ export class AdminSidebarWidget {
 		return groups;
 	});
 
-	/** Collection icon names by slug */
+	/** Collection icon names by slug.
+	 *
+	 * Each collection has a distinct heroicon. No two slugs share the same icon —
+	 * collisions hurt sidebar scanability. Keep semantically obvious. The full
+	 * heroicon outline set (~324 icons) is registered globally via `provideAdminIcons()`,
+	 * so any `hero*` name works.
+	 */
 	private readonly collectionIcons: Record<string, string> = {
-		// Content
-		posts: 'heroNewspaper',
+		// ── Content ──────────────────────────────────────────────────────────
+		posts: 'heroPencilSquare',
 		articles: 'heroNewspaper',
 		pages: 'heroDocument',
 		media: 'heroPhoto',
-		// People
+		categories: 'heroSquares2x2',
+		tags: 'heroHashtag',
+		'user-notes': 'heroBookOpen',
+		'hook-test-items': 'heroBeaker',
+		'field-test-items': 'heroBeaker',
+
+		// ── E-commerce / catalog ─────────────────────────────────────────────
+		products: 'heroShoppingBag',
+		events: 'heroCalendar',
+
+		// ── Forms ────────────────────────────────────────────────────────────
+		forms: 'heroClipboardDocumentList',
+		'form-submissions': 'heroInboxArrowDown',
+
+		// ── Auth ─────────────────────────────────────────────────────────────
 		users: 'heroUsers',
 		'auth-user': 'heroUsers',
-		'auth-session': 'heroBolt',
-		'auth-account': 'heroUsers',
-		'auth-api-keys': 'heroBolt',
-		'auth-verification': 'heroBolt',
-		// System
+		'auth-session': 'heroComputerDesktop',
+		'auth-account': 'heroIdentification',
+		'auth-api-keys': 'heroKey',
+		'auth-verification': 'heroShieldCheck',
+
+		// ── Settings / config ────────────────────────────────────────────────
 		settings: 'heroCog6Tooth',
-		'site-settings': 'heroCog6Tooth',
-		categories: 'heroFolder',
-		tags: 'heroFolder',
-		// Plugins
-		products: 'heroChartBarSquare',
-		'email-templates': 'heroDocumentText',
-		forms: 'heroPuzzlePiece',
-		'form-submissions': 'heroDocumentText',
-		redirects: 'heroMap',
+		'site-settings': 'heroAdjustmentsHorizontal',
+
+		// ── Routing ──────────────────────────────────────────────────────────
+		redirects: 'heroArrowsRightLeft',
+
+		// ── Analytics ────────────────────────────────────────────────────────
 		'tracking-rules': 'heroCursorArrowRays',
-		'queue-jobs': 'heroBolt',
-		'cron-schedules': 'heroBolt',
-		'otel-snapshots': 'heroChartBarSquare',
-		events: 'heroChartBarSquare',
+
+		// ── Email ────────────────────────────────────────────────────────────
+		'email-templates': 'heroEnvelopeOpen',
+
+		// ── System / infra ───────────────────────────────────────────────────
+		'queue-jobs': 'heroQueueList',
+		'cron-schedules': 'heroClock',
+		'otel-snapshots': 'heroChartPie',
+
+		// ── Fallback ─────────────────────────────────────────────────────────
 		default: 'heroFolder',
 	};
 

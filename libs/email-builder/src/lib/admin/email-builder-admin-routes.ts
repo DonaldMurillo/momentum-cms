@@ -10,7 +10,9 @@ export const emailBuilderAdminRoutes: PluginAdminRouteDescriptor[] = [
 	{
 		path: 'email-builder',
 		label: 'Email Builder',
-		icon: 'heroEnvelopeOpen',
+		// Distinct from `email-templates` (heroEnvelopeOpen) — this is the *composer* tool,
+		// not the templates collection.
+		icon: 'heroPaintBrush',
 		loadComponent: (): Promise<unknown> =>
 			import('./email-builder-studio.page').then((m) => m.EmailBuilderStudioPage),
 		group: 'Tools',

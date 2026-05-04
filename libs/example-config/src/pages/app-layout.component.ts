@@ -49,9 +49,9 @@ const NAV_LINKS: NavLink[] = [
 						@for (link of navLinks; track link.path) {
 							<a
 								[routerLink]="link.path"
-								routerLinkActive="text-primary bg-accent"
+								routerLinkActive="text-foreground font-semibold"
 								[routerLinkActiveOptions]="{ exact: link.exact }"
-								class="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+								class="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
 								[attr.data-testid]="'nav-' + link.label.toLowerCase()"
 							>
 								{{ link.label }}
@@ -59,7 +59,7 @@ const NAV_LINKS: NavLink[] = [
 						}
 						<a
 							routerLink="/admin"
-							class="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+							class="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
 							data-testid="nav-admin"
 						>
 							Admin
@@ -103,9 +103,9 @@ const NAV_LINKS: NavLink[] = [
 						@for (link of navLinks; track link.path) {
 							<a
 								[routerLink]="link.path"
-								routerLinkActive="text-primary bg-accent"
+								routerLinkActive="text-foreground font-semibold"
 								[routerLinkActiveOptions]="{ exact: link.exact }"
-								class="block px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+								class="block px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
 								(click)="mobileMenuOpen.set(false)"
 							>
 								{{ link.label }}
@@ -113,7 +113,7 @@ const NAV_LINKS: NavLink[] = [
 						}
 						<a
 							routerLink="/admin"
-							class="block px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+							class="block px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
 							(click)="mobileMenuOpen.set(false)"
 						>
 							Admin
