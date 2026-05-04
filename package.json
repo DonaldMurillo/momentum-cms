@@ -38,6 +38,8 @@
 		"@angular/ssr": "~21.2.0",
 		"@aws-sdk/client-s3": "^3.983.0",
 		"@aws-sdk/s3-request-presigner": "^3.983.0",
+		"@fontsource-variable/public-sans": "^5.2.7",
+		"@fontsource-variable/recursive": "^5.2.8",
 		"@ng-icons/core": "^33.0.0",
 		"@ng-icons/heroicons": "^33.0.0",
 		"@tiptap/core": "^3.19.0",

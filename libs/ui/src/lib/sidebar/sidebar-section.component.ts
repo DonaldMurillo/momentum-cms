@@ -21,7 +21,7 @@ import { ChangeDetectionStrategy, Component, computed, input, model, output } fr
 			@if (collapsible()) {
 				<button
 					type="button"
-					class="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors"
+					class="flex items-center justify-between w-full px-2.5 pb-1 pt-4 text-2xs font-semibold uppercase tracking-mcms-widest text-sidebar-foreground/55 hover:text-sidebar-foreground transition-colors"
 					[attr.aria-expanded]="expanded()"
 					[attr.aria-label]="'Toggle ' + title() + ' section'"
 					(click)="toggle()"
@@ -46,14 +46,14 @@ import { ChangeDetectionStrategy, Component, computed, input, model, output } fr
 				</button>
 			} @else {
 				<div
-					class="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/60"
+					class="px-2.5 pb-1 pt-4 text-2xs font-semibold uppercase tracking-mcms-widest text-sidebar-foreground/55"
 				>
 					{{ title() }}
 				</div>
 			}
 		}
 		@if (!collapsible() || expanded()) {
-			<div class="flex flex-col gap-1" [class.mt-1]="title()">
+			<div class="flex flex-col gap-0.5" [class.mt-0.5]="title()">
 				<ng-content />
 			</div>
 		}

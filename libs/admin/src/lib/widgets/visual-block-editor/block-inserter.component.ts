@@ -44,20 +44,20 @@ import {
 	providers: [provideIcons({ heroPlus })],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: {
-		class: 'group relative flex items-center justify-center py-1',
+		class: 'group relative flex items-center justify-center py-1.5',
 		'[attr.data-testid]': '"block-inserter"',
 		'[attr.data-insert-index]': 'insertIndex()',
 	},
 	template: `
-		<!-- Horizontal line -->
+		<!-- Hairline that doubles as a between-blocks separator on hover -->
 		<div
 			class="absolute inset-x-0 top-1/2 h-px bg-border opacity-0 transition-opacity group-hover:opacity-100"
 			aria-hidden="true"
 		></div>
 
-		<!-- "+" button -->
+		<!-- Insert pill — appears on hover, reads as "what can I add here" -->
 		<button
-			class="relative z-10 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background text-muted-foreground opacity-0 shadow-sm transition-all hover:bg-primary hover:text-primary-foreground hover:border-primary group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+			class="relative z-10 inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-0.5 text-2xs font-medium text-muted-foreground opacity-0 transition-all hover:border-foreground/40 hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			[mcmsPopoverTrigger]="blockPicker"
 			popoverSide="bottom"
 			popoverAlign="center"
@@ -67,7 +67,8 @@ import {
 			(closed)="onPopoverClosed()"
 			[attr.aria-label]="'Add block at position ' + insertIndex()"
 		>
-			<ng-icon name="heroPlus" size="14" aria-hidden="true" />
+			<ng-icon name="heroPlus" size="11" aria-hidden="true" />
+			<span>Insert block</span>
 		</button>
 
 		<!-- Block type picker popover -->

@@ -162,8 +162,13 @@ describe('EntityFormWidget', () => {
 			fixture.detectChanges();
 			await fixture.whenStable();
 
+			// Create-mode header: "New Post" eyebrow + "Untitled post" h1.
+			// Match the full "untitled post" phrase so a regression to the old
+			// "Create Post" wording or any other label drift fails this test.
 			const header = fixture.nativeElement.querySelector('h1');
-			expect(header.textContent).toContain('Create Post');
+			expect(header.textContent.toLowerCase()).toMatch(/untitled\s+post/);
+			const eyebrow = fixture.nativeElement.querySelector('.mcms-eyebrow');
+			expect(eyebrow?.textContent).toContain('New Post');
 		});
 
 		it('should create entity on submit', async () => {
@@ -256,8 +261,11 @@ describe('EntityFormWidget', () => {
 			await fixture.whenStable();
 			fixture.detectChanges();
 
+			// Edit-mode header: "Editing" eyebrow + "Post" h1 (no "Edit" prefix in the title).
 			const header = fixture.nativeElement.querySelector('h1');
-			expect(header.textContent).toContain('Edit Post');
+			expect(header.textContent).toContain('Post');
+			const eyebrow = fixture.nativeElement.querySelector('.mcms-eyebrow');
+			expect(eyebrow?.textContent?.trim()).toBe('Editing');
 		});
 
 		it('should update entity on submit', async () => {

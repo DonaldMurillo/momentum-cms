@@ -31,7 +31,9 @@ export const analyticsAdminRoutes: PluginAdminRouteDescriptor[] = [
 	{
 		path: 'analytics/content',
 		label: 'Content Perf.',
-		icon: 'heroDocumentText',
+		// Distinct from email-templates (heroEnvelopeOpen) and form-submissions (heroInboxArrowDown).
+		// A presentation chart says "performance breakdown" more clearly than a generic doc icon.
+		icon: 'heroPresentationChartBar',
 		loadComponent: (): Promise<unknown> =>
 			import('./dashboard/content-performance.page').then((m) => m.ContentPerformancePage),
 		group: 'Analytics',

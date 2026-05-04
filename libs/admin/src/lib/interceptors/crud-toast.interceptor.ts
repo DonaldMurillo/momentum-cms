@@ -20,8 +20,21 @@ import { FeedbackService } from '../widgets/feedback/feedback.service';
  */
 export const SKIP_AUTO_TOAST = new HttpContextToken<boolean>(() => false);
 
-/** Routes that are not collection endpoints and should be ignored. */
-const EXCLUDED_SLUGS = new Set(['auth', 'setup', 'health', 'config', 'access', 'graphql']);
+/** Routes that are not collection endpoints and should be ignored.
+ * Plugin ingest/system endpoints sit under `/api/<plugin>/...` and would otherwise
+ * be mis-classified as CRUD on a singularized collection (e.g. `/api/analytics/collect`
+ * → "Analytic created"). Add new plugin namespaces here if their internal calls
+ * should not produce user-facing CRUD toasts. */
+const EXCLUDED_SLUGS = new Set([
+	'auth',
+	'setup',
+	'health',
+	'config',
+	'access',
+	'graphql',
+	'analytics',
+	'otel',
+]);
 
 /** Sub-resource actions that have specific toast behavior. */
 const LIFECYCLE_ACTIONS = new Set(['publish', 'unpublish', 'draft']);

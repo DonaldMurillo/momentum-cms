@@ -203,7 +203,9 @@ describe('Table Integration', () => {
 
 	it('should apply selected styling to selected row', () => {
 		const selectedRow = fixture.nativeElement.querySelectorAll('mcms-table-body mcms-table-row')[1];
-		expect(selectedRow.classList.contains('bg-muted')).toBe(true);
+		// Match the exact selected token so a regression that drops the selected
+		// modifier (leaving only `hover:bg-muted/40`, which also contains "bg-muted") fails.
+		expect(selectedRow.className).toMatch(/(^|\s)bg-muted\/60(\s|$)/);
 	});
 
 	it('should have header cells with columnheader role', () => {

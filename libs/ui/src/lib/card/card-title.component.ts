@@ -18,10 +18,10 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 	styles: `
 		:host {
 			display: block;
-			font-size: 1.5rem;
+			font-size: var(--mcms-text-lg);
 			font-weight: 600;
-			line-height: 1;
-			letter-spacing: -0.025em;
+			line-height: 1.2;
+			letter-spacing: -0.012em;
 			margin: 0;
 		}
 	`,

@@ -61,7 +61,8 @@ function resolveAdminRoutes(
 		{
 			path: 'cache',
 			label: 'Cache',
-			icon: 'heroBolt',
+			// Server-stack reads as caching layer; heroBolt was generic and overloaded.
+			icon: 'heroServerStack',
 			loadComponent: defaultLoadComponent,
 			group: 'System',
 		},

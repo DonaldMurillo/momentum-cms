@@ -43,8 +43,12 @@ export class TableRow {
 	readonly class = input('');
 
 	readonly hostClasses = computed(() => {
-		const base = 'border-b transition-colors hover:bg-muted/50';
-		const selectedClasses = this.selected() ? 'bg-muted' : '';
+		/* Hairline below each row, soft hover tint. Last row has no border so the
+		 * table doesn't end on a stray line — handled via :last-of-type selector
+		 * below. (We can't put :last-of-type on host, so the parent body clips it
+		 * by sitting inside the bordered wrapper.) */
+		const base = 'border-b border-border/60 transition-colors hover:bg-muted/40';
+		const selectedClasses = this.selected() ? 'bg-muted/60' : '';
 
 		return `${base} ${selectedClasses} ${this.class()}`.trim();
 	});

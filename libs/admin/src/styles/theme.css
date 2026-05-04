@@ -1,142 +1,166 @@
 /**
- * Momentum CMS Theme CSS Variables
+ * Momentum CMS Theme — Design Tokens
  *
- * Defines the design tokens for the admin UI.
- * Uses HSL values without the hsl() wrapper for Tailwind alpha support.
+ * "Editorial Workshop" aesthetic: warm-tinted neutrals, deep ultramarine accent,
+ * type-driven hierarchy. Colors picked in OKLCH for perceptual uniformity, then
+ * stored as HSL triplets so existing `hsl(var(--…))` consumers and Tailwind
+ * `<alpha-value>` continue to work unchanged.
  *
- * Usage:
- * - Import this file in your app's main styles
- * - Toggle .dark class on <html> for dark mode
+ * Toggle `.dark` on <html> for dark mode.
  *
- * Color format: H S% L% (e.g., "222 47% 11%")
+ * Format: H S% L% (e.g., `48 25% 99%`).
  */
 
 @layer base {
 	:root {
-		/* Base colors */
-		--mcms-background: 0 0% 100%;
-		--mcms-foreground: 222 47% 11%;
+		/* Surfaces & ink */
+		--mcms-background: 48 25% 99%;
+		--mcms-foreground: 30 12% 12%;
 
-		/* Card */
-		--mcms-card: 0 0% 100%;
-		--mcms-card-foreground: 222 47% 11%;
+		--mcms-card: 48 25% 99%;
+		--mcms-card-foreground: 30 12% 12%;
 
-		/* Primary - Blue */
-		--mcms-primary: 221 83% 53%;
-		--mcms-primary-foreground: 210 40% 98%;
+		--mcms-popover: 48 25% 99%;
+		--mcms-popover-foreground: 30 12% 12%;
 
-		/* Secondary - Gray */
-		--mcms-secondary: 210 40% 96%;
-		--mcms-secondary-foreground: 222 47% 11%;
+		/* Brand: deep ultramarine */
+		--mcms-primary: 228 60% 32%;
+		--mcms-primary-foreground: 48 25% 99%;
 
-		/* Muted - Light gray for subtle backgrounds */
-		--mcms-muted: 210 40% 96%;
-		--mcms-muted-foreground: 215 16% 43%;
+		/* Working surfaces (warm-tinted) */
+		--mcms-secondary: 40 14% 92%;
+		--mcms-secondary-foreground: 30 12% 18%;
 
-		/* Accent - Hover states */
-		--mcms-accent: 210 40% 96%;
-		--mcms-accent-foreground: 222 47% 11%;
+		--mcms-muted: 40 14% 95%;
+		--mcms-muted-foreground: 30 6% 38%;
 
-		/* Destructive - Red for dangerous actions */
-		--mcms-destructive: 0 84% 60%;
-		--mcms-destructive-foreground: 210 40% 98%;
+		--mcms-accent: 40 14% 90%;
+		--mcms-accent-foreground: 30 12% 12%;
 
-		/* Success - Green for positive feedback */
-		--mcms-success: 142 76% 36%;
-		--mcms-success-foreground: 0 0% 100%;
+		/* Semantic */
+		--mcms-destructive: 12 55% 46%;
+		--mcms-destructive-foreground: 48 25% 99%;
+		--mcms-success: 148 28% 38%;
+		--mcms-success-foreground: 48 25% 99%;
+		--mcms-warning: 38 65% 56%;
+		--mcms-warning-foreground: 30 18% 14%;
+		--mcms-info: 228 60% 32%;
+		--mcms-info-foreground: 48 25% 99%;
 
-		/* Warning - Amber for caution */
-		--mcms-warning: 38 92% 50%;
-		--mcms-warning-foreground: 48 96% 5%;
+		--mcms-overlay: 30 12% 8%;
 
-		/* Info - Blue for informational messages */
-		--mcms-info: 199 89% 48%;
-		--mcms-info-foreground: 0 0% 100%;
+		/* Hairlines */
+		--mcms-border: 40 14% 86%;
+		--mcms-input: 40 14% 82%;
+		--mcms-ring: 228 60% 38%;
 
-		/* Overlay - For modal backdrops */
-		--mcms-overlay: 0 0% 0%;
+		/* Sidebar — recedes in light mode */
+		--mcms-sidebar: 40 14% 96%;
+		--mcms-sidebar-foreground: 30 12% 14%;
+		--mcms-sidebar-primary: 228 60% 32%;
+		--mcms-sidebar-primary-foreground: 48 25% 99%;
+		--mcms-sidebar-accent: 40 14% 88%;
+		--mcms-sidebar-accent-foreground: 30 12% 12%;
+		--mcms-sidebar-border: 40 14% 86%;
+		--mcms-sidebar-ring: 228 60% 38%;
 
-		/* Border, input, and ring */
-		--mcms-border: 214 32% 91%;
-		--mcms-input: 214 32% 91%;
-		--mcms-ring: 221 83% 53%;
+		--mcms-radius: 0.3125rem;
 
-		/* Border radius */
-		--mcms-radius: 0.5rem;
+		/* Typography. The "Variable" suffix matches the @fontsource-variable/* face
+		 * names; the bare "Public Sans" / "Recursive" names are kept as a fallback
+		 * for consumers who load fonts a different way. */
+		--mcms-font-sans:
+			'Public Sans Variable', 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+			system-ui, sans-serif;
+		--mcms-font-mono:
+			'Recursive Variable', 'Recursive', ui-monospace, 'SF Mono', 'Monaco', 'Cascadia Code',
+			monospace;
 
-		/* Sidebar colors - Dark sidebar in light mode */
-		--mcms-sidebar: 222 47% 11%;
-		--mcms-sidebar-foreground: 210 40% 98%;
-		--mcms-sidebar-primary: 221 83% 53%;
-		--mcms-sidebar-primary-foreground: 210 40% 98%;
-		--mcms-sidebar-accent: 217 33% 17%;
-		--mcms-sidebar-accent-foreground: 210 40% 98%;
-		--mcms-sidebar-border: 217 33% 20%;
-		--mcms-sidebar-ring: 221 83% 53%;
+		--mcms-text-2xs: 0.6875rem;
+		--mcms-text-xs: 0.75rem;
+		--mcms-text-sm: 0.8125rem;
+		--mcms-text-base: 0.875rem;
+		--mcms-text-md: 0.9375rem;
+		--mcms-text-lg: 1.0625rem;
+		--mcms-text-xl: 1.375rem;
+		--mcms-text-2xl: 1.875rem;
+
+		--mcms-leading-tight: 1.25;
+		--mcms-leading-snug: 1.375;
+		--mcms-leading-normal: 1.5;
+		--mcms-leading-relaxed: 1.65;
+
+		--mcms-tracking-wide: 0.08em;
+		--mcms-tracking-wider: 0.14em;
+		--mcms-tracking-widest: 0.22em;
+
+		/* Spacing scale */
+		--mcms-space-2xs: 0.25rem;
+		--mcms-space-xs: 0.5rem;
+		--mcms-space-sm: 0.75rem;
+		--mcms-space-md: 1rem;
+		--mcms-space-lg: 1.5rem;
+		--mcms-space-xl: 2rem;
+		--mcms-space-2xl: 3rem;
+		--mcms-space-3xl: 4rem;
+
+		--mcms-shadow-sm: 0 1px 2px hsl(30 12% 12% / 0.04);
+		--mcms-shadow-md: 0 4px 12px hsl(30 12% 12% / 0.06);
+		--mcms-shadow-lg: 0 12px 32px hsl(30 12% 12% / 0.08);
 	}
 
 	.dark {
-		/* Base colors - Dark background */
-		--mcms-background: 222 47% 11%;
-		--mcms-foreground: 210 40% 98%;
+		--mcms-background: 30 10% 8%;
+		--mcms-foreground: 48 18% 96%;
 
-		/* Card - slightly lighter than background */
-		--mcms-card: 217 33% 15%;
-		--mcms-card-foreground: 210 40% 98%;
+		--mcms-card: 30 8% 11%;
+		--mcms-card-foreground: 48 18% 96%;
 
-		/* Primary - Blue (same as light) */
-		--mcms-primary: 217 91% 60%;
-		--mcms-primary-foreground: 222 47% 11%;
+		--mcms-popover: 30 10% 8%;
+		--mcms-popover-foreground: 48 18% 96%;
 
-		/* Secondary - distinct from card for badges */
-		--mcms-secondary: 215 28% 25%;
-		--mcms-secondary-foreground: 210 40% 98%;
+		--mcms-primary: 225 70% 62%;
+		--mcms-primary-foreground: 30 10% 8%;
 
-		/* Muted - subtle background */
-		--mcms-muted: 217 33% 20%;
-		--mcms-muted-foreground: 215 20% 65%;
+		--mcms-secondary: 30 8% 16%;
+		--mcms-secondary-foreground: 48 18% 96%;
 
-		/* Accent - hover states */
-		--mcms-accent: 217 33% 22%;
-		--mcms-accent-foreground: 210 40% 98%;
+		--mcms-muted: 30 8% 14%;
+		--mcms-muted-foreground: 40 8% 64%;
 
-		/* Destructive */
-		--mcms-destructive: 0 62% 50%;
-		--mcms-destructive-foreground: 210 40% 98%;
+		--mcms-accent: 30 8% 18%;
+		--mcms-accent-foreground: 48 18% 96%;
 
-		/* Success */
-		--mcms-success: 142 71% 45%;
-		--mcms-success-foreground: 0 0% 100%;
+		--mcms-destructive: 12 50% 56%;
+		--mcms-destructive-foreground: 48 18% 96%;
+		--mcms-success: 148 26% 50%;
+		--mcms-success-foreground: 30 10% 8%;
+		--mcms-warning: 38 65% 60%;
+		--mcms-warning-foreground: 30 18% 12%;
+		--mcms-info: 225 70% 62%;
+		--mcms-info-foreground: 30 10% 8%;
 
-		/* Warning */
-		--mcms-warning: 38 92% 50%;
-		--mcms-warning-foreground: 48 96% 5%;
-
-		/* Info */
-		--mcms-info: 199 89% 48%;
-		--mcms-info-foreground: 0 0% 100%;
-
-		/* Overlay */
 		--mcms-overlay: 0 0% 0%;
 
-		/* Border, input, and ring - slightly visible */
-		--mcms-border: 217 33% 22%;
-		--mcms-input: 217 33% 22%;
-		--mcms-ring: 224 76% 48%;
+		--mcms-border: 30 6% 20%;
+		--mcms-input: 30 6% 24%;
+		--mcms-ring: 225 70% 62%;
 
-		/* Sidebar colors - Slightly lighter than main in dark mode */
-		--mcms-sidebar: 224 71% 4%;
-		--mcms-sidebar-foreground: 213 31% 91%;
-		--mcms-sidebar-primary: 217 91% 60%;
-		--mcms-sidebar-primary-foreground: 210 40% 98%;
-		--mcms-sidebar-accent: 217 33% 17%;
-		--mcms-sidebar-accent-foreground: 213 31% 91%;
-		--mcms-sidebar-border: 217 33% 12%;
-		--mcms-sidebar-ring: 217 91% 60%;
+		--mcms-sidebar: 30 10% 6%;
+		--mcms-sidebar-foreground: 48 18% 92%;
+		--mcms-sidebar-primary: 225 70% 62%;
+		--mcms-sidebar-primary-foreground: 30 10% 8%;
+		--mcms-sidebar-accent: 30 8% 14%;
+		--mcms-sidebar-accent-foreground: 48 18% 96%;
+		--mcms-sidebar-border: 30 6% 16%;
+		--mcms-sidebar-ring: 225 70% 62%;
+
+		--mcms-shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.4);
+		--mcms-shadow-md: 0 4px 12px hsl(0 0% 0% / 0.5);
+		--mcms-shadow-lg: 0 12px 32px hsl(0 0% 0% / 0.6);
 	}
 }
 
-/* Apply base styles */
 @layer base {
 	* {
 		border-color: hsl(var(--mcms-border));

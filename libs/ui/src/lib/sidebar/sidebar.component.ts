@@ -64,15 +64,15 @@ import { SidebarService } from './sidebar.service';
 		}
 
 		<ng-template #sidebarContent>
-			<!-- Header: stays at top -->
-			<div class="shrink-0 px-3 py-4">
+			<!-- Header — slim, typographic only -->
+			<div class="shrink-0 px-3 pt-5 pb-3">
 				<ng-content select="[mcmsSidebarHeader]" />
 			</div>
 			<!-- Content: scrollable nav area -->
-			<div class="flex-1 overflow-y-auto px-2">
+			<div class="flex-1 overflow-y-auto px-2 pb-2">
 				<ng-content select="[mcmsSidebarContent]" />
 			</div>
-			<!-- Footer: always at bottom -->
+			<!-- Footer: always at bottom; hairline rule, no chrome -->
 			<div class="shrink-0 border-t border-sidebar-border px-2 py-2">
 				<ng-content select="[mcmsSidebarFooter]" />
 			</div>

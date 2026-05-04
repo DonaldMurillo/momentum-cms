@@ -64,14 +64,15 @@ describe('CollectionCardWidget', () => {
 		expect(component).toBeTruthy();
 	});
 
-	it('should render collection label', async () => {
+	it('should render collection label as the row title', async () => {
 		fixture.componentRef.setInput('collection', mockCollection);
 		fixture.detectChanges();
 		await fixture.whenStable();
 		flushPendingRequests();
 
-		const title = fixture.nativeElement.querySelector('h3');
-		expect(title.textContent).toContain('Posts');
+		// Row layout: the title is the first anchor's text, not a heading element.
+		const text = fixture.nativeElement.textContent;
+		expect(text).toContain('Posts');
 	});
 
 	it('should render collection description', async () => {
@@ -89,7 +90,6 @@ describe('CollectionCardWidget', () => {
 		fixture.detectChanges();
 		await fixture.whenStable();
 
-		// Respond to the HTTP request
 		const req = httpMock.expectOne('/api/posts?limit=0');
 		expect(req.request.method).toBe('GET');
 		req.flush({ docs: [], totalDocs: 42 });
@@ -100,39 +100,41 @@ describe('CollectionCardWidget', () => {
 		expect(component.count()).toBe(42);
 	});
 
-	it('should show skeleton while loading', async () => {
+	it('should render an em-dash placeholder while count is loading', async () => {
 		fixture.componentRef.setInput('collection', mockCollection);
 		fixture.detectChanges();
 
-		// Don't respond to request yet - it's still loading
-		const skeleton = fixture.nativeElement.querySelector('mcms-skeleton');
-		expect(skeleton).toBeTruthy();
+		// Pair the user-visible "—" with the loading() signal so a future swap
+		// (e.g. spinner instead of dash) still has to keep loading state correct.
+		expect(component.loading()).toBe(true);
+		const text = fixture.nativeElement.textContent;
+		expect(text).toContain('—');
 
-		// Clean up by responding to the pending request
+		// Clean up the pending request.
 		const req = httpMock.expectOne('/api/posts?limit=0');
 		req.flush({ docs: [], totalDocs: 0 });
 	});
 
-	it('should show error badge when fetch fails', async () => {
+	it('should render a destructive indicator when fetch fails', async () => {
 		fixture.componentRef.setInput('collection', mockCollection);
 		fixture.detectChanges();
 		await fixture.whenStable();
 
-		// Respond with error
 		const req = httpMock.expectOne('/api/posts?limit=0');
 		req.error(new ErrorEvent('Network error'));
 
-		// Wait for async error handling and multiple change detection cycles
+		// Wait for async error handling.
 		await new Promise((resolve) => setTimeout(resolve, 10));
 		fixture.detectChanges();
 		await fixture.whenStable();
 		fixture.detectChanges();
 
+		// Verify both the internal signal AND the user-visible error UI element —
+		// the destructive-tinted exclamation that replaces the count.
 		expect(component.error()).toBe('Failed to load count');
 		expect(component.loading()).toBe(false);
-		const badge = fixture.nativeElement.querySelector('mcms-badge');
-		expect(badge).toBeTruthy();
-		expect(badge.textContent).toContain('Error');
+		const errorIndicator = fixture.nativeElement.querySelector('.text-destructive');
+		expect(errorIndicator).toBeTruthy();
 	});
 
 	it('should render view all link', async () => {
@@ -145,17 +147,17 @@ describe('CollectionCardWidget', () => {
 		expect(viewPath).toBe('/admin/collections/posts');
 	});
 
-	it('should render create button when user can create', async () => {
+	it('should render the "New" action when user can create', async () => {
 		fixture.componentRef.setInput('collection', mockCollection);
 		fixture.detectChanges();
 		await fixture.whenStable();
 		flushPendingRequests();
 
 		const text = fixture.nativeElement.textContent;
-		expect(text).toContain('Create');
+		expect(text).toContain('New');
 	});
 
-	it('should not render create button when user cannot create', async () => {
+	it('should not render the "New" action when user cannot create', async () => {
 		(mockAccessService.canCreate as ReturnType<typeof vi.fn>).mockReturnValue(false);
 
 		fixture.componentRef.setInput('collection', mockCollection);
@@ -163,10 +165,10 @@ describe('CollectionCardWidget', () => {
 		await fixture.whenStable();
 		flushPendingRequests();
 
-		const links = fixture.nativeElement.querySelectorAll('a[mcms-button]');
-		const createLink = Array.from(links).find((link) =>
-			(link as HTMLElement).textContent?.includes('Create'),
+		const links = Array.from(
+			fixture.nativeElement.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>,
 		);
+		const createLink = links.find((link) => link.textContent?.trim() === 'New');
 		expect(createLink).toBeFalsy();
 	});
 
@@ -212,7 +214,6 @@ describe('CollectionCardWidget', () => {
 		fixture.detectChanges();
 		await fixture.whenStable();
 
-		// No HTTP requests should be made
 		httpMock.expectNone('/api/posts?limit=0');
 	});
 });

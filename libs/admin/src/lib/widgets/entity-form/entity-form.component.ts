@@ -17,9 +17,6 @@ import { form, submit } from '@angular/forms/signals';
 import type { CollectionConfig, Field, ImageSizeConfig, DocumentStatus } from '@momentumcms/core';
 import { flattenDataFields, humanizeFieldName, isUploadCollection } from '@momentumcms/core';
 import {
-	Card,
-	CardContent,
-	CardFooter,
 	Button,
 	Spinner,
 	Alert,
@@ -61,9 +58,6 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 @Component({
 	selector: 'mcms-entity-form',
 	imports: [
-		Card,
-		CardContent,
-		CardFooter,
 		Button,
 		Spinner,
 		Alert,
@@ -93,20 +87,29 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 				</mcms-breadcrumbs>
 			}
 
-			<!-- Page Header -->
+			<!-- Page Header — eyebrow + title + subtitle pattern, matches dashboard/list -->
 			<div class="mb-8">
 				<div class="flex items-start justify-between gap-4">
-					<div>
-						<div class="flex items-center gap-3">
-							<h1 class="text-2xl font-semibold tracking-tight">
+					<div class="flex flex-col gap-1.5">
+						<span class="mcms-eyebrow">
+							@if (isGlobal()) {
+								Settings
+							} @else if (mode() === 'create') {
+								New {{ collectionLabelSingular() }}
+							} @else if (mode() === 'edit') {
+								Editing
+							} @else {
+								Viewing
+							}
+						</span>
+						<div class="flex items-center gap-3 flex-wrap">
+							<h1 class="mcms-page-title">
 								@if (isGlobal()) {
 									{{ collectionLabelSingular() }}
 								} @else if (mode() === 'create') {
-									Create {{ collectionLabelSingular() }}
-								} @else if (mode() === 'edit') {
-									Edit {{ collectionLabelSingular() }}
+									Untitled {{ collectionLabelSingular().toLowerCase() }}
 								} @else {
-									View {{ collectionLabelSingular() }}
+									{{ collectionLabelSingular() }}
 								}
 							</h1>
 							@if (hasVersioning() && mode() === 'edit' && entityId()) {
@@ -119,7 +122,7 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 								/>
 							}
 						</div>
-						<p class="mt-1 text-muted-foreground">
+						<p class="mcms-page-subtitle">
 							@if (isGlobal()) {
 								Manage {{ collectionLabelSingular().toLowerCase() }} settings.
 							} @else if (mode() === 'create') {
@@ -135,74 +138,73 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 				<ng-content select="[entityFormHeaderExtra]" />
 			</div>
 
-			<mcms-card>
-				<mcms-card-content>
-					@if (isLoading()) {
-						<div class="flex items-center justify-center py-12">
-							<mcms-spinner size="lg" />
-						</div>
-					} @else {
-						@if (formError()) {
-							<mcms-alert variant="destructive" class="mb-6" role="alert" aria-live="assertive">
-								{{ formError() }}
-							</mcms-alert>
-						}
+			<!-- Form body — fields flow on the page directly, no card chrome.
+			     Uses generous vertical rhythm via space-y-8. -->
+			@if (isLoading()) {
+				<div class="flex items-center justify-center py-12">
+					<mcms-spinner size="lg" />
+				</div>
+			} @else {
+				@if (formError()) {
+					<mcms-alert variant="destructive" class="mb-6" role="alert" aria-live="assertive">
+						{{ formError() }}
+					</mcms-alert>
+				}
 
-						@if (isUploadCol()) {
-							<mcms-collection-upload-zone
-								[uploadConfig]="collection().upload"
-								[pendingFile]="pendingFile()"
-								[existingMedia]="mode() !== 'create' && !pendingFile() ? formModel() : null"
-								[disabled]="mode() === 'view'"
-								[isUploading]="isUploadingFile()"
-								[uploadProgress]="uploadFileProgress()"
-								[error]="uploadFileError()"
-								(fileSelected)="onFileSelected($event)"
-								(fileRemoved)="onFileRemoved()"
-							/>
-						}
+				@if (isUploadCol()) {
+					<mcms-collection-upload-zone
+						[uploadConfig]="collection().upload"
+						[pendingFile]="pendingFile()"
+						[existingMedia]="mode() !== 'create' && !pendingFile() ? formModel() : null"
+						[disabled]="mode() === 'view'"
+						[isUploading]="isUploadingFile()"
+						[uploadProgress]="uploadFileProgress()"
+						[error]="uploadFileError()"
+						(fileSelected)="onFileSelected($event)"
+						(fileRemoved)="onFileRemoved()"
+					/>
+				}
 
-						@if (isUploadCol() && isImageFile() && focalPointImageUrl()) {
-							<div class="mb-6" [class.pointer-events-none]="mode() === 'view'">
-								<p class="mb-2 text-sm font-medium">Focal Point</p>
-								<mcms-focal-point-picker
-									[imageUrl]="focalPointImageUrl()"
-									[focalPoint]="currentFocalPoint()"
-									[naturalWidth]="imageNaturalDimensions().width"
-									[naturalHeight]="imageNaturalDimensions().height"
-									[alt]="focalPointAlt()"
-									[imageSizes]="uploadImageSizes()"
-									(focalPointChange)="onFocalPointChange($event)"
-								/>
-							</div>
-						}
+				@if (isUploadCol() && isImageFile() && focalPointImageUrl()) {
+					<div class="mb-6" [class.pointer-events-none]="mode() === 'view'">
+						<p class="mb-2 mcms-eyebrow">Focal Point</p>
+						<mcms-focal-point-picker
+							[imageUrl]="focalPointImageUrl()"
+							[focalPoint]="currentFocalPoint()"
+							[naturalWidth]="imageNaturalDimensions().width"
+							[naturalHeight]="imageNaturalDimensions().height"
+							[alt]="focalPointAlt()"
+							[imageSizes]="uploadImageSizes()"
+							(focalPointChange)="onFocalPointChange($event)"
+						/>
+					</div>
+				}
 
-						@if (isUploadCol() && formModelSizes()) {
-							<div class="mb-6">
-								<mcms-image-variants-display [sizes]="formModelSizes()" />
-							</div>
-						}
+				@if (isUploadCol() && formModelSizes()) {
+					<div class="mb-6">
+						<mcms-image-variants-display [sizes]="formModelSizes()" />
+					</div>
+				}
 
-						<div class="space-y-6">
-							@for (field of visibleFields(); track field.name) {
-								<mcms-field-renderer
-									[field]="field"
-									[formNode]="getFormNode(field.name)"
-									[formTree]="entityForm()"
-									[formModel]="formModel()"
-									[mode]="mode()"
-									[path]="field.name"
-								/>
-							}
-						</div>
+				<div class="flex flex-col gap-7 border-t border-border pt-6">
+					@for (field of visibleFields(); track field.name) {
+						<mcms-field-renderer
+							[field]="field"
+							[formNode]="getFormNode(field.name)"
+							[formTree]="entityForm()"
+							[formModel]="formModel()"
+							[mode]="mode()"
+							[path]="field.name"
+						/>
 					}
-				</mcms-card-content>
+				</div>
 
-				<mcms-card-footer class="flex justify-end gap-3 border-t bg-muted/50 px-6 py-4">
+				<!-- Action footer — hairline above, no chrome. Right-aligned actions. -->
+				<div class="mt-8 pt-5 border-t border-border flex justify-end gap-2">
 					@if (mode() !== 'view') {
 						<button
 							mcms-button
-							variant="outline"
+							variant="ghost"
 							[disabled]="isSubmitting() || isSavingDraft()"
 							(click)="onCancel()"
 						>
@@ -218,7 +220,7 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 								@if (isSavingDraft()) {
 									<mcms-spinner size="sm" class="mr-2" />
 								}
-								Save Draft
+								Save draft
 							</button>
 						}
 						<button
@@ -230,15 +232,15 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 							@if (isSubmitting()) {
 								<mcms-spinner size="sm" class="mr-2" />
 							}
-							{{ mode() === 'create' ? 'Create' : 'Save Changes' }}
+							{{ mode() === 'create' ? 'Create' : 'Save changes' }}
 						</button>
 					} @else {
 						@if (canEdit()) {
 							<button mcms-button variant="primary" (click)="switchToEdit()">Edit</button>
 						}
 					}
-				</mcms-card-footer>
-			</mcms-card>
+				</div>
+			}
 
 			@if (hasVersioning() && mode() === 'edit' && entityId()) {
 				<div class="mt-8">

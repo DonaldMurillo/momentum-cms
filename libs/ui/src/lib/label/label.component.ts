@@ -18,7 +18,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 		<label [attr.for]="for()" [class]="hostClasses()">
 			<ng-content />
 			@if (required()) {
-				<span class="text-destructive ml-1" aria-hidden="true">*</span>
+				<span class="ml-1 text-muted-foreground" aria-hidden="true">·</span>
 			}
 		</label>
 	`,
@@ -31,8 +31,10 @@ export class Label {
 	readonly disabled = input(false);
 	readonly class = input('');
 
+	/* Tighter than before: 13px / 500 weight, snug leading. The "required" mark is a
+	 * subdued mid-dot, not a screaming red star — convention for editorial forms. */
 	private readonly baseClasses =
-		'text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70';
+		'text-sm font-medium leading-snug text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70';
 
 	readonly hostClasses = computed(() => {
 		const classes = [this.baseClasses];

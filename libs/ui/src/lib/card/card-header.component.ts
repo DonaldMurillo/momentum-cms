@@ -9,7 +9,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 			display: flex;
 			flex-direction: column;
 			gap: 0.375rem;
-			padding: 1.5rem;
+			padding: 1.25rem 1.25rem 1rem;
 		}
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,

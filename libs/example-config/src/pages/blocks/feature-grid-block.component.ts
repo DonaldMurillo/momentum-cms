@@ -6,6 +6,12 @@ interface FeatureItem {
 	icon: string;
 }
 
+/**
+ * Feature grid block — replaces the "three identical cards in a row" template
+ * (impeccable bans uniform card grids) with a hairline-divided list. Each row
+ * has a small inline icon, a heading, and a description on a defined column
+ * grid. Reads as a structured spec sheet rather than a template carousel.
+ */
 @Component({
 	selector: 'app-feature-grid-block',
 	changeDetection: ChangeDetectionStrategy.OnPush,
@@ -14,11 +20,18 @@ interface FeatureItem {
 		'[attr.data-testid]': '"block-featureGrid"',
 	},
 	template: `
-		<section class="py-8 px-4 md:py-16 md:px-8">
-			<div class="mx-auto max-w-6xl">
+		<section class="px-4 md:px-8 py-12 md:py-20">
+			<div class="mx-auto max-w-5xl">
+				@if (eyebrow()) {
+					<span
+						class="text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-muted-foreground mb-3 block"
+					>
+						{{ eyebrow() }}
+					</span>
+				}
 				@if (heading()) {
 					<h2
-						class="text-2xl md:text-3xl font-bold text-foreground text-center mb-4"
+						class="text-3xl md:text-4xl font-semibold -tracking-[0.02em] text-foreground max-w-3xl"
 						data-testid="feature-grid-heading"
 					>
 						{{ heading() }}
@@ -26,30 +39,38 @@ interface FeatureItem {
 				}
 				@if (description()) {
 					<p
-						class="text-lg text-muted-foreground text-center mb-10 max-w-2xl mx-auto"
+						class="text-lg text-muted-foreground leading-relaxed mt-4 max-w-[58ch]"
 						data-testid="feature-grid-description"
 					>
 						{{ description() }}
 					</p>
 				}
-				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+				<dl class="mt-10 border-t border-border">
 					@for (feature of features(); track $index) {
 						<div
-							class="bg-card border border-border rounded-lg p-6"
+							class="grid grid-cols-1 md:grid-cols-[12rem_minmax(0,1fr)] gap-x-10 gap-y-2 border-b border-border py-6"
 							data-testid="feature-grid-item"
 						>
-							@if (feature.icon) {
-								<div class="text-2xl mb-3 text-primary">{{ feature.icon }}</div>
-							}
-							<h3 class="text-lg font-semibold text-card-foreground mb-2">
-								{{ feature.title }}
-							</h3>
-							@if (feature.description) {
-								<p class="text-muted-foreground text-sm">{{ feature.description }}</p>
-							}
+							<dt class="flex items-baseline gap-2.5">
+								@if (feature.icon) {
+									<span
+										class="text-lg text-primary leading-none translate-y-0.5 select-none"
+										aria-hidden="true"
+									>
+										{{ feature.icon }}
+									</span>
+								}
+								<span class="text-base font-semibold text-foreground -tracking-[0.01em]">
+									{{ feature.title }}
+								</span>
+							</dt>
+							<dd class="text-base text-muted-foreground leading-[1.65] max-w-[60ch]">
+								{{ feature.description }}
+							</dd>
 						</div>
 					}
-				</div>
+				</dl>
 			</div>
 		</section>
 	`,
@@ -57,6 +78,7 @@ interface FeatureItem {
 export class FeatureGridBlockComponent {
 	readonly data = input.required<Record<string, unknown>>();
 
+	readonly eyebrow = computed((): string => String(this.data()['eyebrow'] ?? ''));
 	readonly heading = computed((): string => String(this.data()['heading'] ?? ''));
 	readonly description = computed((): string => String(this.data()['description'] ?? ''));
 	readonly features = computed((): FeatureItem[] => {

@@ -47,8 +47,10 @@ export class TableCell {
 	readonly class = input('');
 
 	readonly hostClasses = computed(() => {
+		/* Generous vertical padding so rows breathe; horizontal stays tight so columns
+		 * don't drift apart. Selected rows pick up a soft brand tint. */
 		const base =
-			'p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>mcms-checkbox]:translate-y-[2px]';
+			'px-3 py-3.5 align-middle text-sm [&:has([role=checkbox])]:pr-0 [&>mcms-checkbox]:translate-y-[2px]';
 		const selectedClasses = this.selected() ? 'bg-primary/10' : '';
 
 		return `${base} ${selectedClasses} ${this.class()}`.trim();

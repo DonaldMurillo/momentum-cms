@@ -84,8 +84,8 @@ import { DropdownMenuItem } from '../dropdown-menu/dropdown-menu-item.component'
 			</div>
 		}
 
-		<!-- Table container -->
-		<div class="rounded-lg border border-border overflow-x-auto">
+		<!-- Table container — top + bottom hairlines only, no rounded box -->
+		<div class="border-t border-b border-border overflow-x-auto">
 			@if (loading()) {
 				<!-- Loading state -->
 				<mcms-table class="min-w-max">

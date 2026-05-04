@@ -82,14 +82,15 @@ import {
 				</mcms-breadcrumbs>
 			}
 
-			<header class="mb-8 flex items-center justify-between">
-				<div>
-					<h1 class="text-2xl font-semibold tracking-tight">
+			<header class="mb-8 flex items-end justify-between gap-6">
+				<div class="flex flex-col gap-1.5 min-w-0">
+					<span class="mcms-eyebrow">{{ viewingTrash() ? 'Archive' : 'Collection' }}</span>
+					<h1 class="mcms-page-title">
 						{{ viewingTrash() ? 'Trash' : collectionLabel() }}
 					</h1>
 					@if (totalItems() > 0) {
-						<p class="mt-1 text-muted-foreground">
-							{{ totalItems() }}
+						<p class="mcms-page-subtitle">
+							<span class="mcms-mono tabular-nums">{{ totalItems() }}</span>
 							{{ totalItems() === 1 ? collectionLabelSingular() : collectionLabel() }}
 						</p>
 					}
@@ -370,7 +371,7 @@ export class EntityListWidget<T extends Entity = Entity> {
 				width: '110px',
 				badgeMap: {
 					draft: { label: 'Draft', variant: 'secondary' },
-					published: { label: 'Published', variant: 'default' },
+					published: { label: 'Published', variant: 'success' },
 				},
 				...(badgeTemplate ? { template: badgeTemplate } : {}),
 			});
@@ -726,7 +727,10 @@ export class EntityListWidget<T extends Entity = Entity> {
 	getBadgeConfig(
 		value: unknown,
 		column: EntityListColumn<T>,
-	): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } | null {
+	): {
+		label: string;
+		variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning';
+	} | null {
 		if (!column.badgeMap || value === null || value === undefined) return null;
 		const key = String(value);
 		return column.badgeMap[key] ?? null;

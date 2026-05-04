@@ -302,8 +302,15 @@ describe('AdminSidebarWidget', () => {
 	// ============================================
 
 	describe('getCollectionIcon', () => {
-		it('should return heroNewspaper for posts', () => {
+		it('should return heroPencilSquare for posts', () => {
+			// Posts are user-authored — pencil-square reads as "writing".
+			// (articles, the editorial sibling, gets heroNewspaper.)
 			const collection = makeCollection('posts');
+			expect(component.getCollectionIcon(collection)).toBe('heroPencilSquare');
+		});
+
+		it('should return heroNewspaper for articles', () => {
+			const collection = makeCollection('articles');
 			expect(component.getCollectionIcon(collection)).toBe('heroNewspaper');
 		});
 

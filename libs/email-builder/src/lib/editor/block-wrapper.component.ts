@@ -93,21 +93,21 @@ import { BLOCK_EDITOR_MAP } from './block-editors/index';
 	styles: `
 		:host {
 			display: block;
-			border-radius: 8px;
+			border-radius: var(--mcms-radius);
 			border: 1px solid hsl(var(--mcms-border));
-			background: hsl(var(--mcms-card));
+			background: hsl(var(--mcms-background));
 			transition:
 				border-color 0.15s,
 				box-shadow 0.15s;
 		}
 
 		:host(.eml-block-wrapper--hovered) {
-			border-color: hsl(var(--mcms-primary) / 0.4);
+			border-color: hsl(var(--mcms-foreground) / 0.2);
 		}
 
 		:host(.eml-block-wrapper--selected) {
-			border-color: hsl(var(--mcms-primary));
-			box-shadow: 0 0 0 2px hsl(var(--mcms-primary) / 0.15);
+			border-color: hsl(var(--mcms-ring));
+			box-shadow: 0 0 0 1px hsl(var(--mcms-ring) / 0.2);
 		}
 
 		:host(.eml-block-wrapper--collapsed) {
@@ -157,15 +157,14 @@ import { BLOCK_EDITOR_MAP } from './block-editors/index';
 			transform: rotate(90deg);
 		}
 
+		/* Editorial eyebrow rather than pilled badge — feels more intentional */
 		.eml-block-type-badge {
-			font-size: 11px;
+			font-size: var(--mcms-text-2xs);
 			font-weight: 600;
 			text-transform: uppercase;
-			letter-spacing: 0.05em;
+			letter-spacing: var(--mcms-tracking-widest);
 			color: hsl(var(--mcms-muted-foreground));
-			background: hsl(var(--mcms-muted));
-			padding: 2px 8px;
-			border-radius: 4px;
+			line-height: 1;
 		}
 
 		.eml-block-actions {

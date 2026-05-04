@@ -20,20 +20,25 @@ import type { EmailBlock } from '@momentumcms/email';
 		'data-testid': 'email-builder-studio',
 	},
 	template: `
-		<div class="flex items-center justify-between border-b border-border px-4 py-2">
-			<h1 class="text-lg font-semibold text-foreground">Email Builder</h1>
-			<div class="flex items-center gap-2">
-				<span class="text-sm text-muted-foreground">{{ blockCount() }} blocks</span>
+		<header class="flex items-end justify-between gap-6 border-b border-border px-6 pt-5 pb-4">
+			<div class="flex flex-col gap-1">
+				<span class="mcms-eyebrow">Tools</span>
+				<h1 class="text-xl font-semibold -tracking-[0.015em]">Email builder</h1>
+			</div>
+			<div class="flex items-center gap-3">
+				<span class="mcms-mono text-2xs text-muted-foreground tabular-nums">
+					{{ blockCount() }} {{ blockCount() === 1 ? 'block' : 'blocks' }}
+				</span>
 				<button
 					type="button"
-					class="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+					class="inline-flex h-[2.125rem] items-center rounded-[var(--mcms-radius)] bg-primary px-3.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
 					data-testid="export-html-button"
 					(click)="exportHtml()"
 				>
 					Export HTML
 				</button>
 			</div>
-		</div>
+		</header>
 		<div class="flex-1 overflow-hidden">
 			<eml-builder (blocksChange)="onBlocksChange($event)" />
 		</div>

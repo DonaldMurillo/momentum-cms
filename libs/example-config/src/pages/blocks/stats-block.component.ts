@@ -6,6 +6,13 @@ interface StatItem {
 	suffix: string;
 }
 
+/**
+ * Stats block — replaces the canonical "four big-number tiles in a card grid"
+ * (impeccable's "hero metric layout template" — a banned pattern) with a
+ * hairline-divided horizontal row. Numbers are large but unboxed; labels are
+ * the editorial eyebrow style. Reads as a publication's by-the-numbers, not a
+ * marketing dashboard.
+ */
 @Component({
 	selector: 'app-stats-block',
 	changeDetection: ChangeDetectionStrategy.OnPush,
@@ -14,11 +21,11 @@ interface StatItem {
 		'[attr.data-testid]': '"block-stats"',
 	},
 	template: `
-		<section class="py-8 px-4 md:py-16 md:px-8">
-			<div class="mx-auto max-w-6xl">
+		<section class="px-4 md:px-8 py-12 md:py-20">
+			<div class="mx-auto max-w-5xl">
 				@if (heading()) {
 					<h2
-						class="text-2xl md:text-3xl font-bold text-foreground text-center mb-4"
+						class="text-2xl md:text-3xl font-semibold -tracking-[0.018em] text-foreground max-w-2xl"
 						data-testid="stats-heading"
 					>
 						{{ heading() }}
@@ -26,22 +33,29 @@ interface StatItem {
 				}
 				@if (description()) {
 					<p
-						class="text-lg text-muted-foreground text-center mb-10 max-w-2xl mx-auto"
+						class="text-base text-muted-foreground leading-relaxed mt-3 max-w-[60ch]"
 						data-testid="stats-description"
 					>
 						{{ description() }}
 					</p>
 				}
-				<div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+
+				<div
+					class="mt-10 grid grid-cols-2 md:grid-cols-4 gap-y-8 md:gap-y-0 border-t border-b border-border divide-y md:divide-y-0 md:divide-x divide-border"
+				>
 					@for (item of items(); track $index) {
-						<div
-							class="text-center bg-card border border-border rounded-lg p-6"
-							data-testid="stat-item"
-						>
-							<div class="text-3xl md:text-4xl font-bold text-primary mb-1">
-								{{ item.value }}{{ item.suffix }}
+						<div class="px-0 md:px-6 py-6 md:py-8 first:pl-0 last:pr-0" data-testid="stat-item">
+							<div
+								class="text-4xl md:text-5xl font-semibold -tracking-[0.025em] text-foreground tabular-nums"
+							>
+								{{ item.value
+								}}<span class="text-3xl text-muted-foreground/70">{{ item.suffix }}</span>
 							</div>
-							<div class="text-sm text-muted-foreground">{{ item.label }}</div>
+							<div
+								class="mt-3 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+							>
+								{{ item.label }}
+							</div>
 						</div>
 					}
 				</div>

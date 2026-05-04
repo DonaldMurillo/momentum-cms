@@ -110,7 +110,8 @@ export function analyticsPlugin(config: AnalyticsConfig): AnalyticsPluginInstanc
 		adminRoutes.push({
 			path: 'analytics/content',
 			label: 'Content Perf.',
-			icon: 'heroDocumentText',
+			// Performance chart, not a doc — visually distinct from email-templates/form-submissions.
+			icon: 'heroPresentationChartBar',
 			loadComponent: (): Promise<unknown> =>
 				import(contentPerfModule).then((m: Record<string, unknown>) => m['ContentPerformancePage']),
 			group: 'Analytics',

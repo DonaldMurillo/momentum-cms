@@ -43,28 +43,41 @@ import type { InputType, ValidationError } from './input.types';
 	styles: `
 		input {
 			display: flex;
-			height: 2.5rem;
+			height: 2.125rem; /* 34px — matches button md */
 			width: 100%;
-			border-radius: 0.375rem;
+			border-radius: var(--mcms-radius);
 			border: 1px solid hsl(var(--mcms-input));
 			background-color: hsl(var(--mcms-background));
-			padding: 0.5rem 0.75rem;
-			font-size: 0.875rem;
-			line-height: 1.25rem;
+			padding: 0.375rem 0.625rem;
+			font-family: var(--mcms-font-sans);
+			font-size: var(--mcms-text-sm);
+			line-height: 1.4;
 			color: hsl(var(--mcms-foreground));
 		}
 		input::placeholder {
 			color: hsl(var(--mcms-muted-foreground));
 		}
+		input:hover:not(:disabled):not(:focus-visible) {
+			border-color: hsl(var(--mcms-foreground) / 0.25);
+		}
 		input:focus-visible {
 			outline: none;
+			border-color: hsl(var(--mcms-ring));
 			box-shadow:
 				0 0 0 2px hsl(var(--mcms-background)),
-				0 0 0 4px hsl(var(--mcms-ring));
+				0 0 0 3px hsl(var(--mcms-ring));
 		}
 		input:disabled {
 			cursor: not-allowed;
 			opacity: 0.5;
+		}
+		:host(.mcms-input--error) input {
+			border-color: hsl(var(--mcms-destructive));
+		}
+		:host(.mcms-input--error) input:focus-visible {
+			box-shadow:
+				0 0 0 2px hsl(var(--mcms-background)),
+				0 0 0 3px hsl(var(--mcms-destructive));
 		}
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,

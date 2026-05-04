@@ -86,6 +86,34 @@ module.exports = {
 				sm: 'calc(var(--mcms-radius) - 4px)',
 			},
 
+			fontFamily: {
+				sans: ['var(--mcms-font-sans)'],
+				mono: ['var(--mcms-font-mono)'],
+			},
+
+			fontSize: {
+				'2xs': ['var(--mcms-text-2xs)', { lineHeight: '1' }],
+				xs: ['var(--mcms-text-xs)', { lineHeight: '1.4' }],
+				sm: ['var(--mcms-text-sm)', { lineHeight: '1.45' }],
+				base: ['var(--mcms-text-base)', { lineHeight: '1.5' }],
+				md: ['var(--mcms-text-md)', { lineHeight: '1.55' }],
+				lg: ['var(--mcms-text-lg)', { lineHeight: '1.4' }],
+				xl: ['var(--mcms-text-xl)', { lineHeight: '1.25', letterSpacing: '-0.015em' }],
+				'2xl': ['var(--mcms-text-2xl)', { lineHeight: '1.15', letterSpacing: '-0.02em' }],
+			},
+
+			letterSpacing: {
+				'mcms-wide': 'var(--mcms-tracking-wide)',
+				'mcms-wider': 'var(--mcms-tracking-wider)',
+				'mcms-widest': 'var(--mcms-tracking-widest)',
+			},
+
+			boxShadow: {
+				'mcms-sm': 'var(--mcms-shadow-sm)',
+				'mcms-md': 'var(--mcms-shadow-md)',
+				'mcms-lg': 'var(--mcms-shadow-lg)',
+			},
+
 			// Custom animations for UI components
 			keyframes: {
 				'accordion-down': {

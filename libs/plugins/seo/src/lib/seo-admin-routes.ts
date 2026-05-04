@@ -35,7 +35,9 @@ export const seoAdminRoutes: PluginAdminRouteDescriptor[] = [
 	{
 		path: 'seo/robots',
 		label: 'Robots',
-		icon: 'heroDocumentText',
+		// Robots.txt — automation/machine read; heroCpuChip reads as "robot" without
+		// being a literal robot icon. heroDocumentText conflicts with content-perf.
+		icon: 'heroCpuChip',
 		group: 'SEO',
 		loadComponent: (): Promise<unknown> =>
 			import('./robots/robots-settings.page').then(

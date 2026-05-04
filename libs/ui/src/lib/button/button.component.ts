@@ -45,26 +45,29 @@ import type { ButtonSize, ButtonVariant } from './button.types';
 			justify-content: center;
 			gap: 0.5rem;
 			white-space: nowrap;
-			border-radius: 0.375rem;
-			font-size: 0.875rem;
+			border-radius: var(--mcms-radius);
+			font-family: var(--mcms-font-sans);
+			font-size: var(--mcms-text-sm);
 			font-weight: 500;
-			transition:
-				background-color 0.15s,
-				color 0.15s,
-				border-color 0.15s;
+			letter-spacing: -0.005em;
 			cursor: pointer;
 			border: 1px solid var(--btn-border, transparent);
 			background-color: var(--btn-bg);
 			color: var(--btn-color);
+			user-select: none;
 		}
 		:host(:hover:not([disabled]):not([aria-disabled='true'])) {
 			background-color: var(--btn-hover-bg);
+			border-color: var(--btn-hover-border, var(--btn-border, transparent));
+		}
+		:host(:active:not([disabled]):not([aria-disabled='true'])) {
+			transform: translateY(0.5px);
 		}
 		:host(:focus-visible) {
 			outline: none;
 			box-shadow:
 				0 0 0 2px hsl(var(--mcms-background)),
-				0 0 0 4px hsl(var(--mcms-ring));
+				0 0 0 3px hsl(var(--mcms-ring));
 		}
 		:host([disabled]),
 		:host([aria-disabled='true']) {
@@ -109,35 +112,35 @@ export class Button {
 		return this.isEffectivelyDisabled() || null;
 	});
 
-	// Size styles
+	// Size styles — slightly tighter than before; the old md was 40px which is dashboard-bloat.
 	readonly sizeHeight = computed(() => {
 		switch (this.size()) {
 			case 'sm':
-				return '2.25rem';
+				return '1.875rem'; /* 30 */
 			case 'md':
-				return '2.5rem';
+				return '2.125rem'; /* 34 */
 			case 'lg':
-				return '2.75rem';
+				return '2.5rem'; /* 40 */
 			case 'icon':
-				return '2.5rem';
+				return '2.125rem';
 		}
 	});
 
 	readonly sizePadding = computed(() => {
 		switch (this.size()) {
 			case 'sm':
-				return '0 0.75rem';
+				return '0 0.625rem';
 			case 'md':
-				return '0.5rem 1rem';
+				return '0 0.875rem';
 			case 'lg':
-				return '0 2rem';
+				return '0 1.25rem';
 			case 'icon':
 				return '0';
 		}
 	});
 
 	readonly sizeWidth = computed(() => {
-		return this.size() === 'icon' ? '2.5rem' : null;
+		return this.size() === 'icon' ? '2.125rem' : null;
 	});
 
 	// CSS variable values for variants
@@ -179,14 +182,17 @@ export class Button {
 		const v = this.variant();
 		switch (v) {
 			case 'primary':
-				return 'hsl(var(--mcms-primary) / 0.9)';
+				/* Slightly darker on hover — color-mix in oklab for a true perceptual shift,
+				 * not a transparency hack that bleeds the bg through. */
+				return 'color-mix(in oklab, hsl(var(--mcms-primary)) 90%, hsl(var(--mcms-foreground)))';
 			case 'secondary':
-				return 'hsl(var(--mcms-secondary) / 0.8)';
-			case 'destructive':
-				return 'hsl(var(--mcms-destructive) / 0.9)';
-			case 'outline':
-			case 'ghost':
 				return 'hsl(var(--mcms-accent))';
+			case 'destructive':
+				return 'color-mix(in oklab, hsl(var(--mcms-destructive)) 90%, hsl(var(--mcms-foreground)))';
+			case 'outline':
+				return 'hsl(var(--mcms-muted))';
+			case 'ghost':
+				return 'hsl(var(--mcms-muted))';
 			case 'link':
 				return 'transparent';
 		}

@@ -50,7 +50,8 @@ import { EmailBuilderStateService, generateBlockId } from '../services/email-bui
 				(click)="toggle()"
 				title="Add block"
 			>
-				+
+				<span aria-hidden="true">+</span>
+				Insert block
 			</button>
 		}
 	`,
@@ -61,35 +62,42 @@ import { EmailBuilderStateService, generateBlockId } from '../services/email-bui
 			padding: 4px 0;
 		}
 
+		/* The trigger is a flush hairline that reveals a "+ Insert block" pill on hover.
+		 * No floating dashed circle — that pattern reads as decorative rather than
+		 * functional. The hairline doubles as a visual separator between blocks. */
+		:host {
+			position: relative;
+		}
+
 		.eml-inserter-trigger {
 			display: inline-flex;
 			align-items: center;
-			justify-content: center;
-			width: 28px;
-			height: 28px;
-			border-radius: 50%;
-			border: 2px dashed hsl(var(--mcms-border));
-			background: transparent;
+			gap: 0.375rem;
+			padding: 0.125rem 0.625rem;
+			border-radius: 999px;
+			border: 1px solid hsl(var(--mcms-border));
+			background: hsl(var(--mcms-background));
 			color: hsl(var(--mcms-muted-foreground));
-			font-size: 16px;
-			font-weight: 600;
+			font-size: 0.6875rem;
+			font-weight: 500;
 			cursor: pointer;
 			transition:
 				border-color 0.15s,
 				color 0.15s,
 				background-color 0.15s,
 				opacity 0.15s;
-			opacity: 0.4;
+			opacity: 0;
+			z-index: 1;
 		}
 
-		:host(:hover) .eml-inserter-trigger {
+		:host(:hover) .eml-inserter-trigger,
+		.eml-inserter-trigger:focus-visible {
 			opacity: 1;
 		}
 
 		.eml-inserter-trigger:hover {
-			border-color: hsl(var(--mcms-primary));
-			color: hsl(var(--mcms-primary));
-			background: hsl(var(--mcms-primary) / 0.05);
+			border-color: hsl(var(--mcms-foreground) / 0.4);
+			color: hsl(var(--mcms-foreground));
 		}
 
 		.eml-inserter-panel {

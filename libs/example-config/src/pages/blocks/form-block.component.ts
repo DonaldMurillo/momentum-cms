@@ -30,8 +30,8 @@ import type { FormSchema } from '@momentumcms/form-builder';
 	},
 	template: `
 		@if (formSchema()) {
-			<section class="py-8 px-4 md:py-12 md:px-8">
-				<div class="mx-auto max-w-2xl">
+			<section class="px-4 md:px-8 py-12 md:py-20">
+				<div class="mx-auto max-w-2xl border-t border-border pt-10">
 					<mcms-form-builder
 						[schema]="formSchema()!"
 						[showHoneypot]="showHoneypot()"
@@ -40,12 +40,16 @@ import type { FormSchema } from '@momentumcms/form-builder';
 				</div>
 			</section>
 		} @else if (loading()) {
-			<section class="py-8 px-4 md:py-12 md:px-8">
-				<div class="mx-auto max-w-2xl text-muted-foreground">Loading form…</div>
+			<section class="px-4 md:px-8 py-12 md:py-20">
+				<div
+					class="mx-auto max-w-2xl text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-muted-foreground"
+				>
+					Loading form
+				</div>
 			</section>
 		} @else if (error()) {
-			<section class="py-8 px-4 md:py-12 md:px-8">
-				<div class="mx-auto max-w-2xl text-destructive">{{ error() }}</div>
+			<section class="px-4 md:px-8 py-12 md:py-20">
+				<div class="mx-auto max-w-2xl text-sm text-destructive">{{ error() }}</div>
 			</section>
 		}
 	`,
