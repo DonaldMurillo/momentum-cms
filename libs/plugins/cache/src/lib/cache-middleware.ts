@@ -77,7 +77,13 @@ function serveCachedResponse(
 	}
 
 	applyHeaders(res, buildCacheHeaders(scope, ttl, collConfig, cdnConfig));
-	res.status(200).json(cached.value);
+	if (cached.contentType) {
+		res.setHeader('Content-Type', cached.contentType);
+	}
+	// res.send() handles strings, Buffers, and objects (auto-JSON-stringifies)
+	// while preserving any Content-Type header set above. Falling back to
+	// res.json() would force application/json and JSON-quote string bodies.
+	res.status(200).send(cached.value);
 	return true;
 }
 
@@ -96,7 +102,7 @@ function cacheOnMiss(
 	cdnConfig: CachePluginConfig['cdn'],
 	etagsEnabled: boolean,
 ): void {
-	interceptResponse(res, (body) => {
+	interceptResponse(res, (body, contentType) => {
 		if (res.statusCode >= 200 && res.statusCode < 300) {
 			const etag = etagsEnabled ? generateEtag(body) : undefined;
 			const entry: CacheEntry = {
@@ -105,6 +111,7 @@ function cacheOnMiss(
 				tags,
 				createdAt: Date.now(),
 				ttl,
+				contentType,
 			};
 			void adapter.set(key, entry);
 
@@ -288,17 +295,72 @@ export function createCacheMiddleware(
 }
 
 /**
- * Intercept res.json() to capture the response body before it's sent.
+ * Intercept res.json(), res.send(), and res.end() to capture the response body
+ * before it's sent. The bodyCaptured flag ensures we only invoke onBody once
+ * per response even if multiple methods are called (e.g. res.send() → res.end()).
+ *
+ * Content-Type is read off `res` at capture time so the cache replay path can
+ * restore the original content type — critical for text/plain or pre-serialized
+ * JSON responses sent via res.send/res.end. res.json() always implies
+ * application/json regardless of any prior res.type() call.
  */
-function interceptResponse(res: Response, onBody: (body: unknown) => void): void {
+function interceptResponse(
+	res: Response,
+	onBody: (body: unknown, contentType: string | undefined) => void,
+): void {
 	const originalJson = res.json.bind(res);
+	const originalSend = res.send?.bind(res);
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/consistent-type-assertions -- res.end has multiple overloads (chunk/encoding/cb) we need to pass through opaquely
+	const originalEnd = res.end.bind(res) as (...args: any[]) => Response;
+
+	let bodyCaptured = false;
+
+	function readContentType(): string | undefined {
+		const value = res.getHeader('Content-Type');
+		return typeof value === 'string' ? value : undefined;
+	}
+
 	res.json = function interceptedJson(body: unknown): Response {
-		try {
-			onBody(body);
-		} catch {
-			// Don't let caching errors break the response
+		if (!bodyCaptured) {
+			bodyCaptured = true;
+			try {
+				// res.json() always emits application/json; record that explicitly
+				// so a handler that called res.type('text/plain').json(...) still
+				// replays as JSON (matching res.json's runtime behavior).
+				onBody(body, 'application/json');
+			} catch {
+				// Don't let caching errors break the response
+			}
 		}
 		return originalJson(body);
+	};
+
+	if (originalSend) {
+		res.send = function interceptedSend(body: unknown): Response {
+			if (!bodyCaptured) {
+				bodyCaptured = true;
+				try {
+					onBody(body, readContentType());
+				} catch {
+					// Don't let caching errors break the response
+				}
+			}
+			return originalSend(body);
+		};
+	}
+
+	// res.end can receive data as first arg
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/consistent-type-assertions -- Express res.end() has complex overloads
+	(res as any).end = function interceptedEnd(this: Response, ...args: any[]): Response {
+		if (!bodyCaptured && args[0] !== undefined) {
+			bodyCaptured = true;
+			try {
+				onBody(args[0], readContentType());
+			} catch {
+				// Don't let caching errors break the response
+			}
+		}
+		return originalEnd.apply(this, args);
 	};
 }
 

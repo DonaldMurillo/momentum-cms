@@ -164,6 +164,7 @@ throw new PluginFatalError('my-plugin', 'Required service unavailable');
 | Plugin                            | Description                                              |
 | --------------------------------- | -------------------------------------------------------- |
 | [Analytics](analytics.md)         | Tracking, content performance, block analytics           |
+| [Cache](cache.md)                 | API response caching with LRU/Redis adapters and ETags   |
 | [Cron](cron.md)                   | Recurring job scheduling with cron expressions           |
 | [Email](email.md)                 | Visual email template builder with auth integration      |
 | [Form Builder](form-builder.md)   | Dynamic forms, submissions, webhooks, honeypot           |

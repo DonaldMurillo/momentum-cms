@@ -235,6 +235,40 @@ export class FeedbackService {
 		this.toast.success('Draft saved', 'Your changes have been saved as a draft.');
 	}
 
+	/**
+	 * Show success message when a publish has been scheduled.
+	 */
+	publishScheduled(collectionLabel: string, when: Date): void {
+		this.toast.success(
+			'Publish scheduled',
+			`The ${collectionLabel.toLowerCase()} will publish at ${when.toLocaleString()}.`,
+		);
+	}
+
+	/**
+	 * Show success message when a scheduled publish has been cancelled.
+	 */
+	scheduledPublishCancelled(collectionLabel: string): void {
+		this.toast.success(
+			'Schedule cancelled',
+			`The scheduled publish for this ${collectionLabel.toLowerCase()} has been cancelled.`,
+		);
+	}
+
+	/**
+	 * Confirm cancel-scheduled-publish operation.
+	 */
+	confirmCancelSchedule(collectionLabel: string): Promise<boolean> {
+		return this.confirmation.confirm({
+			title: `Cancel scheduled publish?`,
+			description: `This ${collectionLabel.toLowerCase()} will no longer publish at the scheduled time.`,
+			confirmText: 'Cancel schedule',
+			cancelText: 'Keep schedule',
+			variant: 'default',
+			icon: 'warning',
+		});
+	}
+
 	// === Import/Export Messages ===
 
 	/**

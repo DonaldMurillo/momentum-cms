@@ -9,7 +9,7 @@
 
 import type { MomentumConfig, ResolvedMomentumConfig, UserContext } from '@momentumcms/core';
 import { getCollectionPermissions, type CollectionPermissions } from './collection-access';
-import type { HandlerResult } from './import-export-handler';
+import type { HandlerResult } from './handler-types';
 import { getMomentumAPI, GlobalNotFoundError } from './momentum-api';
 import { sanitizeErrorMessage } from './shared-server-utils';
 

@@ -119,6 +119,7 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 									[documentLabel]="collectionLabelSingular()"
 									[initialStatus]="documentStatus()"
 									(statusChanged)="onStatusChanged($event)"
+									(actionPerformed)="onPublishActionPerformed()"
 								/>
 							}
 						</div>
@@ -248,6 +249,7 @@ import { ImageVariantsDisplay } from '../image-variants/image-variants-display.c
 						[collection]="collection().slug"
 						[documentId]="entityId() ?? ''"
 						[documentLabel]="collectionLabelSingular()"
+						[reloadKey]="versionsReloadKey()"
 						(restored)="onVersionRestored()"
 					/>
 				</div>
@@ -321,6 +323,13 @@ export class EntityFormWidget<T extends Entity = Entity> {
 	readonly isSubmitting = signal(false);
 	readonly isSavingDraft = signal(false);
 	readonly formError = signal<string | null>(null);
+
+	/**
+	 * Counter passed to mcms-version-history. Bumping it forces the timeline
+	 * to refetch — used after save-draft / publish so the user sees the new
+	 * version without a manual refresh.
+	 */
+	readonly versionsReloadKey = signal(0);
 
 	/** Upload collection state */
 	readonly pendingFile = signal<File | null>(null);
@@ -901,6 +910,11 @@ export class EntityFormWidget<T extends Entity = Entity> {
 		this.formModel.set(data);
 	}
 
+	/** Force the version-history widget to refetch after any publish action. */
+	onPublishActionPerformed(): void {
+		this.versionsReloadKey.update((n) => n + 1);
+	}
+
 	/**
 	 * Handle version restore — reload the entity data.
 	 */
@@ -927,6 +941,7 @@ export class EntityFormWidget<T extends Entity = Entity> {
 
 			await this.versionService.saveDraft(slug, id, data);
 			this.feedback.draftSaved();
+			this.versionsReloadKey.update((n) => n + 1);
 			this.draftSaved.emit();
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : 'Failed to save draft';

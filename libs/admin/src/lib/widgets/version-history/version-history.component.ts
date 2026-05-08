@@ -168,6 +168,13 @@ export class VersionHistoryWidget {
 	/** Document label for feedback messages */
 	readonly documentLabel = input('Document');
 
+	/**
+	 * Bump this number from the parent to force a fresh fetch of versions.
+	 * Lets external actions (save-draft, schedule-publish, manual publish) keep
+	 * the timeline in sync without a hard navigation.
+	 */
+	readonly reloadKey = input(0);
+
 	/** Emitted when a version is restored */
 	readonly restored = output<DocumentVersionParsed>();
 
@@ -196,10 +203,13 @@ export class VersionHistoryWidget {
 	readonly hasNextPage = signal(false);
 
 	constructor() {
-		// Load versions when inputs change
+		// Load versions when inputs change. Reading reloadKey() makes this
+		// effect re-run whenever the parent bumps the counter to request a
+		// fresh fetch (e.g. after save-draft, publish, schedule).
 		effect(() => {
 			const collection = this.collection();
 			const docId = this.documentId();
+			this.reloadKey();
 
 			if (collection && docId) {
 				this.loadVersions(collection, docId, 1);

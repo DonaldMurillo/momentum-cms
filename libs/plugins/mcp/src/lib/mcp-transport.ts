@@ -27,6 +27,38 @@ const ANONYMOUS_USER: UserContext = {
 };
 
 /**
+ * Cached dynamic imports — avoids per-request import() overhead.
+ * The promise is memoized on first call; subsequent requests reuse it.
+ */
+type StreamableTransportModule = {
+	StreamableHTTPServerTransport: typeof import('@modelcontextprotocol/sdk/server/streamableHttp.js').StreamableHTTPServerTransport;
+};
+type ServerFactoryModule = {
+	createMcpServerInstance: typeof import('./mcp-server-factory').createMcpServerInstance;
+};
+
+let cachedStreamableTransport: Promise<StreamableTransportModule> | null = null;
+let cachedServerFactory: Promise<ServerFactoryModule> | null = null;
+
+export function getStreamableTransport(): Promise<StreamableTransportModule> {
+	if (!cachedStreamableTransport) {
+		cachedStreamableTransport = import('@modelcontextprotocol/sdk/server/streamableHttp.js').then(
+			(mod) => ({ StreamableHTTPServerTransport: mod.StreamableHTTPServerTransport }),
+		);
+	}
+	return cachedStreamableTransport;
+}
+
+export function getServerFactory(): Promise<ServerFactoryModule> {
+	if (!cachedServerFactory) {
+		cachedServerFactory = import('./mcp-server-factory').then((mod) => ({
+			createMcpServerInstance: mod.createMcpServerInstance,
+		}));
+	}
+	return cachedServerFactory;
+}
+
+/**
  * Creates an Express middleware handler for the MCP endpoint.
  *
  * The handler checks auth and API readiness, then delegates to the
@@ -88,11 +120,11 @@ async function handleMcpRequest(
 	isGlobalAllowed: (slug: string) => boolean,
 	config: McpPluginConfig,
 ): Promise<void> {
-	// Lazy import to avoid loading MCP SDK until needed
-	const { StreamableHTTPServerTransport } = await import(
-		'@modelcontextprotocol/sdk/server/streamableHttp.js'
-	);
-	const { createMcpServerInstance } = await import('./mcp-server-factory');
+	// Use cached dynamic imports — avoids import() on every request
+	const [{ StreamableHTTPServerTransport }, { createMcpServerInstance }] = await Promise.all([
+		getStreamableTransport(),
+		getServerFactory(),
+	]);
 
 	// Always scope the api — fall back to anonymous so access control still runs
 	// when `apiKeyRequired: false` and no user is on the request.

@@ -21,7 +21,7 @@ import { ChangeDetectionStrategy, Component, computed, input, model, output } fr
 			@if (collapsible()) {
 				<button
 					type="button"
-					class="flex items-center justify-between w-full px-2.5 pb-1 pt-4 text-2xs font-semibold uppercase tracking-mcms-widest text-sidebar-foreground/55 hover:text-sidebar-foreground transition-colors"
+					class="flex items-center justify-between w-full px-2.5 pb-1 pt-4 text-2xs font-semibold uppercase tracking-mcms-widest text-sidebar-foreground/75 hover:text-sidebar-foreground transition-colors"
 					[attr.aria-expanded]="expanded()"
 					[attr.aria-label]="'Toggle ' + title() + ' section'"
 					(click)="toggle()"
@@ -46,7 +46,7 @@ import { ChangeDetectionStrategy, Component, computed, input, model, output } fr
 				</button>
 			} @else {
 				<div
-					class="px-2.5 pb-1 pt-4 text-2xs font-semibold uppercase tracking-mcms-widest text-sidebar-foreground/55"
+					class="px-2.5 pb-1 pt-4 text-2xs font-semibold uppercase tracking-mcms-widest text-sidebar-foreground/75"
 				>
 					{{ title() }}
 				</div>

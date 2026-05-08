@@ -19,6 +19,19 @@ export interface CacheEntry<T = unknown> {
 	createdAt: number;
 	/** Time-to-live in seconds */
 	ttl: number;
+	/** Original Content-Type header captured at cache time. Replayed on hit so
+	 * non-JSON responses (text/plain, application/xml, pre-serialized JSON via
+	 * `res.end()`, etc.) keep their original content type and bytes. */
+	contentType?: string;
+	/** Optional metadata for collision detection and debugging.
+	 * Stores the original query hash and parameters so consumers can verify
+	 * that a cache hit corresponds to the correct query. */
+	metadata?: {
+		/** Hash of the original query parameters */
+		queryHash?: string;
+		/** Original query parameters (for collision verification) */
+		query?: Record<string, unknown>;
+	};
 }
 
 /**

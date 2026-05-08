@@ -118,13 +118,13 @@ export class RedisCacheAdapter implements CacheAdapter {
 		const isNewKey = !existingRaw;
 
 		if (isNewKey && this.maxKeys !== undefined && this.entryCount >= this.maxKeys) {
-			// M4: entryCount may have drifted upward from TTL-expired entries that
-			// Redis removed automatically (SETEX expiry doesn't notify the adapter).
-			// Reconcile by scanning actual entry count before giving up.
+			// Redis expires SETEX keys without notifying this adapter, so the local
+			// counter can drift upward. Reconcile only at the capacity boundary so
+			// normal writes avoid SCAN, but expired capacity is reclaimed.
 			const actualStats = await this.stats();
 			this.entryCount = actualStats.size;
 			if (this.entryCount >= this.maxKeys) {
-				return; // Actually at capacity — silently skip
+				return;
 			}
 		}
 

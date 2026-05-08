@@ -69,7 +69,8 @@ test.describe('Form builder plugin', { tag: ['@form-builder'] }, () => {
 
 			const contentSection = authenticatedPage.getByRole('region', { name: 'Content' });
 			await expect(contentSection).toBeVisible();
-			await expect(contentSection.getByRole('heading', { name: 'Forms' })).toBeVisible();
+			// Editorial design lift (#70) — collection card title is an anchor.
+			await expect(contentSection.getByRole('link', { name: /^Forms\b/ })).toBeVisible();
 		});
 
 		test('should navigate from dashboard to forms list via sidebar', async ({

@@ -166,8 +166,10 @@ export {
 	MAX_EXPORT_DOCS,
 	type ExportHandlerParams,
 	type ImportHandlerParams,
-	type HandlerResult,
 } from './lib/import-export-handler';
+
+// Shared handler types
+export type { HandlerResult } from './lib/handler-types';
 
 // Admin Route Handlers (Access, Status, Globals)
 export {

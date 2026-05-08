@@ -494,6 +494,230 @@ describe('createCacheMiddleware', () => {
 		const stats = await adapter.stats();
 		expect(stats.size).toBe(0);
 	});
+
+	it('should cache GET responses when handler uses res.send() with a string instead of res.json()', async () => {
+		const app = express();
+		app.use(express.json());
+
+		const cacheRouter = createCacheMiddleware(
+			adapter,
+			{ defaultScope: 'public' },
+			new Set(['posts']),
+			new Set(),
+			new Set(),
+			undefined,
+		);
+		app.use('/api', cacheRouter);
+
+		// Handler uses res.send() with a string — does NOT call res.json() internally
+		app.get('/api/:collection', (_req, res) => {
+			res.type('text/plain').send('plain text response');
+		});
+
+		// First request — should be a cache miss that stores the response
+		const res1 = await request(app).get('/api/posts');
+		expect(res1.status).toBe(200);
+		expect(res1.text).toBe('plain text response');
+
+		// The response must have been captured and cached via intercepted res.send()
+		const stats = await adapter.stats();
+		expect(stats.misses).toBe(1);
+		expect(stats.size).toBe(1);
+
+		// Second request — should be a cache hit (served from cache)
+		const res2 = await request(app).get('/api/posts');
+		expect(res2.status).toBe(200);
+
+		// Cache hit MUST replay the same bytes and Content-Type as the cache miss.
+		// Without Content-Type preservation, res.json(string) would JSON-quote the
+		// body and force application/json — silently breaking text/plain handlers.
+		expect(res2.text).toBe('plain text response');
+		expect(res2.headers['content-type']).toMatch(/^text\/plain/);
+
+		const stats2 = await adapter.stats();
+		expect(stats2.hits).toBe(1);
+	});
+
+	it('should cache GET responses when handler uses res.end() with data', async () => {
+		const app = express();
+		app.use(express.json());
+
+		const cacheRouter = createCacheMiddleware(
+			adapter,
+			{ defaultScope: 'public' },
+			new Set(['posts']),
+			new Set(),
+			new Set(),
+			undefined,
+		);
+		app.use('/api', cacheRouter);
+
+		// Handler uses res.end() with JSON data
+		app.get('/api/:collection', (_req, res) => {
+			res.setHeader('Content-Type', 'application/json');
+			res.end(JSON.stringify({ docs: [{ id: '1', title: 'Ended' }], totalDocs: 1 }));
+		});
+
+		// First request — should be a cache miss that stores the response
+		const res1 = await request(app).get('/api/posts');
+		expect(res1.status).toBe(200);
+
+		// The response must have been captured and cached via intercepted res.end()
+		const stats = await adapter.stats();
+		expect(stats.misses).toBe(1);
+		expect(stats.size).toBe(1);
+
+		// Second request — should be a cache hit (served from cache)
+		const res2 = await request(app).get('/api/posts');
+		expect(res2.status).toBe(200);
+
+		// Cache hit MUST round-trip a JSON response sent via res.end() byte-for-byte.
+		// Without Content-Type preservation, res.json(jsonString) would
+		// double-encode the already-stringified payload.
+		expect(res2.body).toEqual({ docs: [{ id: '1', title: 'Ended' }], totalDocs: 1 });
+		expect(res2.headers['content-type']).toMatch(/^application\/json/);
+
+		const stats2 = await adapter.stats();
+		expect(stats2.hits).toBe(1);
+	});
+
+	it('should still cache GET responses when handler uses res.json() (regression guard)', async () => {
+		const app = express();
+		app.use(express.json());
+
+		const cacheRouter = createCacheMiddleware(
+			adapter,
+			{ defaultScope: 'public' },
+			new Set(['posts']),
+			new Set(),
+			new Set(),
+			undefined,
+		);
+		app.use('/api', cacheRouter);
+
+		app.get('/api/:collection', (_req, res) => {
+			res.json({ docs: [{ id: '1', title: 'Json' }], totalDocs: 1 });
+		});
+
+		// First request — cache miss
+		const res1 = await request(app).get('/api/posts');
+		expect(res1.status).toBe(200);
+
+		const stats = await adapter.stats();
+		expect(stats.misses).toBe(1);
+		expect(stats.size).toBe(1);
+
+		// Second request — cache hit
+		const res2 = await request(app).get('/api/posts');
+		expect(res2.status).toBe(200);
+		expect(res2.body).toEqual(res1.body);
+		// Content-Type must stay application/json across miss → hit.
+		expect(res2.headers['content-type']).toBe(res1.headers['content-type']);
+
+		const stats2 = await adapter.stats();
+		expect(stats2.hits).toBe(1);
+	});
+
+	// ============================================
+	// Cache hit round-trip equality — protects against Content-Type drift
+	// ============================================
+
+	it('preserves application/xml Content-Type and body bytes on cache hit', async () => {
+		const app = express();
+		app.use(express.json());
+
+		const cacheRouter = createCacheMiddleware(
+			adapter,
+			{ defaultScope: 'public' },
+			new Set(['posts']),
+			new Set(),
+			new Set(),
+			undefined,
+		);
+		app.use('/api', cacheRouter);
+
+		const xmlBody = '<?xml version="1.0"?><posts><post id="1">Hi</post></posts>';
+		app.get('/api/:collection', (_req, res) => {
+			res.type('application/xml').send(xmlBody);
+		});
+
+		const res1 = await request(app).get('/api/posts');
+		expect(res1.status).toBe(200);
+		expect(res1.text).toBe(xmlBody);
+		expect(res1.headers['content-type']).toMatch(/^application\/xml/);
+
+		const res2 = await request(app).get('/api/posts');
+		expect(res2.status).toBe(200);
+		// Hit must replay the same XML bytes — not a JSON-quoted string.
+		expect(res2.text).toBe(xmlBody);
+		expect(res2.headers['content-type']).toMatch(/^application\/xml/);
+
+		const stats = await adapter.stats();
+		expect(stats.misses).toBe(1);
+		expect(stats.hits).toBe(1);
+	});
+
+	it('preserves Content-Type when handler calls res.send() with an object', async () => {
+		const app = express();
+		app.use(express.json());
+
+		const cacheRouter = createCacheMiddleware(
+			adapter,
+			{ defaultScope: 'public' },
+			new Set(['posts']),
+			new Set(),
+			new Set(),
+			undefined,
+		);
+		app.use('/api', cacheRouter);
+
+		app.get('/api/:collection', (_req, res) => {
+			// Express auto-promotes object-via-send to res.json() internally.
+			res.send({ docs: [{ id: '1', title: 'Obj' }], totalDocs: 1 });
+		});
+
+		const res1 = await request(app).get('/api/posts');
+		expect(res1.status).toBe(200);
+		expect(res1.body).toEqual({ docs: [{ id: '1', title: 'Obj' }], totalDocs: 1 });
+		expect(res1.headers['content-type']).toMatch(/^application\/json/);
+
+		const res2 = await request(app).get('/api/posts');
+		expect(res2.status).toBe(200);
+		expect(res2.body).toEqual(res1.body);
+		expect(res2.headers['content-type']).toMatch(/^application\/json/);
+	});
+
+	it('produces a stable ETag across miss and hit so 304 negotiation works for non-JSON', async () => {
+		const app = express();
+		app.use(express.json());
+
+		const cacheRouter = createCacheMiddleware(
+			adapter,
+			{ defaultScope: 'public', etags: true },
+			new Set(['posts']),
+			new Set(),
+			new Set(),
+			undefined,
+		);
+		app.use('/api', cacheRouter);
+
+		app.get('/api/:collection', (_req, res) => {
+			res.type('text/plain').send('etag-this');
+		});
+
+		const res1 = await request(app).get('/api/posts');
+		expect(res1.status).toBe(200);
+		const etag = res1.headers['etag'];
+		expect(etag, 'miss must set an ETag for non-JSON responses').toBeDefined();
+
+		// Cache hit returns the same ETag — required for client-side conditional GETs.
+		const res2 = await request(app).get('/api/posts');
+		expect(res2.headers['etag']).toBe(etag);
+
+		// If-None-Match with the cached etag must produce a 304.
+		const res304 = await request(app).get('/api/posts').set('If-None-Match', etag);
+		expect(res304.status).toBe(304);
+	});
 });
 
 describe('createCacheManagementRouter', () => {

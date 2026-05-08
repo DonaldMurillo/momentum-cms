@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DialogService } from '@momentumcms/ui';
 import { PublishControlsWidget } from '../publish-controls.component';
 import { VersionService } from '../../../services/version.service';
 import { FeedbackService } from '../../feedback/feedback.service';
@@ -28,9 +29,18 @@ describe('PublishControlsWidget – extended coverage', () => {
 			getStatus: vi.fn().mockResolvedValue('draft'),
 			publish: vi.fn().mockResolvedValue({ doc: {}, message: 'ok' }),
 			unpublish: vi.fn().mockResolvedValue({ doc: {}, message: 'ok' }),
+			schedulePublish: vi
+				.fn()
+				.mockResolvedValue({ id: 'abc123', scheduledPublishAt: '2099-01-01T00:00:00.000Z' }),
+			cancelScheduledPublish: vi.fn().mockResolvedValue({ message: 'ok' }),
+			getScheduledPublishAt: vi.fn().mockResolvedValue(null),
 		};
 		mockFeedback = {
 			confirmUnpublish: vi.fn().mockResolvedValue(true),
+			confirmCancelSchedule: vi.fn().mockResolvedValue(true),
+			publishScheduled: vi.fn(),
+			scheduledPublishCancelled: vi.fn(),
+			operationFailed: vi.fn(),
 		};
 
 		TestBed.configureTestingModule({
@@ -38,6 +48,7 @@ describe('PublishControlsWidget – extended coverage', () => {
 			providers: [
 				{ provide: VersionService, useValue: mockVersionService },
 				{ provide: FeedbackService, useValue: mockFeedback },
+				{ provide: DialogService, useValue: { open: vi.fn() } },
 			],
 		});
 
@@ -214,9 +225,18 @@ describe('PublishControlsWidget – extended coverage', () => {
 				getStatus: vi.fn(() => new Promise((resolve) => (resolveGetStatus = resolve))),
 				publish: vi.fn().mockResolvedValue({ doc: {}, message: 'ok' }),
 				unpublish: vi.fn().mockResolvedValue({ doc: {}, message: 'ok' }),
+				schedulePublish: vi
+					.fn()
+					.mockResolvedValue({ id: 'abc123', scheduledPublishAt: '2099-01-01T00:00:00.000Z' }),
+				cancelScheduledPublish: vi.fn().mockResolvedValue({ message: 'ok' }),
+				getScheduledPublishAt: vi.fn().mockResolvedValue(null),
 			};
 			mockFeedback = {
 				confirmUnpublish: vi.fn().mockResolvedValue(true),
+				confirmCancelSchedule: vi.fn().mockResolvedValue(true),
+				publishScheduled: vi.fn(),
+				scheduledPublishCancelled: vi.fn(),
+				operationFailed: vi.fn(),
 			};
 
 			TestBed.configureTestingModule({
@@ -224,6 +244,7 @@ describe('PublishControlsWidget – extended coverage', () => {
 				providers: [
 					{ provide: VersionService, useValue: mockVersionService },
 					{ provide: FeedbackService, useValue: mockFeedback },
+					{ provide: DialogService, useValue: { open: vi.fn() } },
 				],
 			});
 
@@ -258,9 +279,18 @@ describe('PublishControlsWidget – extended coverage', () => {
 				getStatus: vi.fn(() => new Promise((_resolve, reject) => (rejectGetStatus = reject))),
 				publish: vi.fn().mockResolvedValue({ doc: {}, message: 'ok' }),
 				unpublish: vi.fn().mockResolvedValue({ doc: {}, message: 'ok' }),
+				schedulePublish: vi
+					.fn()
+					.mockResolvedValue({ id: 'abc123', scheduledPublishAt: '2099-01-01T00:00:00.000Z' }),
+				cancelScheduledPublish: vi.fn().mockResolvedValue({ message: 'ok' }),
+				getScheduledPublishAt: vi.fn().mockResolvedValue(null),
 			};
 			mockFeedback = {
 				confirmUnpublish: vi.fn().mockResolvedValue(true),
+				confirmCancelSchedule: vi.fn().mockResolvedValue(true),
+				publishScheduled: vi.fn(),
+				scheduledPublishCancelled: vi.fn(),
+				operationFailed: vi.fn(),
 			};
 
 			TestBed.configureTestingModule({
@@ -268,6 +298,7 @@ describe('PublishControlsWidget – extended coverage', () => {
 				providers: [
 					{ provide: VersionService, useValue: mockVersionService },
 					{ provide: FeedbackService, useValue: mockFeedback },
+					{ provide: DialogService, useValue: { open: vi.fn() } },
 				],
 			});
 

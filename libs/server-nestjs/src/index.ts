@@ -23,6 +23,8 @@ export { AccessController } from './lib/controllers/access.controller';
 export { CollectionController } from './lib/controllers/collection.controller';
 export { GlobalsController } from './lib/controllers/globals.controller';
 export { StatusController } from './lib/controllers/status.controller';
+export { VersionController } from './lib/controllers/version.controller';
+export { PublishingController } from './lib/controllers/publishing.controller';
 
 // Guards & Middleware
 export { MomentumAuthGuard } from './lib/guards/auth.guard';

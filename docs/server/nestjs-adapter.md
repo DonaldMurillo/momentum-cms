@@ -91,6 +91,38 @@ export class CustomController {
 }
 ```
 
+## Opt-In Controllers
+
+`@momentumcms/server-nestjs` also exports DI-based controllers that mirror routes already served by the Express middleware. Use these when you want NestJS-native guards, interceptors, OpenAPI metadata, or per-route logging on top of the shared `server-core` handlers:
+
+| Controller             | Routes                                                                                                                                                                                        |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AccessController`     | `GET /access`                                                                                                                                                                                 |
+| `GlobalsController`    | `GET /globals/:slug`, `PATCH /globals/:slug`                                                                                                                                                  |
+| `StatusController`     | `GET /:collection/:id/status`                                                                                                                                                                 |
+| `VersionController`    | `GET /:collection/:id/versions`, `GET /:collection/:id/versions/:versionId`, `POST /:collection/:id/versions/restore`, `POST /:collection/:id/versions/compare`                               |
+| `PublishingController` | `POST /:collection/:id/publish`, `POST /:collection/:id/unpublish`, `POST /:collection/:id/draft`, `POST /:collection/:id/schedule-publish`, `POST /:collection/:id/cancel-scheduled-publish` |
+
+Each controller is a thin dispatcher to the shared handlers in `@momentumcms/server-core`, so behavior, validation, and error envelopes match the Express adapter byte-for-byte.
+
+```typescript
+import { Module } from '@nestjs/common';
+import {
+	MomentumModule,
+	VersionController,
+	PublishingController,
+} from '@momentumcms/server-nestjs';
+import config from './momentum.config';
+
+@Module({
+	imports: [MomentumModule.forRoot(config)],
+	controllers: [VersionController, PublishingController],
+})
+export class AppModule {}
+```
+
+Mount these only if you wire your own NestJS module — `createMomentumNestServer` already serves the same routes via Express middleware.
+
 ## Express vs NestJS Adapter
 
 Both adapters provide identical CMS functionality — the same 128+ API endpoints, auth, webhooks, and plugins. The difference is the application framework:

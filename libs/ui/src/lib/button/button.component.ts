@@ -29,6 +29,7 @@ import type { ButtonSize, ButtonVariant } from './button.types';
 		'[attr.disabled]': 'isNativeDisabled()',
 		'[attr.aria-disabled]': 'isEffectivelyDisabled() || null',
 		'[attr.aria-busy]': 'loading() || null',
+		'[attr.data-size]': 'size()',
 		'[style.--btn-bg]': 'variantBg()',
 		'[style.--btn-color]': 'variantColor()',
 		'[style.--btn-hover-bg]': 'variantHoverBg()',
@@ -74,6 +75,18 @@ import type { ButtonSize, ButtonVariant } from './button.types';
 			pointer-events: none;
 			opacity: 0.5;
 			cursor: not-allowed;
+		}
+		/* Touch devices: enforce a 44px tap target across every size variant.
+		 * Inline [style.height] sets an exact height for desktop density; min-height
+		 * wins on coarse pointers because it's the larger value, satisfying WCAG
+		 * 2.5.5 AAA + Apple HIG without changing the editorial desktop layout. */
+		@media (pointer: coarse) {
+			:host {
+				min-height: 2.75rem;
+			}
+			:host([data-size='icon']) {
+				min-width: 2.75rem;
+			}
 		}
 	`,
 	changeDetection: ChangeDetectionStrategy.OnPush,
