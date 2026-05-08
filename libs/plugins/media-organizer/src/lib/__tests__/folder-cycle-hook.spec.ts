@@ -140,6 +140,26 @@ describe('preventFolderCycle', () => {
 		// Should cap at a reasonable depth, not make unlimited queries
 		expect(findMock.mock.calls.length).toBeLessThanOrEqual(50);
 	});
+
+	it('reports accurate error when ancestor chain exceeds maximum depth', async () => {
+		// Mock a chain of folders that never terminates (simulates depth > MAX_ANCESTOR_DEPTH)
+		const findMock = vi.fn().mockResolvedValue({
+			docs: [{ id: 'deep-id', parent: 'even-deeper-id' }],
+		});
+		const args = makeHookArgs({
+			data: { parent: 'deep-folder-id' },
+			originalDoc: { id: 'folder-id' },
+			req: {
+				api: {
+					collection: () => ({
+						find: findMock,
+					}),
+				},
+			},
+		});
+
+		await expect(preventFolderCycle(args)).rejects.toThrow(/too deep or contains a cycle/i);
+	});
 });
 
 describe('preventDuplicateSiblingFolderName', () => {

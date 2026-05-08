@@ -608,4 +608,139 @@ describe('wordDiff', () => {
 		const common = result.filter((s) => s.type === 'common');
 		expect(common.length).toBeGreaterThan(0);
 	});
+
+	// ============================================
+	// Regression tests for memory-optimized LCS
+	// ============================================
+
+	describe('memory-optimized wordDiff regression tests', () => {
+		it('produces correct diff for moderately large text (500+ words) with mixed changes', () => {
+			// Build a 600-word base text
+			const baseWords = Array.from({ length: 600 }, (_, i) => `base${i}`);
+
+			// old: base text with some unique words scattered in
+			const oldWords = [...baseWords];
+			oldWords.splice(50, 0, 'OLD_INSERT_A', 'OLD_INSERT_B'); // insert at position 50
+			oldWords.splice(200, 0, 'WILL_BE_DELETED_X', 'WILL_BE_DELETED_Y'); // insert at position 202
+			oldWords.splice(400, 0, 'CHANGED_WORD_OLD'); // insert at position 403
+
+			// new: same base but different modifications
+			const newWords = [...baseWords];
+			newWords.splice(50, 0, 'OLD_INSERT_A', 'OLD_INSERT_B'); // same insert — stays common
+			// WILL_BE_DELETED words are NOT in new — they are removed
+			newWords.splice(400, 0, 'CHANGED_WORD_NEW'); // different word — replacement
+			newWords.splice(550, 0, 'NEWLY_ADDED_WORD'); // brand new word at end
+
+			const oldText = oldWords.join(' ');
+			const newText = newWords.join(' ');
+
+			const result = wordDiff(oldText, newText);
+
+			// Verify the result is a proper diff (not a fallback)
+			expect(result.length).toBeGreaterThan(0);
+			expect(result.length).toBeLessThan(20); // Should be a compact diff, not one segment per word
+
+			// Should have common segments (shared base words)
+			const commonSegments = result.filter((s) => s.type === 'common');
+			expect(commonSegments.length).toBeGreaterThan(0);
+
+			// Should have removed segments (WILL_BELETED_X/Y)
+			const removedSegments = result.filter((s) => s.type === 'removed');
+			expect(removedSegments.length).toBeGreaterThan(0);
+			const removedText = removedSegments.map((s) => s.value).join(' ');
+			expect(removedText).toContain('WILL_BE_DELETED_X');
+			expect(removedText).toContain('WILL_BE_DELETED_Y');
+			expect(removedText).toContain('CHANGED_WORD_OLD');
+
+			// Should have added segments (NEWLY_ADDED_WORD, CHANGED_WORD_NEW)
+			const addedSegments = result.filter((s) => s.type === 'added');
+			expect(addedSegments.length).toBeGreaterThan(0);
+			const addedText = addedSegments.map((s) => s.value).join(' ');
+			expect(addedText).toContain('NEWLY_ADDED_WORD');
+			expect(addedText).toContain('CHANGED_WORD_NEW');
+
+			// Verify reconstructing old/new from diff segments matches originals
+			const reconstructedOld = result
+				.filter((s) => s.type === 'common' || s.type === 'removed')
+				.map((s) => s.value)
+				.join(' ');
+			const reconstructedNew = result
+				.filter((s) => s.type === 'common' || s.type === 'added')
+				.map((s) => s.value)
+				.join(' ');
+			expect(reconstructedOld).toBe(oldText);
+			expect(reconstructedNew).toBe(newText);
+		});
+
+		it('handles texts at the WORD_DIFF_LIMIT boundary (1999 words) without fallback', () => {
+			// 1999 words each: 999 shared prefix + 1000 unique words (one side per).
+			const shared = Array.from({ length: 999 }, (_, i) => `shared${i}`);
+			const oldOnly = Array.from({ length: 1000 }, (_, i) => `oldonly${i}`);
+			const newOnly = Array.from({ length: 1000 }, (_, i) => `newonly${i}`);
+
+			// 999 + 1000 = 1999 words each
+			const oldWords = [...shared, ...oldOnly];
+			const newWords = [...shared, ...newOnly];
+
+			expect(oldWords.length).toBe(1999);
+			expect(newWords.length).toBe(1999);
+
+			const oldText = oldWords.join(' ');
+			const newText = newWords.join(' ');
+
+			const result = wordDiff(oldText, newText);
+
+			// Should NOT be a fallback (fallback would be exactly 2 segments: removed + added)
+			// With LCS, should have common + removed + added segments
+			const commonSegments = result.filter((s) => s.type === 'common');
+			expect(commonSegments.length).toBeGreaterThan(0);
+
+			// The shared prefix should appear as common
+			const commonText = commonSegments.map((s) => s.value).join(' ');
+			expect(commonText).toContain('shared0');
+			expect(commonText).toContain('shared998');
+
+			// Should have removed segments for old-only words
+			const removedSegments = result.filter((s) => s.type === 'removed');
+			expect(removedSegments.length).toBeGreaterThan(0);
+
+			// Should have added segments for new-only words
+			const addedSegments = result.filter((s) => s.type === 'added');
+			expect(addedSegments.length).toBeGreaterThan(0);
+
+			// Verify round-trip reconstruction
+			const reconstructedOld = result
+				.filter((s) => s.type === 'common' || s.type === 'removed')
+				.map((s) => s.value)
+				.join(' ');
+			const reconstructedNew = result
+				.filter((s) => s.type === 'common' || s.type === 'added')
+				.map((s) => s.value)
+				.join(' ');
+			expect(reconstructedOld).toBe(oldText);
+			expect(reconstructedNew).toBe(newText);
+		});
+
+		it('preserves exact output for small diffs (regression guard)', () => {
+			// Snapshot-style test — ensures output is bit-for-bit identical
+			const result = wordDiff(
+				'the quick brown fox jumps over the lazy dog',
+				'the quick red fox leaps over the sleepy dog',
+			);
+
+			// Verify full output structure
+			expect(result).toEqual([
+				{ type: 'common', value: 'the quick' },
+				{ type: 'removed', value: 'brown' },
+				{ type: 'added', value: 'red' },
+				{ type: 'common', value: 'fox' },
+				{ type: 'removed', value: 'jumps' },
+				{ type: 'added', value: 'leaps' },
+				{ type: 'common', value: 'over the' },
+				{ type: 'removed', value: 'lazy' },
+				{ type: 'added', value: 'sleepy' },
+				{ type: 'common', value: 'dog' },
+			]);
+		});
+	});
 });

@@ -525,6 +525,78 @@ describe('RedisCacheAdapter', () => {
 			expect(mockRedis.eval).toHaveBeenCalled();
 		});
 
+		// ── Bug #6: entryCount drift — reconcile only at capacity ────────
+
+		describe('entryCount reconciliation (Bug #6)', () => {
+			it('should reconcile once at maxKeys and still reject when Redis is truly full', async () => {
+				const limitedRedis = createMockRedis();
+				const limitedAdapter = new RedisCacheAdapter({ redis: limitedRedis, maxKeys: 2 });
+				await limitedAdapter.initialize();
+
+				await limitedAdapter.set('k1', makeEntry('v1'));
+				await limitedAdapter.set('k2', makeEntry('v2'));
+
+				// Clear the scan spy so we can assert it's not called below
+				vi.mocked(limitedRedis.scan).mockClear();
+
+				// This set() should reconcile actual Redis size, then drop because it is still full.
+				await limitedAdapter.set('k3', makeEntry('v3'));
+
+				expect(limitedRedis.scan).toHaveBeenCalledTimes(1);
+
+				// k3 should NOT be stored
+				expect(await limitedAdapter.get('k3')).toBeUndefined();
+			});
+
+			it('should reconcile at maxKeys after TTL expiry and store the new entry', async () => {
+				const limitedRedis = createMockRedis();
+				const limitedAdapter = new RedisCacheAdapter({ redis: limitedRedis, maxKeys: 2 });
+				await limitedAdapter.initialize();
+
+				await limitedAdapter.set('k1', makeEntry('v1'));
+				await limitedAdapter.set('k2', makeEntry('v2'));
+
+				// Simulate TTL expiry: Redis auto-removes k1, but adapter's entryCount is still 2.
+				limitedRedis.simulateExpiry('momentum:cache:k1');
+
+				// Now entryCount (2) >= maxKeys (2), but actual Redis has only 1 entry.
+				vi.mocked(limitedRedis.scan).mockClear();
+				await limitedAdapter.set('k3', makeEntry('v3'));
+
+				expect(limitedRedis.scan).toHaveBeenCalledTimes(1);
+				expect(await limitedAdapter.get('k3')).toEqual(expect.objectContaining({ value: 'v3' }));
+			});
+		});
+
+		// ── Bug #7: Cache key collision — store original query metadata ──
+
+		describe('cache entry query metadata for collision detection (Bug #7)', () => {
+			it('should preserve original query hash in CacheEntry so consumers can verify cache hits', async () => {
+				const query = { limit: 10, page: 1, sort: 'title' };
+				const entry: CacheEntry<{ items: string[] }> = {
+					value: { items: ['a', 'b'] },
+					tags: ['posts'],
+					createdAt: Date.now(),
+					ttl: 60,
+					metadata: {
+						queryHash: 'abc123',
+						query,
+					},
+				};
+
+				await adapter.set('cache-key-1', entry);
+				const result = await adapter.get<{ items: string[] }>('cache-key-1');
+
+				expect(result).toBeDefined();
+				expect(result?.value).toEqual({ items: ['a', 'b'] });
+				// The metadata field should be preserved through the store/retrieve cycle
+				expect(result?.metadata).toEqual({
+					queryHash: 'abc123',
+					query,
+				});
+			});
+		});
+
 		it('should maintain consistent tag state after concurrent set() on the same key', async () => {
 			const entryA = makeEntry('valueA', { tags: ['tagA'] });
 			const entryB = makeEntry('valueB', { tags: ['tagB'] });

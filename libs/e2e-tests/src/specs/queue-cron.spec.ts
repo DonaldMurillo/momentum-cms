@@ -26,8 +26,12 @@ test.describe('Queue & Cron Plugins', { tag: ['@admin', '@queue', '@cron'] }, ()
 
 			const systemSection = authenticatedPage.getByRole('region', { name: 'System' });
 			await expect(systemSection).toBeVisible({ timeout: 15000 });
-			await expect(systemSection.getByRole('heading', { name: 'Jobs' })).toBeVisible();
-			await expect(systemSection.getByRole('heading', { name: 'Cron Schedules' })).toBeVisible();
+			// Editorial design lift (#70) replaced heading-based cards with anchor
+			// list rows. The accessible name of the title link includes both the
+			// collection label and its description (e.g. "Jobs Manage jobs"), so
+			// match the start of the string.
+			await expect(systemSection.getByRole('link', { name: /^Jobs\b/ })).toBeVisible();
+			await expect(systemSection.getByRole('link', { name: /^Cron Schedules\b/ })).toBeVisible();
 		});
 	});
 

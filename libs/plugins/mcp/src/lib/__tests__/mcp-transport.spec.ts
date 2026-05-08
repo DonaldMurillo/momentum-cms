@@ -332,6 +332,99 @@ describe('createMcpRouter', () => {
 		});
 	});
 
+	describe('Dynamic import caching', () => {
+		it('should cache the streamable transport import — same Promise returned on repeated calls', async () => {
+			vi.resetModules();
+			vi.doMock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
+				StreamableHTTPServerTransport: class {},
+			}));
+
+			const mod = await import('../mcp-transport');
+			const p1 = (mod as Record<string, unknown>).getStreamableTransport();
+			const p2 = (mod as Record<string, unknown>).getStreamableTransport();
+			expect(p1).toBe(p2); // same Promise object ⇒ cached
+
+			vi.doUnmock('@modelcontextprotocol/sdk/server/streamableHttp.js');
+			vi.resetModules();
+		});
+
+		it('should cache the server factory import — same Promise returned on repeated calls', async () => {
+			vi.resetModules();
+			vi.doMock('../mcp-server-factory', () => ({
+				createMcpServerInstance: vi.fn(),
+			}));
+
+			const mod = await import('../mcp-transport');
+			const p1 = (mod as Record<string, unknown>).getServerFactory();
+			const p2 = (mod as Record<string, unknown>).getServerFactory();
+			expect(p1).toBe(p2); // same Promise object ⇒ cached
+
+			vi.doUnmock('../mcp-server-factory');
+			vi.resetModules();
+		});
+
+		it('should handle two consecutive requests correctly with cached imports', async () => {
+			vi.resetModules();
+
+			const handleRequestCalls: unknown[][] = [];
+			vi.doMock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
+				StreamableHTTPServerTransport: class {
+					connect = vi.fn().mockResolvedValue(undefined);
+					handleRequest = vi.fn((...args: unknown[]) => {
+						handleRequestCalls.push(args);
+						return Promise.resolve();
+					});
+					close = vi.fn().mockResolvedValue(undefined);
+				},
+			}));
+			vi.doMock('../mcp-server-factory', () => ({
+				createMcpServerInstance: vi.fn().mockReturnValue({
+					connect: vi.fn().mockResolvedValue(undefined),
+					close: vi.fn().mockResolvedValue(undefined),
+				}),
+			}));
+
+			const { createMcpRouter: freshRouter } = await import('../mcp-transport');
+			const router = freshRouter(
+				{ apiKeyRequired: false, allowAnonymous: true },
+				getApi,
+				allowAll,
+				allowAll,
+			);
+
+			// First request
+			const req1 = makeReq('POST', undefined, { jsonrpc: '2.0', method: 'initialize', id: 1 });
+			const res1 = makeRes();
+			router(req1, res1 as never, vi.fn());
+
+			await vi.waitFor(
+				() => {
+					expect(handleRequestCalls.length).toBeGreaterThanOrEqual(1);
+				},
+				{ timeout: 3000 },
+			);
+
+			// Second request — uses cached import
+			const req2 = makeReq('POST', undefined, { jsonrpc: '2.0', method: 'initialize', id: 2 });
+			const res2 = makeRes();
+			router(req2, res2 as never, vi.fn());
+
+			await vi.waitFor(
+				() => {
+					expect(handleRequestCalls.length).toBe(2);
+				},
+				{ timeout: 3000 },
+			);
+
+			// Both requests went through handleRequest → cached imports work
+			expect(handleRequestCalls.length).toBe(2);
+
+			vi.doUnmock('@modelcontextprotocol/sdk/server/streamableHttp.js');
+			vi.doUnmock('../mcp-server-factory');
+			vi.resetModules();
+		});
+	});
+
 	describe('DNS rebinding / Host validation forwarding', () => {
 		// The MCP HTTP spec recommends Host/Origin validation to defend
 		// against DNS-rebinding attacks against locally-bound or private

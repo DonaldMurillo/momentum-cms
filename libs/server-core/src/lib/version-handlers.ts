@@ -13,7 +13,7 @@
  */
 
 import type { UserContext } from '@momentumcms/core';
-import type { HandlerResult } from './import-export-handler';
+import type { HandlerResult } from './handler-types';
 import { getMomentumAPI } from './momentum-api';
 import type { VersionOperations } from './momentum-api.types';
 import { sanitizeErrorMessage } from './shared-server-utils';
@@ -308,6 +308,20 @@ export async function handleSchedulePublishRequest(
 			},
 		};
 	}
+
+	const parsedDate = new Date(params.publishAt);
+	if (Number.isNaN(parsedDate.getTime())) {
+		return {
+			status: 400,
+			body: {
+				error: 'Invalid publishAt',
+				message: 'publishAt must be a valid ISO date string',
+			},
+		};
+	}
+	// Past dates are intentionally allowed — the publish-scheduler will pick
+	// them up on its next tick. Validation against past dates lives in the
+	// admin schedule dialog, where it's a UX safeguard.
 
 	const check = resolveVersionOps(params.collectionSlug, params.user);
 	if (!check.ok) return check.result;

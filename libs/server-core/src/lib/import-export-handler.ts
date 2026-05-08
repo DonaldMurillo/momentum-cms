@@ -10,6 +10,10 @@
 import type { CollectionConfig } from '@momentumcms/core';
 import type { MomentumAPI } from '@momentumcms/core';
 import type { ExportFormat, ImportResult } from './import-export';
+import type { HandlerResult } from './handler-types';
+
+// Re-export for backward compatibility — consumers may still import from this module
+export type { HandlerResult } from './handler-types';
 import {
 	exportToJson,
 	exportToCsv,
@@ -41,12 +45,6 @@ export interface ImportHandlerParams {
 	user?: { id: string | number; role?: string };
 	config: { collections: CollectionConfig[] };
 	api: MomentumAPI;
-}
-
-export interface HandlerResult<TBody = unknown> {
-	status: number;
-	body: TBody;
-	headers?: Record<string, string>;
 }
 
 // ============================================
@@ -226,19 +224,35 @@ export async function handleImportRequest(params: ImportHandlerParams): Promise<
 		}
 
 		// Only attempt to create documents that passed validation
-		for (const v of validation) {
-			if (!v.valid) continue;
+		// Use batchCreate for efficiency; fall back to sequential on batch failure
+		const validEntries = validation.filter((v) => v.valid);
+		const validDocs = validEntries.map((v) => v.coerced);
+
+		if (validDocs.length > 0) {
 			try {
-				const doc = await (
+				const batchResult = await (
 					contextApi.collection(collectionSlug) as {
-						create(data: Record<string, unknown>): Promise<Record<string, unknown>>;
+						batchCreate(docs: Record<string, unknown>[]): Promise<Record<string, unknown>[]>;
 					}
-				).create(v.coerced);
-				result.docs.push(doc);
-				result.imported++;
-			} catch (err) {
-				const errMsg = sanitizeErrorMessage(err, 'Failed to import document');
-				result.errors.push({ index: v.index, message: errMsg });
+				).batchCreate(validDocs);
+				result.docs = batchResult;
+				result.imported = batchResult.length;
+			} catch {
+				// Batch failed — fall back to sequential create for granular per-doc error reporting
+				for (const v of validEntries) {
+					try {
+						const doc = await (
+							contextApi.collection(collectionSlug) as {
+								create(data: Record<string, unknown>): Promise<Record<string, unknown>>;
+							}
+						).create(v.coerced);
+						result.docs.push(doc);
+						result.imported++;
+					} catch (innerErr) {
+						const errMsg = sanitizeErrorMessage(innerErr, 'Failed to import document');
+						result.errors.push({ index: v.index, message: errMsg });
+					}
+				}
 			}
 		}
 

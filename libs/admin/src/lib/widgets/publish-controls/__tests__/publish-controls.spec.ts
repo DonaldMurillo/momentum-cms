@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DialogService } from '@momentumcms/ui';
 import { PublishControlsWidget } from '../publish-controls.component';
 import { VersionService } from '../../../services/version.service';
 import { FeedbackService } from '../../feedback/feedback.service';
@@ -9,15 +10,28 @@ describe('PublishControlsWidget', () => {
 	let component: PublishControlsWidget;
 	let mockVersionService: Record<string, ReturnType<typeof vi.fn>>;
 	let mockFeedback: Record<string, ReturnType<typeof vi.fn>>;
+	let mockDialogService: Record<string, ReturnType<typeof vi.fn>>;
 
 	function setup(initialStatus?: 'draft' | 'published'): void {
 		mockVersionService = {
 			getStatus: vi.fn().mockResolvedValue('draft'),
 			publish: vi.fn().mockResolvedValue({ doc: {}, message: 'ok' }),
 			unpublish: vi.fn().mockResolvedValue({ doc: {}, message: 'ok' }),
+			schedulePublish: vi
+				.fn()
+				.mockResolvedValue({ id: 'abc123', scheduledPublishAt: '2099-01-01T00:00:00.000Z' }),
+			cancelScheduledPublish: vi.fn().mockResolvedValue({ message: 'ok' }),
+			getScheduledPublishAt: vi.fn().mockResolvedValue(null),
 		};
 		mockFeedback = {
 			confirmUnpublish: vi.fn().mockResolvedValue(true),
+			confirmCancelSchedule: vi.fn().mockResolvedValue(true),
+			publishScheduled: vi.fn(),
+			scheduledPublishCancelled: vi.fn(),
+			operationFailed: vi.fn(),
+		};
+		mockDialogService = {
+			open: vi.fn(),
 		};
 
 		TestBed.configureTestingModule({
@@ -25,6 +39,7 @@ describe('PublishControlsWidget', () => {
 			providers: [
 				{ provide: VersionService, useValue: mockVersionService },
 				{ provide: FeedbackService, useValue: mockFeedback },
+				{ provide: DialogService, useValue: mockDialogService },
 			],
 		});
 
@@ -98,9 +113,18 @@ describe('PublishControlsWidget', () => {
 				getStatus: vi.fn().mockResolvedValue('published'),
 				publish: vi.fn().mockResolvedValue({ doc: {}, message: 'ok' }),
 				unpublish: vi.fn().mockResolvedValue({ doc: {}, message: 'ok' }),
+				schedulePublish: vi
+					.fn()
+					.mockResolvedValue({ id: 'abc123', scheduledPublishAt: '2099-01-01T00:00:00.000Z' }),
+				cancelScheduledPublish: vi.fn().mockResolvedValue({ message: 'ok' }),
+				getScheduledPublishAt: vi.fn().mockResolvedValue(null),
 			};
 			mockFeedback = {
 				confirmUnpublish: vi.fn().mockResolvedValue(true),
+				confirmCancelSchedule: vi.fn().mockResolvedValue(true),
+				publishScheduled: vi.fn(),
+				scheduledPublishCancelled: vi.fn(),
+				operationFailed: vi.fn(),
 			};
 
 			TestBed.configureTestingModule({
@@ -108,6 +132,7 @@ describe('PublishControlsWidget', () => {
 				providers: [
 					{ provide: VersionService, useValue: mockVersionService },
 					{ provide: FeedbackService, useValue: mockFeedback },
+					{ provide: DialogService, useValue: { open: vi.fn() } },
 				],
 			});
 
@@ -136,9 +161,18 @@ describe('PublishControlsWidget', () => {
 				getStatus: vi.fn().mockRejectedValue(new Error('Network error')),
 				publish: vi.fn().mockResolvedValue({ doc: {}, message: 'ok' }),
 				unpublish: vi.fn().mockResolvedValue({ doc: {}, message: 'ok' }),
+				schedulePublish: vi
+					.fn()
+					.mockResolvedValue({ id: 'abc123', scheduledPublishAt: '2099-01-01T00:00:00.000Z' }),
+				cancelScheduledPublish: vi.fn().mockResolvedValue({ message: 'ok' }),
+				getScheduledPublishAt: vi.fn().mockResolvedValue(null),
 			};
 			mockFeedback = {
 				confirmUnpublish: vi.fn().mockResolvedValue(true),
+				confirmCancelSchedule: vi.fn().mockResolvedValue(true),
+				publishScheduled: vi.fn(),
+				scheduledPublishCancelled: vi.fn(),
+				operationFailed: vi.fn(),
 			};
 
 			TestBed.configureTestingModule({
@@ -146,6 +180,7 @@ describe('PublishControlsWidget', () => {
 				providers: [
 					{ provide: VersionService, useValue: mockVersionService },
 					{ provide: FeedbackService, useValue: mockFeedback },
+					{ provide: DialogService, useValue: { open: vi.fn() } },
 				],
 			});
 
@@ -167,7 +202,9 @@ describe('PublishControlsWidget', () => {
 				expect(component.status()).toBe('draft');
 			});
 
-			expect(component.isLoading()).toBe(false);
+			await vi.waitFor(() => {
+				expect(component.isLoading()).toBe(false);
+			});
 		});
 	});
 

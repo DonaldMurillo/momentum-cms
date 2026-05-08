@@ -77,7 +77,7 @@ export const preventFolderCycle: HookFunction = async ({ data, originalDoc, req 
 		}
 
 		if (currentParentId) {
-			throw new Error('Folder hierarchy exceeds maximum depth');
+			throw new Error('Folder hierarchy is too deep or contains a cycle');
 		}
 	}
 

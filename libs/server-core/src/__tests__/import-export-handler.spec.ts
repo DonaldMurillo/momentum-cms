@@ -55,6 +55,11 @@ function createMockApi(
 			.mockImplementation((data: Record<string, unknown>) =>
 				Promise.resolve({ id: `new-${Date.now()}`, ...data }),
 			),
+		batchCreate: vi
+			.fn()
+			.mockImplementation((docs: Record<string, unknown>[]) =>
+				Promise.resolve(docs.map((d, i) => ({ id: `batch-${i}-${Date.now()}`, ...d }))),
+			),
 	};
 
 	return {
@@ -302,6 +307,7 @@ describe('handleImportRequest', () => {
 	it('should return 400 when all docs fail', async () => {
 		const mockApi = createMockApi();
 		mockApi._collectionOps.create.mockRejectedValue(new Error('fail'));
+		mockApi._collectionOps.batchCreate.mockRejectedValue(new Error('fail'));
 
 		const result = await handleImportRequest(
 			importParams({
@@ -408,8 +414,13 @@ describe('handleImportRequest', () => {
 
 		expect(result.status).toBe(200);
 		const body = result.body as ImportResult;
-		// Handler should only attempt to create valid docs (2), not all 3
-		expect(mockApi._collectionOps.create).toHaveBeenCalledTimes(2);
+		// Handler should batchCreate only the 2 valid docs
+		expect(mockApi._collectionOps.batchCreate).toHaveBeenCalledTimes(1);
+		const batchArgs = mockApi._collectionOps.batchCreate.mock.calls[0][0] as Record<
+			string,
+			unknown
+		>[];
+		expect(batchArgs).toHaveLength(2);
 		expect(body.imported).toBe(2);
 		expect(body.errors).toHaveLength(1);
 		expect(body.errors[0].index).toBe(1);
@@ -428,5 +439,111 @@ describe('handleImportRequest', () => {
 
 		// Should not be rejected for size — status depends on create success
 		expect(result.status).not.toBe(400);
+	});
+
+	// ============================================
+	// batchCreate integration tests
+	// ============================================
+
+	it('should call batchCreate once instead of individual create calls', async () => {
+		const mockApi = createMockApi();
+		const docs = [
+			{ title: 'Alpha', price: 1.0 },
+			{ title: 'Beta', price: 2.0 },
+			{ title: 'Gamma', price: 3.0 },
+		];
+
+		const result = await handleImportRequest(
+			importParams({
+				api: mockApi,
+				body: { docs },
+			}),
+		);
+
+		expect(result.status).toBe(200);
+		// batchCreate should be called exactly once with all 3 docs
+		expect(mockApi._collectionOps.batchCreate).toHaveBeenCalledTimes(1);
+		expect(mockApi._collectionOps.batchCreate).toHaveBeenCalledWith(
+			expect.arrayContaining([
+				expect.objectContaining({ title: 'Alpha' }),
+				expect.objectContaining({ title: 'Beta' }),
+				expect.objectContaining({ title: 'Gamma' }),
+			]),
+		);
+		// Individual create should NOT be called when batchCreate succeeds
+		expect(mockApi._collectionOps.create).not.toHaveBeenCalled();
+
+		const body = result.body as ImportResult;
+		expect(body.imported).toBe(3);
+		expect(body.docs).toHaveLength(3);
+	});
+
+	it('should fall back to sequential create when batchCreate throws', async () => {
+		const mockApi = createMockApi();
+		// batchCreate fails
+		mockApi._collectionOps.batchCreate.mockRejectedValue(new Error('Batch insert failed'));
+		// Individual create succeeds for first, fails for second
+		mockApi._collectionOps.create
+			.mockResolvedValueOnce({ id: 'seq-1', title: 'A' })
+			.mockRejectedValueOnce(new Error('Row-level error'));
+
+		const result = await handleImportRequest(
+			importParams({
+				api: mockApi,
+				body: { docs: [{ title: 'A' }, { title: 'B' }] },
+			}),
+		);
+
+		expect(result.status).toBe(200);
+		const body = result.body as ImportResult;
+		// One doc imported via fallback, one errored
+		expect(body.imported).toBe(1);
+		expect(body.errors).toHaveLength(1);
+		expect(body.errors[0].message).toContain('Row-level error');
+
+		// batchCreate was attempted, then individual create was used as fallback
+		expect(mockApi._collectionOps.batchCreate).toHaveBeenCalledTimes(1);
+		expect(mockApi._collectionOps.create).toHaveBeenCalledTimes(2);
+	});
+
+	it('should send only valid docs to batchCreate when some fail validation', async () => {
+		const mockApi = createMockApi();
+		mockApi._collectionOps.batchCreate.mockImplementation((docs: Record<string, unknown>[]) =>
+			Promise.resolve(docs.map((d, i) => ({ id: `batch-${i}`, ...d }))),
+		);
+
+		const result = await handleImportRequest(
+			importParams({
+				api: mockApi,
+				body: {
+					docs: [
+						{ title: 'Valid1', price: 10 },
+						{ price: 999 }, // missing required 'title' -> validation fail
+						{ title: 'Valid2', price: 20 },
+						{ price: 888 }, // missing required 'title' -> validation fail
+						{ title: 'Valid3', price: 30 },
+					],
+				},
+			}),
+		);
+
+		expect(result.status).toBe(200);
+
+		// batchCreate should be called with only the 3 valid docs
+		expect(mockApi._collectionOps.batchCreate).toHaveBeenCalledTimes(1);
+		const batchCallArgs = mockApi._collectionOps.batchCreate.mock.calls[0][0] as Record<
+			string,
+			unknown
+		>[];
+		expect(batchCallArgs).toHaveLength(3);
+
+		const body = result.body as ImportResult;
+		expect(body.imported).toBe(3);
+		// 2 validation errors (rows 1 and 3)
+		expect(body.errors).toHaveLength(2);
+		expect(body.errors.map((e) => e.index).sort()).toEqual([1, 3]);
+
+		// Individual create should NOT be called
+		expect(mockApi._collectionOps.create).not.toHaveBeenCalled();
 	});
 });

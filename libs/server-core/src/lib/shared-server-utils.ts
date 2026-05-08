@@ -10,8 +10,23 @@
 export function sanitizeErrorMessage(error: unknown, fallback: string): string {
 	if (!(error instanceof Error)) return fallback;
 	const msg = error.message;
-	// Strip messages that look like they contain SQL keywords
-	if (/\bSELECT\b|\bINSERT\b|\bUPDATE\b|\bDELETE\b|\bFROM\b|\bWHERE\b/i.test(msg)) return fallback;
+	// Strip messages that look like they contain SQL statements
+	// Require SQL-like context (keyword combinations with column/table syntax)
+	// rather than standalone keywords to avoid false positives on natural language
+	// like "select your option from the list"
+	if (/\bSELECT\s+[*\w"']+(?:\s*,\s*[*\w"']+)*\s+FROM\b/i.test(msg)) return fallback;
+	if (/\bINSERT\s+INTO\b/i.test(msg)) return fallback;
+	if (/\bUPDATE\s+["'\w.]+\s+SET\b/i.test(msg)) return fallback;
+	if (/\bDELETE\s+FROM\b/i.test(msg)) return fallback;
+	if (/\bDROP\s+TABLE\b/i.test(msg)) return fallback;
+	if (/\bsyntax error at or near\b/i.test(msg)) return fallback;
+	if (/\b(?:column|relation|table)\s+["'\w.-]+(?:\s+\w+)*\s+does not exist\b/i.test(msg)) {
+		return fallback;
+	}
+	if (/\bcolumn\s+["'\w.-]+(?:\s+\w+)*\s+referenced\b/i.test(msg)) return fallback;
+	if (/\bviolates\s+(?:foreign key|unique|not-null|check)\s+constraint\b/i.test(msg)) {
+		return fallback;
+	}
 	// Strip messages that contain file paths (Unix forward-slash or Windows backslash)
 	if (/[/\\][\w.-]+[/\\][\w.-]+/.test(msg)) return fallback;
 	// Strip messages that look like stack traces

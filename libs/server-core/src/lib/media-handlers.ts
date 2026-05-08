@@ -12,7 +12,7 @@
  */
 
 import type { UploadedFile, UploadCollectionConfig, UserContext } from '@momentumcms/core';
-import type { HandlerResult } from './import-export-handler';
+import type { HandlerResult } from './handler-types';
 import {
 	handleUpload,
 	handleCollectionUpload,

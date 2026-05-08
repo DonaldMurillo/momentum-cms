@@ -331,7 +331,7 @@ describe('Security: Redis Adapter', () => {
 	});
 
 	describe('M4: entryCount must not drift when Redis expires entries via TTL', () => {
-		it('should still accept new entries after previous entries expire in Redis', async () => {
+		it('should reconcile maxKeys after Redis TTL expiry and allow new entries', async () => {
 			// Configure adapter with maxKeys limit
 			const limitedAdapter = new RedisCacheAdapter({ redis: mockRedis, maxKeys: 3 });
 			await limitedAdapter.initialize();
@@ -346,14 +346,12 @@ describe('Security: Redis Adapter', () => {
 			mockRedis.simulateExpiry('momentum:cache:b');
 			mockRedis.simulateExpiry('momentum:cache:c');
 
-			// Adapter's entryCount is still 3 (the bug). New writes should still work
-			// because the expired entries are gone from Redis.
 			await limitedAdapter.set('d', makeEntry('D', { tags: ['t4'], ttl: 60 }));
 
-			// The new entry MUST be stored — entryCount must not block it
-			const result = await limitedAdapter.get('d');
-			expect(result).toBeDefined();
-			expect(result?.value).toBe('D');
+			expect(await limitedAdapter.get('d')).toEqual(expect.objectContaining({ value: 'D' }));
+
+			const stats = await limitedAdapter.stats();
+			expect(stats.size).toBe(1);
 		});
 
 		it('should not allow entryCount to go negative via delete()', async () => {

@@ -364,9 +364,8 @@ function diffUnknownField(key: string, oldVal: unknown, newVal: unknown): DeepDi
 		newValue: newUndef ? undefined : newVal,
 	};
 }
-
 // ============================================
-// Word-level diff
+// Word-level diff — Hirschberg's algorithm
 // ============================================
 
 /** Max word count for LCS diffing. Above this, fall back to full add/remove. */
@@ -374,7 +373,7 @@ const WORD_DIFF_LIMIT = 2000;
 
 /**
  * Compute word-level diff between two strings.
- * Uses a simple LCS algorithm on word arrays.
+ * Uses Hirschberg’s algorithm (divide-and-conquer LCS) for O(min(m,n)) space.
  * Falls back to full remove+add for texts exceeding WORD_DIFF_LIMIT words.
  */
 export function wordDiff(oldText: string, newText: string): TextDiffSegment[] {
@@ -388,10 +387,10 @@ export function wordDiff(oldText: string, newText: string): TextDiffSegment[] {
 		return [{ type: 'removed', value: oldText }];
 	}
 
-	const oldWords = oldText.split(/\s+/);
-	const newWords = newText.split(/\s+/);
+	let oldWords = oldText.split(/\s+/);
+	let newWords = newText.split(/\s+/);
 
-	// Guard against O(m*n) memory explosion for very large texts
+	// Guard against excessive computation for very large texts
 	if (oldWords.length > WORD_DIFF_LIMIT || newWords.length > WORD_DIFF_LIMIT) {
 		return [
 			{ type: 'removed', value: oldText },
@@ -399,47 +398,32 @@ export function wordDiff(oldText: string, newText: string): TextDiffSegment[] {
 		];
 	}
 
-	// Build LCS table
-	const m = oldWords.length;
-	const n = newWords.length;
-	const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-
-	for (let i = 1; i <= m; i++) {
-		for (let j = 1; j <= n; j++) {
-			if (oldWords[i - 1] === newWords[j - 1]) {
-				dp[i][j] = dp[i - 1][j - 1] + 1;
-			} else {
-				dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-			}
-		}
+	// Ensure oldWords is the longer sequence so Hirschberg splits the longer side
+	// and computes DP rows of size min(m,n), giving O(min(m,n)) space.
+	let swapped = false;
+	if (oldWords.length < newWords.length) {
+		[oldWords, newWords] = [newWords, oldWords];
+		swapped = true;
 	}
 
-	// Backtrack to build diff segments
-	const segments: TextDiffSegment[] = [];
-	let i = m;
-	let j = n;
+	const ops = hirschbergDiff(oldWords, 0, oldWords.length, newWords, 0, newWords.length);
 
-	// Collect raw operations in reverse order
-	const ops: { type: 'common' | 'added' | 'removed'; word: string }[] = [];
-
-	while (i > 0 || j > 0) {
-		if (i > 0 && j > 0 && oldWords[i - 1] === newWords[j - 1]) {
-			ops.push({ type: 'common', word: oldWords[i - 1] });
-			i--;
-			j--;
-		} else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-			ops.push({ type: 'added', word: newWords[j - 1] });
-			j--;
-		} else {
-			ops.push({ type: 'removed', word: oldWords[i - 1] });
-			i--;
-		}
-	}
-
-	ops.reverse();
+	// Swap operation types back if sequences were swapped
+	const finalOps = swapped
+		? ops.map((op) => ({
+				...op,
+				type:
+					op.type === 'added'
+						? ('removed' as const)
+						: op.type === 'removed'
+							? ('added' as const)
+							: op.type,
+			}))
+		: ops;
 
 	// Merge consecutive same-type operations into segments
-	for (const op of ops) {
+	const segments: TextDiffSegment[] = [];
+	for (const op of finalOps) {
 		const last = segments[segments.length - 1];
 		if (last && last.type === op.type) {
 			last.value += ' ' + op.word;
@@ -451,7 +435,193 @@ export function wordDiff(oldText: string, newText: string): TextDiffSegment[] {
 	return segments;
 }
 
-// ============================================
+// --------------------------------------------
+// Hirschberg helpers (file-private)
+// --------------------------------------------
+
+/** A single diff operation produced by Hirschberg's recursion. */
+type DiffOp = { type: 'common' | 'added' | 'removed'; word: string };
+
+/**
+ * Compute the last row of the LCS DP table for a[aStart..aEnd) × b[bStart..bEnd)
+ * using only two rows (O(n) space where n = bEnd - bStart).
+ */
+function computeLcsRow(
+	a: string[],
+	aStart: number,
+	aEnd: number,
+	b: string[],
+	bStart: number,
+	bEnd: number,
+): Uint16Array {
+	const n = bEnd - bStart;
+	let prev = new Uint16Array(n + 1);
+	let curr = new Uint16Array(n + 1);
+
+	for (let i = aStart; i < aEnd; i++) {
+		const aWord = a[i];
+		for (let j = 1; j <= n; j++) {
+			if (aWord === b[bStart + j - 1]) {
+				curr[j] = prev[j - 1] + 1;
+			} else {
+				curr[j] = prev[j] > curr[j - 1] ? prev[j] : curr[j - 1];
+			}
+		}
+		const tmp = prev;
+		prev = curr;
+		curr = tmp;
+	}
+
+	return prev;
+}
+
+/**
+ * Compute the last row of the LCS DP table for reversed subsequences:
+ * reverse(a[aStart..aEnd)) × reverse(b[bStart..bEnd)).
+ * Uses the same two-row O(n) space technique.
+ */
+function computeLcsRowReverse(
+	a: string[],
+	aStart: number,
+	aEnd: number,
+	b: string[],
+	bStart: number,
+	bEnd: number,
+): Uint16Array {
+	const n = bEnd - bStart;
+	let prev = new Uint16Array(n + 1);
+	let curr = new Uint16Array(n + 1);
+
+	for (let i = aEnd - 1; i >= aStart; i--) {
+		const aWord = a[i];
+		for (let j = 1; j <= n; j++) {
+			if (aWord === b[bEnd - j]) {
+				curr[j] = prev[j - 1] + 1;
+			} else {
+				curr[j] = prev[j] > curr[j - 1] ? prev[j] : curr[j - 1];
+			}
+		}
+		const tmp = prev;
+		prev = curr;
+		curr = tmp;
+	}
+
+	return prev;
+}
+
+/**
+ * Standard LCS diff using full DP table — used as the base case for Hirschberg's
+ * when one dimension is ≤ 1. This is small enough that O(m*n) memory is trivial.
+ */
+function standardLcsDiff(
+	oldWords: string[],
+	oStart: number,
+	oEnd: number,
+	newWords: string[],
+	nStart: number,
+	nEnd: number,
+): DiffOp[] {
+	const m = oEnd - oStart;
+	const n = nEnd - nStart;
+
+	if (m === 0) {
+		const ops: DiffOp[] = [];
+		for (let j = nStart; j < nEnd; j++) ops.push({ type: 'added', word: newWords[j] });
+		return ops;
+	}
+	if (n === 0) {
+		const ops: DiffOp[] = [];
+		for (let i = oStart; i < oEnd; i++) ops.push({ type: 'removed', word: oldWords[i] });
+		return ops;
+	}
+
+	// Build small DP table
+	const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+	for (let i = 1; i <= m; i++) {
+		for (let j = 1; j <= n; j++) {
+			if (oldWords[oStart + i - 1] === newWords[nStart + j - 1]) {
+				dp[i][j] = dp[i - 1][j - 1] + 1;
+			} else {
+				dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+			}
+		}
+	}
+
+	// Backtrack (same tie-breaking as original: prefer 'added' when tied)
+	const ops: DiffOp[] = [];
+	let i = m;
+	let j = n;
+
+	while (i > 0 || j > 0) {
+		if (i > 0 && j > 0 && oldWords[oStart + i - 1] === newWords[nStart + j - 1]) {
+			ops.push({ type: 'common', word: oldWords[oStart + i - 1] });
+			i--;
+			j--;
+		} else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+			ops.push({ type: 'added', word: newWords[nStart + j - 1] });
+			j--;
+		} else {
+			ops.push({ type: 'removed', word: oldWords[oStart + i - 1] });
+			i--;
+		}
+	}
+
+	ops.reverse();
+	return ops;
+}
+
+/**
+ * Hirschberg's divide-and-conquer LCS algorithm.
+ * Space: O(min(m,n)) — only two DP rows per recursion level, and left completes
+ * before right starts so peak memory is O(n) × O(log m) stack depth.
+ * Time:  O(m*n) — same asymptotic complexity as the standard algorithm.
+ */
+function hirschbergDiff(
+	oldWords: string[],
+	oStart: number,
+	oEnd: number,
+	newWords: string[],
+	nStart: number,
+	nEnd: number,
+): DiffOp[] {
+	const m = oEnd - oStart;
+	const n = nEnd - nStart;
+
+	// Base case: small enough for standard DP (O(m*n) is trivial here)
+	if (m <= 1 || n <= 1) {
+		return standardLcsDiff(oldWords, oStart, oEnd, newWords, nStart, nEnd);
+	}
+
+	// Split old sequence at midpoint
+	const mid = oStart + Math.floor(m / 2);
+
+	// Forward pass: LCS row for old[oStart..mid) × new[nStart..nEnd)
+	const forward = computeLcsRow(oldWords, oStart, mid, newWords, nStart, nEnd);
+
+	// Backward pass: LCS row for reversed old[mid..oEnd) × reversed new[nStart..nEnd)
+	const backward = computeLcsRowReverse(oldWords, mid, oEnd, newWords, nStart, nEnd);
+
+	// Find split point k in [0..n] that maximises forward[k] + backward[n-k]
+	let maxSum = -1;
+	let bestK = 0;
+	for (let k = 0; k <= n; k++) {
+		const sum = forward[k] + backward[n - k];
+		if (sum > maxSum) {
+			maxSum = sum;
+			bestK = k;
+		}
+	}
+
+	const splitN = nStart + bestK;
+
+	// Recurse on the two halves — left completes before right starts
+	const left = hirschbergDiff(oldWords, oStart, mid, newWords, nStart, splitN);
+	const right = hirschbergDiff(oldWords, mid, oEnd, newWords, splitN, nEnd);
+
+	return [...left, ...right];
+}
+
 // Utilities
 // ============================================
 

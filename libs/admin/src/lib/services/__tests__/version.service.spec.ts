@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import type { SchedulePublishResult } from '@momentumcms/core';
 import {
 	VersionService,
 	type VersionQueryResult,
@@ -79,6 +80,14 @@ describe('VersionService', () => {
 
 	const mockCompareResult: VersionCompareResult = {
 		differences: mockDiffs,
+	};
+
+	// Server returns `{ id, scheduledPublishAt }` — see
+	// libs/core/src/lib/versions/version.types.ts (canonical SchedulePublishResult)
+	// and libs/server-core/src/lib/version-operations.ts schedulePublish().
+	const mockScheduleResult: SchedulePublishResult = {
+		id: 'abc123',
+		scheduledPublishAt: '2099-01-01T00:00:00.000Z',
 	};
 
 	// ============================================
@@ -259,6 +268,119 @@ describe('VersionService', () => {
 
 			const req = httpMock.expectOne('/api/posts/abc123/versions/compare');
 			req.flush(mockCompareResult);
+		});
+	});
+
+	describe('schedulePublish$', () => {
+		it('should POST /api/{collection}/{docId}/schedule-publish with publishAt', () => {
+			service
+				.schedulePublish$('posts', 'abc123', '2099-01-01T00:00:00.000Z')
+				.subscribe((result) => {
+					expect(result).toEqual(mockScheduleResult);
+					expect(result.id).toBe('abc123');
+					expect(result.scheduledPublishAt).toBe('2099-01-01T00:00:00.000Z');
+				});
+
+			const req = httpMock.expectOne('/api/posts/abc123/schedule-publish');
+			expect(req.request.method).toBe('POST');
+			expect(req.request.body).toEqual({ publishAt: '2099-01-01T00:00:00.000Z' });
+			req.flush(mockScheduleResult);
+		});
+
+		it('forwards a non-UTC offset publishAt verbatim (no client-side normalization)', () => {
+			const offsetPublishAt = '2099-01-01T15:30:00+09:00';
+			service.schedulePublish$('posts', 'abc123', offsetPublishAt).subscribe();
+
+			const req = httpMock.expectOne('/api/posts/abc123/schedule-publish');
+			expect(req.request.body).toEqual({ publishAt: offsetPublishAt });
+			req.flush(mockScheduleResult);
+		});
+
+		it('propagates 403 errors from the server', async () => {
+			const errorSpy = vi.fn();
+			service
+				.schedulePublish$('posts', 'abc123', '2099-01-01T00:00:00.000Z')
+				.subscribe({ error: errorSpy });
+
+			const req = httpMock.expectOne('/api/posts/abc123/schedule-publish');
+			req.flush({ error: 'Access denied' }, { status: 403, statusText: 'Forbidden' });
+
+			expect(errorSpy).toHaveBeenCalledTimes(1);
+			expect(errorSpy.mock.calls[0][0].status).toBe(403);
+		});
+
+		it('propagates 400 invalid-publishAt errors from the server', async () => {
+			const errorSpy = vi.fn();
+			service.schedulePublish$('posts', 'abc123', 'not-a-date').subscribe({ error: errorSpy });
+
+			const req = httpMock.expectOne('/api/posts/abc123/schedule-publish');
+			req.flush(
+				{ error: 'Invalid publishAt', message: 'publishAt must be a valid ISO date string' },
+				{ status: 400, statusText: 'Bad Request' },
+			);
+
+			expect(errorSpy).toHaveBeenCalledTimes(1);
+			expect(errorSpy.mock.calls[0][0].status).toBe(400);
+			expect(errorSpy.mock.calls[0][0].error.error).toBe('Invalid publishAt');
+		});
+	});
+
+	describe('cancelScheduledPublish$', () => {
+		it('should POST /api/{collection}/{docId}/cancel-scheduled-publish', () => {
+			service.cancelScheduledPublish$('posts', 'abc123').subscribe((result) => {
+				expect(result).toEqual({ message: 'Scheduled publish cancelled' });
+			});
+
+			const req = httpMock.expectOne('/api/posts/abc123/cancel-scheduled-publish');
+			expect(req.request.method).toBe('POST');
+			expect(req.request.body).toEqual({});
+			req.flush({ message: 'Scheduled publish cancelled' });
+		});
+
+		it('propagates 403 errors from the server', async () => {
+			const errorSpy = vi.fn();
+			service.cancelScheduledPublish$('posts', 'abc123').subscribe({ error: errorSpy });
+
+			const req = httpMock.expectOne('/api/posts/abc123/cancel-scheduled-publish');
+			req.flush({ error: 'Access denied' }, { status: 403, statusText: 'Forbidden' });
+
+			expect(errorSpy).toHaveBeenCalledTimes(1);
+			expect(errorSpy.mock.calls[0][0].status).toBe(403);
+		});
+
+		it('propagates 500 errors from the server', async () => {
+			const errorSpy = vi.fn();
+			service.cancelScheduledPublish$('posts', 'abc123').subscribe({ error: errorSpy });
+
+			const req = httpMock.expectOne('/api/posts/abc123/cancel-scheduled-publish');
+			req.flush(
+				{ error: 'Failed to cancel scheduled publish' },
+				{ status: 500, statusText: 'Internal Server Error' },
+			);
+
+			expect(errorSpy).toHaveBeenCalledTimes(1);
+			expect(errorSpy.mock.calls[0][0].status).toBe(500);
+		});
+	});
+
+	describe('getScheduledPublishAt', () => {
+		it('returns the scheduledPublishAt string from a doc-shaped response', async () => {
+			const promise = service.getScheduledPublishAt('posts', 'abc123');
+
+			const req = httpMock.expectOne('/api/posts/abc123');
+			expect(req.request.method).toBe('GET');
+			req.flush({ doc: { id: 'abc123', scheduledPublishAt: '2099-01-01T00:00:00.000Z' } });
+
+			await expect(promise).resolves.toBe('2099-01-01T00:00:00.000Z');
+		});
+
+		it('returns null when scheduledPublishAt is absent', async () => {
+			const promise = service.getScheduledPublishAt('posts', 'abc123');
+
+			const req = httpMock.expectOne('/api/posts/abc123');
+			req.flush({ doc: { id: 'abc123' } });
+
+			await expect(promise).resolves.toBeNull();
 		});
 	});
 

@@ -456,7 +456,9 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 			throw new DocumentNotFoundError(this.slug, docId);
 		}
 
-		// Validate the date is in the future
+		// Validate the date string parses. Past dates are accepted on purpose —
+		// the publish-scheduler picks them up immediately, which lets callers
+		// trigger a "publish now via scheduler" path without a separate code path.
 		const scheduledDate = new Date(publishAt);
 		if (isNaN(scheduledDate.getTime())) {
 			throw new Error('Invalid date format for scheduledPublishAt');

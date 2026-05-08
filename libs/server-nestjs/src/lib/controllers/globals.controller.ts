@@ -1,15 +1,8 @@
 import { Controller, Get, Patch, Param, Body, Req, Res, Inject, Query } from '@nestjs/common';
 import { handleGetGlobalRequest, handleUpdateGlobalRequest } from '@momentumcms/server-core';
 import type { Request, Response } from 'express';
-import type { UserContext } from '@momentumcms/core';
 import { MomentumApiService } from '../momentum-api.service';
-
-function extractUser(req: Request): UserContext | undefined {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/consistent-type-assertions -- Express request augmentation for req.user
-	const user = (req as any)['user'];
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- narrowing after runtime check
-	return user?.id ? (user as UserContext) : undefined;
-}
+import { extractUser } from '../utils/extract-user';
 
 @Controller('globals')
 export class GlobalsController {

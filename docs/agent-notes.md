@@ -1,5 +1,14 @@
 # Agent Notes
 
+## 2026-05-07 - Server adapter and Redis cache guardrails
+
+- Scope: server-core/server-nestjs/plugins-cache
+- Trigger: Review found numeric Nest users were treated as anonymous, DB parser errors could leak through sanitized responses, and Redis `maxKeys` could block cache writes after TTL expiry.
+- Approach: Add regression tests first, allow finite numeric `UserContext.id`, block DB parser/object error patterns while preserving natural-language messages, and reconcile Redis `entryCount` only at the `maxKeys` boundary.
+- Evidence: `libs/server-nestjs/src/lib/utils/extract-user.spec.ts`, `libs/server-core/src/lib/shared-server-utils.spec.ts`, `libs/plugins/cache/src/lib/__tests__/security-redis-adapter.spec.ts`, `pnpm nx run-many -t test -p server-nestjs,server-core,plugins-cache -- --run`
+- Next time: When loosening a security heuristic or making capacity counters approximate, add adversarial tests for the old failure mode before accepting the tradeoff.
+- Status: active
+
 ## 2026-03-07 - Headless dialog and radio a11y regressions
 
 - Scope: headless

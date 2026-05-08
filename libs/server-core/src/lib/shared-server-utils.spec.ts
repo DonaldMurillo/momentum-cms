@@ -3,33 +3,23 @@ import { sanitizeErrorMessage, parseWhereParam, sanitizeFilename } from './share
 
 describe('sanitizeErrorMessage', () => {
 	// --- SQL keyword detection ---
-	it('returns fallback for messages containing SELECT', () => {
+	it('returns fallback for messages containing SELECT...FROM pattern', () => {
 		const err = new Error('error: SELECT "id" FROM "users" WHERE ...');
 		expect(sanitizeErrorMessage(err, 'Something went wrong')).toBe('Something went wrong');
 	});
 
-	it('returns fallback for messages containing INSERT', () => {
+	it('returns fallback for messages containing INSERT INTO pattern', () => {
 		const err = new Error('INSERT INTO "articles" ("title") VALUES ...');
 		expect(sanitizeErrorMessage(err, 'fail')).toBe('fail');
 	});
 
-	it('returns fallback for messages containing UPDATE', () => {
+	it('returns fallback for messages containing UPDATE...SET pattern', () => {
 		const err = new Error('error near UPDATE "posts" SET ...');
 		expect(sanitizeErrorMessage(err, 'fail')).toBe('fail');
 	});
 
-	it('returns fallback for messages containing DELETE', () => {
+	it('returns fallback for messages containing DELETE FROM pattern', () => {
 		const err = new Error('DELETE FROM "sessions" WHERE ...');
-		expect(sanitizeErrorMessage(err, 'fail')).toBe('fail');
-	});
-
-	it('returns fallback for messages containing FROM clause', () => {
-		const err = new Error('column "foo" referenced FROM subquery');
-		expect(sanitizeErrorMessage(err, 'fail')).toBe('fail');
-	});
-
-	it('returns fallback for messages containing WHERE clause', () => {
-		const err = new Error('syntax error at or near WHERE');
 		expect(sanitizeErrorMessage(err, 'fail')).toBe('fail');
 	});
 
@@ -68,6 +58,63 @@ describe('sanitizeErrorMessage', () => {
 	it('returns fallback for stack traces with .js: pattern', () => {
 		const err = new Error('TypeError at module.js:123 — cannot read property');
 		expect(sanitizeErrorMessage(err, 'fail')).toBe('fail');
+	});
+
+	// --- Casual SQL-like words in natural language (Fix A) ---
+	it('allows messages with casual SQL-like words in natural language', () => {
+		const err = new Error('Please select your preferred option from the list');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe(
+			'Please select your preferred option from the list',
+		);
+	});
+
+	it('allows messages with standalone word "from" in natural language', () => {
+		const err = new Error('copied from another document');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe('copied from another document');
+	});
+
+	it('allows messages with standalone word "where" in natural language', () => {
+		const err = new Error('show me where the error is');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe('show me where the error is');
+	});
+
+	// --- Actual SQL injection patterns are still blocked (Fix A) ---
+	it('blocks messages containing SELECT ... FROM SQL injection patterns', () => {
+		const err = new Error('SELECT * FROM users WHERE id = 1');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe('fallback');
+	});
+
+	it('blocks messages containing INSERT INTO SQL patterns', () => {
+		const err = new Error('INSERT INTO "articles" ("title") VALUES ...');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe('fallback');
+	});
+
+	it('blocks messages containing UPDATE ... SET SQL patterns', () => {
+		const err = new Error('error near UPDATE "posts" SET ...');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe('fallback');
+	});
+
+	it('blocks messages containing DELETE FROM SQL patterns', () => {
+		const err = new Error('DELETE FROM "sessions" WHERE ...');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe('fallback');
+	});
+
+	it('blocks messages containing DROP TABLE SQL patterns', () => {
+		const err = new Error('DROP TABLE "users"');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe('fallback');
+	});
+
+	it('blocks database parser errors that mention SQL clauses', () => {
+		const err = new Error('syntax error at or near "WHERE"');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe('fallback');
+	});
+
+	it('blocks database column/relation errors', () => {
+		const columnErr = new Error('column "secret_token" does not exist');
+		const relationErr = new Error('relation "auth_sessions" does not exist');
+
+		expect(sanitizeErrorMessage(columnErr, 'fallback')).toBe('fallback');
+		expect(sanitizeErrorMessage(relationErr, 'fallback')).toBe('fallback');
 	});
 
 	// --- Safe messages pass through ---

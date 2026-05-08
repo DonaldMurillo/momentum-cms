@@ -77,3 +77,7 @@ docs/visuals/.auth-state.json
 # Skill eval workspace outputs (regenerable via /skill-eval)
 .claude/skill-evals/
 .claude/scheduled_tasks.lock
+# pi agent state (auto-added)
+.pi/
+pi-agent/plugins/*
+!pi-agent/plugins/registry.json

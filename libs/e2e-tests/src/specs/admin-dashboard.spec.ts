@@ -47,8 +47,11 @@ test.describe('Admin Dashboard - Collection Grouping', { tag: ['@admin', '@smoke
 		// <section aria-labelledby="group-Content"> is a named region
 		const contentSection = authenticatedPage.getByRole('region', { name: 'Content' });
 		await expect(contentSection).toBeVisible();
-		await expect(contentSection.getByRole('heading', { name: 'Categories' })).toBeVisible();
-		await expect(contentSection.getByRole('heading', { name: 'Articles' })).toBeVisible();
+		// PR #70 (editorial design lift) replaced heading-based cards with anchor
+		// list rows. Title link's accessible name includes the description, so
+		// match against the start.
+		await expect(contentSection.getByRole('link', { name: /^Categories\b/ })).toBeVisible();
+		await expect(contentSection.getByRole('link', { name: /^Articles\b/ })).toBeVisible();
 	});
 
 	test('should place Users and Auth Api Keys cards inside the Authentication group section', async ({
@@ -59,8 +62,8 @@ test.describe('Admin Dashboard - Collection Grouping', { tag: ['@admin', '@smoke
 
 		const authSection = authenticatedPage.getByRole('region', { name: 'Authentication' });
 		await expect(authSection).toBeVisible();
-		await expect(authSection.getByRole('heading', { name: 'Users' })).toBeVisible();
-		await expect(authSection.getByRole('heading', { name: 'Auth Api Keys' })).toBeVisible();
+		await expect(authSection.getByRole('link', { name: /^Users\b/ })).toBeVisible();
+		await expect(authSection.getByRole('link', { name: /^Auth Api Keys\b/ })).toBeVisible();
 	});
 
 	test('should NOT show Content collection cards inside the Authentication section', async ({
@@ -70,8 +73,8 @@ test.describe('Admin Dashboard - Collection Grouping', { tag: ['@admin', '@smoke
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const authSection = authenticatedPage.getByRole('region', { name: 'Authentication' });
-		await expect(authSection.getByRole('heading', { name: 'Categories' })).toBeHidden();
-		await expect(authSection.getByRole('heading', { name: 'Articles' })).toBeHidden();
+		await expect(authSection.getByRole('link', { name: /^Categories\b/ })).toBeHidden();
+		await expect(authSection.getByRole('link', { name: /^Articles\b/ })).toBeHidden();
 	});
 
 	test('should render the Content group section before the Authentication group section', async ({
@@ -110,8 +113,8 @@ test.describe('Admin Dashboard', { tag: ['@admin', '@smoke'] }, () => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		// Dashboard subtitle
-		const subtitle = authenticatedPage.getByText(/Manage your content and collections/i);
+		// Dashboard subtitle (text was reworded by editorial design lift #70).
+		const subtitle = authenticatedPage.getByText(/A snapshot of every collection/i);
 		await expect(subtitle).toBeVisible();
 	});
 
@@ -121,9 +124,11 @@ test.describe('Admin Dashboard', { tag: ['@admin', '@smoke'] }, () => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		// Check collection cards are visible by their labels
-		await expect(authenticatedPage.getByRole('heading', { name: 'Categories' })).toBeVisible();
-		await expect(authenticatedPage.getByRole('heading', { name: 'Articles' })).toBeVisible();
+		// Check collection cards are visible by their labels (anchor list rows since #70).
+		// Scope to mcms-collection-card to avoid the sidebar link with the same name.
+		const cards = authenticatedPage.locator('mcms-collection-card');
+		await expect(cards.getByRole('link', { name: /^Categories\b/ })).toBeVisible();
+		await expect(cards.getByRole('link', { name: /^Articles\b/ })).toBeVisible();
 	});
 
 	test('should navigate to Articles collection when clicking View all', async ({
@@ -132,14 +137,14 @@ test.describe('Admin Dashboard', { tag: ['@admin', '@smoke'] }, () => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		// Find the Articles card and click its "View all" link
-		// The card has heading "Articles" and a "View all" button
+		// Find the Articles card by its title link, then click "Open →"
 		const articlesCard = authenticatedPage.locator('mcms-collection-card', {
-			has: authenticatedPage.getByRole('heading', { name: 'Articles' }),
+			has: authenticatedPage.getByRole('link', { name: /^Articles\b/ }),
 		});
-		await articlesCard.getByRole('link', { name: 'View all' }).click();
+		await articlesCard.getByRole('link', { name: /Open/ }).click();
 
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/articles/);
+		// The list page DOES use a heading for its title.
 		await expect(authenticatedPage.getByRole('heading', { name: 'Articles' })).toBeVisible();
 	});
 
@@ -149,12 +154,11 @@ test.describe('Admin Dashboard', { tag: ['@admin', '@smoke'] }, () => {
 		await authenticatedPage.goto('/admin');
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
-		// Find the Users card and click its "View all" link
-		// Users collection is now auth-user (managed by auth plugin)
+		// Users collection is now auth-user (managed by auth plugin).
 		const usersCard = authenticatedPage.locator('mcms-collection-card', {
-			has: authenticatedPage.getByRole('heading', { name: 'Users' }),
+			has: authenticatedPage.getByRole('link', { name: /^Users\b/ }),
 		});
-		await usersCard.getByRole('link', { name: 'View all' }).click();
+		await usersCard.getByRole('link', { name: /Open/ }).click();
 
 		await expect(authenticatedPage).toHaveURL(/\/admin\/collections\/auth-user/);
 		await expect(authenticatedPage.getByRole('heading', { name: 'Users' })).toBeVisible();
@@ -167,12 +171,15 @@ test.describe('Admin Dashboard', { tag: ['@admin', '@smoke'] }, () => {
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const usersCard = authenticatedPage.locator('mcms-collection-card', {
-			has: authenticatedPage.getByRole('heading', { name: 'Users' }),
+			has: authenticatedPage.getByRole('link', { name: /^Users\b/ }),
 		});
-		const badge = usersCard.locator('mcms-badge');
-
-		// Use auto-retrying assertion — badge may briefly show "Error" before count loads
-		await expect(badge).toHaveText(/^\d+$/, { timeout: 15000 });
+		// The numeric count is rendered as a tabular number span with an aria-label,
+		// not via mcms-badge anymore. Match the count container by its aria-label.
+		const count = usersCard.locator('[aria-label*="entries in"]').first();
+		// Strip whitespace and assert the rendered count is a number, not "—" or "!".
+		await expect
+			.poll(async () => (await count.textContent())?.trim() ?? '', { timeout: 15000 })
+			.toMatch(/^\d[\d,]*$/);
 	});
 
 	test('should display Auth API Keys card on dashboard', async ({ authenticatedPage }) => {
@@ -180,13 +187,15 @@ test.describe('Admin Dashboard', { tag: ['@admin', '@smoke'] }, () => {
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		const apiKeysCard = authenticatedPage.locator('mcms-collection-card', {
-			has: authenticatedPage.getByRole('heading', { name: 'Auth Api Keys' }),
+			has: authenticatedPage.getByRole('link', { name: /^Auth Api Keys\b/ }),
 		});
 		await expect(apiKeysCard).toBeVisible({ timeout: 15000 });
 
-		// Use auto-retrying assertion — badge may briefly show "Error" before count loads
-		const badge = apiKeysCard.locator('mcms-badge');
-		await expect(badge).toHaveText(/^\d+$/, { timeout: 15000 });
+		const count = apiKeysCard.locator('[aria-label*="entries in"]').first();
+		// Strip whitespace and assert the rendered count is a number, not "—" or "!".
+		await expect
+			.poll(async () => (await count.textContent())?.trim() ?? '', { timeout: 15000 })
+			.toMatch(/^\d[\d,]*$/);
 	});
 
 	test('should NOT display hidden auth collections as dashboard cards', async ({
@@ -196,19 +205,20 @@ test.describe('Admin Dashboard', { tag: ['@admin', '@smoke'] }, () => {
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// Hidden auth collections (auth-session, auth-account, auth-verification)
-		// should NOT appear as collection cards on the dashboard
+		// should NOT appear as collection cards on the dashboard. Match by the
+		// title link (anchor list rows since #70).
 		const sessionCard = authenticatedPage.locator('mcms-collection-card', {
-			has: authenticatedPage.getByRole('heading', { name: 'Auth Session', level: 3 }),
+			has: authenticatedPage.getByRole('link', { name: /^Auth Session\b/ }),
 		});
 		await expect(sessionCard).toHaveCount(0);
 
 		const accountCard = authenticatedPage.locator('mcms-collection-card', {
-			has: authenticatedPage.getByRole('heading', { name: 'Auth Account', level: 3 }),
+			has: authenticatedPage.getByRole('link', { name: /^Auth Account\b/ }),
 		});
 		await expect(accountCard).toHaveCount(0);
 
 		const verificationCard = authenticatedPage.locator('mcms-collection-card', {
-			has: authenticatedPage.getByRole('heading', { name: 'Auth Verification', level: 3 }),
+			has: authenticatedPage.getByRole('link', { name: /^Auth Verification\b/ }),
 		});
 		await expect(verificationCard).toHaveCount(0);
 	});

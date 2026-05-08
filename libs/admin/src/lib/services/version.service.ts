@@ -9,6 +9,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import type { DeepDiffResult, SchedulePublishResult } from '@momentumcms/core';
 
 // ============================================
 // Types
@@ -96,9 +97,14 @@ export interface StatusResult {
 }
 
 /**
+ * Re-export the canonical schedule-publish result so callers in the admin UI
+ * keep a single source of truth shared with the server (`@momentumcms/core`).
+ */
+export type { SchedulePublishResult } from '@momentumcms/core';
+
+/**
  * Re-export DeepDiffResult as the canonical diff type.
  */
-import type { DeepDiffResult } from '@momentumcms/core';
 export type { DeepDiffResult } from '@momentumcms/core';
 
 /** @deprecated Use DeepDiffResult instead. Kept for backward compat. */
@@ -306,6 +312,58 @@ export class VersionService {
 	 */
 	async getStatus(collection: string, docId: string): Promise<DocumentStatus> {
 		return firstValueFrom(this.getStatus$(collection, docId));
+	}
+
+	/**
+	 * Schedule a document to publish at a future ISO date.
+	 */
+	schedulePublish$(
+		collection: string,
+		docId: string,
+		publishAt: string,
+	): Observable<SchedulePublishResult> {
+		const url = this.buildUrl(collection, docId, 'schedule-publish');
+		return this.http.post<SchedulePublishResult>(url, { publishAt });
+	}
+
+	/**
+	 * Schedule a document to publish at a future ISO date (Promise version).
+	 */
+	async schedulePublish(
+		collection: string,
+		docId: string,
+		publishAt: string,
+	): Promise<SchedulePublishResult> {
+		return firstValueFrom(this.schedulePublish$(collection, docId, publishAt));
+	}
+
+	/**
+	 * Cancel a previously scheduled publish.
+	 */
+	cancelScheduledPublish$(collection: string, docId: string): Observable<{ message: string }> {
+		const url = this.buildUrl(collection, docId, 'cancel-scheduled-publish');
+		return this.http.post<{ message: string }>(url, {});
+	}
+
+	/**
+	 * Cancel a previously scheduled publish (Promise version).
+	 */
+	async cancelScheduledPublish(collection: string, docId: string): Promise<{ message: string }> {
+		return firstValueFrom(this.cancelScheduledPublish$(collection, docId));
+	}
+
+	/**
+	 * Read scheduledPublishAt off the live document. Returns null when no
+	 * publish is scheduled. Uses the standard collection findById endpoint.
+	 */
+	async getScheduledPublishAt(collection: string, docId: string): Promise<string | null> {
+		const url = `/api/${collection}/${docId}`;
+		const response = await firstValueFrom(
+			this.http.get<{ doc?: Record<string, unknown> } & Record<string, unknown>>(url),
+		);
+		const docData: Record<string, unknown> = response.doc ?? response;
+		const value = docData['scheduledPublishAt'];
+		return typeof value === 'string' ? value : null;
 	}
 
 	// ============================================
