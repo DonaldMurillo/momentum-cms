@@ -25,6 +25,14 @@ export { GlobalsController } from './lib/controllers/globals.controller';
 export { StatusController } from './lib/controllers/status.controller';
 export { VersionController } from './lib/controllers/version.controller';
 export { PublishingController } from './lib/controllers/publishing.controller';
+export { MediaController } from './lib/controllers/media.controller';
+export { UploadController } from './lib/controllers/upload.controller';
+export { BatchController } from './lib/controllers/batch.controller';
+export { SearchController } from './lib/controllers/search.controller';
+export { ImportExportController } from './lib/controllers/import-export.controller';
+export { PreviewController } from './lib/controllers/preview.controller';
+export { GraphQLController } from './lib/controllers/graphql.controller';
+export { CustomEndpointsController } from './lib/controllers/custom-endpoints.controller';
 
 // Guards & Middleware
 export { MomentumAuthGuard } from './lib/guards/auth.guard';

@@ -8,16 +8,7 @@ import {
 	afterNextRender,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import {
-	Input,
-	Button,
-	McmsFormField,
-	Card,
-	CardHeader,
-	CardTitle,
-	CardDescription,
-	CardContent,
-} from '@momentumcms/ui';
+import { Input, Button, McmsFormField, Card, CardContent } from '@momentumcms/ui';
 import { MomentumAuthService } from '../../services/auth.service';
 import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-outlet.component';
 
@@ -28,18 +19,7 @@ import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-o
  */
 @Component({
 	selector: 'mcms-login-page',
-	imports: [
-		RouterLink,
-		Input,
-		Button,
-		McmsFormField,
-		Card,
-		CardHeader,
-		CardTitle,
-		CardDescription,
-		CardContent,
-		AdminSlotOutlet,
-	],
+	imports: [RouterLink, Input, Button, McmsFormField, Card, CardContent, AdminSlotOutlet],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	host: {
 		class: 'flex min-h-screen items-center justify-center bg-background p-6',
@@ -55,14 +35,7 @@ import { AdminSlotOutlet } from '../../components/admin-slot-outlet/admin-slot-o
 				<p class="text-sm text-muted-foreground">Enter your workspace credentials to continue.</p>
 			</header>
 
-			<mcms-card class="w-full">
-				<mcms-card-header class="sr-only">
-					<mcms-card-title>Sign In</mcms-card-title>
-					<mcms-card-description>
-						Enter your credentials to access the admin dashboard
-					</mcms-card-description>
-				</mcms-card-header>
-
+			<mcms-card class="w-full" aria-label="Sign-in form">
 				<mcms-card-content>
 					<form (submit)="onSubmit($event)" class="space-y-4">
 						@if (error()) {

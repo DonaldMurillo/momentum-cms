@@ -522,7 +522,9 @@ test.describe('Accessibility: Keyboard navigation', { tag: ['@a11y', '@admin'] }
 			await page.keyboard.press('Tab');
 			const isButton = await page.evaluate(() => {
 				const el = document.activeElement;
-				return el?.tagName === 'BUTTON' && el?.textContent?.trim().includes('Sign In');
+				return (
+					el?.tagName === 'BUTTON' && el?.textContent?.trim().toLowerCase().includes('sign in')
+				);
 			});
 			if (isButton) {
 				foundLoginButton = true;

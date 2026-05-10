@@ -368,10 +368,11 @@ test.describe('Email Templates — Admin UI', { tag: ['@admin'] }, () => {
 			timeout: 10000,
 		});
 
-		// Look for the Email Templates link in the sidebar
-		const emailTemplatesLink = authenticatedPage.getByRole('link', {
-			name: /email templates/i,
-		});
+		// Look for the Email Templates link in the sidebar (the dashboard also
+		// surfaces a card link with the same accessible name; scope to sidebar nav).
+		const emailTemplatesLink = authenticatedPage
+			.locator('mcms-admin-sidebar')
+			.getByRole('link', { name: /email templates/i });
 		await expect(emailTemplatesLink).toBeVisible({ timeout: 10000 });
 	});
 

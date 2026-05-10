@@ -24,7 +24,10 @@ test.describe('Redirects Admin UI - Dashboard & Sidebar', { tag: ['@redirects', 
 
 		const settingsSection = authenticatedPage.getByRole('region', { name: 'Settings' });
 		await expect(settingsSection).toBeVisible();
-		await expect(settingsSection.getByRole('heading', { name: 'Redirects' })).toBeVisible();
+		// Editorial dashboard uses <span> labels in collection cards, not headings.
+		// Match by accessible link name instead so the assertion stays meaningful
+		// across visual redesigns.
+		await expect(settingsSection.getByRole('link', { name: /redirects/i }).first()).toBeVisible();
 	});
 
 	test('should show Redirects link in the sidebar under Settings group', async ({

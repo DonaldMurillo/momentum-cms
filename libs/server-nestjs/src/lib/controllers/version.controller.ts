@@ -8,12 +8,7 @@ import {
 import type { Request, Response } from 'express';
 import { MomentumApiService } from '../momentum-api.service';
 import { extractUser } from '../utils/extract-user';
-
-function parsePositiveInt(value: string | undefined): number | undefined {
-	if (!value) return undefined;
-	const parsed = parseInt(value, 10);
-	return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-}
+import { parsePositiveInt } from '../utils/parse-query-int';
 
 /**
  * Optional NestJS controller exposing version-related routes:

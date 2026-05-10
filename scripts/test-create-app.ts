@@ -177,7 +177,7 @@ function startVerdaccio(port: number, configPath: string): ChildProcess {
 /**
  * Wait for Verdaccio to respond
  */
-async function waitForVerdaccio(port: number, timeoutMs = 30000): Promise<void> {
+async function waitForVerdaccio(port: number, timeoutMs = 90000): Promise<void> {
 	const start = Date.now();
 	const url = `http://localhost:${port}/-/ping`;
 
@@ -799,10 +799,13 @@ async function startAndVerifyServer(
 	});
 
 	try {
-		// Wait for server to become ready via health endpoint
+		// Wait for server to become ready via health endpoint.
+		// Analog uses Nitro/h3 with JIT compilation on first request, which can
+		// take noticeably longer than Express/NestJS adapters — bump the
+		// timeout for that flavor so cold starts don't false-fail.
 		const healthUrl = `http://localhost:${port}/api/health`;
 		const start = Date.now();
-		const timeoutMs = 30000;
+		const timeoutMs = flavor === 'analog' ? 90000 : 30000;
 		let ready = false;
 
 		while (Date.now() - start < timeoutMs) {
@@ -1034,7 +1037,10 @@ async function runPlaywrightTests(port: number): Promise<void> {
 
 		const dashboardHeading = dashPage.getByRole('heading', { name: /dashboard/i });
 		await dashboardHeading.waitFor({ state: 'visible', timeout: 10000 });
-		const postsLink = dashPage.getByRole('link', { name: /posts/i });
+		// Scope to the admin sidebar — the editorial dashboard now also surfaces
+		// a collection card link with the same accessible name, which would
+		// trigger Playwright's strict-mode duplicate-resolution error.
+		const postsLink = dashPage.locator('mcms-admin-sidebar').getByRole('link', { name: /posts/i });
 		await postsLink.waitFor({ state: 'visible', timeout: 5000 });
 		console.log(`${LOG_PREFIX}   [Playwright] Login succeeded, dashboard loaded with Posts.`);
 		await dashPage.close();

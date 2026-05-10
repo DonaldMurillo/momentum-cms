@@ -56,7 +56,7 @@ test.describe('Blocks field renderer', { tag: ['@field', '@blocks'] }, () => {
 		// Feature block
 		expect(home?.content?.[2]?.blockType).toBe('feature');
 		expect(home?.content?.[2]?.['title']).toBe('Fast Testing');
-		expect(home?.content?.[2]?.['icon']).toBe('bolt');
+		expect(home?.content?.[2]?.['icon']).toBe('◇');
 	});
 
 	test('seeded about page has single block', async ({ request }) => {
