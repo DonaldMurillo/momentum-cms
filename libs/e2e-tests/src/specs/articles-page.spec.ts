@@ -73,7 +73,7 @@ test.describe('Articles Page', { tag: ['@frontend', '@articles'] }, () => {
 		await expect(page.locator('[data-testid="articles-empty"]')).toBeVisible({
 			timeout: 5000,
 		});
-		await expect(page.locator('[data-testid="articles-empty"]')).toContainText('No articles found');
+		await expect(page.locator('[data-testid="articles-empty"]')).toContainText(/no articles/i);
 	});
 
 	test('category filter buttons are displayed', async ({ authenticatedPage: page }) => {

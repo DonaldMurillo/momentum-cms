@@ -99,23 +99,23 @@ export class Badge {
 	});
 
 	readonly variantColor = computed((): string => {
+		/* Soft tinted chips need their text mixed toward the theme foreground or
+		 * else saturated brand hues drop below WCAG AA's 4.5:1 against the 12-18%
+		 * tinted backgrounds (axe-core flags this on the collection-list status
+		 * badges in light mode). Mixing 60% of the brand hue with 40% foreground
+		 * preserves the identity color while clearing AA in both themes. */
 		switch (this.variant()) {
 			case 'default':
-				return 'hsl(var(--mcms-primary))';
+				return 'color-mix(in oklab, hsl(var(--mcms-primary)) 60%, hsl(var(--mcms-foreground)))';
 			case 'secondary':
 				return 'hsl(var(--mcms-secondary-foreground))';
 			case 'destructive':
-				return 'hsl(var(--mcms-destructive))';
+				return 'color-mix(in oklab, hsl(var(--mcms-destructive)) 60%, hsl(var(--mcms-foreground)))';
 			case 'outline':
 				return 'hsl(var(--mcms-foreground))';
 			case 'success':
-				return 'hsl(var(--mcms-success))';
+				return 'color-mix(in oklab, hsl(var(--mcms-success)) 55%, hsl(var(--mcms-foreground)))';
 			case 'warning':
-				/* The base warning hue (mid-amber) on the soft 18% tinted bg drops to
-				 * ~2.2:1 contrast in light mode — well below WCAG AA's 4.5:1 for the
-				 * 11px badge text. Mix half-way toward foreground (dark in light mode,
-				 * light in dark mode) so the chip clears AA in both themes while
-				 * keeping the amber identity. */
 				return 'color-mix(in oklab, hsl(var(--mcms-warning)) 50%, hsl(var(--mcms-foreground)))';
 		}
 	});

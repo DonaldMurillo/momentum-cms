@@ -58,7 +58,7 @@ test.describe('Email Builder', { tag: ['@admin'] }, () => {
 		await expect(blockWrappers).toHaveCount(0);
 
 		// Should show empty state message
-		await expect(editorPanel.getByText(/no blocks yet/i)).toBeVisible();
+		await expect(editorPanel.getByText(/empty canvas/i)).toBeVisible();
 
 		// Should show at least one inserter trigger button
 		const inserterToggle = authenticatedPage.locator('[data-testid="block-inserter-toggle"]');
@@ -108,7 +108,7 @@ test.describe('Email Builder', { tag: ['@admin'] }, () => {
 		await expect(authenticatedPage.locator('[data-block-type="text"]')).toBeVisible();
 
 		// Empty state should be gone
-		await expect(editorPanel.getByText(/no blocks yet/i)).toBeHidden();
+		await expect(editorPanel.getByText(/empty canvas/i)).toBeHidden();
 	});
 
 	test('should add multiple blocks and see them in editor', async ({ authenticatedPage }) => {

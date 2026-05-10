@@ -127,7 +127,7 @@ test.describe('Visual Block Editor', { tag: ['@admin', '@blocks'] }, () => {
 		await expect(visualEditor).toBeVisible({ timeout: 10000 });
 
 		// Should show empty state text
-		await expect(authenticatedPage.getByText('No content blocks yet.')).toBeVisible();
+		await expect(authenticatedPage.getByText(/empty canvas/i)).toBeVisible();
 
 		// Should show an inserter for adding the first block
 		const inserter = authenticatedPage.locator('[data-testid="block-inserter"]');

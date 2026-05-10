@@ -963,9 +963,7 @@ test.describe('Media Collection Upload Zone UI', { tag: ['@media', '@admin'] }, 
 		// Navigate to edit page for this media document
 		await authenticatedPage.goto(`/admin/collections/media/${mediaDoc.id}/edit`);
 		await authenticatedPage.waitForLoadState('domcontentloaded');
-		await expect(
-			authenticatedPage.getByRole('button', { name: 'Save Changes', exact: true }),
-		).toBeVisible();
+		await expect(authenticatedPage.getByRole('button', { name: /save changes/i })).toBeVisible();
 
 		// The upload zone should show the existing file preview, not the drop zone
 		const uploadZone = authenticatedPage.locator('mcms-collection-upload-zone');

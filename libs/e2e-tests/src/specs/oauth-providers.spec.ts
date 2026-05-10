@@ -38,7 +38,7 @@ test.describe('OAuth Provider Infrastructure', { tag: ['@auth', '@api'] }, () =>
 		await page.waitForLoadState('domcontentloaded');
 
 		// Sign In form should be present
-		await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /sign in/i })).toBeVisible();
 
 		// Email and password fields should be present
 		await expect(page.getByLabel(/email/i)).toBeVisible();

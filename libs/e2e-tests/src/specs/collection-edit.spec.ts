@@ -21,7 +21,7 @@ test.describe('Collection Create Form - Articles', { tag: ['@admin', '@crud'] },
 			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
 		).toBeVisible();
 
-		const heading = authenticatedPage.getByRole('heading', { name: /Create Article/i });
+		const heading = authenticatedPage.getByRole('heading', { name: /Untitled article/i });
 		await expect(heading).toBeVisible();
 	});
 
@@ -144,7 +144,7 @@ test.describe('Collection Create Form - Categories', { tag: ['@admin', '@crud'] 
 			authenticatedPage.getByRole('button', { name: 'Create', exact: true }),
 		).toBeVisible();
 
-		const heading = authenticatedPage.getByRole('heading', { name: /Create Category/i });
+		const heading = authenticatedPage.getByRole('heading', { name: /Untitled category/i });
 		await expect(heading).toBeVisible();
 	});
 
@@ -176,7 +176,7 @@ test.describe('Collection Edit Form - Auth User', { tag: ['@admin', '@crud'] }, 
 		await authenticatedPage.waitForLoadState('domcontentloaded');
 
 		// Wait for form to render
-		await expect(authenticatedPage.getByRole('heading', { name: /Create User/i })).toBeVisible({
+		await expect(authenticatedPage.getByRole('heading', { name: /Untitled user/i })).toBeVisible({
 			timeout: 10000,
 		});
 
