@@ -32,7 +32,11 @@ import {
 } from './init-helpers';
 import { createDeferredSessionResolver } from './auth-middleware';
 import { getPluginMiddleware, getPluginProviders } from './plugin-middleware-registry';
-import { momentumApiMiddleware, createOpenAPIMiddleware } from './server-express';
+import {
+	momentumApiMiddleware,
+	createOpenAPIMiddleware,
+	sanitizedJsonErrorHandler,
+} from './server-express';
 import type { MomentumAuthPlugin } from '@momentumcms/auth';
 
 /**
@@ -95,6 +99,33 @@ export interface CreateMomentumServerOptions {
 /**
  * Result of creating a Momentum CMS server.
  */
+/**
+ * Apply slow-client mitigations to a Node http.Server returned by
+ * `app.listen()`.
+ *
+ * Defaults:
+ *  - `requestTimeout` 30s (full request must arrive within this window)
+ *  - `headersTimeout` 10s (headers must arrive faster than requestTimeout)
+ *  - `keepAliveTimeout` 5s
+ *
+ * These complement Express middleware: Slowloris attacks that trickle bytes
+ * to keep a TCP connection open are killed at the http layer.
+ *
+ * Override individual values via the `overrides` argument.
+ */
+export function configureHttpServerTimeouts(
+	server: { requestTimeout?: number; headersTimeout?: number; keepAliveTimeout?: number },
+	overrides: Partial<{
+		requestTimeout: number;
+		headersTimeout: number;
+		keepAliveTimeout: number;
+	}> = {},
+): void {
+	server.requestTimeout = overrides.requestTimeout ?? 30_000;
+	server.headersTimeout = overrides.headersTimeout ?? 10_000;
+	server.keepAliveTimeout = overrides.keepAliveTimeout ?? 5_000;
+}
+
 export interface MomentumServer {
 	/**
 	 * Express app with all CMS middleware mounted.
@@ -171,10 +202,23 @@ export async function createMomentumServer(
 	// 1. Create or reuse Express app
 	const app = options.app ?? express();
 	if (!options.app) {
-		// 10mb accommodates the import-export plugin's batch-import payloads
-		// (MAX_IMPORT_DOCS = 5000) without rejecting legitimate requests via
-		// Express's 100kb default.
-		app.use(express.json({ limit: '10mb' }));
+		// Scope JSON body parser to /api/* so non-API requests don't have their
+		// streams consumed. Without this scoping, requests that fall through to
+		// the SSR handler (e.g. `/api/some/unknown/path`) crash with
+		// "Response body object should not be disturbed or locked" because the
+		// SSR layer tries to construct a `Request` from a stream the parser
+		// already drained. Found by the workflow chaos audit.
+		//
+		// 10mb accommodates import-export batch payloads (MAX_IMPORT_DOCS=5000).
+		// Most routes don't need anywhere near this — `express.json` with a
+		// 10mb cap is acceptable because the import-export handler does its
+		// own row-count cap, but the parser stops earlier on malformed input.
+		app.use('/api', express.json({ limit: '10mb' }));
+		// Sanitize body-parser errors (SyntaxError, charset, payload-too-large)
+		// to JSON envelopes BEFORE they fall through to the SSR handler's
+		// default HTML stack-trace page. Scoped to /api/* — non-API errors
+		// still propagate to the framework's default handler.
+		app.use('/api', sanitizedJsonErrorHandler);
 	}
 
 	// 2. Register webhook hooks

@@ -238,6 +238,10 @@ export class VersionOperationsImpl<T = Record<string, unknown>> implements Versi
 		return restored;
 	}
 
+	async checkPublishAccess(): Promise<void> {
+		await this.checkAccess('publishVersions');
+	}
+
 	async publish(docId: string, _options?: PublishOptions): Promise<T> {
 		// Check publishVersions access
 		await this.checkAccess('publishVersions');

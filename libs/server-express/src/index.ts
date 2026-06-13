@@ -30,6 +30,7 @@ export { getPluginMiddleware, getPluginProviders } from './lib/plugin-middleware
 export { createRateLimitMiddleware } from './lib/rate-limit-middleware';
 export {
 	createMomentumServer,
+	configureHttpServerTimeouts,
 	type CreateMomentumServerOptions,
 	type MomentumServer,
 } from './lib/create-momentum-server';

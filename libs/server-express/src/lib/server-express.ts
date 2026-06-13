@@ -17,6 +17,8 @@ import {
 	handleSaveDraftRequest,
 	handleSchedulePublishRequest,
 	handleCancelScheduledPublishRequest,
+	handleTransitionRequest,
+	handleListWorkflowHistoryRequest,
 	handleBatchRequest,
 	handleGraphQLPostRequest,
 	handleGraphQLGetRequest,
@@ -110,8 +112,10 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 	const router = Router();
 	const handlers = createMomentumHandlers(config);
 
-	// Use Express's built-in JSON body parser
-	router.use(jsonParser());
+	// Use Express's built-in JSON body parser. A duplicate parser at the
+	// app level (in `createMomentumServer`) is `/api`-scoped; if a caller
+	// mounts this router standalone, the parser still runs here.
+	router.use(jsonParser({ limit: '10mb' }));
 
 	// Security headers middleware
 	router.use((_req: Request, res: Response, next: NextFunction) => {
@@ -121,6 +125,13 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
 		next();
 	});
+
+	// CSRF / Origin guard. Runs BEFORE CORS so cross-origin state-changing
+	// requests are rejected before any Access-Control-Allow-* headers are
+	// emitted. Cookie-auth + mutating POST + no Origin check = CSRF; Better
+	// Auth's CSRF protection covers `/api/auth/*` only, leaving the CMS
+	// routes exposed. See cms-feature-red-team skill, attack pattern #10.
+	router.use(buildCsrfOriginGuard(config));
 
 	// CORS middleware
 	router.use((req: Request, res: Response, next: NextFunction) => {
@@ -351,6 +362,31 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		const result = await handleCancelScheduledPublishRequest({
 			collectionSlug: req.params['collection'],
 			id: req.params['id'],
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
+	});
+
+	// Route: POST /:collection/:id/transition - Move document to a new workflow stage
+	router.post('/:collection/:id/transition', async (req: Request, res: Response) => {
+		const result = await handleTransitionRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			body: getBody(req),
+			user: extractUserFromRequest(req),
+		});
+		res.status(result.status).json(result.body);
+	});
+
+	// Route: GET /:collection/:id/workflow-history - Paginated transition audit trail
+	router.get('/:collection/:id/workflow-history', async (req: Request, res: Response) => {
+		const limit = req.query['limit'] !== undefined ? Number(req.query['limit']) : undefined;
+		const page = req.query['page'] !== undefined ? Number(req.query['page']) : undefined;
+		const result = await handleListWorkflowHistoryRequest({
+			collectionSlug: req.params['collection'],
+			id: req.params['id'],
+			limit: Number.isFinite(limit) ? limit : undefined,
+			page: Number.isFinite(page) ? page : undefined,
 			user: extractUserFromRequest(req),
 		});
 		res.status(result.status).json(result.body);
@@ -1073,7 +1109,127 @@ export function momentumApiMiddleware(config: MomentumConfig | ResolvedMomentumC
 		}
 	});
 
+	// JSON 404 terminator: any `/api/*` request that didn't match a route
+	// returns a clean JSON envelope instead of falling through to the SSR
+	// handler (which would crash with `Response body … locked`).
+	router.use((req: Request, res: Response) => {
+		if (res.headersSent) return;
+		res.status(404).json({
+			error: 'Not found',
+			method: req.method,
+			path: req.originalUrl,
+		});
+	});
+
+	router.use(sanitizedJsonErrorHandler);
+
 	return router;
+}
+
+/**
+ * JSON error sanitizer for `/api/*` middleware. Translates body-parser
+ * SyntaxError, charset 415, payload-too-large 413, and uncaught 500s into a
+ * minimal JSON envelope with NO stack traces, NO absolute file paths, NO
+ * undici internals. Express recognises this as an error handler by its
+ * 4-arg signature.
+ *
+ * Mounted twice in createMomentumServer: once at the app level (so
+ * body-parser errors thrown before the router are caught) and once inside
+ * the API router (defense in depth for router-level errors).
+ */
+export function sanitizedJsonErrorHandler(
+	err: unknown,
+	_req: Request,
+	res: Response,
+	_next: NextFunction,
+): void {
+	if (res.headersSent) return;
+	const errType = err && typeof err === 'object' ? Reflect.get(err, 'type') : undefined;
+	const errStatusRaw = err && typeof err === 'object' ? Reflect.get(err, 'status') : undefined;
+	const errStatusCodeRaw =
+		err && typeof err === 'object' ? Reflect.get(err, 'statusCode') : undefined;
+	const errStatus = typeof errStatusRaw === 'number' ? errStatusRaw : undefined;
+	const errStatusCode = typeof errStatusCodeRaw === 'number' ? errStatusCodeRaw : undefined;
+
+	if (errType === 'entity.parse.failed') {
+		res.status(400).json({ error: 'Invalid JSON body' });
+		return;
+	}
+	if (errType === 'entity.too.large' || errStatus === 413 || errStatusCode === 413) {
+		res.status(413).json({ error: 'Payload too large' });
+		return;
+	}
+	if (errType === 'charset.unsupported' || errStatusCode === 415 || errStatus === 415) {
+		res.status(415).json({ error: 'Unsupported media type' });
+		return;
+	}
+	const status = errStatus ?? errStatusCode ?? 500;
+	res.status(status).json({ error: 'Internal error' });
+}
+
+/**
+ * CSRF / Origin guard for state-changing methods. Built once per router so the
+ * trusted-origin list is resolved at boot, not per request.
+ *
+ * Active only when `config.server.cors.origin` is an explicit list. When the
+ * developer leaves CORS at `*` or unset, this guard is a no-op — they have
+ * explicitly opted out of origin-based protection and presumably gate the
+ * router upstream (API key, mTLS, internal network, etc.).
+ *
+ * Rejects requests where the `Origin` header is present and does not match a
+ * trusted origin (no suffix-match: exact origin string comparison). When
+ * `Origin` is absent, falls back to parsing the `Referer` header's origin.
+ * When neither is present, allows through — CLI tools, server-to-server
+ * callers, and same-origin GETs from older browsers won't send these
+ * headers, and browsers always send `Origin` on cross-origin POST.
+ *
+ * Only applies to POST / PUT / PATCH / DELETE. GET / HEAD / OPTIONS pass
+ * unconditionally (read-only or CORS preflight).
+ */
+export function buildCsrfOriginGuard(config: {
+	server?: { cors?: { origin?: string | string[] } };
+}): (req: Request, res: Response, next: NextFunction) => void {
+	const corsOrigin = config.server?.cors?.origin;
+	const origins = Array.isArray(corsOrigin) ? corsOrigin : corsOrigin ? [corsOrigin] : [];
+	const trusted = new Set(origins.filter((o) => o !== '*'));
+	const enforce = trusted.size > 0 && !origins.includes('*');
+
+	return function csrfOriginGuard(req: Request, res: Response, next: NextFunction): void {
+		if (!enforce) return next();
+		const method = req.method.toUpperCase();
+		if (method !== 'POST' && method !== 'PUT' && method !== 'PATCH' && method !== 'DELETE') {
+			return next();
+		}
+
+		const originHeader = typeof req.headers['origin'] === 'string' ? req.headers['origin'] : '';
+		const refererHeader = typeof req.headers['referer'] === 'string' ? req.headers['referer'] : '';
+
+		// Non-browser callers (curl, server-to-server, healthchecks) typically
+		// send neither header. Browsers always send Origin on cross-origin
+		// state-changing requests, so allowing the no-header case does not
+		// open a browser-CSRF gap.
+		if (originHeader === '' && refererHeader === '') return next();
+
+		const candidateOrigin = originHeader !== '' ? originHeader : extractOrigin(refererHeader);
+		if (candidateOrigin === null || !trusted.has(candidateOrigin)) {
+			res.status(403).json({
+				error: 'Origin not permitted',
+				code: 'CSRF_ORIGIN_MISMATCH',
+			});
+			return;
+		}
+
+		next();
+	};
+}
+
+/** Parse the origin component (`scheme://host[:port]`) from a URL string. */
+function extractOrigin(value: string): string | null {
+	try {
+		return new URL(value).origin;
+	} catch {
+		return null;
+	}
 }
 
 /**

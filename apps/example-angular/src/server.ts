@@ -13,7 +13,11 @@ import {
 import express from 'express';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createMomentumServer } from '@momentumcms/server-express';
+import {
+	configureHttpServerTimeouts,
+	createMomentumServer,
+	sanitizedJsonErrorHandler,
+} from '@momentumcms/server-express';
 import { provideMomentumAPI } from '@momentumcms/admin';
 import { mountTestEndpoints } from '@momentumcms/example-config';
 import momentumConfig, {
@@ -36,10 +40,16 @@ const angularApp = new AngularNodeAppEngine({
  * Test endpoints must be registered first because the CMS API is a catch-all at /api.
  */
 const app = express();
-// Bump the body-size limit so the import-export plugin can accept up to
-// MAX_IMPORT_DOCS (5000) per request — Express's 100kb default rejects
-// large but legitimate batch imports with PayloadTooLargeError.
-app.use(express.json({ limit: '10mb' }));
+// Scope the JSON body parser to /api/* so requests that fall through to the
+// Angular SSR handler don't have their streams consumed. Without scoping,
+// the SSR layer crashes with "Response body … locked" reconstructing a
+// Request from a drained stream. 10mb accommodates import-export batches.
+app.use('/api', express.json({ limit: '10mb' }));
+// Sanitize body-parser errors (SyntaxError, charset, payload-too-large) into
+// JSON envelopes so unknown clients don't see HTML stack traces with file://
+// paths. Must run after the body parser but before the test endpoints + the
+// CMS API router that also mounts at /api.
+app.use('/api', sanitizedJsonErrorHandler);
 mountTestEndpoints(app, { analytics, analyticsAdapter, events, pool });
 
 /**
@@ -107,7 +117,8 @@ server.app.use('/**', (req, res, next) => {
  */
 if (isMainModule(import.meta.url) || process.env['pm_id']) {
 	const port = process.env['PORT'] || momentumConfig.server.port;
-	server.app.listen(port);
+	const httpServer = server.app.listen(port);
+	configureHttpServerTimeouts(httpServer);
 }
 
 /**

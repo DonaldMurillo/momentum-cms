@@ -350,7 +350,10 @@ function handleError(error: unknown): MomentumResponse {
  */
 export function createInMemoryAdapter(): DatabaseAdapter {
 	const store: Map<string, Map<string, Record<string, unknown>>> = new Map();
+	const workflowHistory: Map<string, import('@momentumcms/core').WorkflowHistoryEntry[]> =
+		new Map();
 	let idCounter = 1;
+	let historyIdCounter = 1;
 
 	function getStore(collection: string): Map<string, Record<string, unknown>> {
 		let collectionStore = store.get(collection);
@@ -359,6 +362,15 @@ export function createInMemoryAdapter(): DatabaseAdapter {
 			store.set(collection, collectionStore);
 		}
 		return collectionStore;
+	}
+
+	function getHistory(key: string): import('@momentumcms/core').WorkflowHistoryEntry[] {
+		let entries = workflowHistory.get(key);
+		if (!entries) {
+			entries = [];
+			workflowHistory.set(key, entries);
+		}
+		return entries;
 	}
 
 	return {
@@ -414,6 +426,117 @@ export function createInMemoryAdapter(): DatabaseAdapter {
 		async delete(collection: string, id: string): Promise<boolean> {
 			const collectionStore = getStore(collection);
 			return collectionStore.delete(id);
+		},
+
+		async getWorkflowState(collection, id) {
+			const doc = getStore(collection).get(id);
+			if (!doc) return null;
+			const stage = typeof doc['workflowStage'] === 'string' ? doc['workflowStage'] : null;
+			const updatedAt =
+				typeof doc['workflowUpdatedAt'] === 'string' ? doc['workflowUpdatedAt'] : null;
+			if (stage === null || updatedAt === null) return null;
+			return { workflowStage: stage, workflowUpdatedAt: updatedAt };
+		},
+
+		async recordWorkflowCreation(collection, parentId, opts) {
+			const doc = getStore(collection).get(parentId);
+			if (!doc) return null;
+			const createdAt = new Date().toISOString();
+			const historyEntry: import('@momentumcms/core').WorkflowHistoryEntry = {
+				id: `wh-${historyIdCounter++}`,
+				parent: parentId,
+				fromStage: null,
+				toStage: opts.initialStage,
+				userId: opts.userId ?? null,
+				comment: opts.comment ?? null,
+				createdAt,
+			};
+			getHistory(`${collection}:${parentId}`).push(historyEntry);
+			return historyEntry;
+		},
+
+		async transitionWorkflowStage(collection, id, opts) {
+			const collectionStore = getStore(collection);
+			const doc = collectionStore.get(id);
+			if (!doc) return null;
+
+			const currentStage =
+				typeof doc['workflowStage'] === 'string' ? doc['workflowStage'] : opts.from;
+			const currentUpdatedAt =
+				typeof doc['workflowUpdatedAt'] === 'string'
+					? doc['workflowUpdatedAt']
+					: new Date(0).toISOString();
+
+			const stageMatches = opts.expectedStage === undefined || opts.expectedStage === currentStage;
+			const updatedAtMatches =
+				opts.expectedUpdatedAt === undefined || opts.expectedUpdatedAt === currentUpdatedAt;
+			const fromMatches = opts.from === currentStage;
+
+			if (!stageMatches || !updatedAtMatches || !fromMatches) {
+				return {
+					conflict: true,
+					currentStage,
+					currentUpdatedAt,
+				};
+			}
+
+			const newUpdatedAt = new Date().toISOString();
+			collectionStore.set(id, {
+				...doc,
+				workflowStage: opts.to,
+				workflowUpdatedAt: newUpdatedAt,
+			});
+
+			const historyEntry: import('@momentumcms/core').WorkflowHistoryEntry = {
+				id: `wh-${historyIdCounter++}`,
+				parent: id,
+				fromStage: opts.from,
+				toStage: opts.to,
+				userId: opts.userId ?? null,
+				comment: opts.comment ?? null,
+				createdAt: newUpdatedAt,
+			};
+			getHistory(`${collection}:${id}`).push(historyEntry);
+
+			return {
+				conflict: false,
+				fromStage: opts.from,
+				toStage: opts.to,
+				workflowUpdatedAt: newUpdatedAt,
+				history: historyEntry,
+			};
+		},
+
+		async findWorkflowHistory(collection, parentId, options) {
+			const allEntries = [...getHistory(`${collection}:${parentId}`)].reverse();
+			// Mirror the Postgres adapter: when visibleStages is supplied,
+			// scope both totals and the page slice so the caller never sees
+			// inconsistent counts. NULL fromStage (initial-creation row) is
+			// always allowed.
+			const visible = options?.visibleStages;
+			const entries =
+				visible !== undefined
+					? allEntries.filter(
+							(e) =>
+								(e.fromStage === null || visible.includes(e.fromStage)) &&
+								visible.includes(e.toStage),
+						)
+					: allEntries;
+			const limit = Math.max(1, Math.min(options?.limit ?? 25, 100));
+			const page = Math.max(1, options?.page ?? 1);
+			const start = (page - 1) * limit;
+			const slice = entries.slice(start, start + limit);
+			const totalDocs = entries.length;
+			const totalPages = Math.max(1, Math.ceil(totalDocs / limit));
+			return {
+				docs: slice,
+				totalDocs,
+				totalPages,
+				page,
+				limit,
+				hasNextPage: page < totalPages,
+				hasPrevPage: page > 1,
+			};
 		},
 	};
 }

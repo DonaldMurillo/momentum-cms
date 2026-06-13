@@ -259,6 +259,34 @@ export const adminConfig: MomentumAdminConfig<CollectionSlug, GlobalSlug> = {
 			},
 		},
 		{
+			slug: 'posts',
+			labels: {
+				singular: 'Post',
+				plural: 'Posts',
+			},
+			fields: [
+				{
+					name: 'title',
+					type: 'text',
+					required: true,
+					label: 'Title',
+				},
+				{
+					name: 'content',
+					type: 'richText',
+					label: 'Content',
+				},
+			],
+			admin: {
+				group: 'Content',
+			},
+			timestamps: true,
+			versions: {
+				drafts: true,
+				maxPerDoc: 10,
+			},
+		},
+		{
 			slug: 'products',
 			labels: {
 				singular: 'Product',

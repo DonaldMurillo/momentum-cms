@@ -12,12 +12,19 @@ import type {
 	CreateVersionOptions,
 	VersionQueryOptions,
 	VersionCountOptions,
+	WorkflowHistoryEntry,
+	WorkflowHistoryQueryOptions,
+	WorkflowHistoryQueryResult,
+	WorkflowTransitionAdapterArgs,
+	WorkflowTransitionAdapterResult,
 } from '@momentumcms/core';
 import {
 	flattenDataFields,
 	ReferentialIntegrityError,
 	getSoftDeleteField,
 	hasVersionDrafts,
+	hasWorkflow,
+	assertStageIdSafeForSql,
 } from '@momentumcms/core';
 import { createLogger } from '@momentumcms/logger';
 
@@ -212,6 +219,125 @@ function createVersionTableSql(collection: CollectionConfig): string | null {
 }
 
 // isDocumentStatus, getStatusFromRow, parseJsonToRecord are now imported from ./db-shared
+
+/**
+ * Creates the SQL for a collection's workflow history table.
+ * Returns null if the collection doesn't have a workflow configured.
+ *
+ * Schema: { id, parent, fromStage, toStage, userId, comment, createdAt }
+ * - `parent` is FK to the collection's primary key (cascade delete).
+ * - `fromStage` is null only for the initial-creation row.
+ * - Composite index on (parent, createdAt DESC) supports the common query
+ *   "history for this doc, newest first".
+ */
+function createWorkflowHistoryTableSql(collection: CollectionConfig): string | null {
+	if (!hasWorkflow(collection)) return null;
+
+	const baseTable = getTableName(collection);
+	const tableName = `${baseTable}_workflow_history`;
+	return `
+		CREATE TABLE IF NOT EXISTS "${tableName}" (
+			"id" VARCHAR(36) PRIMARY KEY,
+			"parent" VARCHAR(36) NOT NULL,
+			"fromStage" VARCHAR(255),
+			"toStage" VARCHAR(255) NOT NULL,
+			"userId" VARCHAR(36),
+			"comment" TEXT,
+			"createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			CONSTRAINT "fk_${tableName}_parent" FOREIGN KEY ("parent") REFERENCES "${baseTable}"("id") ON DELETE CASCADE
+		);
+		CREATE INDEX IF NOT EXISTS "idx_${tableName}_parent_created" ON "${tableName}"("parent", "createdAt" DESC);
+		CREATE INDEX IF NOT EXISTS "idx_${tableName}_toStage" ON "${tableName}"("toStage");
+	`;
+}
+
+/**
+ * SQL for the workflow init log table. Tracks which collections have already
+ * had their existing rows backfilled with workflow stages, so the backfill is
+ * idempotent across server restarts.
+ */
+const WORKFLOW_INIT_LOG_TABLE_SQL = `
+	CREATE TABLE IF NOT EXISTS "_workflow_init_log" (
+		"collection" VARCHAR(255) PRIMARY KEY,
+		"initialStage" VARCHAR(255) NOT NULL,
+		"backfilledAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+	)
+`;
+
+/**
+ * Idempotent backfill of workflow stages on server startup.
+ *
+ * For collections that gained a workflow config after rows already existed:
+ * - All rows already received `initialStage` via the `ADD COLUMN ... DEFAULT`.
+ * - For versioned collections, published rows are nudged forward to the first
+ *   `publishesOnEnter` stage so existing public docs don't sit in Draft on restart.
+ * - One history row is written per nudged doc so the audit trail is complete.
+ *
+ * Gated by `_workflow_init_log` — the second restart finds the row and skips.
+ */
+async function runWorkflowBackfill(pool: Pool, collection: CollectionConfig): Promise<void> {
+	if (!hasWorkflow(collection)) return;
+	const slug = collection.slug;
+	const tbl = getTableName(collection);
+	const workflow = collection.workflow;
+
+	const existing = await pool.query(
+		'SELECT 1 FROM "_workflow_init_log" WHERE "collection" = $1 LIMIT 1',
+		[slug],
+	);
+	if (existing.rows.length > 0) return;
+
+	const publishStage =
+		workflow.publishGateStage ?? workflow.stages.find((s) => s.publishesOnEnter)?.id;
+
+	// Wrap the nudge UPDATE, per-row history INSERTs, and the init-log INSERT in
+	// a single transaction. Without this, a crash mid-backfill can leave docs at
+	// the new stage with no history row, and the next start's UPDATE filter
+	// (`workflowStage = initialStage`) would permanently skip them.
+	const client = await pool.connect();
+	try {
+		await client.query('BEGIN');
+
+		if (publishStage && hasVersionDrafts(collection)) {
+			const updated = await client.query<{ id: string }>(
+				`UPDATE "${tbl}" SET "workflowStage" = $1, "workflowUpdatedAt" = NOW()
+				 WHERE "_status" = 'published' AND "workflowStage" = $2
+				 RETURNING "id"`,
+				[publishStage, workflow.initialStage],
+			);
+			const historyTable = `${tbl}_workflow_history`;
+			for (const row of updated.rows) {
+				await client.query(
+					`INSERT INTO "${historyTable}" ("id", "parent", "fromStage", "toStage", "comment")
+					 VALUES ($1, $2, $3, $4, $5)`,
+					[
+						randomUUID(),
+						row.id,
+						workflow.initialStage,
+						publishStage,
+						'[backfill] published doc on workflow init',
+					],
+				);
+			}
+		}
+
+		await client.query(
+			`INSERT INTO "_workflow_init_log" ("collection", "initialStage")
+			 VALUES ($1, $2)
+			 ON CONFLICT ("collection") DO NOTHING`,
+			[slug, workflow.initialStage],
+		);
+
+		await client.query('COMMIT');
+	} catch (error) {
+		await client.query('ROLLBACK').catch(() => {
+			/* ignore secondary errors during rollback */
+		});
+		throw error;
+	} finally {
+		client.release();
+	}
+}
 
 // AUTH_TABLES_SQL removed — auth tables are now defined as managed collections
 // and created through the normal createTableSql() path via the auth plugin.
@@ -1176,6 +1302,12 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				// Remove id and createdAt from update data
 				delete updateData['id'];
 				delete updateData['createdAt'];
+				// Workflow state lives on the live document, not on versions —
+				// never carry an old snapshot's stage forward on restore. Without
+				// this strip a snapshot containing `workflowStage: 'approved'`
+				// could clear the publish gate from a cold draft.
+				delete updateData['workflowStage'];
+				delete updateData['workflowUpdatedAt'];
 
 				const setClauses: string[] = [];
 				const values: unknown[] = [];
@@ -1453,6 +1585,40 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				if (versionTableSql) {
 					await pool.query(versionTableSql);
 				}
+
+				// Workflow: ensure workflow_stage + workflow_updated_at columns and history table.
+				// Stage column carries a default so existing rows are backfilled by Postgres on
+				// first ALTER TABLE; the explicit data backfill below is for the published-doc
+				// override and the audit trail row.
+				if (hasWorkflow(collection)) {
+					const initialStage = collection.workflow.initialStage;
+					// Postgres has no parameterized form for column DEFAULT, so
+					// the stage id is interpolated. Re-assert STAGE_ID_PATTERN
+					// locally — config validation runs at boot but adapters
+					// must not trust that path; a future plugin that mutates
+					// configs after validation must not silently get a SQL
+					// injection win.
+					assertStageIdSafeForSql(initialStage);
+					await pool.query(
+						`ALTER TABLE "${tbl}" ADD COLUMN IF NOT EXISTS "workflowStage" VARCHAR(255) NOT NULL DEFAULT '${initialStage}'`,
+					);
+					await pool.query(
+						`ALTER TABLE "${tbl}" ADD COLUMN IF NOT EXISTS "workflowUpdatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
+					);
+					await pool.query(
+						`CREATE INDEX IF NOT EXISTS "idx_${tbl}_workflowStage" ON "${tbl}"("workflowStage")`,
+					);
+					const historySql = createWorkflowHistoryTableSql(collection);
+					if (historySql) await pool.query(historySql);
+				}
+			}
+
+			// Workflow init log: stores which collections have already been backfilled.
+			// Backfill itself runs in a separate phase (see runWorkflowBackfill below).
+			await pool.query(WORKFLOW_INIT_LOG_TABLE_SQL);
+			for (const collection of collections) {
+				if (!hasWorkflow(collection)) continue;
+				await runWorkflowBackfill(pool, collection);
 			}
 
 			// Second pass: Add FK constraints for relationship fields
@@ -1500,6 +1666,245 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 					}
 				}
 			}
+		},
+
+		// ============================================
+		// Workflow Operations
+		// ============================================
+
+		async transitionWorkflowStage(
+			collection: string,
+			id: string,
+			opts: WorkflowTransitionAdapterArgs,
+		): Promise<WorkflowTransitionAdapterResult | null> {
+			validateCollectionSlug(collection);
+			const tbl = resolveTableName(collection);
+			const historyTable = `${tbl}_workflow_history`;
+			const client = await pool.connect();
+			try {
+				await client.query('BEGIN');
+
+				// SELECT FOR UPDATE locks the row so concurrent transitioners serialize.
+				const lockResult: QueryResult = await client.query(
+					`SELECT "workflowStage", "workflowUpdatedAt" FROM "${tbl}" WHERE "id" = $1 FOR UPDATE`,
+					[id],
+				);
+				if (lockResult.rows.length === 0) {
+					await client.query('ROLLBACK');
+					return null;
+				}
+				const row = lockResult.rows[0];
+				const currentStage = String(row['workflowStage']);
+				const currentUpdatedAtRaw = row['workflowUpdatedAt'];
+				const currentUpdatedAt =
+					currentUpdatedAtRaw instanceof Date
+						? currentUpdatedAtRaw.toISOString()
+						: String(currentUpdatedAtRaw);
+
+				// CAS: if either expectation is provided, both must match.
+				const stageMatches =
+					opts.expectedStage === undefined || opts.expectedStage === currentStage;
+				const updatedAtMatches =
+					opts.expectedUpdatedAt === undefined || opts.expectedUpdatedAt === currentUpdatedAt;
+				const fromMatches = opts.from === currentStage;
+
+				if (!stageMatches || !updatedAtMatches || !fromMatches) {
+					await client.query('ROLLBACK');
+					return {
+						conflict: true,
+						currentStage,
+						currentUpdatedAt,
+					};
+				}
+
+				const updateResult: QueryResult = await client.query(
+					`UPDATE "${tbl}" SET "workflowStage" = $1, "workflowUpdatedAt" = NOW() WHERE "id" = $2 RETURNING "workflowUpdatedAt"`,
+					[opts.to, id],
+				);
+				const updatedAtRaw = updateResult.rows[0]?.['workflowUpdatedAt'];
+				const newUpdatedAt =
+					updatedAtRaw instanceof Date ? updatedAtRaw.toISOString() : String(updatedAtRaw);
+
+				const historyId = randomUUID();
+				const historyResult: QueryResult = await client.query(
+					`INSERT INTO "${historyTable}" ("id", "parent", "fromStage", "toStage", "userId", "comment")
+					 VALUES ($1, $2, $3, $4, $5, $6)
+					 RETURNING "id", "parent", "fromStage", "toStage", "userId", "comment", "createdAt"`,
+					[historyId, id, opts.from, opts.to, opts.userId ?? null, opts.comment ?? null],
+				);
+
+				await client.query('COMMIT');
+
+				const hRow = historyResult.rows[0];
+				const createdAtRaw = hRow['createdAt'];
+				const history: WorkflowHistoryEntry = {
+					id: String(hRow['id']),
+					parent: String(hRow['parent']),
+					fromStage: hRow['fromStage'] === null ? null : String(hRow['fromStage']),
+					toStage: String(hRow['toStage']),
+					userId: hRow['userId'] === null ? null : String(hRow['userId']),
+					comment: hRow['comment'] === null ? null : String(hRow['comment']),
+					createdAt:
+						createdAtRaw instanceof Date ? createdAtRaw.toISOString() : String(createdAtRaw),
+				};
+
+				return {
+					conflict: false,
+					fromStage: opts.from,
+					toStage: opts.to,
+					workflowUpdatedAt: newUpdatedAt,
+					history,
+				};
+			} catch (error) {
+				await client.query('ROLLBACK').catch(() => {
+					/* ignore secondary errors during rollback */
+				});
+				throw error;
+			} finally {
+				client.release();
+			}
+		},
+
+		async findWorkflowHistory(
+			collection: string,
+			parentId: string,
+			queryOptions: WorkflowHistoryQueryOptions = {},
+		): Promise<WorkflowHistoryQueryResult> {
+			validateCollectionSlug(collection);
+			const tbl = resolveTableName(collection);
+			const historyTable = `${tbl}_workflow_history`;
+			const limit = Math.max(1, Math.min(queryOptions.limit ?? 25, 100));
+			const page = Math.max(1, queryOptions.page ?? 1);
+			const offset = (page - 1) * limit;
+
+			// When visibleStages is supplied, scope both the count and the row
+			// fetch so totals match the rows the caller can actually read.
+			// fromStage=NULL is the initial-creation row and is always allowed.
+			const visibleStages = queryOptions.visibleStages;
+			const stageFilter =
+				visibleStages !== undefined
+					? `AND ("fromStage" IS NULL OR "fromStage" = ANY($2::text[])) AND "toStage" = ANY($2::text[])`
+					: '';
+			const countParams: unknown[] =
+				visibleStages !== undefined ? [parentId, visibleStages] : [parentId];
+
+			const countResult: QueryResult = await pool.query(
+				`SELECT COUNT(*)::int AS count FROM "${historyTable}" WHERE "parent" = $1 ${stageFilter}`,
+				countParams,
+			);
+			const totalDocs = Number(countResult.rows[0]?.['count'] ?? 0);
+			const totalPages = Math.max(1, Math.ceil(totalDocs / limit));
+
+			const rowsParams: unknown[] =
+				visibleStages !== undefined
+					? [parentId, visibleStages, limit, offset]
+					: [parentId, limit, offset];
+			const limitParamIdx = visibleStages !== undefined ? '$3' : '$2';
+			const offsetParamIdx = visibleStages !== undefined ? '$4' : '$3';
+
+			const rowsResult: QueryResult = await pool.query(
+				// `"id"` is a stable secondary sort key: when two history rows share
+				// the same `createdAt` (e.g. an auto-revert transition fired in the
+				// same transaction NOW() tick as the forward transition), ordering
+				// by createdAt alone is non-deterministic across calls, which breaks
+				// the newest-first contract and can drop/duplicate rows across page
+				// boundaries. Note this guarantees STABILITY, not parity with the
+				// in-memory adapter's insertion order — for same-tick rows the two
+				// adapters may order the tied pair differently (no contract asserts
+				// cross-adapter order for same-transaction rows).
+				`SELECT "id", "parent", "fromStage", "toStage", "userId", "comment", "createdAt"
+				 FROM "${historyTable}"
+				 WHERE "parent" = $1 ${stageFilter}
+				 ORDER BY "createdAt" DESC, "id" DESC
+				 LIMIT ${limitParamIdx} OFFSET ${offsetParamIdx}`,
+				rowsParams,
+			);
+
+			const docs: WorkflowHistoryEntry[] = rowsResult.rows.map((r) => {
+				const createdAtRaw = r['createdAt'];
+				return {
+					id: String(r['id']),
+					parent: String(r['parent']),
+					fromStage: r['fromStage'] === null ? null : String(r['fromStage']),
+					toStage: String(r['toStage']),
+					userId: r['userId'] === null ? null : String(r['userId']),
+					comment: r['comment'] === null ? null : String(r['comment']),
+					createdAt:
+						createdAtRaw instanceof Date ? createdAtRaw.toISOString() : String(createdAtRaw),
+				};
+			});
+
+			return {
+				docs,
+				totalDocs,
+				totalPages,
+				page,
+				limit,
+				hasNextPage: page < totalPages,
+				hasPrevPage: page > 1,
+			};
+		},
+
+		async getWorkflowState(
+			collection: string,
+			id: string,
+		): Promise<{ workflowStage: string; workflowUpdatedAt: string } | null> {
+			validateCollectionSlug(collection);
+			const tbl = resolveTableName(collection);
+			const result: QueryResult = await pool.query(
+				`SELECT "workflowStage", "workflowUpdatedAt" FROM "${tbl}" WHERE "id" = $1`,
+				[id],
+			);
+			if (result.rows.length === 0) return null;
+			const row = result.rows[0];
+			const updatedAtRaw = row['workflowUpdatedAt'];
+			return {
+				workflowStage: String(row['workflowStage']),
+				workflowUpdatedAt:
+					updatedAtRaw instanceof Date ? updatedAtRaw.toISOString() : String(updatedAtRaw),
+			};
+		},
+
+		async recordWorkflowCreation(
+			collection: string,
+			parentId: string,
+			opts: { initialStage: string; userId?: string; comment?: string },
+		): Promise<WorkflowHistoryEntry | null> {
+			validateCollectionSlug(collection);
+			const tbl = resolveTableName(collection);
+			const historyTable = `${tbl}_workflow_history`;
+			const historyId = randomUUID();
+			// Single INSERT — no CAS, no lock. The parent row was just created
+			// by adapter.create(); the FK CASCADE on `parent` would reject if
+			// the doc had since been deleted in a concurrent transaction, in
+			// which case we surface null so the caller's logger can flag it.
+			let result: QueryResult;
+			try {
+				result = await pool.query(
+					`INSERT INTO "${historyTable}" ("id", "parent", "fromStage", "toStage", "userId", "comment")
+					 VALUES ($1, $2, NULL, $3, $4, $5)
+					 RETURNING "id", "parent", "fromStage", "toStage", "userId", "comment", "createdAt"`,
+					[historyId, parentId, opts.initialStage, opts.userId ?? null, opts.comment ?? null],
+				);
+			} catch (error) {
+				// FK violations show up as 23503; treat as "doc vanished" rather
+				// than crashing the caller's create path.
+				const pgCode = error && typeof error === 'object' ? Reflect.get(error, 'code') : undefined;
+				if (pgCode === '23503') return null;
+				throw error;
+			}
+			const row = result.rows[0];
+			if (!row) return null;
+			const createdAtRaw = row['createdAt'];
+			return {
+				id: String(row['id']),
+				parent: String(row['parent']),
+				fromStage: null,
+				toStage: String(row['toStage']),
+				userId: row['userId'] === null ? null : String(row['userId']),
+				comment: row['comment'] === null ? null : String(row['comment']),
+				createdAt: createdAtRaw instanceof Date ? createdAtRaw.toISOString() : String(createdAtRaw),
+			};
 		},
 
 		// ============================================

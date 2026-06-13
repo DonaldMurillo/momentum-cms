@@ -3,6 +3,7 @@ export { collections } from './collections';
 export {
 	Categories,
 	Articles,
+	Posts,
 	Products,
 	Pages,
 	Settings,
