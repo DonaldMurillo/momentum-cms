@@ -129,4 +129,40 @@ describe('redirectsPlugin', () => {
 			expect(shutdownCtx.logger.info).toHaveBeenCalled();
 		});
 	});
+
+	describe('cache invalidation after CRUD', () => {
+		it('registers afterChange hook on redirects collection for cache busting', async () => {
+			const plugin = redirectsPlugin();
+			const collections: CollectionConfig[] = [];
+			const ctx = makePluginContext(collections);
+			await plugin.onInit?.(ctx);
+
+			// The plugin should register afterChange hooks on the redirects collection
+			// so that cache is invalidated when redirect documents are created or updated.
+			const redirectCollection = collections.find((c) => c.slug === 'redirects');
+			expect(redirectCollection).toBeDefined();
+
+			const hooks = redirectCollection?.hooks;
+			expect(hooks?.afterChange).toBeDefined();
+			expect(Array.isArray(hooks?.afterChange)).toBe(true);
+			expect(hooks?.afterChange?.length ?? 0).toBeGreaterThanOrEqual(1);
+		});
+
+		it('registers afterDelete hook on redirects collection for cache busting', async () => {
+			const plugin = redirectsPlugin();
+			const collections: CollectionConfig[] = [];
+			const ctx = makePluginContext(collections);
+			await plugin.onInit?.(ctx);
+
+			// The plugin should register afterDelete hooks on the redirects collection
+			// so that cache is invalidated when redirect documents are deleted.
+			const redirectCollection = collections.find((c) => c.slug === 'redirects');
+			expect(redirectCollection).toBeDefined();
+
+			const hooks = redirectCollection?.hooks;
+			expect(hooks?.afterDelete).toBeDefined();
+			expect(Array.isArray(hooks?.afterDelete)).toBe(true);
+			expect(hooks?.afterDelete?.length ?? 0).toBeGreaterThanOrEqual(1);
+		});
+	});
 });

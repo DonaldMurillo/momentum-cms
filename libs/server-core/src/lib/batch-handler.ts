@@ -41,7 +41,18 @@ function ensureArrayOfRecords(
 			error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} items`,
 		};
 	}
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Array.isArray narrows to unknown[]; consumers validate item shape
+	// Validate each element is a non-null object (not a primitive or array)
+	// to prevent silent creation of empty documents from items like 123, "hello", true.
+	for (let i = 0; i < value.length; i++) {
+		const item = value[i];
+		if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+			return {
+				ok: false,
+				error: `${field}[${i}] must be an object, got ${item === null ? 'null' : typeof item}`,
+			};
+		}
+	}
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Array.isArray narrows to unknown[]; validated as object[] above
 	return { ok: true, value: value as Record<string, unknown>[] };
 }
 
@@ -57,28 +68,68 @@ function ensureArrayOfIds(
 			error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} items`,
 		};
 	}
-	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Array.isArray narrows to unknown[]; consumers validate item shape
+	// Validate each element is a non-empty string — reject numeric/null/undefined/whitespace IDs
+	// to prevent silent coercion that would mask input errors as 404s.
+	for (let i = 0; i < value.length; i++) {
+		const id = value[i];
+		if (typeof id !== 'string' || id.trim().length === 0) {
+			const hint =
+				id === null
+					? 'null'
+					: id === undefined
+						? 'undefined'
+						: typeof id !== 'string'
+							? typeof id
+							: id.length === 0
+								? 'empty string'
+								: 'whitespace-only string';
+			return {
+				ok: false,
+				error: `ids[${i}] must be a non-empty string, got ${hint}`,
+			};
+		}
+	}
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- every element validated as a non-empty string in the loop above
 	return { ok: true, value: value as string[] };
 }
 
 /**
  * Adapt a generic array of records to the batchUpdate `{ id, data }` shape.
- * Mirrors existing adapter behaviour: caller is expected to send the correct
- * shape; the API layer surfaces shape errors as ValidationError.
+ * Validates that each item has a non-empty string `id` and an optional `data` object.
+ * Returns an error result if any item has an invalid or missing ID.
  */
 function toBatchUpdateItems(
 	records: Record<string, unknown>[],
-): { id: string; data: Partial<Record<string, unknown>> }[] {
+):
+	| { ok: true; value: { id: string; data: Partial<Record<string, unknown>> }[] }
+	| { ok: false; error: string } {
 	const result: { id: string; data: Partial<Record<string, unknown>> }[] = [];
-	for (const item of records) {
+	for (let i = 0; i < records.length; i++) {
+		const item = records[i];
 		const id = item['id'];
+		if (typeof id !== 'string' || id.trim().length === 0) {
+			const hint =
+				id === undefined
+					? 'missing'
+					: id === null
+						? 'null'
+						: typeof id !== 'string'
+							? typeof id
+							: id.length === 0
+								? 'empty string'
+								: 'whitespace-only string';
+			return {
+				ok: false,
+				error: `items[${i}].id must be a non-empty string (${hint})`,
+			};
+		}
 		const data = item['data'];
 		result.push({
-			id: typeof id === 'string' ? id : String(id ?? ''),
+			id,
 			data: typeof data === 'object' && data !== null ? { ...data } : {},
 		});
 	}
-	return result;
+	return { ok: true, value: result };
 }
 
 function mapBatchError(error: unknown): HandlerResult {
@@ -86,7 +137,12 @@ function mapBatchError(error: unknown): HandlerResult {
 	if (error instanceof Error) {
 		if (error.name === 'ValidationError') status = 400;
 		else if (error.name === 'DocumentNotFoundError') status = 404;
+		else if (error.name === 'CollectionNotFoundError') status = 404;
+		else if (error.name === 'GlobalNotFoundError') status = 404;
 		else if (error.name === 'AccessDeniedError') status = 403;
+		else if (error.name === 'ReferentialIntegrityError') status = 409;
+		// NOTE: No DraftNotVisibleError case — it is only thrown by single-doc
+		// findById reads, never by batch create/update/delete operations.
 	}
 	return {
 		status,
@@ -97,6 +153,10 @@ function mapBatchError(error: unknown): HandlerResult {
 export async function handleBatchRequest(params: BatchHandlerParams): Promise<HandlerResult> {
 	const { config, collectionSlug, body, user } = params;
 
+	if (!body || typeof body !== 'object') {
+		return { status: 400, body: { error: 'Request body is required and must be an object' } };
+	}
+
 	if (isManagedCollection(config, collectionSlug)) {
 		return {
 			status: 403,
@@ -106,10 +166,11 @@ export async function handleBatchRequest(params: BatchHandlerParams): Promise<Ha
 
 	const api = getMomentumAPI();
 	const contextApi = user ? api.setContext({ user }) : api;
-	const collection = contextApi.collection<Record<string, unknown>>(collectionSlug);
 	const operation = body['operation'];
 
 	try {
+		// Resolve collection inside try/catch so CollectionNotFoundError is mapped to 404
+		const collection = contextApi.collection<Record<string, unknown>>(collectionSlug);
 		if (operation === 'create') {
 			const validation = ensureArrayOfRecords(body['items'], 'items');
 			if (!validation.ok) return { status: 400, body: { error: validation.error } };
@@ -122,7 +183,9 @@ export async function handleBatchRequest(params: BatchHandlerParams): Promise<Ha
 		if (operation === 'update') {
 			const validation = ensureArrayOfRecords(body['items'], 'items');
 			if (!validation.ok) return { status: 400, body: { error: validation.error } };
-			const docs = await collection.batchUpdate(toBatchUpdateItems(validation.value));
+			const items = toBatchUpdateItems(validation.value);
+			if (!items.ok) return { status: 400, body: { error: items.error } };
+			const docs = await collection.batchUpdate(items.value);
 			return {
 				status: 200,
 				body: { docs, message: `${docs.length} documents updated` },

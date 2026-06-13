@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { detectMimeType, mimeTypeMatches, isMimeTypeAllowed, validateMimeType } from './mime-validator';
+import {
+	detectMimeType,
+	mimeTypeMatches,
+	isMimeTypeAllowed,
+	validateMimeType,
+} from './mime-validator';
 
 describe('detectMimeType', () => {
 	it('should detect JPEG from magic bytes', () => {
@@ -234,5 +239,104 @@ describe('validateMimeType', () => {
 		const result = validateMimeType(buffer, 'application/pdf', ['application/pdf']);
 		expect(result.valid).toBe(true);
 		expect(result.detectedType).toBe('application/pdf');
+	});
+});
+
+describe('detectMimeType edge cases', () => {
+	it('should detect UTF-8 multibyte text correctly', () => {
+		// "Hello" in UTF-8 followed by 2-byte UTF-8 character é (0xC3 0xA9)
+		const buffer = Buffer.from([0x48, 0x65, 0x6c, 0x6c, 0x6f, 0xc3, 0xa9]);
+		expect(detectMimeType(buffer)).toBe('text/plain');
+	});
+
+	it('should detect 3-byte UTF-8 text (CJK characters)', () => {
+		// Chinese character 你 is 0xE4 0xBD 0xA0 in UTF-8
+		const buffer = Buffer.from([0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd]);
+		expect(detectMimeType(buffer)).toBe('text/plain');
+	});
+
+	it('should reject buffer containing DEL character (0x7f)', () => {
+		const buffer = Buffer.from([0x48, 0x65, 0x6c, 0x7f, 0x6c, 0x6f]);
+		expect(detectMimeType(buffer)).toBeNull();
+	});
+
+	it('should detect single printable byte as text', () => {
+		const buffer = Buffer.from([0x41]); // 'A'
+		expect(detectMimeType(buffer)).toBe('text/plain');
+	});
+
+	it('should return null for single control byte', () => {
+		const buffer = Buffer.from([0x01]);
+		expect(detectMimeType(buffer)).toBeNull();
+	});
+
+	describe('RIFF truncation (HIGH-RISK)', () => {
+		it('should return image/webp for truncated RIFF with length < 12', () => {
+			// RIFF header present but buffer too short for format detection
+			// This documents current behavior: truncated RIFF → misidentified as webp
+			const buffer = Buffer.alloc(8);
+			buffer.write('RIFF', 0, 'ascii');
+			buffer.writeUInt32LE(100, 4);
+			// Buffer is exactly 8 bytes — too short for WEBP/WAVE/AVI check
+			// Falls through to return sig.mimeType which is 'image/webp'
+			const result = detectMimeType(buffer);
+			expect(result).toBe('image/webp');
+		});
+
+		it('should identify unknown RIFF format (not WEBP/WAVE/AVI) as image/webp', () => {
+			const buffer = Buffer.alloc(12);
+			buffer.write('RIFF', 0, 'ascii');
+			buffer.writeUInt32LE(100, 4);
+			buffer.write('XXXX', 8, 'ascii'); // Unknown format
+			// No WEBP/WAVE/AVI match → falls through to return sig.mimeType
+			expect(detectMimeType(buffer)).toBe('image/webp');
+		});
+	});
+
+	it('should detect BMP from magic bytes', () => {
+		const buffer = Buffer.from([0x42, 0x4d, 0x00, 0x00]);
+		expect(detectMimeType(buffer)).toBe('image/bmp');
+	});
+
+	it('should detect OGG from magic bytes', () => {
+		const buffer = Buffer.from([0x4f, 0x67, 0x67, 0x53, 0x00]);
+		expect(detectMimeType(buffer)).toBe('audio/ogg');
+	});
+
+	it('should detect FLAC from magic bytes', () => {
+		const buffer = Buffer.from([0x66, 0x4c, 0x61, 0x43]);
+		expect(detectMimeType(buffer)).toBe('audio/flac');
+	});
+
+	it('should detect WebM from EBML header', () => {
+		const buffer = Buffer.from([0x1a, 0x45, 0xdf, 0xa3]);
+		expect(detectMimeType(buffer)).toBe('video/webm');
+	});
+
+	it('should detect SVG from binary magic bytes <svg', () => {
+		const buffer = Buffer.from([0x3c, 0x73, 0x76, 0x67]);
+		expect(detectMimeType(buffer)).toBe('image/svg+xml');
+	});
+});
+
+describe('validateMimeType edge cases', () => {
+	it('should reject text/json claimed for application/json detected (cross-category)', () => {
+		// detected='application/json', claimed='text/json' → different categories → rejected
+		// The variation map only has 'text/json' as a variant of 'application/json', not the reverse
+		const buffer = Buffer.from('{"test": true}', 'utf-8');
+		const result = validateMimeType(buffer, 'text/json');
+		expect(result.valid).toBe(false);
+	});
+
+	it('should accept image/pjpeg as compatible with image/jpeg', () => {
+		const buffer = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+		const result = validateMimeType(buffer, 'image/pjpeg');
+		expect(result.valid).toBe(true);
+	});
+
+	it('should accept text/x-plain as compatible with text/plain', () => {
+		const buffer = Buffer.from('Hello world', 'utf-8');
+		const result = validateMimeType(buffer, 'text/x-plain');
+		expect(result.valid).toBe(true);
 	});
 });

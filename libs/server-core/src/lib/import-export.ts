@@ -260,21 +260,39 @@ export function exportToCsv(
  * Parse JSON import data into document records.
  * Accepts either an array of objects or `{ docs: [...] }`.
  */
+/**
+ * Validate that every element in an import array is a non-null object.
+ * Returns early with an error at the first invalid element.
+ */
+function validateImportArray(arr: unknown[]): { docs: Record<string, unknown>[]; error?: string } {
+	for (let i = 0; i < arr.length; i++) {
+		const el = arr[i];
+		if (typeof el !== 'object' || el === null || Array.isArray(el)) {
+			const hint = el === null ? 'null' : Array.isArray(el) ? 'array' : typeof el;
+			return {
+				docs: [],
+				error: `items[${i}] must be an object, got ${hint}`,
+			};
+		}
+	}
+	return { docs: arr as Record<string, unknown>[] };
+}
+
 export function parseJsonImport(body: unknown): {
 	docs: Record<string, unknown>[];
 	error?: string;
 } {
 	if (Array.isArray(body)) {
-		return { docs: body };
+		return validateImportArray(body);
 	}
 
 	if (typeof body === 'object' && body !== null) {
 		const obj = body as Record<string, unknown>;
 		if (Array.isArray(obj['docs'])) {
-			return { docs: obj['docs'] as Record<string, unknown>[] };
+			return validateImportArray(obj['docs']);
 		}
 		if (Array.isArray(obj['data'])) {
-			return { docs: obj['data'] as Record<string, unknown>[] };
+			return validateImportArray(obj['data']);
 		}
 	}
 
@@ -377,6 +395,18 @@ export function validateImportDocs(
 	return docs.map((doc, index) => {
 		const errors: { field: string; message: string }[] = [];
 		const coerced: Record<string, unknown> = {};
+
+		// Guard against non-object elements in the import array
+		// (e.g., null, primitives, strings) — these cannot be valid documents
+		if (typeof doc !== 'object' || doc === null || Array.isArray(doc)) {
+			const hint = doc === null ? 'null' : Array.isArray(doc) ? 'array' : typeof doc;
+			return {
+				index,
+				valid: false,
+				errors: [{ field: 'root', message: `Expected an object, got ${hint}` }],
+				coerced: {},
+			};
+		}
 
 		// Copy all values, coercing known fields
 		for (const [key, value] of Object.entries(doc)) {

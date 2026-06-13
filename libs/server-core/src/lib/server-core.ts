@@ -11,6 +11,7 @@ import {
 	ValidationError as MomentumValidationError,
 } from './momentum-api';
 import type { MomentumAPI, MomentumAPIContext } from './momentum-api.types';
+import { sanitizeErrorMessage } from './shared-server-utils';
 
 // Re-export types for convenience
 export type { DatabaseAdapter, MomentumConfig, ResolvedMomentumConfig } from '@momentumcms/core';
@@ -313,7 +314,10 @@ function handleError(error: unknown): MomentumResponse {
 	}
 	if (error instanceof DraftNotVisibleError) {
 		// Document exists but is not visible (draft) — return 200 with null doc
-		// so the API doesn't falsely 404 while still hiding draft content
+		// so the API doesn't falsely 404 while still hiding draft content.
+		// This error only originates from the single-doc read path (findById);
+		// batch operations (create/update/delete) never produce it, so
+		// mapBatchError intentionally has no DraftNotVisibleError case.
 		return { doc: null };
 	}
 	if (error instanceof AccessDeniedError) {
@@ -330,13 +334,19 @@ function handleError(error: unknown): MomentumResponse {
 		};
 	}
 	if (error instanceof Error) {
-		return { error: error.message, status: 500 };
+		return { error: sanitizeErrorMessage(error, 'Internal server error'), status: 500 };
 	}
 	return { error: 'Unknown error', status: 500 };
 }
 
 /**
  * In-memory database adapter for development/testing.
+ *
+ * NOTE: The `find()` method returns ALL documents in the collection and ignores
+ * the query parameter (where, limit, page, sort). This is intentional — the
+ * adapter is a minimal stub for unit tests and rapid prototyping. It is NOT
+ * suitable for integration tests that verify filtering, pagination, or sorting.
+ * Use a real database adapter (e.g. DrizzlePostgresAdapter) for those tests.
  */
 export function createInMemoryAdapter(): DatabaseAdapter {
 	const store: Map<string, Map<string, Record<string, unknown>>> = new Map();

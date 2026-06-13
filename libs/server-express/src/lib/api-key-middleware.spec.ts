@@ -233,3 +233,175 @@ describe('createApiKeyResolverMiddleware - role normalization', () => {
 		expect(captured.user?.role).toBe('user');
 	});
 });
+
+describe('createApiKeyResolverMiddleware - expiration guards', () => {
+	const validApiKey = `mcms_${'a'.repeat(40)}`;
+
+	function makeExpiryRecord(expiresAt: string | null) {
+		return {
+			id: 'rec-1',
+			name: 'test-key',
+			keyPrefix: 'mcms_aaaa',
+			keyHash: hashApiKey(validApiKey),
+			role: 'admin',
+			createdBy: 'user-1',
+			createdAt: new Date(),
+			expiresAt,
+			lastUsedAt: null,
+		};
+	}
+
+	function createResolverApp(store: ApiKeyStore) {
+		const app = express();
+		app.use(createApiKeyResolverMiddleware({ store }));
+		app.get('/test', (req, res) => {
+			res.status(200).json({ ok: true });
+		});
+		return app;
+	}
+
+	it('rejects API key with NaN-inducing expiresAt ("not-a-date")', async () => {
+		const store = createMockStore();
+		vi.mocked(store.findByHash).mockResolvedValue(makeExpiryRecord('not-a-date'));
+		const app = createResolverApp(store);
+
+		const res = await request(app).get('/test').set('x-api-key', validApiKey);
+		expect(res.status).toBe(401);
+		expect(res.body.error).toMatch(/invalid expiration/i);
+	});
+
+	it('rejects API key with NaN-inducing expiresAt (empty string)', async () => {
+		const store = createMockStore();
+		vi.mocked(store.findByHash).mockResolvedValue(makeExpiryRecord(''));
+		// new Date('') returns Invalid Date (NaN)
+		const app = createResolverApp(store);
+
+		const res = await request(app).get('/test').set('x-api-key', validApiKey);
+		expect(res.status).toBe(401);
+	});
+
+	it('rejects expired API key (past date)', async () => {
+		const store = createMockStore();
+		const pastDate = new Date(Date.now() - 86400000).toISOString();
+		vi.mocked(store.findByHash).mockResolvedValue(makeExpiryRecord(pastDate));
+		const app = createResolverApp(store);
+
+		const res = await request(app).get('/test').set('x-api-key', validApiKey);
+		expect(res.status).toBe(401);
+		expect(res.body.error).toMatch(/expired/i);
+	});
+
+	it('allows API key with null expiresAt (never expires)', async () => {
+		const store = createMockStore();
+		vi.mocked(store.findByHash).mockResolvedValue(makeExpiryRecord(null));
+		const app = createResolverApp(store);
+
+		const res = await request(app).get('/test').set('x-api-key', validApiKey);
+		expect(res.status).toBe(200);
+	});
+
+	it('allows API key with future expiresAt', async () => {
+		const store = createMockStore();
+		const futureDate = new Date(Date.now() + 86400000 * 30).toISOString();
+		vi.mocked(store.findByHash).mockResolvedValue(makeExpiryRecord(futureDate));
+		const app = createResolverApp(store);
+
+		const res = await request(app).get('/test').set('x-api-key', validApiKey);
+		expect(res.status).toBe(200);
+	});
+
+	it('rejects API key with Infinity as expiresAt', async () => {
+		const store = createMockStore();
+		// Infinity coerces to NaN via new Date(Infinity).getTime() → NaN
+		vi.mocked(store.findByHash).mockResolvedValue(makeExpiryRecord('Infinity'));
+		const app = createResolverApp(store);
+
+		const res = await request(app).get('/test').set('x-api-key', validApiKey);
+		expect(res.status).toBe(401);
+		expect(res.body.error).toMatch(/invalid expiration/i);
+	});
+
+	it('rejects API key with epoch (1970-01-01) as expiresAt', async () => {
+		const store = createMockStore();
+		vi.mocked(store.findByHash).mockResolvedValue(makeExpiryRecord('1970-01-01T00:00:00.000Z'));
+		const app = createResolverApp(store);
+
+		const res = await request(app).get('/test').set('x-api-key', validApiKey);
+		expect(res.status).toBe(401);
+		expect(res.body.error).toMatch(/expired/i);
+	});
+
+	it('returns 500 when store.findByHash throws a database error', async () => {
+		const store = createMockStore();
+		vi.mocked(store.findByHash).mockRejectedValue(new Error('Connection refused'));
+		const app = createResolverApp(store);
+
+		const res = await request(app).get('/test').set('x-api-key', validApiKey);
+		expect(res.status).toBe(500);
+		expect(res.body.error).toBe('API key validation failed');
+	});
+});
+
+describe('createApiKeyResolverMiddleware - array header normalization', () => {
+	const validApiKey = `mcms_${'a'.repeat(40)}`;
+
+	function makeValidRecord() {
+		return {
+			id: 'rec-1',
+			name: 'test-key',
+			keyPrefix: 'mcms_aaaa',
+			keyHash: hashApiKey(validApiKey),
+			role: 'admin',
+			createdBy: 'user-1',
+			createdAt: new Date(),
+			expiresAt: null,
+			lastUsedAt: null,
+		};
+	}
+
+	it('uses first value from array-valued X-API-Key header', async () => {
+		const store = createMockStore();
+		vi.mocked(store.findByHash).mockResolvedValue(makeValidRecord());
+
+		const captured: { user?: { id?: string } } = {};
+		const app = express();
+		app.use(createApiKeyResolverMiddleware({ store }));
+		app.get('/test', (req, res) => {
+			captured.user = (req as unknown as { user?: { id?: string } }).user;
+			res.status(200).json({ ok: true });
+		});
+
+		// Simulate Express parsing duplicate X-API-Key headers into string[]
+		// supertest doesn't support array headers directly, so we use a raw middleware test
+		app.get(
+			'/test-array',
+			(req, res, next) => {
+				// Simulate Express array header behavior
+				(req.headers as Record<string, unknown>)['x-api-key'] = [validApiKey, 'mcms_invalid'];
+				next();
+			},
+			createApiKeyResolverMiddleware({ store }),
+			(req, res) => {
+				captured.user = (req as unknown as { user?: { id?: string } }).user;
+				res.status(200).json({ ok: true });
+			},
+		);
+
+		const res = await request(app).get('/test-array');
+		expect(res.status).toBe(200);
+		expect(captured.user?.id).toBe('apikey:rec-1');
+	});
+});
+
+describe('createApiKeyRoutes - non-admin delete error handling', () => {
+	it('returns 500 when store.findById throws for non-admin delete', async () => {
+		const store = createMockStore();
+		vi.mocked(store.findById).mockRejectedValue(new Error('DB connection lost'));
+		const app = createApp(store, { id: 'user-1', role: 'editor' });
+
+		const res = await request(app).delete('/api-keys/key-123');
+
+		expect(res.status).toBe(500);
+		expect(res.body.error).toBe('Failed to verify API key ownership');
+	});
+});

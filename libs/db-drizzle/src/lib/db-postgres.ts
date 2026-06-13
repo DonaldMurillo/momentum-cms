@@ -623,8 +623,18 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				] as const) {
 					if (op in valObj) {
 						const arr = valObj[op];
-						if (!Array.isArray(arr) || arr.length === 0) {
-							throw new Error(`Operator ${op} requires a non-empty array value`);
+						if (!Array.isArray(arr)) {
+							throw new Error(`Operator ${op} requires an array value`);
+						}
+						// Empty array → standard SQL set semantics. `$in ()` matches
+						// nothing, `$nin ()` matches everything. Emit a constant
+						// predicate instead of throwing: where-clause normalization can
+						// legitimately produce an empty array from a crafted/empty query,
+						// and "match nothing" is the safe interpretation (dropping the
+						// clause would match everything).
+						if (arr.length === 0) {
+							whereClauses.push(op === '$nin' ? '1=1' : '1=0');
+							continue;
 						}
 						if (arr.length > MAX_IN_ARRAY_SIZE) {
 							throw new Error(
@@ -662,7 +672,8 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 					// Coerce string "true"/"false" to boolean (query-string origin)
 					let existsVal = valObj['$exists'];
 					if (typeof existsVal === 'string') {
-						existsVal = existsVal === 'true';
+						const lower = existsVal.toLowerCase();
+						existsVal = lower === 'true' || lower === '1' || lower === 'yes';
 					}
 					whereClauses.push(existsVal ? `${col} IS NOT NULL` : `${col} IS NULL`);
 				}
@@ -861,15 +872,27 @@ export function postgresAdapter(options: PostgresAdapterOptions): PostgresAdapte
 				const ilikePattern = `%${escapedQuery}%`;
 				const ilikeParams = fields.map(() => ilikePattern);
 
+				// limit: 0 means "no limit" (return all matches). Callers such as
+				// momentum-api search rely on this to fetch the full result set for
+				// accurate totals before applying in-memory filters + pagination.
+				// Mirrors the find()/count() convention above; without this, `?? 20`
+				// keeps 0 (it is not nullish) and `LIMIT 0` would return zero rows.
+				const paginationClause =
+					limitValue === 0 ? '' : `LIMIT $${fields.length + 2} OFFSET $${fields.length + 3}`;
+				const params =
+					limitValue === 0
+						? [searchQuery, ...ilikeParams]
+						: [searchQuery, ...ilikeParams, limitValue, offset];
+
 				const sql = `
 					SELECT *, ts_rank(${tsvectorExpr}, ${tsqueryExpr}) AS _search_rank
 					FROM "${resolveTableName(collection)}"
 					WHERE ${tsvectorExpr} @@ ${tsqueryExpr} OR ${ilikeClauses}
 					ORDER BY _search_rank DESC
-					LIMIT $${fields.length + 2} OFFSET $${fields.length + 3}
+					${paginationClause}
 				`;
 
-				const results = await h.query(sql, [searchQuery, ...ilikeParams, limitValue, offset]);
+				const results = await h.query(sql, params);
 
 				// Remove internal ranking column
 				return results.map((row) => {

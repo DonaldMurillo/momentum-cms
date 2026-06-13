@@ -31,15 +31,15 @@ describe('BatchController', () => {
 		resetMomentumAPI();
 	});
 
-	it('POST /:collection/batch surfaces a 5xx when the collection does not exist', async () => {
-		// handleBatchRequest dispatches via getMomentumAPI().collection(slug) which
-		// throws CollectionNotFoundError outside the handler's try/catch — NestJS
-		// catches it and emits a default 5xx envelope. We only assert the route
-		// reached the handler (no 404 swallowing the request before dispatch).
+	it('POST /:collection/batch returns 404 when the collection does not exist', async () => {
+		// handleBatchRequest now resolves getMomentumAPI().collection(slug) INSIDE its
+		// try/catch and maps CollectionNotFoundError to a 404 envelope. A missing
+		// collection is a client error (the resource does not exist), not a server 500.
 		const res = await request(app.getHttpServer())
 			.post('/missing/batch')
 			.send({ operation: 'create', items: [{ name: 'a' }] });
-		expect(res.status).toBe(500);
+		expect(res.status).toBe(404);
+		expect(res.body.error).toBeDefined();
 	});
 
 	it('POST /:collection/batch returns 400 with "Invalid operation" label for unknown op', async () => {

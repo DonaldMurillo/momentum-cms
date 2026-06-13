@@ -743,4 +743,103 @@ describe('wordDiff', () => {
 			]);
 		});
 	});
+
+	// ============================================
+	// Null vs Undefined (distinct semantics)
+	// ============================================
+
+	describe('null vs undefined semantics', () => {
+		it('null → undefined should be removed (field cleared to absent)', () => {
+			const result = deepDiff({ title: null }, { title: undefined });
+			const d = result.find((r) => r.field === 'title');
+			expect(d).toBeDefined();
+			expect(d?.changeType).toBe('removed');
+			expect(d?.oldValue).toBeNull();
+			expect(d?.newValue).toBeUndefined();
+		});
+
+		it('undefined → null should be added (absent field set to null)', () => {
+			const result = deepDiff({ title: undefined }, { title: null });
+			const d = result.find((r) => r.field === 'title');
+			expect(d).toBeDefined();
+			expect(d?.changeType).toBe('added');
+			expect(d?.oldValue).toBeUndefined();
+			expect(d?.newValue).toBeNull();
+		});
+
+		it('null → null should be unchanged', () => {
+			const result = deepDiff({ title: null }, { title: null });
+			const d = result.find((r) => r.field === 'title');
+			expect(d).toBeDefined();
+			expect(d?.changeType).toBe('unchanged');
+		});
+
+		it('null → value should be changed (not added)', () => {
+			const result = deepDiff({ title: null }, { title: 'New' });
+			const d = result.find((r) => r.field === 'title');
+			expect(d).toBeDefined();
+			expect(d?.changeType).toBe('changed');
+			expect(d?.oldValue).toBeNull();
+			expect(d?.newValue).toBe('New');
+		});
+
+		it('value → null should be changed (not removed)', () => {
+			const result = deepDiff({ title: 'Old' }, { title: null });
+			const d = result.find((r) => r.field === 'title');
+			expect(d).toBeDefined();
+			expect(d?.changeType).toBe('changed');
+			expect(d?.oldValue).toBe('Old');
+			expect(d?.newValue).toBeNull();
+		});
+
+		it('with field config: null → value should be changed', () => {
+			const fields: Field[] = [textField('title')];
+			const result = deepDiff({ title: null }, { title: 'New' }, fields);
+			const d = result.find((r) => r.field === 'title');
+			expect(d).toBeDefined();
+			expect(d?.changeType).toBe('changed');
+			expect(d?.oldValue).toBeNull();
+			expect(d?.newValue).toBe('New');
+		});
+
+		it('with field config: value → null should be changed', () => {
+			const fields: Field[] = [textField('title')];
+			const result = deepDiff({ title: 'Old' }, { title: null }, fields);
+			const d = result.find((r) => r.field === 'title');
+			expect(d).toBeDefined();
+			expect(d?.changeType).toBe('changed');
+			expect(d?.oldValue).toBe('Old');
+			expect(d?.newValue).toBeNull();
+		});
+
+		it('with field config: null → undefined should be removed', () => {
+			const fields: Field[] = [textField('title')];
+			const result = deepDiff({ title: null }, { title: undefined }, fields);
+			const d = result.find((r) => r.field === 'title');
+			expect(d).toBeDefined();
+			expect(d?.changeType).toBe('removed');
+			expect(d?.oldValue).toBeNull();
+			expect(d?.newValue).toBeUndefined();
+		});
+
+		it('with field config: undefined → null should be added', () => {
+			const fields: Field[] = [textField('title')];
+			const result = deepDiff({ title: undefined }, { title: null }, fields);
+			const d = result.find((r) => r.field === 'title');
+			expect(d).toBeDefined();
+			expect(d?.changeType).toBe('added');
+			expect(d?.oldValue).toBeUndefined();
+			expect(d?.newValue).toBeNull();
+		});
+
+		it('with field config: null → null should be unchanged', () => {
+			const fields: Field[] = [textField('title')];
+			const result = deepDiff({ title: null }, { title: null }, fields);
+			const d = result.find((r) => r.field === 'title');
+			expect(d).toBeDefined();
+			expect(d?.changeType).toBe('unchanged');
+			expect(d?.oldValue).toBeNull();
+			expect(d?.newValue).toBeNull();
+		});
+	});
 });

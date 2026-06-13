@@ -9,34 +9,46 @@
 
 import type { Field, FieldHookFunction, RequestContext } from '@momentumcms/core';
 import { isNamedTab } from '@momentumcms/core';
+import { ValidationError } from './momentum-api.types';
 
 type FieldHookType = 'beforeValidate' | 'beforeChange' | 'afterChange' | 'afterRead';
 
 /**
  * Check if any fields in the collection have hooks defined.
  * Recursively checks through all field nesting (groups, arrays, blocks, layout fields).
+ * Uses _depth parameter to guard against stack overflow from deeply nested field configs.
  */
-export function hasFieldHooks(fields: Field[]): boolean {
+export function hasFieldHooks(fields: Field[], _depth = 0): boolean {
+	if (_depth > MAX_FIELD_HOOK_DEPTH) {
+		return false; // Guard against stack overflow from deeply nested field configs
+	}
+
 	for (const field of fields) {
 		if (field.hooks !== undefined) return true;
-		if (field.type === 'group' && hasFieldHooks(field.fields)) return true;
-		if (field.type === 'array' && hasFieldHooks(field.fields)) return true;
+		if (field.type === 'group' && hasFieldHooks(field.fields, _depth + 1)) return true;
+		if (field.type === 'array' && hasFieldHooks(field.fields, _depth + 1)) return true;
 		if (field.type === 'blocks') {
 			for (const block of field.blocks) {
-				if (hasFieldHooks(block.fields)) return true;
+				if (hasFieldHooks(block.fields, _depth + 1)) return true;
 			}
 		}
 		if (field.type === 'tabs') {
 			for (const tab of field.tabs) {
-				if (hasFieldHooks(tab.fields)) return true;
+				if (hasFieldHooks(tab.fields, _depth + 1)) return true;
 			}
 		}
-		if ((field.type === 'collapsible' || field.type === 'row') && hasFieldHooks(field.fields)) {
+		if (
+			(field.type === 'collapsible' || field.type === 'row') &&
+			hasFieldHooks(field.fields, _depth + 1)
+		) {
 			return true;
 		}
 	}
 	return false;
 }
+
+/** Maximum nesting depth for field hook recursion (groups, arrays, blocks, tabs). */
+const MAX_FIELD_HOOK_DEPTH = 10;
 
 /**
  * Run field-level hooks for a specific hook type.
@@ -50,7 +62,24 @@ export async function runFieldHooks(
 	data: Record<string, unknown>,
 	req: RequestContext,
 	operation: 'create' | 'update' | 'read',
+	_depth = 0,
 ): Promise<Record<string, unknown>> {
+	// SECURITY: On depth overflow, throw ValidationError to prevent silent data loss.
+	// Matches the behavior in field-access.ts filterReadableFields/filterWritableFields.
+	if (_depth > MAX_FIELD_HOOK_DEPTH) {
+		throw new ValidationError([
+			{
+				field: 'root',
+				message: `Field hook nesting depth exceeds maximum of ${MAX_FIELD_HOOK_DEPTH} levels`,
+			},
+		]);
+	}
+
+	// Shallow copy is sufficient: the recursion into groups/arrays/blocks below
+	// reassigns each nested value with a freshly-copied object, so the original
+	// input tree is never mutated. A deep clone (structuredClone) would needlessly
+	// copy large transient payloads like the `_file` upload buffer on every write
+	// and would throw DataCloneError on any non-cloneable document value.
 	let processedData = { ...data };
 
 	for (const field of fields) {
@@ -69,17 +98,32 @@ export async function runFieldHooks(
 							nested as Record<string, unknown>,
 							req,
 							operation,
+							_depth + 1,
 						);
 					}
 				} else {
 					// Unnamed tab: fields live at same level (layout-only)
-					processedData = await runFieldHooks(hookType, tab.fields, processedData, req, operation);
+					processedData = await runFieldHooks(
+						hookType,
+						tab.fields,
+						processedData,
+						req,
+						operation,
+						_depth + 1,
+					);
 				}
 			}
 			continue;
 		}
 		if (field.type === 'collapsible' || field.type === 'row') {
-			processedData = await runFieldHooks(hookType, field.fields, processedData, req, operation);
+			processedData = await runFieldHooks(
+				hookType,
+				field.fields,
+				processedData,
+				req,
+				operation,
+				_depth + 1,
+			);
 			continue;
 		}
 
@@ -124,6 +168,7 @@ export async function runFieldHooks(
 				processedData[field.name] as Record<string, unknown>,
 				req,
 				operation,
+				_depth + 1,
 			);
 		}
 
@@ -131,7 +176,7 @@ export async function runFieldHooks(
 		if (field.type === 'array' && Array.isArray(processedData[field.name])) {
 			const rows = processedData[field.name] as Record<string, unknown>[];
 			processedData[field.name] = await Promise.all(
-				rows.map((row) => runFieldHooks(hookType, field.fields, row, req, operation)),
+				rows.map((row) => runFieldHooks(hookType, field.fields, row, req, operation, _depth + 1)),
 			);
 		}
 
@@ -143,7 +188,7 @@ export async function runFieldHooks(
 				blockRows.map(async (row) => {
 					const blockConfig = blockMap.get(row['blockType'] as string);
 					if (blockConfig) {
-						return runFieldHooks(hookType, blockConfig.fields, row, req, operation);
+						return runFieldHooks(hookType, blockConfig.fields, row, req, operation, _depth + 1);
 					}
 					return row;
 				}),

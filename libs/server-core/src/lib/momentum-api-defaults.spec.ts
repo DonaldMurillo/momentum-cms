@@ -430,4 +430,223 @@ describe('MomentumAPI', () => {
 			expect(result.docs[0]).toHaveProperty('ownerId', 'user-42');
 		});
 	});
+
+	describe('search() totalDocs and pagination', () => {
+		const searchCollection: CollectionConfig = {
+			slug: 'searchable',
+			labels: { singular: 'Searchable', plural: 'Searchables' },
+			fields: [
+				{ name: 'title', type: 'text', required: true },
+				{ name: 'body', type: 'textarea' },
+			],
+		};
+
+		beforeEach(() => {
+			resetMomentumAPI();
+		});
+
+		it('should compute totalDocs from pre-pagination count, not post-hook count', async () => {
+			const docs = Array.from({ length: 20 }, (_, i) => ({
+				id: String(i + 1),
+				title: `Post ${i + 1}`,
+				body: 'searchable content',
+			}));
+
+			const searchAdapter = {
+				...mockAdapter,
+				search: vi.fn().mockResolvedValue(docs),
+			};
+			const searchConfig: MomentumConfig = {
+				collections: [searchCollection],
+				db: { adapter: searchAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(searchConfig);
+
+			// Request page 1 with limit 5 — totalDocs should be 20, not 5
+			const result = await api.collection('searchable').search('content', {
+				fields: ['body'],
+				limit: 5,
+				page: 1,
+			});
+
+			expect(result.docs).toHaveLength(5);
+			expect(result.totalDocs).toBe(20);
+			expect(result.totalPages).toBe(4);
+			expect(result.hasNextPage).toBe(true);
+			expect(result.page).toBe(1);
+		});
+
+		it('should return correct pagination for page 2', async () => {
+			const docs = Array.from({ length: 20 }, (_, i) => ({
+				id: String(i + 1),
+				title: `Post ${i + 1}`,
+				body: 'searchable content',
+			}));
+
+			const searchAdapter = {
+				...mockAdapter,
+				search: vi.fn().mockResolvedValue(docs),
+			};
+			const searchConfig: MomentumConfig = {
+				collections: [searchCollection],
+				db: { adapter: searchAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(searchConfig);
+
+			const result = await api.collection('searchable').search('content', {
+				fields: ['body'],
+				limit: 5,
+				page: 2,
+			});
+
+			expect(result.docs).toHaveLength(5);
+			expect(result.totalDocs).toBe(20);
+			expect(result.page).toBe(2);
+			expect(result.hasNextPage).toBe(true);
+			expect(result.hasPrevPage).toBe(true);
+		});
+
+		it('should request a bounded scan from the adapter, not an unbounded limit: 0', async () => {
+			// Regression guard: search() must cap how many rows it pulls for in-memory
+			// filtering/pagination. limit: 0 ("no limit") would buffer the entire
+			// collection into Node on every search — a memory/DoS hazard.
+			const searchAdapter = {
+				...mockAdapter,
+				search: vi.fn().mockResolvedValue([]),
+			};
+			const searchConfig: MomentumConfig = {
+				collections: [searchCollection],
+				db: { adapter: searchAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(searchConfig);
+
+			await api.collection('searchable').search('content', { fields: ['body'], limit: 5 });
+
+			expect(searchAdapter.search).toHaveBeenCalledTimes(1);
+			const scanOptions = searchAdapter.search.mock.calls[0][3] as { limit: number };
+			expect(scanOptions.limit).toBeGreaterThan(0);
+			expect(Number.isFinite(scanOptions.limit)).toBe(true);
+		});
+
+		it('should include defaultWhere-filtered docs in totalDocs but not in results', async () => {
+			const scopedCol: CollectionConfig = {
+				slug: 'scoped-search',
+				fields: [
+					{ name: 'title', type: 'text', required: true },
+					{ name: 'ownerId', type: 'text' },
+				],
+				defaultWhere: () => ({ ownerId: 'user-1' }),
+			};
+			const docs = [
+				{ id: '1', title: 'match', ownerId: 'user-1' },
+				{ id: '2', title: 'match', ownerId: 'user-2' },
+				{ id: '3', title: 'match', ownerId: 'user-1' },
+				{ id: '4', title: 'match', ownerId: 'user-3' },
+			];
+			const searchAdapter = {
+				...mockAdapter,
+				search: vi.fn().mockResolvedValue(docs),
+			};
+			const searchConfig: MomentumConfig = {
+				collections: [scopedCol],
+				db: { adapter: searchAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(searchConfig);
+
+			const result = await api.collection('scoped-search').search('match', { limit: 10 });
+
+			// Only 2 docs match defaultWhere (ownerId = user-1)
+			expect(result.docs).toHaveLength(2);
+			expect(result.totalDocs).toBe(2);
+		});
+
+		it('should filter by query string in fallback path (no adapter.search)', async () => {
+			const allDocs = [
+				{ id: '1', title: 'Hello World', body: 'Some content' },
+				{ id: '2', title: 'Goodbye', body: 'Other stuff' },
+				{ id: '3', title: 'Hello Again', body: 'More content' },
+				{ id: '4', title: 'Random', body: 'hello lowercase' },
+			];
+			// Adapter without search method — uses find
+			const noSearchAdapter = {
+				...mockAdapter,
+				find: vi.fn().mockResolvedValue(allDocs),
+			};
+			const searchConfig: MomentumConfig = {
+				collections: [searchCollection],
+				db: { adapter: noSearchAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(searchConfig);
+
+			const result = await api.collection('searchable').search('hello', {
+				fields: ['title', 'body'],
+			});
+
+			// Should match: "Hello World" (title), "Hello Again" (title), "hello lowercase" (body)
+			expect(result.docs).toHaveLength(3);
+			expect(result.totalDocs).toBe(3);
+			// Verify it's case-insensitive
+			expect(result.docs.map((d: Record<string, unknown>) => d['title'])).toEqual(
+				expect.arrayContaining(['Hello World', 'Hello Again', 'Random']),
+			);
+		});
+
+		it('should paginate correctly in fallback path', async () => {
+			const allDocs = Array.from({ length: 15 }, (_, i) => ({
+				id: String(i + 1),
+				title: `Hello ${i + 1}`,
+				body: 'content',
+			}));
+			const noSearchAdapter = {
+				...mockAdapter,
+				find: vi.fn().mockResolvedValue(allDocs),
+			};
+			const searchConfig: MomentumConfig = {
+				collections: [searchCollection],
+				db: { adapter: noSearchAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(searchConfig);
+
+			const result = await api.collection('searchable').search('hello', {
+				fields: ['title'],
+				limit: 5,
+				page: 1,
+			});
+
+			expect(result.docs).toHaveLength(5);
+			expect(result.totalDocs).toBe(15);
+			expect(result.totalPages).toBe(3);
+			expect(result.hasNextPage).toBe(true);
+		});
+
+		it('should return empty results when no docs match query in fallback path', async () => {
+			const allDocs = [
+				{ id: '1', title: 'Hello World', body: 'content' },
+				{ id: '2', title: 'Goodbye', body: 'other' },
+			];
+			const noSearchAdapter = {
+				...mockAdapter,
+				find: vi.fn().mockResolvedValue(allDocs),
+			};
+			const searchConfig: MomentumConfig = {
+				collections: [searchCollection],
+				db: { adapter: noSearchAdapter },
+				server: { port: 4000 },
+			};
+			const api = initializeMomentumAPI(searchConfig);
+
+			const result = await api.collection('searchable').search('nonexistent', {
+				fields: ['title', 'body'],
+			});
+
+			expect(result.docs).toHaveLength(0);
+			expect(result.totalDocs).toBe(0);
+		});
+	});
 });

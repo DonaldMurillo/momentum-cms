@@ -37,8 +37,24 @@ export function redirectsPlugin(config: RedirectsPluginConfig = {}): MomentumPlu
 				collections.push(RedirectsCollection);
 			}
 
-			// Create redirect handler
-			const { router } = createRedirectsRouter(() => momentumApi, { cacheTtl });
+			// Create redirect handler — capture invalidateCache for cache busting on CRUD
+			const { router, invalidateCache } = createRedirectsRouter(() => momentumApi, { cacheTtl });
+
+			// Wire cache invalidation into collection hooks so the redirect map
+			// is refreshed immediately when redirect documents change.
+			RedirectsCollection.hooks = {
+				...RedirectsCollection.hooks,
+				afterChange: [
+					() => {
+						invalidateCache();
+					},
+				],
+				afterDelete: [
+					() => {
+						invalidateCache();
+					},
+				],
+			};
 
 			// Register at root level — runs before Angular SSR
 			registerMiddleware({

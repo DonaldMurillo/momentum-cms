@@ -142,13 +142,14 @@ describe('db-shared utilities', () => {
 			expect(result).toEqual({ a: { b: 1 }, c: [1, 2] });
 		});
 
-		it('should pass through parsed arrays (typeof array is object)', () => {
-			// Arrays pass the `typeof === 'object' && !== null` check, so they are returned as-is
+		it('should return empty object for JSON arrays (not records)', () => {
+			// Arrays pass `typeof === 'object'` but are not valid Record<string, unknown>.
+			// Previously returned the array, causing Object.entries() to produce numeric
+			// keys ('0','1','2') that failed column name validation with confusing errors.
 
-			expect(parseJsonToRecord('[1, 2, 3]')).toEqual([1, 2, 3] as unknown as Record<
-				string,
-				unknown
-			>);
+			expect(parseJsonToRecord('[1, 2, 3]')).toEqual({});
+			expect(parseJsonToRecord('[]')).toEqual({});
+			expect(parseJsonToRecord('[{"a":1}]')).toEqual({});
 		});
 
 		it('should return empty object for JSON primitives', () => {

@@ -171,9 +171,10 @@ function flattenWhereRecursive(where: WhereClause, depth: number): Record<string
 		for (const [userOp, internalOp] of Object.entries(OPERATOR_MAP)) {
 			if (userOp in condObj) {
 				let value = condObj[userOp];
-				// Coerce string "true"/"false" to boolean for $exists (query-string origin)
+				// Coerce string "true"/"false"/"1"/"yes" to boolean for $exists (query-string origin)
 				if (internalOp === '$exists' && typeof value === 'string') {
-					value = value === 'true';
+					const lower = value.toLowerCase();
+					value = lower === 'true' || lower === '1' || lower === 'yes';
 				}
 				// Strip null bytes from string values — they crash Postgres UTF-8 encoding
 				if (typeof value === 'string') {

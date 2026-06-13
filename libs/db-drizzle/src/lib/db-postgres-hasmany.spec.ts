@@ -134,4 +134,30 @@ describe('PostgreSQL adapter — hasMany JSONB query generation', () => {
 			expect(query.text).toMatch(/"folder"\s*!=\s*\$/);
 		});
 	});
+
+	// Regression: momentum-api's search() passes `limit: 0` to fetch ALL matches for
+	// accurate totals before in-memory filtering + pagination. `limit: 0` must mean
+	// "no limit", NOT a literal `LIMIT 0` (which returns zero rows and silently breaks
+	// search). The `?? 20` default keeps 0 (it is not nullish), so the SQL builder must
+	// special-case it. The SQLite/in-memory test adapters ignore limit, so only this
+	// SQL-generation assertion guards the contract.
+	describe('search() limit:0 contract (no-limit)', () => {
+		it('omits the LIMIT/OFFSET clause when limit is 0', async () => {
+			await adapter.search?.('media', 'hello', ['filename'], { limit: 0, page: 1 });
+			const query = expectLastSelect();
+			expect(query.text).not.toMatch(/\bLIMIT\b/i);
+			expect(query.text).not.toMatch(/\bOFFSET\b/i);
+			// Only the search query + per-field ILIKE params — no limit/offset params appended.
+			expect(query.values).toEqual(['hello', '%hello%']);
+		});
+
+		it('includes LIMIT/OFFSET when a positive limit is given', async () => {
+			await adapter.search?.('media', 'hello', ['filename'], { limit: 10, page: 2 });
+			const query = expectLastSelect();
+			expect(query.text).toMatch(/\bLIMIT\b/i);
+			expect(query.text).toMatch(/\bOFFSET\b/i);
+			// search query + ILIKE param + limit + offset (page 2 → offset 10)
+			expect(query.values).toEqual(['hello', '%hello%', 10, 10]);
+		});
+	});
 });

@@ -13,6 +13,7 @@ import type {
 } from '@momentumcms/core';
 import { validateMimeType as validateMimeByMagicBytes } from '@momentumcms/storage';
 import { getMomentumAPI, type MomentumAPIContext } from './momentum-api';
+import { AccessDeniedError } from './momentum-api.types';
 
 /**
  * Upload request from the client.
@@ -111,6 +112,85 @@ export function validateMimeType(mimeType: string, allowedTypes: string[]): stri
 }
 
 /**
+ * Shared upload validation and execution pipeline.
+ * Both handleUpload and handleCollectionUpload delegate to this function,
+ * ensuring security checks (auth, size, MIME, magic bytes) are applied consistently.
+ *
+ * @param adapter - Storage adapter
+ * @param file - Uploaded file
+ * @param user - User context (must be authenticated)
+ * @param limits - File size and MIME type limits
+ * @param buildDocData - Callback to assemble document data from stored file info
+ * @param collectionSlug - Target collection slug
+ * @returns Upload result with status and optional doc/error
+ */
+async function executeUploadPipeline(
+	adapter: StorageAdapter,
+	file: UploadedFile,
+	user: MomentumAPIContext['user'],
+	limits: { maxFileSize: number; allowedMimeTypes: string[] },
+	buildDocData: (storedFile: StoredFile, file: UploadedFile) => Record<string, unknown>,
+	collectionSlug: string,
+): Promise<{ status: number; doc?: Record<string, unknown>; error?: string }> {
+	// 1. Auth check
+	if (!user) {
+		return { status: 401, error: 'Authentication required to upload files' };
+	}
+
+	// 2. Validate file size
+	const sizeError = validateFileSize(file, limits.maxFileSize);
+	if (sizeError) {
+		return { status: 400, error: sizeError };
+	}
+
+	// 3. Validate claimed MIME type against allowed list
+	const mimeError = validateMimeType(file.mimeType, limits.allowedMimeTypes);
+	if (mimeError) {
+		return { status: 400, error: mimeError };
+	}
+
+	// 4. Validate actual file content via magic bytes
+	if (file.buffer && file.buffer.length > 0) {
+		const magicByteResult = validateMimeByMagicBytes(
+			file.buffer,
+			file.mimeType,
+			limits.allowedMimeTypes,
+		);
+		if (!magicByteResult.valid) {
+			return {
+				status: 400,
+				error: magicByteResult.error ?? 'File content does not match claimed type',
+			};
+		}
+	}
+
+	// 5. Store file via adapter
+	const storedFile: StoredFile = await adapter.upload(file);
+
+	// 6. Build document data via caller-provided callback
+	const docData = buildDocData(storedFile, file);
+
+	// 7. Create document in the database
+	const api = getMomentumAPI().setContext({ user });
+	const doc = await api.collection<Record<string, unknown>>(collectionSlug).create(docData);
+
+	return { status: 201, doc };
+}
+
+/**
+ * Map upload errors to standardised response shapes.
+ */
+function mapUploadError(error: unknown): { status: number; error: string } {
+	if (error instanceof AccessDeniedError) {
+		return { status: 403, error: error.message };
+	}
+	if (error instanceof Error) {
+		return { status: 500, error: `Upload failed: ${error.message}` };
+	}
+	return { status: 500, error: 'Upload failed: Unknown error' };
+}
+
+/**
  * Handle file upload.
  *
  * @param config - Upload configuration
@@ -125,88 +205,28 @@ export async function handleUpload(
 	const { file, user, alt, collection = 'media' } = request;
 
 	try {
-		// Check if user is authenticated
-		if (!user) {
-			return {
-				status: 401,
-				error: 'Authentication required to upload files',
-			};
-		}
+		const result = await executeUploadPipeline(
+			adapter,
+			file,
+			user,
+			{ maxFileSize, allowedMimeTypes },
+			(storedFile, uploadedFile) => ({
+				filename: uploadedFile.originalName,
+				mimeType: uploadedFile.mimeType,
+				filesize: uploadedFile.size,
+				path: storedFile.path,
+				url: storedFile.url,
+				alt: alt ?? '',
+				_file: uploadedFile,
+			}),
+			collection,
+		);
 
-		// Validate file size
-		const sizeError = validateFileSize(file, maxFileSize);
-		if (sizeError) {
-			return {
-				status: 400,
-				error: sizeError,
-			};
-		}
-
-		// Validate claimed MIME type against allowed list
-		const mimeError = validateMimeType(file.mimeType, allowedMimeTypes);
-		if (mimeError) {
-			return {
-				status: 400,
-				error: mimeError,
-			};
-		}
-
-		// Validate actual file content via magic bytes
-		if (file.buffer && file.buffer.length > 0) {
-			const magicByteResult = validateMimeByMagicBytes(
-				file.buffer,
-				file.mimeType,
-				allowedMimeTypes,
-			);
-			if (!magicByteResult.valid) {
-				return {
-					status: 400,
-					error: magicByteResult.error ?? 'File content does not match claimed type',
-				};
-			}
-		}
-
-		// Store file using the storage adapter
-		const storedFile: StoredFile = await adapter.upload(file);
-
-		// Build media data
-		const mediaData: Record<string, unknown> = {
-			filename: file.originalName,
-			mimeType: file.mimeType,
-			filesize: file.size,
-			path: storedFile.path,
-			url: storedFile.url,
-			alt: alt ?? '',
-			_file: file,
-		};
-
-		// Create media document in the database
-		const api = getMomentumAPI().setContext({ user });
-		const doc = await api.collection<MediaDocument>(collection).create(mediaData);
-
-		return {
-			status: 201,
-			doc,
-		};
+		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- buildDocData assembles MediaDocument-shaped data for the create call
+		const doc = result.doc as MediaDocument | undefined;
+		return { status: result.status, doc, error: result.error };
 	} catch (error) {
-		// Handle specific error types
-		if (error instanceof Error) {
-			if (error.message.includes('Access denied')) {
-				return {
-					status: 403,
-					error: error.message,
-				};
-			}
-			return {
-				status: 500,
-				error: `Upload failed: ${error.message}`,
-			};
-		}
-
-		return {
-			status: 500,
-			error: 'Upload failed: Unknown error',
-		};
+		return mapUploadError(error);
 	}
 }
 
@@ -266,71 +286,26 @@ export async function handleCollectionUpload(
 	const allowedMimeTypes = collectionUpload.mimeTypes ?? globalConfig.allowedMimeTypes ?? [];
 
 	try {
-		// 1. Auth check
-		if (!user) {
-			return {
-				status: 401,
-				error: 'Authentication required to upload files',
-			};
-		}
+		const result = await executeUploadPipeline(
+			adapter,
+			file,
+			user,
+			{ maxFileSize, allowedMimeTypes },
+			(storedFile, uploadedFile) => ({
+				...fields,
+				filename: uploadedFile.originalName,
+				mimeType: uploadedFile.mimeType,
+				filesize: uploadedFile.size,
+				path: storedFile.path,
+				url: storedFile.url,
+				_file: uploadedFile,
+			}),
+			collectionSlug,
+		);
 
-		// 2. Validate file size
-		const sizeError = validateFileSize(file, maxFileSize);
-		if (sizeError) {
-			return { status: 400, error: sizeError };
-		}
-
-		// 3. Validate claimed MIME type
-		const mimeError = validateMimeType(file.mimeType, allowedMimeTypes);
-		if (mimeError) {
-			return { status: 400, error: mimeError };
-		}
-
-		// 4. Validate actual file content via magic bytes
-		if (file.buffer && file.buffer.length > 0) {
-			const magicByteResult = validateMimeByMagicBytes(
-				file.buffer,
-				file.mimeType,
-				allowedMimeTypes,
-			);
-			if (!magicByteResult.valid) {
-				return {
-					status: 400,
-					error: magicByteResult.error ?? 'File content does not match claimed type',
-				};
-			}
-		}
-
-		// 5. Store file via adapter
-		const storedFile: StoredFile = await adapter.upload(file);
-
-		// 6. Build document data: user fields first, then auto-populated metadata wins
-		const docData: Record<string, unknown> = {
-			...fields,
-			filename: file.originalName,
-			mimeType: file.mimeType,
-			filesize: file.size,
-			path: storedFile.path,
-			url: storedFile.url,
-			_file: file,
-		};
-
-		// 7. Create document in the target collection
-		const api = getMomentumAPI().setContext({ user });
-		const doc = await api.collection<Record<string, unknown>>(collectionSlug).create(docData);
-
-		return {
-			status: 201,
-			doc,
-		};
+		return { status: result.status, doc: result.doc, error: result.error };
 	} catch (error) {
-		if (error instanceof Error) {
-			if (error.message.includes('Access denied')) {
-				return { status: 403, error: error.message };
-			}
-			return { status: 500, error: `Upload failed: ${error.message}` };
-		}
-		return { status: 500, error: 'Upload failed: Unknown error' };
+		return mapUploadError(error);
 	}
 }
 

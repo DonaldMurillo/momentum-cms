@@ -9,6 +9,7 @@ import {
 	generateApiKeyId,
 	normalizeApiKeyRole,
 } from '@momentumcms/server-core';
+import { AUTH_ROLES } from '@momentumcms/auth';
 import type { AuthenticatedRequest } from './auth-middleware';
 
 /**
@@ -39,7 +40,12 @@ export function createApiKeyResolverMiddleware(
 	config: ApiKeyMiddlewareConfig,
 ): (req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void> {
 	return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-		const apiKey = req.headers['x-api-key'];
+		let apiKey = req.headers['x-api-key'];
+
+		// Normalize array headers (duplicate X-API-Key from proxies / HTTP smuggling)
+		if (Array.isArray(apiKey)) {
+			apiKey = apiKey[0];
+		}
 
 		// No API key header - let session auth handle it
 		if (!apiKey || typeof apiKey !== 'string') {
@@ -62,10 +68,18 @@ export function createApiKeyResolverMiddleware(
 				return;
 			}
 
-			// Check expiration
-			if (record.expiresAt && new Date(record.expiresAt) < new Date()) {
-				res.status(401).json({ error: 'API key expired' });
-				return;
+			// Check expiration — guard against NaN from malformed expiresAt in DB
+			// Empty string is falsy-like but stored in DB — treat as invalid
+			if (record.expiresAt !== null && record.expiresAt !== undefined) {
+				const expiry = new Date(record.expiresAt);
+				if (!Number.isFinite(expiry.getTime())) {
+					res.status(401).json({ error: 'API key has invalid expiration' });
+					return;
+				}
+				if (expiry < new Date()) {
+					res.status(401).json({ error: 'API key expired' });
+					return;
+				}
 			}
 
 			// Set user context from API key
@@ -89,8 +103,9 @@ export function createApiKeyResolverMiddleware(
 }
 
 /** Role hierarchy for permission checks. Lower index = higher privilege.
- * Canonical source: AUTH_ROLES in @momentumcms/auth/collections */
-const ROLE_HIERARCHY = ['admin', 'editor', 'user', 'viewer'];
+ * Derived from AUTH_ROLES (canonical, ordered by privilege) so this stays in
+ * sync with the auth library instead of being hand-maintained. */
+const ROLE_HIERARCHY = AUTH_ROLES.map((role) => role.value);
 
 /**
  * Creates Express router for API key management endpoints.
@@ -235,14 +250,19 @@ export function createApiKeyRoutes(config: ApiKeyMiddlewareConfig): Router {
 
 			// Non-admin users can only delete their own keys
 			if (user.role !== 'admin') {
-				const existingKey = await config.store.findById(keyId);
-				if (!existingKey) {
-					res.status(404).json({ error: 'API key not found' });
-					return;
-				}
-				if (existingKey.createdBy !== user.id) {
-					// Return 404 (not 403) to prevent API key ID enumeration
-					res.status(404).json({ error: 'API key not found' });
+				try {
+					const existingKey = await config.store.findById(keyId);
+					if (!existingKey) {
+						res.status(404).json({ error: 'API key not found' });
+						return;
+					}
+					if (existingKey.createdBy !== user.id) {
+						// Return 404 (not 403) to prevent API key ID enumeration
+						res.status(404).json({ error: 'API key not found' });
+						return;
+					}
+				} catch {
+					res.status(500).json({ error: 'Failed to verify API key ownership' });
 					return;
 				}
 			}
