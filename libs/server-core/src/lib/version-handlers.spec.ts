@@ -414,3 +414,151 @@ describe('version handler success and error mapping', () => {
 	// Suppress the version operations resolver warning in spy-based assertions
 	afterEach(() => vi.restoreAllMocks());
 });
+
+describe('handleSchedulePublishRequest edge cases', () => {
+	beforeEach(() => {
+		resetMomentumAPI();
+		setupConfig();
+	});
+	afterEach(() => resetMomentumAPI());
+
+	it('returns 400 when publishAt is an empty string', async () => {
+		const result = await handleSchedulePublishRequest({
+			collectionSlug: 'posts',
+			id: '1',
+			publishAt: '',
+			user: adminUser,
+		});
+		expect(result.status).toBe(400);
+		expect(result.body).toMatchObject({ error: 'Missing publishAt' });
+	});
+
+	it('returns 400 when publishAt is not a valid date ("not-a-date")', async () => {
+		const result = await handleSchedulePublishRequest({
+			collectionSlug: 'posts',
+			id: '1',
+			publishAt: 'not-a-date',
+			user: adminUser,
+		});
+		expect(result.status).toBe(400);
+		expect(result.body).toMatchObject({ error: 'Invalid publishAt' });
+	});
+
+	it('accepts auto-corrected date like "2024-02-30" (JS runtime auto-corrects to March 1)', async () => {
+		// new Date("2024-02-30") auto-corrects to 2024-03-01 — not NaN, so it passes
+		const result = await handleSchedulePublishRequest({
+			collectionSlug: 'posts',
+			id: '1',
+			publishAt: '2024-02-30',
+			user: adminUser,
+		});
+		// Will 500 because the in-memory adapter doesn't implement schedulePublish,
+		// but it should NOT return 400 (the date validation passes).
+		expect(result.status).not.toBe(400);
+	});
+
+	it('accepts a far-future date like "9999-12-31T23:59:59.999Z"', async () => {
+		const result = await handleSchedulePublishRequest({
+			collectionSlug: 'posts',
+			id: '1',
+			publishAt: '9999-12-31T23:59:59.999Z',
+			user: adminUser,
+		});
+		expect(result.status).not.toBe(400);
+	});
+});
+
+describe('handleRestoreVersionRequest edge cases', () => {
+	beforeEach(() => {
+		resetMomentumAPI();
+		setupConfig();
+	});
+	afterEach(() => resetMomentumAPI());
+
+	it('returns 400 when versionId is an empty string', async () => {
+		const result = await handleRestoreVersionRequest({
+			collectionSlug: 'posts',
+			id: 'doc-1',
+			versionId: '',
+			user: adminUser,
+		});
+		expect(result.status).toBe(400);
+		expect(result.body).toMatchObject({ error: 'Invalid request' });
+	});
+
+	it('returns 400 when versionId is a number (not string)', async () => {
+		const result = await handleRestoreVersionRequest({
+			collectionSlug: 'posts',
+			id: 'doc-1',
+			versionId: 42,
+			user: adminUser,
+		});
+		expect(result.status).toBe(400);
+		expect(result.body).toMatchObject({ error: 'Invalid request' });
+	});
+
+	it('returns 400 when versionId is null', async () => {
+		const result = await handleRestoreVersionRequest({
+			collectionSlug: 'posts',
+			id: 'doc-1',
+			versionId: null,
+			user: adminUser,
+		});
+		expect(result.status).toBe(400);
+	});
+});
+
+describe('handleCompareVersionsRequest edge cases', () => {
+	let docId: string;
+
+	beforeEach(async () => {
+		resetMomentumAPI();
+		setupVersionedConfig();
+		const { getMomentumAPI } = await import('./momentum-api');
+		const created = await getMomentumAPI()
+			.collection<{ title: string }>('posts')
+			.create({ title: 'Initial' });
+		docId = String(created['id']);
+	});
+	afterEach(() => resetMomentumAPI());
+
+	it('returns 400 when versionId1 is an empty string', async () => {
+		const result = await handleCompareVersionsRequest({
+			collectionSlug: 'posts',
+			id: docId,
+			versionId1: '',
+			versionId2: 'v-1',
+			user: adminUser,
+		});
+		expect(result.status).toBe(400);
+		expect(result.body).toMatchObject({ error: 'Missing version IDs' });
+	});
+
+	it('returns 200 when comparing a version with itself (same versionId)', async () => {
+		// Save a draft to create a version
+		await handleSaveDraftRequest({
+			collectionSlug: 'posts',
+			id: docId,
+			data: { title: 'v1' },
+			user: adminUser,
+		});
+		const list = await handleListVersionsRequest({
+			collectionSlug: 'posts',
+			id: docId,
+			user: adminUser,
+		});
+		const body = list.body as { docs: { id: string }[] };
+		const versionId = body.docs[0]?.id;
+		expect(versionId).toBeDefined();
+
+		// Comparing a version with itself — handler should not error
+		const result = await handleCompareVersionsRequest({
+			collectionSlug: 'posts',
+			id: docId,
+			versionId1: versionId,
+			versionId2: versionId,
+			user: adminUser,
+		});
+		expect(result.status).toBe(200);
+	});
+});

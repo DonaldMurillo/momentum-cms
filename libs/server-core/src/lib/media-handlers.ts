@@ -95,7 +95,10 @@ export async function handleMediaServeRequest(params: MediaServeParams): Promise
 	return {
 		status: 200,
 		body: result,
-		headers: { 'Content-Type': result.mimeType ?? 'application/octet-stream' },
+		headers: {
+			'Content-Type': result.mimeType ?? 'application/octet-stream',
+			'X-Content-Type-Options': 'nosniff',
+		},
 	};
 }
 

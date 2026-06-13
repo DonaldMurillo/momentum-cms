@@ -249,4 +249,105 @@ describe('createRedirectsRouter', () => {
 
 		expect(res.redirect).toHaveBeenCalledWith(301, '/dest');
 	});
+
+	describe('cache invalidation after CRUD', () => {
+		it('serves fresh redirect immediately after invalidateCache is called (new redirect added)', async () => {
+			// Step 1: Create router with mock API returning initial empty list
+			const findFn = vi.fn().mockResolvedValue({ docs: [] });
+			const api = {
+				collection: vi.fn().mockReturnValue({ find: findFn }),
+				getConfig: vi.fn(),
+			} as unknown as MomentumAPI;
+
+			const { router, invalidateCache } = createRedirectsRouter(() => api, { cacheTtl: 60_000 });
+
+			// Step 2: Request /old — should pass through (no redirect)
+			const res1 = mockRes();
+			await invokeMiddleware(router, mockReq('/old'), res1, mockNext());
+			expect(res1.redirect).not.toHaveBeenCalled();
+			expect(findFn).toHaveBeenCalledTimes(1);
+
+			// Step 3: Simulate a new redirect document being added to the collection
+			findFn.mockResolvedValue({
+				docs: [{ from: '/old', to: '/new', type: 'permanent', active: true }],
+			});
+
+			// Step 3b: Invalidate cache (as the plugin now does after CRUD via hooks)
+			invalidateCache();
+
+			// Step 4: Request /old again within the TTL window
+			const res2 = mockRes();
+			await invokeMiddleware(router, mockReq('/old'), res2, mockNext());
+
+			// Step 5: After invalidation, the redirect is served immediately
+			expect(findFn).toHaveBeenCalledTimes(2);
+			expect(res2.redirect).toHaveBeenCalledWith(301, '/new');
+		});
+
+		it('serves fresh data immediately after invalidateCache (redirect deleted)', async () => {
+			// Step 1: Create router with mock API returning a redirect
+			const findFn = vi.fn().mockResolvedValue({
+				docs: [{ from: '/old', to: '/new', type: 'permanent', active: true }],
+			});
+			const api = {
+				collection: vi.fn().mockReturnValue({ find: findFn }),
+				getConfig: vi.fn(),
+			} as unknown as MomentumAPI;
+
+			const { router, invalidateCache } = createRedirectsRouter(() => api, { cacheTtl: 60_000 });
+
+			// Step 2: Request /old — should redirect
+			const res1 = mockRes();
+			await invokeMiddleware(router, mockReq('/old'), res1, mockNext());
+			expect(res1.redirect).toHaveBeenCalledWith(301, '/new');
+
+			// Step 3: Simulate redirect being deleted from collection
+			findFn.mockResolvedValue({ docs: [] });
+
+			// Step 3b: Invalidate cache (as the plugin now does after CRUD via hooks)
+			invalidateCache();
+
+			// Step 4: Request /old again within TTL window
+			const res2 = mockRes();
+			await invokeMiddleware(router, mockReq('/old'), res2, mockNext());
+
+			// Step 5: After invalidation, the redirect is gone — passes through
+			expect(findFn).toHaveBeenCalledTimes(2); // Re-queried after invalidation
+			expect(res2.redirect).not.toHaveBeenCalled(); // No redirect — deleted
+		});
+
+		it('serves updated redirect target immediately after invalidateCache (target changed)', async () => {
+			// Step 1: Create router with mock API returning a redirect
+			const findFn = vi.fn().mockResolvedValue({
+				docs: [{ from: '/old', to: '/v1', type: 'permanent', active: true }],
+			});
+			const api = {
+				collection: vi.fn().mockReturnValue({ find: findFn }),
+				getConfig: vi.fn(),
+			} as unknown as MomentumAPI;
+
+			const { router, invalidateCache } = createRedirectsRouter(() => api, { cacheTtl: 60_000 });
+
+			// Step 2: Request /old — should redirect to /v1
+			const res1 = mockRes();
+			await invokeMiddleware(router, mockReq('/old'), res1, mockNext());
+			expect(res1.redirect).toHaveBeenCalledWith(301, '/v1');
+
+			// Step 3: Simulate redirect target being updated to /v2
+			findFn.mockResolvedValue({
+				docs: [{ from: '/old', to: '/v2', type: 'permanent', active: true }],
+			});
+
+			// Step 3b: Invalidate cache (as the plugin now does after CRUD via hooks)
+			invalidateCache();
+
+			// Step 4: Request /old again within TTL window
+			const res2 = mockRes();
+			await invokeMiddleware(router, mockReq('/old'), res2, mockNext());
+
+			// Step 5: After invalidation, the updated target is served immediately
+			expect(findFn).toHaveBeenCalledTimes(2); // Re-queried after invalidation
+			expect(res2.redirect).toHaveBeenCalledWith(301, '/v2'); // New target
+		});
+	});
 });

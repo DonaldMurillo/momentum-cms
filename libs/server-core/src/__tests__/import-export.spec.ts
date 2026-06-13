@@ -270,6 +270,54 @@ describe('parseJsonImport', () => {
 		expect(result.docs).toEqual([]);
 		expect(result.error).toBeDefined();
 	});
+
+	it('should reject null elements in the import array', () => {
+		const result = parseJsonImport([{ title: 'A' }, null, { title: 'B' }]);
+
+		expect(result.docs).toEqual([]);
+		expect(result.error).toContain('items[1]');
+		expect(result.error).toContain('null');
+	});
+
+	it('should reject primitive elements (number) in the import array', () => {
+		const result = parseJsonImport([{ title: 'A' }, 123]);
+
+		expect(result.docs).toEqual([]);
+		expect(result.error).toContain('items[1]');
+		expect(result.error).toContain('number');
+	});
+
+	it('should reject string elements in the import array', () => {
+		const result = parseJsonImport([{ title: 'A' }, 'not-an-object']);
+
+		expect(result.docs).toEqual([]);
+		expect(result.error).toContain('items[1]');
+		expect(result.error).toContain('string');
+	});
+
+	it('should reject nested array elements in the import array', () => {
+		const result = parseJsonImport([{ title: 'A' }, [1, 2, 3]]);
+
+		expect(result.docs).toEqual([]);
+		expect(result.error).toContain('items[1]');
+		expect(result.error).toContain('array');
+	});
+
+	it('should reject non-object elements in { docs: [...] } wrapper', () => {
+		const result = parseJsonImport({ docs: [{ title: 'A' }, 123, null] });
+
+		expect(result.docs).toEqual([]);
+		expect(result.error).toContain('items[1]');
+		expect(result.error).toContain('number');
+	});
+
+	it('should reject non-object elements in { data: [...] } wrapper', () => {
+		const result = parseJsonImport({ data: [null, { title: 'A' }] });
+
+		expect(result.docs).toEqual([]);
+		expect(result.error).toContain('items[0]');
+		expect(result.error).toContain('null');
+	});
 });
 
 // ============================================
@@ -469,6 +517,44 @@ describe('parseCsvImport', () => {
 		expect(result.docs[0]['price']).not.toBe(Infinity);
 		expect(result.docs[1]['price']).not.toBe(-Infinity);
 	});
+
+	it('should silently drop entirely blank rows', () => {
+		const csv = 'title,price\nWidget,9.99\n\nGadget,4.99';
+		const result = parseCsvImport(csv, testCollection);
+
+		expect(result.docs).toHaveLength(2);
+		expect(result.docs[0]['title']).toBe('Widget');
+		expect(result.docs[1]['title']).toBe('Gadget');
+	});
+
+	it('should silently drop rows that are only commas (all-empty fields)', () => {
+		const csv = 'title,price\nWidget,9.99\n,\nGadget,4.99';
+		const result = parseCsvImport(csv, testCollection);
+
+		expect(result.docs).toHaveLength(2);
+		expect(result.docs[0]['title']).toBe('Widget');
+		expect(result.docs[1]['title']).toBe('Gadget');
+	});
+
+	it('should handle data rows with fewer columns than header', () => {
+		// Header has 3 columns, data row has only 1 — missing fields stay undefined
+		const csv = 'title,price,active\nWidget';
+		const result = parseCsvImport(csv, testCollection);
+
+		expect(result.docs).toHaveLength(1);
+		expect(result.docs[0]).toEqual({ title: 'Widget' });
+		expect(result.docs[0]['price']).toBeUndefined();
+		expect(result.docs[0]['active']).toBeUndefined();
+	});
+
+	it('should handle data rows with more columns than header', () => {
+		// Extra column values are ignored because the inner loop uses j < headers.length
+		const csv = 'title\nWidget,9.99,true';
+		const result = parseCsvImport(csv, testCollection);
+
+		expect(result.docs).toHaveLength(1);
+		expect(result.docs[0]).toEqual({ title: 'Widget' });
+	});
 });
 
 // ============================================
@@ -578,5 +664,32 @@ describe('validateImportDocs', () => {
 			expect(r.valid).toBe(false);
 			expect(r.errors).toContainEqual(expect.objectContaining({ field: 'price' }));
 		}
+	});
+
+	it('should reject null elements in the docs array', () => {
+		// @ts-expect-error — intentionally passing null to test runtime guard
+		const results = validateImportDocs([{ title: 'A' }, null], testCollection);
+
+		expect(results[0].valid).toBe(true);
+		expect(results[1].valid).toBe(false);
+		expect(results[1].errors[0].message).toContain('Expected an object, got null');
+	});
+
+	it('should reject primitive elements (number) in the docs array', () => {
+		// @ts-expect-error — intentionally passing number to test runtime guard
+		const results = validateImportDocs([{ title: 'A' }, 123], testCollection);
+
+		expect(results[0].valid).toBe(true);
+		expect(results[1].valid).toBe(false);
+		expect(results[1].errors[0].message).toContain('Expected an object, got number');
+	});
+
+	it('should reject string elements in the docs array', () => {
+		// @ts-expect-error — intentionally passing string to test runtime guard
+		const results = validateImportDocs([{ title: 'A' }, 'not-an-object'], testCollection);
+
+		expect(results[0].valid).toBe(true);
+		expect(results[1].valid).toBe(false);
+		expect(results[1].errors[0].message).toContain('Expected an object, got string');
 	});
 });

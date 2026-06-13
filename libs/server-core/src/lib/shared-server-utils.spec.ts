@@ -149,6 +149,62 @@ describe('sanitizeErrorMessage', () => {
 	it('returns fallback for non-Error values (number)', () => {
 		expect(sanitizeErrorMessage(42, 'fail')).toBe('fail');
 	});
+
+	// --- Hostname / port / network info leaks ---
+	it('returns fallback for ECONNREFUSED with host:port', () => {
+		const err = new Error('connect ECONNREFUSED 127.0.0.1:5432');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe('fallback');
+	});
+
+	it('returns fallback for messages containing internal URLs', () => {
+		const err = new Error('fetch failed http://db.internal:5432/query');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe('fallback');
+	});
+
+	it('returns fallback for DNS resolution errors leaking hostnames', () => {
+		const err = new Error('getaddrinfo ENOTFOUND db-server.internal.local');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe('fallback');
+	});
+
+	it('returns fallback for connection refused with IPv6 loopback', () => {
+		const err = new Error('connect ECONNREFUSED ::1:5432');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe('fallback');
+	});
+
+	// --- Public URLs should NOT be sanitized (false positive protection) ---
+	it('preserves messages with public documentation URLs', () => {
+		const err = new Error('See https://docs.example.com for API documentation');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe(
+			'See https://docs.example.com for API documentation',
+		);
+	});
+
+	it('preserves messages with public schema URLs (with path segments)', () => {
+		const err = new Error('Invalid format, expected https://schema.org/Article');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe(
+			'Invalid format, expected https://schema.org/Article',
+		);
+	});
+
+	it('preserves messages with public schema URLs (no slashes in path)', () => {
+		const err = new Error('Please visit https://momentumcms.com for help');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe(
+			'Please visit https://momentumcms.com for help',
+		);
+	});
+
+	// --- A filesystem path must still be stripped even when a public URL is present ---
+	it('strips a filesystem path even when the message also contains a public URL', () => {
+		// URL presence must not disable path detection — the URL is removed first,
+		// then the remaining text is checked for real filesystem paths.
+		const err = new Error("open '/etc/app/secret.key' failed, see https://docs.example.com/errors");
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe('fallback');
+	});
+
+	it('strips a Windows path even when the message also contains a public URL', () => {
+		const err = new Error('cannot read C:\\app\\config\\secret.env (docs: https://example.com)');
+		expect(sanitizeErrorMessage(err, 'fallback')).toBe('fallback');
+	});
 });
 
 describe('parseWhereParam', () => {
@@ -214,18 +270,19 @@ describe('parseWhereParam', () => {
 		expect(parseWhereParam(true)).toBeUndefined();
 	});
 
-	it('rejects object values inside in operator (only wraps primitives)', () => {
+	it('converts object values inside in operator to values array', () => {
 		// Simulates crafted query: ?where[status][in][equals]=something
+		// qs parses this as {0:"foo"} style objects; normalizeWhereOperators converts
+		// object values to Object.values arrays so the filter is preserved.
 		const obj = { status: { in: { equals: 'something' } } };
 		const result = parseWhereParam(obj);
-		// Object should NOT be wrapped into an array — should be stripped or ignored
-		expect(result).toEqual({ status: {} });
+		expect(result).toEqual({ status: { in: ['something'] } });
 	});
 
-	it('rejects object values inside not_in operator', () => {
+	it('converts object values inside not_in operator to values array', () => {
 		const obj = { status: { not_in: { equals: 'something' } } };
 		const result = parseWhereParam(obj);
-		expect(result).toEqual({ status: {} });
+		expect(result).toEqual({ status: { not_in: ['something'] } });
 	});
 
 	it('wraps primitive string values in in/not_in as arrays', () => {
@@ -238,6 +295,35 @@ describe('parseWhereParam', () => {
 		const obj = { priority: { in: 5 } };
 		const result = parseWhereParam(obj);
 		expect(result).toEqual({ priority: { in: [5] } });
+	});
+
+	// --- Regression: qs bracket-notation objects in `in` operator ---
+	it('converts qs bracket-notation object {0:"draft"} to array ["draft"]', () => {
+		// ?where[status][in][0]=draft → qs parses to {0:"draft"}
+		const obj = { status: { in: { '0': 'draft' } } };
+		const result = parseWhereParam(obj);
+		expect(result).toEqual({ status: { in: ['draft'] } });
+	});
+
+	it('keeps empty `in` array for empty object (match-nothing, not match-everything)', () => {
+		// Empty object → Object.values({}) = [] → must become { in: [] } not dropped.
+		// Dropping the key would widen the filter to match all rows (data leak).
+		const obj = { status: { in: {} } };
+		const result = parseWhereParam(obj);
+		expect(result).toEqual({ status: { in: [] } });
+	});
+
+	it('extracts non-primitive values from qs bracket-notation objects', () => {
+		// ?where[status][in][0][nested]=x → qs might parse as {0: {nested: 'x'}}
+		const obj = { status: { in: { '0': { nested: 'x' } } } };
+		const result = parseWhereParam(obj);
+		expect(result).toEqual({ status: { in: [{ nested: 'x' }] } });
+	});
+
+	it('preserves existing arrays in `in` operator unchanged', () => {
+		const obj = { status: { in: ['draft', 'published'] } };
+		const result = parseWhereParam(obj);
+		expect(result).toEqual({ status: { in: ['draft', 'published'] } });
 	});
 });
 

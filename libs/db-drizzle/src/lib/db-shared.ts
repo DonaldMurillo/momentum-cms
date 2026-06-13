@@ -60,7 +60,7 @@ export function getStatusFromRow(row: Record<string, unknown>): DocumentStatus {
 export function parseJsonToRecord(jsonString: string): Record<string, unknown> {
 	try {
 		const parsed: unknown = JSON.parse(jsonString);
-		if (typeof parsed === 'object' && parsed !== null) {
+		if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
 			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Safe after type check
 			return parsed as Record<string, unknown>;
 		}

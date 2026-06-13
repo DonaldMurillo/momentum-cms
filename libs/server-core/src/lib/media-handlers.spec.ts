@@ -84,6 +84,16 @@ describe('handleMediaServeRequest', () => {
 		expect(result.status).toBe(200);
 		expect(result.headers?.['Content-Type']).toBe('image/jpeg');
 	});
+
+	it('includes X-Content-Type-Options: nosniff header to prevent MIME sniffing', async () => {
+		const buffer = new Uint8Array([1, 2, 3]);
+		const result = await handleMediaServeRequest({
+			uploadConfig: { adapter: { read: async () => buffer } } as never,
+			rawPath: 'photo.jpg',
+		});
+		expect(result.status).toBe(200);
+		expect(result.headers?.['X-Content-Type-Options']).toBe('nosniff');
+	});
 });
 
 describe('handleMediaUploadRequest', () => {

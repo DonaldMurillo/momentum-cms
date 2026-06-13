@@ -5,7 +5,7 @@
  * Supports HMAC-SHA256 signature verification and configurable retries.
  */
 
-import { createHmac } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import type {
 	CollectionConfig,
 	HookFunction,
@@ -16,6 +16,9 @@ import type {
 import { createLogger } from '@momentumcms/logger';
 
 const webhookLogger = createLogger('Webhook');
+
+/** Maximum number of webhook delivery retries. Caps exponential backoff to prevent excessive delays. */
+const MAX_WEBHOOK_RETRIES = 5;
 
 /**
  * Sign a webhook payload with HMAC-SHA256.
@@ -44,7 +47,13 @@ function isAllowedWebhookUrl(url: string): boolean {
 		}
 
 		const hostname = parsed.hostname.toLowerCase();
+
+		// IPv6 addresses in URLs come through hostname as "::ffff:127.0.0.1"
+		// (without brackets) — normalize by stripping brackets for matching.
+		const normalizedHost = hostname.replace(/^\[|\]$/g, '');
+
 		const blockedPatterns = [
+			// IPv4 loopback / private ranges
 			/^localhost$/,
 			/^127\./,
 			/^10\./,
@@ -52,13 +61,18 @@ function isAllowedWebhookUrl(url: string): boolean {
 			/^192\.168\./,
 			/^169\.254\./,
 			/^0\./,
+			// IPv6 loopback (all representations)
 			/^::1$/,
-			/^fc00:/,
-			/^fe80:/,
-			/^\[::1\]$/,
+			/^0:0:0:0:0:0:0:1$/,
+			// IPv6 ULA / link-local
+			/^fc00:/i,
+			/^fe80:/i,
+			// IPv6-mapped IPv4 (::ffff:127.0.0.1, ::ffff:10.0.0.1, etc.)
+			// Also catches hex form like ::ffff:7f00:1 (= 127.0.0.1)
+			/^::ffff:/i,
 		];
 
-		return !blockedPatterns.some((p) => p.test(hostname));
+		return !blockedPatterns.some((p) => p.test(normalizedHost));
 	} catch {
 		return false;
 	}
@@ -78,28 +92,34 @@ async function sendWebhook(
 		return;
 	}
 
-	const body = JSON.stringify(payload, (_key, value) =>
-		typeof value === 'bigint' ? Number(value) : value,
-	);
-	const maxRetries = webhook.retries ?? 0;
-
-	const headers: Record<string, string> = {
-		'Content-Type': 'application/json',
-		'X-Momentum-Event': payload.event,
-		'X-Momentum-Collection': payload.collection,
-		'X-Momentum-Delivery': `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-		...(webhook.headers ?? {}),
-	};
-
-	if (webhook.secret) {
-		headers['X-Momentum-Signature'] = signPayload(body, webhook.secret);
-	}
+	// Cap retries to prevent unbounded exponential backoff; clamp to 0 minimum
+	const maxRetries = Math.max(0, Math.min(webhook.retries ?? 0, MAX_WEBHOOK_RETRIES));
 
 	try {
+		// Serialize inside try/catch — circular references in payload throw synchronously,
+		// and since sendWebhook is fire-and-forget (void sendWebhook(...)), unhandled
+		// rejections from outside try/catch would crash the process.
+		const body = JSON.stringify(payload, (_key, value) =>
+			typeof value === 'bigint' ? Number(value) : value,
+		);
+
+		// Custom headers spread FIRST so standard/security headers below can't be overridden
+		const headers: Record<string, string> = {
+			...(webhook.headers ?? {}),
+			'Content-Type': 'application/json',
+			'X-Momentum-Event': payload.event,
+			'X-Momentum-Collection': payload.collection,
+			'X-Momentum-Delivery': randomUUID(),
+		};
+
+		if (webhook.secret) {
+			headers['X-Momentum-Signature'] = signPayload(body, webhook.secret);
+		}
 		const response = await fetch(webhook.url, {
 			method: 'POST',
 			headers,
 			body,
+			redirect: 'error', // Prevent SSRF via redirect to private IPs
 			signal: AbortSignal.timeout(10_000), // 10s timeout
 		});
 
@@ -116,6 +136,14 @@ async function sendWebhook(
 			);
 		}
 	} catch (error) {
+		// JSON.stringify circular reference — retrying won't fix it
+		if (error instanceof TypeError && error.message.includes('circular')) {
+			webhookLogger.warn(
+				`Failed to serialize webhook payload for ${webhook.url}: ${error.message}`,
+			);
+			return;
+		}
+
 		if (attempt < maxRetries) {
 			const delay = Math.pow(2, attempt) * 1000;
 			await new Promise((resolve) => setTimeout(resolve, delay));
@@ -230,3 +258,12 @@ export function registerWebhookHooks(collections: CollectionConfig[]): void {
 
 // Re-export for testing and reuse
 export { sendWebhook, dispatchWebhooks, signPayload, isAllowedWebhookUrl };
+
+/**
+ * DNS rebinding limitation: isAllowedWebhookUrl validates the hostname against
+ * a blocklist of private IP patterns, but fetch() resolves DNS *after* this check.
+ * An attacker with a domain that resolves to a private IP (e.g. via DNS rebinding
+ * services like 1u.ms) can bypass all hostname patterns. For a CMS webhook dispatcher
+ * where admins configure their own URLs, this is considered acceptable risk.
+ * Mitigation: redirect: 'error' on fetch prevents redirect-based SSRF.
+ */

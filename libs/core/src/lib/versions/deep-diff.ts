@@ -89,17 +89,28 @@ function diffField(field: Field, oldVal: unknown, newVal: unknown): DeepDiffResu
 	};
 
 	// Handle added/removed at the field level
-	const oldUndef = oldVal === undefined || oldVal === null;
-	const newUndef = newVal === undefined || newVal === null;
+	// Treat only undefined (field absent) as "missing". Null is a valid value
+	// meaning "explicitly cleared" — it must not be conflated with undefined.
+	const oldMissing = oldVal === undefined;
+	const newMissing = newVal === undefined;
 
-	if (oldUndef && newUndef) {
+	if (oldMissing && newMissing) {
 		return { ...base, changeType: 'unchanged' };
 	}
-	if (oldUndef) {
+	if (oldMissing) {
 		return { ...base, changeType: 'added', newValue: newVal };
 	}
-	if (newUndef) {
+	if (newMissing) {
 		return { ...base, changeType: 'removed', oldValue: oldVal };
+	}
+
+	// Both values are present (including null). Compare them directly.
+	if (oldVal === null && newVal === null) {
+		return { ...base, changeType: 'unchanged', oldValue: oldVal, newValue: newVal };
+	}
+	if (oldVal === null || newVal === null) {
+		// One is null, other is non-null — this is a change
+		return { ...base, changeType: 'changed', oldValue: oldVal, newValue: newVal };
 	}
 
 	// Type-specific comparison
@@ -341,17 +352,19 @@ function diffWithoutFields(
  * Diff a field without type metadata (fallback).
  */
 function diffUnknownField(key: string, oldVal: unknown, newVal: unknown): DeepDiffResult {
-	const oldUndef = oldVal === undefined || oldVal === null;
-	const newUndef = newVal === undefined || newVal === null;
+	// Treat only undefined as "missing". Null is a valid value meaning
+	// "explicitly cleared" — distinct from "field absent".
+	const oldMissing = oldVal === undefined;
+	const newMissing = newVal === undefined;
 
 	let changeType: DiffChangeType;
-	if (oldUndef && newUndef) {
+	if (oldMissing && newMissing) {
 		changeType = 'unchanged';
-	} else if (oldUndef) {
+	} else if (oldMissing) {
 		changeType = 'added';
-	} else if (newUndef) {
+	} else if (newMissing) {
 		changeType = 'removed';
-	} else if (JSON.stringify(oldVal) === JSON.stringify(newVal)) {
+	} else if (oldVal === newVal || JSON.stringify(oldVal) === JSON.stringify(newVal)) {
 		changeType = 'unchanged';
 	} else {
 		changeType = 'changed';
@@ -360,8 +373,8 @@ function diffUnknownField(key: string, oldVal: unknown, newVal: unknown): DeepDi
 	return {
 		field: key,
 		changeType,
-		oldValue: oldUndef ? undefined : oldVal,
-		newValue: newUndef ? undefined : newVal,
+		oldValue: oldMissing ? undefined : oldVal,
+		newValue: newMissing ? undefined : newVal,
 	};
 }
 // ============================================

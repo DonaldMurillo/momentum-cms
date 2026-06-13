@@ -90,8 +90,17 @@ function buildOperatorClauses(
 	] as const) {
 		if (op in record) {
 			const arr = record[op];
-			if (!Array.isArray(arr) || arr.length === 0) {
-				throw new Error(`Operator ${op} requires a non-empty array value`);
+			if (!Array.isArray(arr)) {
+				throw new Error(`Operator ${op} requires an array value`);
+			}
+			// Empty array → standard SQL set semantics. `$in ()` matches nothing,
+			// `$nin ()` matches everything. Emit a constant predicate instead of
+			// throwing: where-clause normalization can legitimately produce an
+			// empty array from a crafted/empty query, and "match nothing" is the
+			// safe interpretation (dropping the clause would match everything).
+			if (arr.length === 0) {
+				whereClauses.push(op === '$nin' ? '1=1' : '1=0');
+				continue;
 			}
 			if (arr.length > MAX_IN_ARRAY_SIZE) {
 				throw new Error(
@@ -109,7 +118,8 @@ function buildOperatorClauses(
 		// Coerce string "true"/"false" to boolean (query-string origin)
 		let existsVal = record['$exists'];
 		if (typeof existsVal === 'string') {
-			existsVal = existsVal === 'true';
+			const lower = existsVal.toLowerCase();
+			existsVal = lower === 'true' || lower === '1' || lower === 'yes';
 		}
 		whereClauses.push(existsVal ? `${col} IS NOT NULL` : `${col} IS NULL`);
 	}
@@ -298,6 +308,44 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 	/** Maps collection slugs to actual DB table names (populated during initialize). */
 	const tableNameMap = new Map<string, string>();
 
+	/** Maps collection slugs to sets of boolean (checkbox) field names for type coercion. */
+	const booleanFieldsMap = new Map<string, Set<string>>();
+
+	/**
+	 * Extract boolean (checkbox) column names from a collection's field config.
+	 * Uses the SAME flattenDataFields() walk as createTableSql(), so the coerced
+	 * set is exactly the set of checkbox fields that become real INTEGER columns.
+	 * Fields nested inside group/array/blocks are stored as JSON (a single TEXT
+	 * column), so they are NOT columns and must NOT be collected — doing so could
+	 * wrongly coerce an unrelated top-level column that happens to share a name.
+	 */
+	function collectBooleanFieldNames(fields: Field[]): string[] {
+		return flattenDataFields(fields)
+			.filter((field) => field.type === 'checkbox')
+			.map((field) => field.name);
+	}
+
+	/**
+	 * Convert 0/1 integers back to boolean true/false for known checkbox fields.
+	 * SQLite stores booleans as INTEGER, so SELECT * returns 0/1.
+	 */
+	function coerceBooleanFields(
+		slug: string,
+		row: Record<string, unknown>,
+	): Record<string, unknown> {
+		const booleanFields = booleanFieldsMap.get(slug);
+		if (!booleanFields || booleanFields.size === 0) return row;
+		for (const field of booleanFields) {
+			if (field in row) {
+				const val = row[field];
+				if (val === 0 || val === 1) {
+					row[field] = val === 1;
+				}
+			}
+		}
+		return row;
+	}
+
 	/**
 	 * Resolves a collection slug to its actual database table name.
 	 * Falls back to the slug itself if no mapping exists.
@@ -485,9 +533,10 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 			const sql = `SELECT * FROM "${resolveTableName(collection)}" ${whereClause} ${orderByClause} LIMIT ? OFFSET ?`;
 			rows = sqlite.prepare(sql).all(...whereValues, limitValue, offset);
 		}
-		return rows.filter(
+		const filtered = rows.filter(
 			(row): row is Record<string, unknown> => typeof row === 'object' && row !== null,
 		);
+		return filtered.map((row) => coerceBooleanFields(collection, row));
 	}
 
 	function countSync(collection: string, query: Record<string, unknown>): number {
@@ -538,7 +587,8 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		const row: unknown = sqlite
 			.prepare(`SELECT * FROM "${resolveTableName(collection)}" WHERE id = ?`)
 			.get(id);
-		return isRecord(row) ? row : null;
+		if (!isRecord(row)) return null;
+		return coerceBooleanFields(collection, row);
 	}
 
 	function createSync(collection: string, data: Record<string, unknown>): Record<string, unknown> {
@@ -600,7 +650,7 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		if (!isRecord(updated)) {
 			throw new Error('Failed to fetch updated document');
 		}
-		return updated;
+		return coerceBooleanFields(collection, updated);
 	}
 
 	function deleteSync(collection: string, id: string): boolean {
@@ -877,6 +927,12 @@ export function sqliteAdapter(options: SqliteAdapterOptions): SqliteAdapterWithR
 		for (const collection of collections) {
 			const tbl = getTableName(collection);
 			tableNameMap.set(collection.slug, tbl);
+
+			// Build boolean field map for type coercion on read
+			const booleanFields = collectBooleanFieldNames(collection.fields);
+			if (booleanFields.length > 0) {
+				booleanFieldsMap.set(collection.slug, new Set(booleanFields));
+			}
 		}
 	}
 

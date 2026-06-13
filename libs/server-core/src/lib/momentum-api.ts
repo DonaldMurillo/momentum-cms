@@ -224,6 +224,16 @@ function rethrowHookError(
 // ============================================
 
 /**
+ * Maximum number of rows search() will pull from the adapter for in-memory
+ * filtering (soft-delete, defaultWhere) and pagination. Bounds memory/latency:
+ * without it, search would `SELECT *` the entire collection on every request.
+ * If a search matches more than this many rows, totalDocs reflects a lower
+ * bound (the capped scan) rather than the true total — an acceptable trade for
+ * not buffering an unbounded result set into Node.
+ */
+const SEARCH_MAX_SCAN = 10_000;
+
+/**
  * Implementation of collection operations.
  * Type assertions are necessary here because the DatabaseAdapter returns
  * Record<string, unknown> while the generic type T represents the user's
@@ -759,7 +769,12 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		}
 
 		if (!doc[softDeleteField]) {
-			throw new Error('Document is not soft-deleted');
+			throw new ValidationError([
+				{
+					field: softDeleteField,
+					message: 'Document is not soft-deleted',
+				},
+			]);
 		}
 
 		// Run beforeRestore hooks
@@ -826,17 +841,28 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			}
 		}
 
-		// Use the adapter's search method if available, otherwise fall back to find
+		// Use the adapter's search method if available, otherwise fall back to in-memory filtering
 		let docs: Record<string, unknown>[];
+		let totalDocs: number;
+
 		if (this.adapter.search) {
-			docs = await this.adapter.search(this.slug, query, searchFields, { limit, page });
+			// Fetch matching docs up to SEARCH_MAX_SCAN (not limit: 0 / unbounded) so a
+			// search on a huge collection can't buffer the entire table into memory.
+			// We still over-fetch beyond the page size to apply in-memory filters
+			// (soft-delete, defaultWhere) and compute totals before paginating.
+			const allMatches = await this.adapter.search(this.slug, query, searchFields, {
+				limit: SEARCH_MAX_SCAN,
+				page: 1,
+			});
+
 			// Filter out soft-deleted documents from search results
+			let filtered = allMatches;
 			if (softDeleteField) {
-				docs = docs.filter((doc) => !doc[softDeleteField]);
+				filtered = filtered.filter((doc) => !doc[softDeleteField]);
 			}
 			// Apply defaultWhere constraints in-memory for adapter search results
 			if (Object.keys(defaultWhereFilter).length > 0) {
-				docs = docs.filter((doc) => {
+				filtered = filtered.filter((doc) => {
 					return Object.entries(defaultWhereFilter).every(([key, value]) => {
 						if (value && typeof value === 'object' && !Array.isArray(value)) {
 							return JSON.stringify(doc[key]) === JSON.stringify(value);
@@ -845,14 +871,38 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 					});
 				});
 			}
+
+			totalDocs = filtered.length;
+
+			// Apply pagination in-memory AFTER filtering for accurate totals
+			const start = (page - 1) * limit;
+			docs = filtered.slice(start, start + limit);
 		} else {
-			// Fallback: basic find with soft-delete and defaultWhere filters
-			docs = await this.adapter.find(this.slug, {
+			// Fallback: fetch docs with filters (capped at SEARCH_MAX_SCAN to bound
+			// memory), then do in-memory text search.
+			const allDocs = await this.adapter.find(this.slug, {
 				...softDeleteFilter,
 				...defaultWhereFilter,
-				limit,
-				page,
+				limit: SEARCH_MAX_SCAN,
 			});
+
+			// In-memory case-insensitive substring search across specified fields
+			const lowerQuery = query.toLowerCase();
+			const filtered = allDocs.filter((doc) =>
+				searchFields.some((field) => {
+					const val = doc[field];
+					if (typeof val === 'string') {
+						return val.toLowerCase().includes(lowerQuery);
+					}
+					return false;
+				}),
+			);
+
+			totalDocs = filtered.length;
+
+			// Apply pagination in-memory AFTER filtering
+			const start = (page - 1) * limit;
+			docs = filtered.slice(start, start + limit);
 		}
 
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>[], safe cast to T[]
@@ -861,7 +911,9 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Run afterRead hooks and field-level access filtering (same pipeline as find())
 		const afterHookDocs = await this.processAfterReadHooks(resolvedDocs);
 
-		const totalDocs = afterHookDocs.length;
+		// totalDocs is pre-computed from pre-hook count for accurate pagination metadata.
+		// afterHookDocs.length may differ if hooks suppress documents, but pagination
+		// links should reflect the database reality, not hook side-effects.
 		const totalPages = Math.max(1, Math.ceil(totalDocs / limit));
 
 		return {
@@ -933,98 +985,61 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		return docs.length;
 	}
 
+	/**
+	 * Run an operation within a transaction if the adapter supports it.
+	 * Creates a fresh CollectionOperationsImpl with the transaction adapter,
+	 * ensuring all constructor args (including allCollections) are consistent.
+	 */
+	private withTransaction<R>(fn: (ops: CollectionOperationsImpl<T>) => Promise<R>): Promise<R> | R {
+		if (!this.adapter.transaction) {
+			return fn(this);
+		}
+		return this.adapter.transaction(async (txAdapter) => {
+			const txOps = new CollectionOperationsImpl<T>(
+				this.slug,
+				this.collectionConfig,
+				txAdapter,
+				this.context,
+				this.allCollections,
+			);
+			return fn(txOps);
+		});
+	}
+
 	async batchCreate(items: Partial<T>[]): Promise<T[]> {
 		if (items.length === 0) return [];
 
-		const doCreate = async (): Promise<T[]> => {
+		return this.withTransaction(async (ops) => {
 			const results: T[] = [];
 			for (const item of items) {
-				results.push(await this.create(item));
+				results.push(await ops.create(item));
 			}
 			return results;
-		};
-
-		// Use transaction if available
-		if (this.adapter.transaction) {
-			return this.adapter.transaction(async (txAdapter) => {
-				// Create a new collection ops with the txAdapter
-				const txOps = new CollectionOperationsImpl<T>(
-					this.slug,
-					this.collectionConfig,
-					txAdapter,
-					this.context,
-				);
-				const results: T[] = [];
-				for (const item of items) {
-					results.push(await txOps.create(item));
-				}
-				return results;
-			});
-		}
-
-		return doCreate();
+		});
 	}
 
 	async batchUpdate(items: { id: string; data: Partial<T> }[]): Promise<T[]> {
 		if (items.length === 0) return [];
 
-		const doUpdate = async (): Promise<T[]> => {
+		return this.withTransaction(async (ops) => {
 			const results: T[] = [];
 			for (const item of items) {
-				results.push(await this.update(item.id, item.data));
+				results.push(await ops.update(item.id, item.data));
 			}
 			return results;
-		};
-
-		// Use transaction if available
-		if (this.adapter.transaction) {
-			return this.adapter.transaction(async (txAdapter) => {
-				const txOps = new CollectionOperationsImpl<T>(
-					this.slug,
-					this.collectionConfig,
-					txAdapter,
-					this.context,
-				);
-				const results: T[] = [];
-				for (const item of items) {
-					results.push(await txOps.update(item.id, item.data));
-				}
-				return results;
-			});
-		}
-
-		return doUpdate();
+		});
 	}
 
 	async batchDelete(ids: string[]): Promise<DeleteResult[]> {
 		if (ids.length === 0) return [];
 
-		const doDelete = async (): Promise<DeleteResult[]> => {
+		return this.withTransaction(async (ops) => {
 			const results: DeleteResult[] = [];
 			for (const id of ids) {
-				results.push(await this.delete(id));
+				results.push(await ops.delete(id));
 			}
 			return results;
-		};
-
-		// Use transaction if available
-		if (this.adapter.transaction) {
-			return this.adapter.transaction(async (txAdapter) => {
-				const txOps = new CollectionOperationsImpl<T>(
-					this.slug,
-					this.collectionConfig,
-					txAdapter,
-					this.context,
-				);
-				const results: DeleteResult[] = [];
-				for (const id of ids) {
-					results.push(await txOps.delete(id));
-				}
-				return results;
-			});
-		}
-
-		return doDelete();
+		});
 	}
 
 	/**

@@ -1,9 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type {
 	StorageAdapter,
 	UploadedFile,
 	StoredFile,
 	MomentumConfig,
+	CollectionConfig,
+	HookArgs,
 	UploadCollectionConfig,
 } from '@momentumcms/core';
 import {
@@ -16,14 +18,12 @@ import {
 	type UploadRequest,
 	type CollectionUploadRequest,
 } from './upload-handler';
-
-// Only mock getMomentumAPI (server singleton with DB).
-// validateMimeType is a pure function — use the real implementation.
-vi.mock('./momentum-api', () => ({
-	getMomentumAPI: vi.fn(),
-}));
-
-import { getMomentumAPI } from './momentum-api';
+// Use the REAL MomentumAPI backed by an in-memory adapter so the upload
+// success path actually persists a document (a module-level vi.mock would let
+// these tests pass even if the DB write silently failed). Only file I/O (the
+// StorageAdapter) is mocked. validateMimeType is a pure function — also real.
+import { initializeMomentumAPI, resetMomentumAPI, getMomentumAPI } from './momentum-api';
+import { createInMemoryAdapter } from './server-core';
 
 function createMockAdapter(overrides: Partial<StorageAdapter> = {}): StorageAdapter {
 	return {
@@ -66,6 +66,47 @@ function createTestFile(overrides: Partial<UploadedFile> = {}): UploadedFile {
 }
 
 const mockUser = { id: 'user-1', email: 'test@example.com', role: 'admin' };
+
+// Captures the data a collection beforeChange hook receives. These hooks run
+// BEFORE transient `_`-prefixed keys (e.g. `_file`) are stripped for DB insert,
+// so this lets us assert the upload handler forwards `_file` for hook processing.
+let lastBeforeChange: Record<string, unknown> | undefined;
+
+const captureHook = (args: HookArgs): Record<string, unknown> | undefined => {
+	lastBeforeChange = args.data;
+	return args.data;
+};
+
+const uploadFields: CollectionConfig['fields'] = [
+	{ name: 'filename', type: 'text' },
+	{ name: 'mimeType', type: 'text' },
+	{ name: 'filesize', type: 'number' },
+	{ name: 'path', type: 'text' },
+	{ name: 'url', type: 'text' },
+	{ name: 'alt', type: 'text' },
+];
+
+function uploadCollection(slug: string): CollectionConfig {
+	return { slug, fields: uploadFields, hooks: { beforeChange: [captureHook] } };
+}
+
+/**
+ * Initialise a real MomentumAPI with an in-memory adapter. Registers two open
+ * collections (media, documents) for happy-path/persistence + routing tests and
+ * one collection that denies create access for the 403 path.
+ */
+function setupUploadApi(): MomentumConfig {
+	const config: MomentumConfig = {
+		collections: [
+			uploadCollection('media'),
+			uploadCollection('documents'),
+			{ slug: 'restricted', fields: uploadFields, access: { create: () => false } },
+		],
+		db: { adapter: createInMemoryAdapter() },
+	};
+	initializeMomentumAPI(config);
+	return config;
+}
 
 describe('getUploadConfig', () => {
 	it('should return null when config has no storage', () => {
@@ -126,10 +167,12 @@ describe('getUploadConfig', () => {
 describe('handleUpload', () => {
 	let mockAdapter: StorageAdapter;
 	let uploadConfig: UploadConfig;
-	let mockCreate: ReturnType<typeof vi.fn>;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		lastBeforeChange = undefined;
+		resetMomentumAPI();
+		setupUploadApi();
 
 		mockAdapter = createMockAdapter();
 		uploadConfig = {
@@ -137,26 +180,8 @@ describe('handleUpload', () => {
 			maxFileSize: 10 * 1024 * 1024,
 			allowedMimeTypes: ['image/*', 'application/pdf'],
 		};
-
-		// Setup getMomentumAPI mock chain — this is a DB singleton, must be mocked
-		const createdDoc = {
-			id: 'media-1',
-			filename: 'test-image.jpg',
-			mimeType: 'image/jpeg',
-			filesize: 22,
-			path: 'abc123.jpg',
-			url: '/api/media/file/abc123.jpg',
-			alt: '',
-			createdAt: '2025-01-01T00:00:00Z',
-			updatedAt: '2025-01-01T00:00:00Z',
-		};
-		mockCreate = vi.fn().mockResolvedValue(createdDoc);
-		const mockCollection = vi.fn().mockReturnValue({ create: mockCreate });
-		const mockSetContext = vi.fn().mockReturnValue({ collection: mockCollection });
-		vi.mocked(getMomentumAPI).mockReturnValue({
-			setContext: mockSetContext,
-		} as ReturnType<typeof getMomentumAPI>);
 	});
+	afterEach(() => resetMomentumAPI());
 
 	it('should return 401 when user is not provided', async () => {
 		const request: UploadRequest = { file: createTestFile(), user: undefined };
@@ -257,9 +282,8 @@ describe('handleUpload', () => {
 		const response = await handleUpload(uploadConfig, request);
 
 		expect(response.status).toBe(201);
-		expect(mockCreate).toHaveBeenCalledOnce();
-		const createArg = mockCreate.mock.calls[0][0] as Record<string, unknown>;
-		expect(createArg).toMatchObject({
+		// Assert the persisted document (real round-trip), not a mock's call args.
+		expect(response.doc).toMatchObject({
 			filename: 'test-image.jpg',
 			mimeType: 'image/jpeg',
 			filesize: 22,
@@ -274,8 +298,11 @@ describe('handleUpload', () => {
 		const response = await handleUpload(uploadConfig, request);
 
 		expect(response.status).toBe(201);
-		const createArg = mockCreate.mock.calls[0][0] as Record<string, unknown>;
-		expect(createArg['_file']).toBe(file);
+		// The collection beforeChange hook sees _file before transient keys are
+		// stripped — proving the handler forwards it for hook processing.
+		expect(lastBeforeChange?.['_file']).toBe(file);
+		// And _file must NOT be persisted (transient keys are stripped pre-insert).
+		expect(response.doc?.['_file']).toBeUndefined();
 	});
 
 	it('should return 201 with doc on successful upload', async () => {
@@ -284,7 +311,8 @@ describe('handleUpload', () => {
 
 		expect(response.status).toBe(201);
 		expect(response.doc).toBeDefined();
-		expect(response.doc?.id).toBe('media-1');
+		expect(typeof response.doc?.id).toBe('string');
+		expect(response.doc?.id).toBeTruthy();
 	});
 
 	it('should include alt text in media document when provided', async () => {
@@ -296,8 +324,7 @@ describe('handleUpload', () => {
 		const response = await handleUpload(uploadConfig, request);
 
 		expect(response.status).toBe(201);
-		const createArg = mockCreate.mock.calls[0][0] as Record<string, unknown>;
-		expect(createArg.alt).toBe('A beautiful landscape');
+		expect(response.doc?.alt).toBe('A beautiful landscape');
 	});
 
 	it('should default alt text to empty string when not provided', async () => {
@@ -305,17 +332,10 @@ describe('handleUpload', () => {
 		const response = await handleUpload(uploadConfig, request);
 
 		expect(response.status).toBe(201);
-		const createArg = mockCreate.mock.calls[0][0] as Record<string, unknown>;
-		expect(createArg.alt).toBe('');
+		expect(response.doc?.alt).toBe('');
 	});
 
 	it('should use custom collection slug when provided', async () => {
-		const mockCollection = vi.fn().mockReturnValue({ create: mockCreate });
-		const mockSetContext = vi.fn().mockReturnValue({ collection: mockCollection });
-		vi.mocked(getMomentumAPI).mockReturnValue({
-			setContext: mockSetContext,
-		} as ReturnType<typeof getMomentumAPI>);
-
 		const request: UploadRequest = {
 			file: createTestFile(),
 			user: mockUser,
@@ -324,13 +344,20 @@ describe('handleUpload', () => {
 		const response = await handleUpload(uploadConfig, request);
 
 		expect(response.status).toBe(201);
-		expect(mockCollection).toHaveBeenCalledWith('documents');
+		// Verify the doc actually landed in the 'documents' collection and not 'media'.
+		const api = getMomentumAPI().setContext({ user: mockUser });
+		const inDocuments = await api.collection('documents').find();
+		const inMedia = await api.collection('media').find();
+		expect(inDocuments.docs).toHaveLength(1);
+		expect(inMedia.docs).toHaveLength(0);
 	});
 
 	it('should return 403 on access denied error', async () => {
-		mockCreate.mockRejectedValue(new Error('Access denied: insufficient permissions'));
-
-		const request: UploadRequest = { file: createTestFile(), user: mockUser };
+		const request: UploadRequest = {
+			file: createTestFile(),
+			user: mockUser,
+			collection: 'restricted',
+		};
 		const response = await handleUpload(uploadConfig, request);
 
 		expect(response.status).toBe(403);
@@ -447,8 +474,6 @@ describe('handleFileDelete', () => {
 describe('handleCollectionUpload', () => {
 	let mockAdapter: StorageAdapter;
 	let globalConfig: UploadConfig;
-	let mockCreate: ReturnType<typeof vi.fn>;
-	let mockCollection: ReturnType<typeof vi.fn>;
 
 	const collectionUpload: UploadCollectionConfig = {
 		mimeTypes: ['image/*', 'application/pdf'],
@@ -456,6 +481,9 @@ describe('handleCollectionUpload', () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		lastBeforeChange = undefined;
+		resetMomentumAPI();
+		setupUploadApi();
 
 		mockAdapter = createMockAdapter();
 		globalConfig = {
@@ -463,25 +491,8 @@ describe('handleCollectionUpload', () => {
 			maxFileSize: 10 * 1024 * 1024,
 			allowedMimeTypes: ['image/*', 'application/pdf', 'video/*', 'audio/*'],
 		};
-
-		const createdDoc = {
-			id: 'media-1',
-			filename: 'test-image.jpg',
-			mimeType: 'image/jpeg',
-			filesize: 22,
-			path: 'abc123.jpg',
-			url: '/api/media/file/abc123.jpg',
-			alt: 'test alt',
-			createdAt: '2025-01-01T00:00:00Z',
-			updatedAt: '2025-01-01T00:00:00Z',
-		};
-		mockCreate = vi.fn().mockResolvedValue(createdDoc);
-		mockCollection = vi.fn().mockReturnValue({ create: mockCreate });
-		const mockSetContext = vi.fn().mockReturnValue({ collection: mockCollection });
-		vi.mocked(getMomentumAPI).mockReturnValue({
-			setContext: mockSetContext,
-		} as ReturnType<typeof getMomentumAPI>);
 	});
+	afterEach(() => resetMomentumAPI());
 
 	function createCollectionUploadRequest(
 		overrides: Partial<CollectionUploadRequest> = {},
@@ -573,18 +584,15 @@ describe('handleCollectionUpload', () => {
 		const response = await handleCollectionUpload(globalConfig, request);
 
 		expect(response.status).toBe(201);
-		expect(mockCreate).toHaveBeenCalledOnce();
-
-		const createArg = mockCreate.mock.calls[0][0] as Record<string, unknown>;
-		// Auto-populated metadata
-		expect(createArg.filename).toBe('test-image.jpg');
-		expect(createArg.mimeType).toBe('image/jpeg');
-		expect(createArg.filesize).toBe(22);
-		expect(createArg.path).toBe('abc123.jpg');
-		expect(createArg.url).toBe('/api/media/file/abc123.jpg');
+		// Auto-populated metadata (persisted)
+		expect(response.doc?.filename).toBe('test-image.jpg');
+		expect(response.doc?.mimeType).toBe('image/jpeg');
+		expect(response.doc?.filesize).toBe(22);
+		expect(response.doc?.path).toBe('abc123.jpg');
+		expect(response.doc?.url).toBe('/api/media/file/abc123.jpg');
 		// User-provided fields preserved
-		expect(createArg.alt).toBe('sunset photo');
-		expect(createArg.customField).toBe('extra data');
+		expect(response.doc?.alt).toBe('sunset photo');
+		expect(response.doc?.customField).toBe('extra data');
 	});
 
 	it('should include _file in doc data for hook processing', async () => {
@@ -593,8 +601,9 @@ describe('handleCollectionUpload', () => {
 		const response = await handleCollectionUpload(globalConfig, request);
 
 		expect(response.status).toBe(201);
-		const createArg = mockCreate.mock.calls[0][0] as Record<string, unknown>;
-		expect(createArg['_file']).toBe(file);
+		// _file reaches the beforeChange hook but is stripped before persistence.
+		expect(lastBeforeChange?.['_file']).toBe(file);
+		expect(response.doc?.['_file']).toBeUndefined();
 	});
 
 	it('should auto-populated metadata override user-provided duplicates', async () => {
@@ -608,11 +617,10 @@ describe('handleCollectionUpload', () => {
 		const response = await handleCollectionUpload(globalConfig, request);
 
 		expect(response.status).toBe(201);
-		const createArg = mockCreate.mock.calls[0][0] as Record<string, unknown>;
 		// Auto-populated values win over user-provided duplicates
-		expect(createArg.filename).toBe('test-image.jpg');
-		expect(createArg.mimeType).toBe('image/jpeg');
-		expect(createArg.filesize).toBe(22);
+		expect(response.doc?.filename).toBe('test-image.jpg');
+		expect(response.doc?.mimeType).toBe('image/jpeg');
+		expect(response.doc?.filesize).toBe(22);
 	});
 
 	it('should use the provided collection slug', async () => {
@@ -622,7 +630,10 @@ describe('handleCollectionUpload', () => {
 		const response = await handleCollectionUpload(globalConfig, request);
 
 		expect(response.status).toBe(201);
-		expect(mockCollection).toHaveBeenCalledWith('documents');
+		// Verify the doc landed in 'documents', not the default 'media'.
+		const api = getMomentumAPI().setContext({ user: mockUser });
+		expect((await api.collection('documents').find()).docs).toHaveLength(1);
+		expect((await api.collection('media').find()).docs).toHaveLength(0);
 	});
 
 	it('should return 201 with created doc on success', async () => {
@@ -631,13 +642,12 @@ describe('handleCollectionUpload', () => {
 
 		expect(response.status).toBe(201);
 		expect(response.doc).toBeDefined();
-		expect(response.doc?.id).toBe('media-1');
+		expect(typeof response.doc?.id).toBe('string');
+		expect(response.doc?.id).toBeTruthy();
 	});
 
 	it('should return 403 on access denied error', async () => {
-		mockCreate.mockRejectedValue(new Error('Access denied: insufficient permissions'));
-
-		const request = createCollectionUploadRequest();
+		const request = createCollectionUploadRequest({ collectionSlug: 'restricted' });
 		const response = await handleCollectionUpload(globalConfig, request);
 
 		expect(response.status).toBe(403);

@@ -32,6 +32,16 @@ const mockProductsCollection: CollectionConfig = {
 	],
 };
 
+const mockBooleanCollection: CollectionConfig = {
+	slug: 'flags',
+	labels: { singular: 'Flag', plural: 'Flags' },
+	fields: [
+		{ name: 'label', type: 'text', required: true },
+		{ name: 'active', type: 'checkbox', label: 'Active' },
+		{ name: 'published', type: 'checkbox', label: 'Published' },
+	],
+};
+
 describe('sqliteAdapter', () => {
 	beforeEach(() => {
 		// Ensure test directory exists
@@ -400,16 +410,20 @@ describe('sqliteAdapter', () => {
 			expect(docs.some((d) => d['title'] === 'No Content')).toBe(true);
 		});
 
-		it('should throw for $in with empty array', async () => {
-			await expect(adapter.find('posts', { title: { $in: [] } })).rejects.toThrow(
-				'non-empty array',
-			);
+		it('should match nothing for $in with empty array (SQL set semantics)', async () => {
+			await adapter.create('posts', { title: 'Alpha' });
+			await adapter.create('posts', { title: 'Beta' });
+
+			const docs = await adapter.find('posts', { title: { $in: [] } });
+			expect(docs).toEqual([]);
 		});
 
-		it('should throw for $nin with empty array', async () => {
-			await expect(adapter.find('posts', { title: { $nin: [] } })).rejects.toThrow(
-				'non-empty array',
-			);
+		it('should match everything for $nin with empty array (SQL set semantics)', async () => {
+			await adapter.create('posts', { title: 'Alpha' });
+			await adapter.create('posts', { title: 'Beta' });
+
+			const docs = await adapter.find('posts', { title: { $nin: [] } });
+			expect(docs.map((d) => d['title']).sort()).toEqual(['Alpha', 'Beta']);
 		});
 
 		it('should combine extended operators with comparison operators', async () => {
@@ -825,6 +839,100 @@ describe('sqliteAdapter', () => {
 			expect(docs.length).toBeGreaterThanOrEqual(1);
 			expect(docs.every((d) => d['content'] == null)).toBe(true);
 		});
+
+		it('should coerce case-insensitive "TRUE" to boolean for $exists', async () => {
+			const docs = await adapter.find('posts', {
+				content: { $exists: 'TRUE' as unknown as boolean },
+			});
+			expect(docs.length).toBeGreaterThanOrEqual(1);
+			expect(docs.every((d) => d['content'] != null)).toBe(true);
+		});
+
+		it('should coerce string "1" to boolean true for $exists', async () => {
+			const docs = await adapter.find('posts', {
+				content: { $exists: '1' as unknown as boolean },
+			});
+			expect(docs.length).toBeGreaterThanOrEqual(1);
+			expect(docs.every((d) => d['content'] != null)).toBe(true);
+		});
+
+		it('should coerce string "yes" to boolean true for $exists', async () => {
+			const docs = await adapter.find('posts', {
+				content: { $exists: 'yes' as unknown as boolean },
+			});
+			expect(docs.length).toBeGreaterThanOrEqual(1);
+			expect(docs.every((d) => d['content'] != null)).toBe(true);
+		});
+	});
+
+	describe('CRUD edge cases', () => {
+		let adapter: ReturnType<typeof sqliteAdapter>;
+
+		beforeEach(async () => {
+			adapter = sqliteAdapter({ filename: TEST_DB_PATH });
+			await adapter.initialize?.([mockPostsCollection]);
+		});
+
+		it('should throw when creating with empty data (required field missing)', async () => {
+			// title is required, SQLite NOT NULL constraint should reject
+			await expect(adapter.create('posts', {})).rejects.toThrow();
+		});
+
+		it('should throw when creating with undefined required field', async () => {
+			// title: undefined maps to NULL, violating NOT NULL constraint
+			await expect(adapter.create('posts', { title: undefined })).rejects.toThrow();
+		});
+
+		it('should throw when updating a non-existent document', async () => {
+			await expect(adapter.update('posts', 'nonexistent-id', { title: 'X' })).rejects.toThrow(
+				'Failed to fetch updated document',
+			);
+		});
+
+		it('should overwrite user-supplied id with generated UUID', async () => {
+			const doc = await adapter.create('posts', {
+				id: 'user-supplied-id',
+				title: 'Test',
+			});
+			// The adapter generates a random UUID, ignoring the user-supplied id
+			expect(doc.id).toBeDefined();
+			expect(doc.id).not.toBe('user-supplied-id');
+		});
+
+		it('should overwrite user-supplied createdAt/updatedAt', async () => {
+			const fakeTime = '1999-01-01T00:00:00.000Z';
+			const doc = await adapter.create('posts', {
+				title: 'Timestamp Test',
+				createdAt: fakeTime,
+				updatedAt: fakeTime,
+			});
+			// Adapter sets its own timestamps, ignoring user-supplied values
+			expect(doc.createdAt).not.toBe(fakeTime);
+			expect(doc.updatedAt).not.toBe(fakeTime);
+		});
+
+		it('should return all rows when limit is 0', async () => {
+			for (let i = 0; i < 5; i++) {
+				await adapter.create('posts', { title: `Post ${i}` });
+			}
+			// limit: 0 means "no limit" — returns all rows
+			const docs = await adapter.find('posts', { limit: 0 });
+			expect(docs).toHaveLength(5);
+		});
+
+		it('should handle page: 0 without crashing (offset becomes negative)', async () => {
+			await adapter.create('posts', { title: 'Only Post' });
+			// page: 0 → offset = (0-1) * limit = negative
+			// SQLite treats negative OFFSET as 0
+			const docs = await adapter.find('posts', { page: 0, limit: 10 });
+			expect(docs.length).toBeGreaterThanOrEqual(1);
+		});
+
+		it('should handle page: -1 without crashing', async () => {
+			await adapter.create('posts', { title: 'Only Post' });
+			const docs = await adapter.find('posts', { page: -1, limit: 10 });
+			expect(docs.length).toBeGreaterThanOrEqual(0);
+		});
 	});
 
 	describe('count()', () => {
@@ -863,6 +971,129 @@ describe('sqliteAdapter', () => {
 				$or: [{ title: 'Post A' }, { title: 'Post B' }],
 			});
 			expect(result).toBe(2);
+		});
+	});
+
+	describe('Boolean round-trip (checkbox fields)', () => {
+		let adapter: ReturnType<typeof sqliteAdapter>;
+
+		beforeEach(async () => {
+			adapter = sqliteAdapter({ filename: TEST_DB_PATH });
+			await adapter.initialize?.([mockBooleanCollection]);
+		});
+
+		it('should return boolean true after create', async () => {
+			const doc = await adapter.create('flags', {
+				label: 'Test',
+				active: true,
+				published: false,
+			});
+
+			expect(doc.active).toBe(true);
+			expect(doc.published).toBe(false);
+		});
+
+		it('should return boolean values after findById', async () => {
+			const created = await adapter.create('flags', {
+				label: 'Test',
+				active: true,
+				published: false,
+			});
+
+			const found = await adapter.findById('flags', created.id as string);
+
+			expect(found).not.toBeNull();
+			expect(found?.['active']).toBe(true);
+			expect(found?.['published']).toBe(false);
+		});
+
+		it('should return boolean values after find', async () => {
+			await adapter.create('flags', {
+				label: 'Test',
+				active: true,
+				published: false,
+			});
+
+			const docs = await adapter.find('flags', {});
+
+			expect(docs).toHaveLength(1);
+			expect(docs[0]['active']).toBe(true);
+			expect(docs[0]['published']).toBe(false);
+		});
+
+		it('should return boolean values after update', async () => {
+			const created = await adapter.create('flags', {
+				label: 'Test',
+				active: false,
+				published: false,
+			});
+
+			const updated = await adapter.update('flags', created.id as string, {
+				active: true,
+			});
+
+			expect(updated.active).toBe(true);
+			expect(updated.published).toBe(false);
+		});
+
+		it('should coerce a checkbox nested inside a layout (row) container', async () => {
+			// Layout fields (row/collapsible/unnamed tabs) flatten their children to
+			// top-level columns, so a checkbox inside a row IS a real INTEGER column
+			// and must be coerced back to boolean. Guards that the boolean-column
+			// collector descends through layout containers (via flattenDataFields).
+			const layoutCollection: CollectionConfig = {
+				slug: 'layout-flags',
+				fields: [
+					{ name: 'label', type: 'text', required: true },
+					{
+						name: 'settings',
+						type: 'row',
+						fields: [{ name: 'enabled', type: 'checkbox' }],
+					},
+				],
+			};
+			const layoutAdapter = sqliteAdapter({ filename: TEST_DB_PATH });
+			await layoutAdapter.initialize?.([layoutCollection]);
+
+			const created = await layoutAdapter.create('layout-flags', {
+				label: 'L',
+				enabled: true,
+			});
+			const found = await layoutAdapter.findById('layout-flags', created.id as string);
+
+			expect(found).not.toBeNull();
+			expect(found?.['enabled']).toBe(true); // not the raw integer 1
+		});
+
+		it('should NOT coerce a top-level field sharing a name with a group-nested checkbox', async () => {
+			// Regression guard for field-name collision: a checkbox nested inside a
+			// `group` is stored as JSON (not its own column), so its name must NOT be
+			// added to the boolean-coercion set. A naive recursive collector would
+			// add 'count' and then wrongly coerce the unrelated top-level numeric
+			// `count` (1) into boolean `true`.
+			const collisionCollection: CollectionConfig = {
+				slug: 'collision',
+				fields: [
+					{ name: 'count', type: 'number' }, // top-level numeric column
+					{
+						name: 'meta',
+						type: 'group',
+						fields: [{ name: 'count', type: 'checkbox' }], // same name, JSON-nested
+					},
+				],
+			};
+			const collisionAdapter = sqliteAdapter({ filename: TEST_DB_PATH });
+			await collisionAdapter.initialize?.([collisionCollection]);
+
+			const created = await collisionAdapter.create('collision', {
+				count: 1,
+				meta: { count: true },
+			});
+			const found = await collisionAdapter.findById('collision', created.id as string);
+
+			// Top-level numeric `count` must remain the number 1, NOT become `true`.
+			expect(found?.['count']).toBe(1);
+			expect(typeof found?.['count']).toBe('number');
 		});
 	});
 });

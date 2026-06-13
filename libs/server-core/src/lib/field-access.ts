@@ -9,6 +9,10 @@
 
 import type { Field, FieldAccessConfig, RequestContext } from '@momentumcms/core';
 import { flattenDataFields } from '@momentumcms/core';
+import { ValidationError } from './momentum-api.types';
+
+/** Maximum nesting depth for field access recursion (groups, arrays, blocks, tabs). */
+const MAX_FIELD_ACCESS_DEPTH = 10;
 
 interface FieldAccessArgs {
 	req: RequestContext;
@@ -21,24 +25,32 @@ interface FieldAccessArgs {
  * Recursively checks through all field nesting (groups, arrays, blocks, layout fields).
  * Used as a fast-path to skip processing when no field access is configured.
  */
-export function hasFieldAccessControl(fields: Field[]): boolean {
+export function hasFieldAccessControl(fields: Field[], _depth = 0): boolean {
+	// On depth overflow, return false. If no real access control was found
+	// before hitting the depth limit, there's nothing to filter. The filter
+	// functions have their own depth guards that throw ValidationError when
+	// actual access control processing overflows — but only for collections
+	// that have real access control configured (which means this function
+	// would have returned true before reaching this branch).
+	if (_depth > MAX_FIELD_ACCESS_DEPTH) return false;
+
 	for (const field of fields) {
 		if (field.access !== undefined) return true;
-		if (field.type === 'group' && hasFieldAccessControl(field.fields)) return true;
-		if (field.type === 'array' && hasFieldAccessControl(field.fields)) return true;
+		if (field.type === 'group' && hasFieldAccessControl(field.fields, _depth + 1)) return true;
+		if (field.type === 'array' && hasFieldAccessControl(field.fields, _depth + 1)) return true;
 		if (field.type === 'blocks') {
 			for (const block of field.blocks) {
-				if (hasFieldAccessControl(block.fields)) return true;
+				if (hasFieldAccessControl(block.fields, _depth + 1)) return true;
 			}
 		}
 		if (field.type === 'tabs') {
 			for (const tab of field.tabs) {
-				if (hasFieldAccessControl(tab.fields)) return true;
+				if (hasFieldAccessControl(tab.fields, _depth + 1)) return true;
 			}
 		}
 		if (
 			(field.type === 'collapsible' || field.type === 'row') &&
-			hasFieldAccessControl(field.fields)
+			hasFieldAccessControl(field.fields, _depth + 1)
 		) {
 			return true;
 		}
@@ -54,7 +66,20 @@ export async function filterReadableFields(
 	fields: Field[],
 	doc: Record<string, unknown>,
 	req: RequestContext,
+	_depth = 0,
 ): Promise<Record<string, unknown>> {
+	// SECURITY: On depth overflow, throw ValidationError to prevent silent data loss.
+	// Previously returned {} which silently emptied payloads on writes and stripped
+	// all fields on reads. Throwing makes the depth limit visible to callers.
+	if (_depth > MAX_FIELD_ACCESS_DEPTH) {
+		throw new ValidationError([
+			{
+				field: 'root',
+				message: `Field nesting depth exceeds maximum of ${MAX_FIELD_ACCESS_DEPTH} levels`,
+			},
+		]);
+	}
+
 	const dataFields = flattenDataFields(fields);
 	const filtered = { ...doc };
 	const args: FieldAccessArgs = { req, doc };
@@ -77,6 +102,7 @@ export async function filterReadableFields(
 				field.fields,
 				filtered[field.name] as Record<string, unknown>,
 				req,
+				_depth + 1,
 			);
 		}
 
@@ -84,7 +110,7 @@ export async function filterReadableFields(
 		if (field.type === 'array' && Array.isArray(filtered[field.name])) {
 			const rows = filtered[field.name] as Record<string, unknown>[];
 			filtered[field.name] = await Promise.all(
-				rows.map((row) => filterReadableFields(field.fields, row, req)),
+				rows.map((row) => filterReadableFields(field.fields, row, req, _depth + 1)),
 			);
 		}
 
@@ -97,7 +123,7 @@ export async function filterReadableFields(
 					if (!blockType) return row;
 					const blockConfig = field.blocks.find((b) => b.slug === blockType);
 					if (!blockConfig) return row;
-					return filterReadableFields(blockConfig.fields, row, req);
+					return filterReadableFields(blockConfig.fields, row, req, _depth + 1);
 				}),
 			);
 		}
@@ -135,7 +161,20 @@ async function filterWritableFields(
 	data: Record<string, unknown>,
 	req: RequestContext,
 	operation: 'create' | 'update',
+	_depth = 0,
 ): Promise<Record<string, unknown>> {
+	// SECURITY: On depth overflow, throw ValidationError to prevent silent data loss.
+	// Previously returned {} which silently emptied payloads on writes and stripped
+	// all fields on reads. Throwing makes the depth limit visible to callers.
+	if (_depth > MAX_FIELD_ACCESS_DEPTH) {
+		throw new ValidationError([
+			{
+				field: 'root',
+				message: `Field nesting depth exceeds maximum of ${MAX_FIELD_ACCESS_DEPTH} levels`,
+			},
+		]);
+	}
+
 	const dataFields = flattenDataFields(fields);
 	const filtered = { ...data };
 	const accessKey: keyof FieldAccessConfig = operation;
@@ -161,6 +200,7 @@ async function filterWritableFields(
 				filtered[field.name] as Record<string, unknown>,
 				req,
 				operation,
+				_depth + 1,
 			);
 		}
 
@@ -168,7 +208,7 @@ async function filterWritableFields(
 		if (field.type === 'array' && Array.isArray(filtered[field.name])) {
 			const rows = filtered[field.name] as Record<string, unknown>[];
 			filtered[field.name] = await Promise.all(
-				rows.map((row) => filterWritableFields(field.fields, row, req, operation)),
+				rows.map((row) => filterWritableFields(field.fields, row, req, operation, _depth + 1)),
 			);
 		}
 
@@ -181,7 +221,7 @@ async function filterWritableFields(
 					if (!blockType) return row;
 					const blockConfig = field.blocks.find((b) => b.slug === blockType);
 					if (!blockConfig) return row;
-					return filterWritableFields(blockConfig.fields, row, req, operation);
+					return filterWritableFields(blockConfig.fields, row, req, operation, _depth + 1);
 				}),
 			);
 		}
