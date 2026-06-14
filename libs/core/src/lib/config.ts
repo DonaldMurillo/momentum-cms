@@ -7,6 +7,11 @@ import type {
 	VersionCountOptions,
 	CreateVersionOptions,
 } from './versions';
+import type {
+	WorkflowHistoryEntry,
+	WorkflowHistoryQueryOptions,
+	WorkflowHistoryQueryResult,
+} from './workflow';
 import type { MomentumPlugin, PluginAdminRouteDescriptor } from './plugins';
 import type { StorageAdapter } from './storage';
 import type { MigrationConfig, ResolvedMigrationConfig } from './migrations';
@@ -196,6 +201,68 @@ export interface DatabaseAdapter {
 	transaction?<T>(callback: (txAdapter: DatabaseAdapter) => Promise<T>): Promise<T>;
 
 	// ============================================
+	// Workflow Operations (optional, for collections with workflow config)
+	// ============================================
+
+	/**
+	 * Atomically transition a document's workflow stage with compare-and-swap
+	 * concurrency control. Validates expected stage / updated-at against the
+	 * current row inside a `SELECT FOR UPDATE` transaction; rejects mismatches
+	 * with a `conflict: true` envelope so the caller can surface the
+	 * `WORKFLOW_CONFLICT_STALE_STAGE` error code without an exception.
+	 *
+	 * Inserts a history row in the same transaction. Does NOT trigger the
+	 * publish/unpublish flow — that's the handler's responsibility, since it
+	 * sits above the version-ops layer.
+	 *
+	 * Adapters intentionally do NOT validate the declared transition graph
+	 * (`canTransition`). The handler enforces it for normal requests; the
+	 * publish-failure auto-revert path then re-enters this method to write a
+	 * reverse arrow that is NOT in the declared graph. Adding a graph check
+	 * here would break that compensation. Callers that need graph validation
+	 * must run it before calling.
+	 *
+	 * @param collection - Collection slug
+	 * @param id - Document id
+	 * @param opts - Transition options (target stage + CAS expectations)
+	 * @returns Success envelope, conflict envelope, or null if document missing
+	 */
+	transitionWorkflowStage?(
+		collection: string,
+		id: string,
+		opts: WorkflowTransitionAdapterArgs,
+	): Promise<WorkflowTransitionAdapterResult | null>;
+
+	/** Paginated workflow history for a single document. */
+	findWorkflowHistory?(
+		collection: string,
+		parentId: string,
+		options?: WorkflowHistoryQueryOptions,
+	): Promise<WorkflowHistoryQueryResult>;
+
+	/** Read just the workflow stage + cas token for a document. Cheaper than findById. */
+	getWorkflowState?(
+		collection: string,
+		id: string,
+	): Promise<{ workflowStage: string; workflowUpdatedAt: string } | null>;
+
+	/**
+	 * Insert the initial creation row in `*_workflow_history` for a freshly
+	 * created document. `fromStage` is null by convention (no source stage —
+	 * the doc just came into existence at `toStage`).
+	 *
+	 * Called by `MomentumAPI.collection(...).create()` immediately after the
+	 * adapter create succeeds, when the collection has a workflow configured.
+	 * Safe to no-op (return null) when the adapter does not implement
+	 * workflow operations — the caller logs the gap and continues.
+	 */
+	recordWorkflowCreation?(
+		collection: string,
+		parentId: string,
+		opts: { initialStage: string; userId?: string; comment?: string },
+	): Promise<WorkflowHistoryEntry | null>;
+
+	// ============================================
 	// Globals Operations (optional, for singleton documents)
 	// ============================================
 
@@ -260,6 +327,35 @@ export interface DatabaseAdapter {
 	 */
 	acquireMigrationLock?(): Promise<() => Promise<void>>;
 }
+
+/**
+ * Inputs for the adapter-level workflow transition. The handler computes the
+ * `from` value (it just read the doc) and provides it explicitly so the
+ * adapter can validate the CAS without re-reading.
+ */
+export interface WorkflowTransitionAdapterArgs {
+	from: string;
+	to: string;
+	expectedStage?: string;
+	expectedUpdatedAt?: string;
+	userId?: string;
+	comment?: string;
+}
+
+/** Result envelope from `transitionWorkflowStage`. */
+export type WorkflowTransitionAdapterResult =
+	| {
+			conflict: false;
+			fromStage: string;
+			toStage: string;
+			workflowUpdatedAt: string;
+			history: WorkflowHistoryEntry;
+	  }
+	| {
+			conflict: true;
+			currentStage: string;
+			currentUpdatedAt: string;
+	  };
 
 /**
  * Database configuration options.

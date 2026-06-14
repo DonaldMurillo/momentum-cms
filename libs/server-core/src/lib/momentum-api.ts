@@ -21,6 +21,7 @@ import {
 	validateFieldConstraints,
 	getSoftDeleteField,
 	hasVersionDrafts,
+	hasWorkflow,
 } from '@momentumcms/core';
 import type { DocumentStatus } from '@momentumcms/core';
 import {
@@ -196,6 +197,27 @@ class MomentumAPIImpl implements MomentumAPI {
 	}
 }
 
+/**
+ * Remove `workflowStage` and `workflowUpdatedAt` from a create/update payload
+ * unless the caller has `overrideAccess` set.
+ *
+ * Without this strip, a user with collection update access could PATCH
+ * `workflowStage: 'approved'` and bypass `workflow.access.transition`, the
+ * declared transition graph, and the CAS token. Reported by chaos-monkey
+ * audit; covered by `workflow-handlers.spec.ts`.
+ */
+function stripWorkflowColumns(
+	data: Record<string, unknown>,
+	collection: { workflow?: unknown },
+	context: { overrideAccess?: boolean },
+): Record<string, unknown> {
+	if (!collection.workflow) return data;
+	if (context.overrideAccess) return data;
+	if (!('workflowStage' in data) && !('workflowUpdatedAt' in data)) return data;
+	const { workflowStage: _stage, workflowUpdatedAt: _ts, ...rest } = data;
+	return rest;
+}
+
 function rethrowHookError(
 	error: unknown,
 	hookType: 'beforeValidate' | 'beforeChange' | 'afterChange',
@@ -320,6 +342,29 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			}
 		}
 
+		// Workflow defaultStageFilter: scope list queries to the stages the role
+		// is permitted to see. Caller-supplied `where[workflowStage]` only
+		// overrides when it carries a meaningful filter — `null`/`undefined`
+		// are NOT respected as override intent because they would otherwise
+		// silently bypass the role scope (e.g. a malformed query that
+		// flattens to `{workflowStage: null}` would list every stage).
+		if (
+			hasWorkflow(this.collectionConfig) &&
+			!this.context.overrideAccess &&
+			this.collectionConfig.workflow.defaultStageFilter &&
+			whereParams['workflowStage'] == null
+		) {
+			const allowedStages = this.collectionConfig.workflow.defaultStageFilter(
+				this.buildRequestContext(),
+			);
+			if (allowedStages && allowedStages.length > 0) {
+				// Use the adapter-facing `$in` operator. `whereParams` is the
+				// post-flatten map, so user-facing `in` would not be recognized
+				// by the Postgres adapter and the filter would no-op.
+				whereParams['workflowStage'] = { $in: allowedStages };
+			}
+		}
+
 		const query: Record<string, unknown> = {
 			...queryOptions,
 			...whereParams,
@@ -438,6 +483,30 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			throw new DocumentNotFoundError(this.slug, id);
 		}
 
+		// Workflow stage read access: if the doc's stage has a `readStage[stage]`
+		// access function and it returns false, the doc appears as 404 rather
+		// than 403 so the API does not leak the document's existence.
+		if (
+			hasWorkflow(this.collectionConfig) &&
+			!this.context.overrideAccess &&
+			this.collectionConfig.workflow.access?.readStage
+		) {
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
+			const stageRaw = (doc as Record<string, unknown>)['workflowStage'];
+			if (typeof stageRaw === 'string') {
+				const stageReadFn = this.collectionConfig.workflow.access.readStage[stageRaw];
+				if (stageReadFn) {
+					const allowed = await stageReadFn({
+						req: this.buildRequestContext(),
+						id,
+					});
+					if (!allowed) {
+						throw new DocumentNotFoundError(this.slug, id);
+					}
+				}
+			}
+		}
+
 		// Run afterRead hooks
 		const [processed] = await this.processAfterReadHooks([doc]);
 
@@ -477,6 +546,11 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			const { [softDeleteField]: _stripped, ...rest } = processedData;
 			processedData = rest;
 		}
+
+		// Strip workflow columns to prevent stage tampering: workflowStage and
+		// workflowUpdatedAt are managed exclusively by the workflow handler.
+		// `overrideAccess` allows the workflow handler itself to set them.
+		processedData = stripWorkflowColumns(processedData, this.collectionConfig, this.context);
 
 		// Filter fields the user cannot create (field-level access)
 		if (hasFieldAccessControl(this.collectionConfig.fields)) {
@@ -528,6 +602,33 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 		// Execute create
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Adapter returns Record<string, unknown>, safe cast to T
 		const doc = (await this.adapter.create(this.slug, processedData)) as T;
+
+		// Workflow audit anchor: write the `fromStage=null → initialStage`
+		// creation row for collections with workflow configured. This is the
+		// only place that emits the NULL-fromStage row the history endpoint
+		// already special-cases. Best-effort: a history failure is logged
+		// (via the surrounding hook chain) but must not strand the freshly
+		// created doc — the user already received it.
+		if (hasWorkflow(this.collectionConfig) && this.adapter.recordWorkflowCreation) {
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
+			const idValue = (doc as Record<string, unknown>)['id'];
+			if (typeof idValue === 'string' || typeof idValue === 'number') {
+				try {
+					await this.adapter.recordWorkflowCreation(this.slug, String(idValue), {
+						initialStage: this.collectionConfig.workflow.initialStage,
+						userId: this.context.user?.id !== undefined ? String(this.context.user.id) : undefined,
+					});
+				} catch (error) {
+					// Audit row failure must not roll back the create. The
+					// doc exists, the user has it. Log loudly so operators can
+					// detect the gap — silent audit failures defeat the
+					// purpose of having an audit trail in the first place.
+					createLogger('Workflow').warn(
+						`recordWorkflowCreation failed for ${this.slug}/${String(idValue)} — audit trail will be missing the creation anchor: ${error instanceof Error ? error.message : String(error)}`,
+					);
+				}
+			}
+		}
 
 		// Run collection-level afterChange hooks
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- T is compatible with Record<string, unknown>
@@ -590,6 +691,11 @@ class CollectionOperationsImpl<T> implements CollectionOperations<T> {
 			const { [softDeleteField]: _stripped, ...rest } = processedData;
 			processedData = rest;
 		}
+
+		// Strip workflow columns: only the workflow handler may write these.
+		// Without this, a user with update access could PATCH workflowStage to
+		// bypass transition rules entirely.
+		processedData = stripWorkflowColumns(processedData, this.collectionConfig, this.context);
 
 		// Filter fields the user cannot update (field-level access)
 		if (hasFieldAccessControl(this.collectionConfig.fields)) {

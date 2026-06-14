@@ -230,6 +230,10 @@ export type {
 	SchedulePublishParams,
 } from './lib/version-handlers';
 
+// Workflow Handlers
+export { handleTransitionRequest, handleListWorkflowHistoryRequest } from './lib/workflow-handlers';
+export type { TransitionParams, ListWorkflowHistoryParams } from './lib/workflow-handlers';
+
 // Import/Export
 export {
 	exportToJson,

@@ -5,6 +5,7 @@
 
 import type { Field } from '../fields/field.types';
 import type { ImageSizeConfig } from '../storage';
+import type { WorkflowConfig } from '../workflow/workflow.types';
 
 // ============================================
 // Access Control
@@ -384,6 +385,14 @@ export interface CollectionConfig {
 	 * Similar to Payload CMS's upload collection pattern.
 	 */
 	upload?: UploadCollectionConfig;
+
+	/**
+	 * Multi-stage review workflow configuration. When present, documents in this
+	 * collection track an additional `workflowStage` alongside the standard
+	 * draft/published status, and publish endpoints are gated on the configured
+	 * publish stage. At most one workflow per collection.
+	 */
+	workflow?: WorkflowConfig;
 }
 
 // ============================================

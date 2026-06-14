@@ -1,5 +1,6 @@
 import { Categories } from './categories.collection';
 import { Articles } from './articles.collection';
+import { Posts } from './posts.collection';
 import { Products } from './products.collection';
 import { Pages } from './pages.collection';
 import { Settings } from './settings.collection';
@@ -29,6 +30,7 @@ const MediaWithImageSizes = defineCollection({
 export const collections: CollectionConfig[] = [
 	Categories,
 	Articles,
+	Posts,
 	Products,
 	Pages,
 	Settings,
@@ -43,6 +45,7 @@ export const collections: CollectionConfig[] = [
 export {
 	Categories,
 	Articles,
+	Posts,
 	Products,
 	Pages,
 	Settings,

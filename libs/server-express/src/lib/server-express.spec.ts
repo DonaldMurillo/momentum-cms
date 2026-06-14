@@ -253,6 +253,167 @@ describe('momentumApiMiddleware', () => {
 		});
 	});
 
+	/**
+	 * Red-team finding (cms-feature-red-team #10): cookie-auth + state-changing
+	 * POST + no Origin check = CSRF. Better-Auth's CSRF protection covers
+	 * `/api/auth/*` but the CMS routes mounted under `/api/:collection/*` were
+	 * unguarded — a malicious site could trigger publish, transition, or any
+	 * mutation against a logged-in admin via a forged form-post.
+	 *
+	 * The guard activates ONLY when `config.server.cors.origin` is an explicit
+	 * list. When `origin === '*'` or unset, the developer has opted out of CSRF
+	 * protection (and CORS) entirely. CLI / server-to-server callers with no
+	 * Origin and no Referer pass through — only browser-initiated forged
+	 * requests are blocked.
+	 */
+	describe('CSRF / Origin guard on state-changing methods', () => {
+		function makeApp(): { app: express.Application; csrfConfig: MomentumConfig } {
+			const csrfAdapter = createInMemoryAdapter();
+			const csrfConfig: MomentumConfig = {
+				collections: [mockPostsCollection],
+				db: { adapter: csrfAdapter },
+				server: {
+					port: 4000,
+					cors: { origin: ['https://allowed.example'] },
+				},
+			};
+			const csrfApp = express();
+			csrfApp.use('/api', momentumApiMiddleware(csrfConfig));
+			return { app: csrfApp, csrfConfig };
+		}
+
+		it('rejects POST with an Origin header that is not in the trusted list', async () => {
+			const { app: csrfApp } = makeApp();
+			const res = await request(csrfApp)
+				.post('/api/posts')
+				.set('Origin', 'https://evil.example')
+				.send({ title: 'forged', content: 'csrf' });
+			expect(res.status).toBe(403);
+			expect(res.body.code).toBe('CSRF_ORIGIN_MISMATCH');
+		});
+
+		it('rejects PATCH with mismatched Origin', async () => {
+			const { app: csrfApp } = makeApp();
+			const res = await request(csrfApp)
+				.patch('/api/posts/some-id')
+				.set('Origin', 'https://evil.example')
+				.send({ title: 'tampered' });
+			expect(res.status).toBe(403);
+			expect(res.body.code).toBe('CSRF_ORIGIN_MISMATCH');
+		});
+
+		it('rejects DELETE with mismatched Origin', async () => {
+			const { app: csrfApp } = makeApp();
+			const res = await request(csrfApp)
+				.delete('/api/posts/some-id')
+				.set('Origin', 'https://evil.example');
+			expect(res.status).toBe(403);
+			expect(res.body.code).toBe('CSRF_ORIGIN_MISMATCH');
+		});
+
+		it('rejects PUT with mismatched Origin', async () => {
+			const { app: csrfApp } = makeApp();
+			const res = await request(csrfApp)
+				.put('/api/posts/some-id')
+				.set('Origin', 'https://evil.example')
+				.send({ title: 'forged' });
+			expect(res.status).toBe(403);
+			expect(res.body.code).toBe('CSRF_ORIGIN_MISMATCH');
+		});
+
+		it('allows POST with an Origin header in the trusted list', async () => {
+			const { app: csrfApp } = makeApp();
+			const res = await request(csrfApp)
+				.post('/api/posts')
+				.set('Origin', 'https://allowed.example')
+				.send({ title: 'legitimate', content: 'ok' });
+			expect(res.status).toBe(201);
+		});
+
+		it('falls back to Referer when Origin is absent and rejects mismatched Referer', async () => {
+			const { app: csrfApp } = makeApp();
+			const res = await request(csrfApp)
+				.post('/api/posts')
+				.set('Referer', 'https://evil.example/some/page')
+				.send({ title: 'forged', content: 'via-referer' });
+			expect(res.status).toBe(403);
+			expect(res.body.code).toBe('CSRF_ORIGIN_MISMATCH');
+		});
+
+		it('allows POST when neither Origin nor Referer is present (CLI / server-to-server)', async () => {
+			const { app: csrfApp } = makeApp();
+			const res = await request(csrfApp)
+				.post('/api/posts')
+				.send({ title: 'cli-script', content: 'no headers' });
+			expect(res.status).toBe(201);
+		});
+
+		it('allows GET with mismatched Origin (read-only methods are not state-changing)', async () => {
+			const { app: csrfApp } = makeApp();
+			const res = await request(csrfApp).get('/api/posts').set('Origin', 'https://evil.example');
+			expect(res.status).toBe(200);
+		});
+
+		it('allows OPTIONS preflight from any origin (browser preflight, not a state change)', async () => {
+			const { app: csrfApp } = makeApp();
+			const res = await request(csrfApp)
+				.options('/api/posts')
+				.set('Origin', 'https://evil.example');
+			expect(res.status).toBe(204);
+		});
+
+		it('does NOT enforce when cors.origin is "*" (developer opted out)', async () => {
+			const openAdapter = createInMemoryAdapter();
+			const openConfig: MomentumConfig = {
+				collections: [mockPostsCollection],
+				db: { adapter: openAdapter },
+				server: { port: 4000, cors: { origin: '*' } },
+			};
+			const openApp = express();
+			openApp.use('/api', momentumApiMiddleware(openConfig));
+			const res = await request(openApp)
+				.post('/api/posts')
+				.set('Origin', 'https://evil.example')
+				.send({ title: 'wide-open', content: 'no csrf gate' });
+			expect(res.status).toBe(201);
+		});
+
+		it('does NOT enforce when cors.origin is unset (no trusted-origin list to compare against)', async () => {
+			const looseAdapter = createInMemoryAdapter();
+			const looseConfig: MomentumConfig = {
+				collections: [mockPostsCollection],
+				db: { adapter: looseAdapter },
+				server: { port: 4000 },
+			};
+			const looseApp = express();
+			looseApp.use('/api', momentumApiMiddleware(looseConfig));
+			const res = await request(looseApp)
+				.post('/api/posts')
+				.set('Origin', 'https://evil.example')
+				.send({ title: 'no-cors-config', content: 'ok' });
+			expect(res.status).toBe(201);
+		});
+
+		it('rejects an Origin that is a substring suffix of a trusted origin (no suffix-match weakness)', async () => {
+			// 'https://allowed.example' must not loosely-match 'https://evilallowed.example'.
+			const { app: csrfApp } = makeApp();
+			const res = await request(csrfApp)
+				.post('/api/posts')
+				.set('Origin', 'https://evilallowed.example')
+				.send({ title: 'suffix-trick', content: 'nope' });
+			expect(res.status).toBe(403);
+		});
+
+		it('rejects a malformed Origin header that cannot be parsed', async () => {
+			const { app: csrfApp } = makeApp();
+			const res = await request(csrfApp)
+				.post('/api/posts')
+				.set('Origin', 'not a url')
+				.send({ title: 'malformed-origin', content: 'nope' });
+			expect(res.status).toBe(403);
+		});
+	});
+
 	describe('security headers', () => {
 		it('should include X-Content-Type-Options: nosniff', async () => {
 			const res = await request(app).get('/api/posts');

@@ -13,10 +13,90 @@
  */
 
 import type { UserContext } from '@momentumcms/core';
+import { WORKFLOW_ERROR_CODES, hasWorkflow, satisfiesPublishGate } from '@momentumcms/core';
 import type { HandlerResult } from './handler-types';
 import { getMomentumAPI } from './momentum-api';
 import type { VersionOperations } from './momentum-api.types';
 import { sanitizeErrorMessage } from './shared-server-utils';
+
+/**
+ * If the collection has a workflow, check the doc's stage satisfies the
+ * publish gate. Returns null if no gate violation; otherwise an error
+ * envelope to short-circuit the handler.
+ *
+ * IMPORTANT: this function intentionally does NOT enforce access. The caller
+ * MUST verify the user can read the document (via `ops.findById` or
+ * equivalent) BEFORE invoking the gate check, otherwise unauth callers can
+ * fingerprint stage state for any document id. Reported by chaos-monkey
+ * audit.
+ */
+async function checkWorkflowPublishGate(
+	collectionSlug: string,
+	id: string,
+	user: UserContext | undefined,
+): Promise<HandlerResult | null> {
+	const api = getMomentumAPI();
+	const config = api.getConfig();
+	const collection = config.collections.find((c) => c.slug === collectionSlug);
+	if (!collection || !hasWorkflow(collection)) return null;
+	const adapter = config.db.adapter;
+	if (!adapter.getWorkflowState) return null;
+	const state = await adapter.getWorkflowState(collectionSlug, id);
+	if (!state) return null;
+	if (satisfiesPublishGate(collection.workflow, state.workflowStage)) return null;
+	void user;
+	const requiredStage =
+		collection.workflow.publishGateStage ??
+		collection.workflow.stages.find((s) => s.publishesOnEnter)?.id ??
+		null;
+	return {
+		status: 409,
+		body: {
+			error: 'Publish blocked by workflow stage gate',
+			code: WORKFLOW_ERROR_CODES.PublishGateNotMet,
+			currentStage: state.workflowStage,
+			requiredStage,
+			message:
+				requiredStage !== null
+					? `Document must be in stage "${requiredStage}" to publish (currently in "${state.workflowStage}")`
+					: `Workflow does not declare a publish gate stage`,
+		},
+	};
+}
+
+/**
+ * Verify the calling user has publish access before any state-revealing
+ * checks run. Returns null on success, or an envelope to short-circuit.
+ *
+ * This must run BEFORE `checkWorkflowPublishGate` on publish/schedule-publish
+ * so unauthenticated and underprivileged callers receive 403 rather than a
+ * 409 that leaks the document's workflow stage. Without this, any caller
+ * with collection read access (including `allowAll` collections) could
+ * fingerprint stage state for any document id.
+ *
+ * Fails closed: any non-AccessDeniedError throw returns a 500 envelope so an
+ * internal access-check failure (DB error, buggy user-supplied access fn)
+ * cannot silently allow the publish flow to proceed past the gate-leak guard.
+ */
+async function ensurePublishAccess(
+	ops: VersionOperations<Record<string, unknown>>,
+): Promise<HandlerResult | null> {
+	try {
+		await ops.checkPublishAccess();
+		return null;
+	} catch (error) {
+		if (error instanceof Error && error.name === 'AccessDeniedError') {
+			return { status: 403, body: { error: 'Access denied' } };
+		}
+		return {
+			status: 500,
+			body: {
+				error: 'Access check failed',
+				message: sanitizeErrorMessage(error, 'Unknown error'),
+			},
+		};
+	}
+}
 
 /**
  * Resolve the version operations for a collection or return the
@@ -149,6 +229,17 @@ export async function handleRestoreVersionRequest(
 	const check = resolveVersionOps(params.collectionSlug, params.user);
 	if (!check.ok) return check.result;
 
+	// Workflow gate: a `publish: true` restore must clear the same gate as a
+	// direct publish. Reported by chaos-monkey audit — without this check,
+	// restoring a version whose snapshot stored `workflowStage: 'approved'`
+	// could publish a doc whose live stage was still `draft`.
+	if (params.publish === true) {
+		const restoreAccessGuard = await ensurePublishAccess(check.ops);
+		if (restoreAccessGuard) return restoreAccessGuard;
+		const gate = await checkWorkflowPublishGate(params.collectionSlug, params.id, params.user);
+		if (gate) return gate;
+	}
+
 	try {
 		const restored = await check.ops.restore({
 			versionId: params.versionId,
@@ -228,6 +319,14 @@ export interface PublishParams {
 export async function handlePublishRequest(params: PublishParams): Promise<HandlerResult> {
 	const check = resolveVersionOps(params.collectionSlug, params.user);
 	if (!check.ok) return check.result;
+
+	// Auth check MUST run before the gate to avoid leaking stage state to
+	// unauthenticated callers via the 409 envelope.
+	const accessGuard = await ensurePublishAccess(check.ops);
+	if (accessGuard) return accessGuard;
+
+	const gate = await checkWorkflowPublishGate(params.collectionSlug, params.id, params.user);
+	if (gate) return gate;
 
 	try {
 		const published = await check.ops.publish(params.id);
@@ -325,6 +424,13 @@ export async function handleSchedulePublishRequest(
 
 	const check = resolveVersionOps(params.collectionSlug, params.user);
 	if (!check.ok) return check.result;
+
+	// Auth check before gate to prevent stage-state leak.
+	const scheduleAccessGuard = await ensurePublishAccess(check.ops);
+	if (scheduleAccessGuard) return scheduleAccessGuard;
+
+	const gate = await checkWorkflowPublishGate(params.collectionSlug, params.id, params.user);
+	if (gate) return gate;
 
 	try {
 		const result = await check.ops.schedulePublish(params.id, params.publishAt);

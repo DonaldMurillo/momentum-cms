@@ -43,6 +43,15 @@ export interface Articles {
 	updatedAt: string;
 }
 
+export interface Posts {
+	id: string;
+	title: string;
+	content?: string;
+	_status?: 'draft' | 'published';
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface Products {
 	id: string;
 	name: string;
@@ -544,6 +553,14 @@ export interface ArticlesWhereClause {
 	content?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
 	category?: string | { equals?: string; not?: string; in?: string[] };
 	internalNotes?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
+}
+
+export interface PostsWhereClause {
+	id?: string | { equals?: string; not?: string; in?: string[] };
+	title?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
+	content?: string | { equals?: string; not?: string; contains?: string; in?: string[] };
 	createdAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 	updatedAt?: string | { equals?: string; gt?: string; gte?: string; lt?: string; lte?: string };
 }
@@ -1135,6 +1152,7 @@ export interface MediaTagsWhereClause {
 export type CollectionSlug =
 	| 'categories'
 	| 'articles'
+	| 'posts'
 	| 'products'
 	| 'pages'
 	| 'settings'
@@ -1165,6 +1183,7 @@ export type GlobalSlug = 'site-settings';
 export interface MomentumCollections {
 	categories: Categories;
 	articles: Articles;
+	posts: Posts;
 	products: Products;
 	pages: Pages;
 	settings: Settings;
@@ -1198,6 +1217,7 @@ export interface MomentumGlobals {
 export type TypedMomentumCollections = {
 	categories: { doc: Categories; where: CategoriesWhereClause };
 	articles: { doc: Articles; where: ArticlesWhereClause };
+	posts: { doc: Posts; where: PostsWhereClause };
 	products: { doc: Products; where: ProductsWhereClause };
 	pages: { doc: Pages; where: PagesWhereClause };
 	settings: { doc: Settings; where: SettingsWhereClause };

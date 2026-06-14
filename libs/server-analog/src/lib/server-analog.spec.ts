@@ -414,3 +414,173 @@ describe('createComprehensiveMomentumHandler — /media/file/* serves without co
 		expect(sentArg).toBe(storedBuffer);
 	});
 });
+
+// Adapter-level coverage for the workflow `transition` + `workflow-history`
+// routes added to server-analog. The shared e2e spec only exercises these
+// under E2E_SERVER_FLAVOR=analog (not the default flavor), so these tests pin
+// the analog dispatcher wiring (segment routing, body/query parsing, the
+// unknown-action 404 fallthrough) directly against the in-memory adapter.
+describe('createComprehensiveMomentumHandler — workflow routes', () => {
+	const workflowCollection: CollectionConfig = {
+		slug: 'articles',
+		labels: { singular: 'Article', plural: 'Articles' },
+		fields: [{ name: 'title', type: 'text', required: true, label: 'Title' }],
+		versions: { drafts: true },
+		access: { read: () => true, create: () => true, update: () => true, delete: () => true },
+		workflow: {
+			stages: [
+				{ id: 'draft', label: 'Draft', transitions: ['in-review'] },
+				{ id: 'in-review', label: 'In Review', transitions: ['draft', 'approved'] },
+				{ id: 'approved', label: 'Approved', transitions: ['draft'], publishesOnEnter: true },
+			],
+			initialStage: 'draft',
+		},
+	};
+
+	let comprehensiveHandler: ReturnType<typeof createComprehensiveMomentumHandler>;
+	let mockUtils: MomentumH3Utils;
+	let statusCapture: number;
+	const adminCtx = { user: { id: 'admin-1', email: 'admin@test.com', role: 'admin' } };
+
+	beforeEach(() => {
+		resetMomentumAPI();
+		const adapter = createInMemoryAdapter();
+		const config: MomentumConfig = { db: { adapter }, collections: [workflowCollection] };
+		comprehensiveHandler = createComprehensiveMomentumHandler(config);
+		statusCapture = 200;
+		mockUtils = {
+			readBody: vi.fn().mockResolvedValue({}),
+			getQuery: vi.fn().mockReturnValue({}),
+			getRouterParams: vi.fn().mockReturnValue({ momentum: '' }),
+			setResponseStatus: vi.fn((_event: H3Event, status: number) => {
+				statusCapture = status;
+			}),
+			setResponseHeader: vi.fn(),
+			readMultipartFormData: vi.fn().mockResolvedValue(undefined),
+			send: vi.fn(),
+		};
+	});
+
+	function event(method: string): H3Event {
+		return { method, path: '/api/articles', context: { params: {} } };
+	}
+	function route(momentum: string): void {
+		(mockUtils.getRouterParams as ReturnType<typeof vi.fn>).mockReturnValue({ momentum });
+	}
+	function body(value: Record<string, unknown>): void {
+		(mockUtils.readBody as ReturnType<typeof vi.fn>).mockResolvedValue(value);
+	}
+	async function createArticle(): Promise<string> {
+		route('articles');
+		body({ title: 'WF Article' });
+		statusCapture = 200;
+		const result = (await comprehensiveHandler(event('POST'), mockUtils, adminCtx)) as Record<
+			string,
+			unknown
+		>;
+		const doc = result['doc'] as Record<string, unknown> | undefined;
+		if (!doc) throw new Error(`createArticle failed: status=${statusCapture}`);
+		return doc['id'] as string;
+	}
+
+	it('POST /:id/transition moves the document to a new stage', async () => {
+		const id = await createArticle();
+		route(`articles/${id}/transition`);
+		body({ toStage: 'in-review' });
+		const result = (await comprehensiveHandler(event('POST'), mockUtils, adminCtx)) as Record<
+			string,
+			unknown
+		>;
+		expect(statusCapture).toBe(200);
+		expect(result).toMatchObject({ fromStage: 'draft', toStage: 'in-review' });
+	});
+
+	it('POST /:id/transition returns 400 when toStage is missing (body is parsed)', async () => {
+		const id = await createArticle();
+		route(`articles/${id}/transition`);
+		body({});
+		await comprehensiveHandler(event('POST'), mockUtils, adminCtx);
+		expect(statusCapture).toBe(400);
+	});
+
+	it('POST /:id/<unknown-action> falls through to 404 (transition branch does not shadow it)', async () => {
+		const id = await createArticle();
+		route(`articles/${id}/bogus-action`);
+		const result = (await comprehensiveHandler(event('POST'), mockUtils, adminCtx)) as Record<
+			string,
+			unknown
+		>;
+		expect(statusCapture).toBe(404);
+		expect(String(result['message'])).toContain('bogus-action');
+	});
+
+	it('GET /:id/workflow-history returns the audit trail incl. the creation anchor', async () => {
+		const id = await createArticle();
+		route(`articles/${id}/workflow-history`);
+		const result = (await comprehensiveHandler(event('GET'), mockUtils, adminCtx)) as Record<
+			string,
+			unknown
+		>;
+		expect(statusCapture).toBe(200);
+		expect(result['totalDocs']).toBe(1);
+		const docs = result['docs'] as Array<Record<string, unknown>>;
+		expect(docs[0]).toMatchObject({ fromStage: null, toStage: 'draft' });
+	});
+
+	it('GET /:id/workflow-history coerces a non-numeric ?limit to the default instead of breaking pagination', async () => {
+		const id = await createArticle();
+		route(`articles/${id}/workflow-history`);
+		// h3 getQuery returns string values; `abc` must not reach the adapter as NaN.
+		(mockUtils.getQuery as ReturnType<typeof vi.fn>).mockReturnValue({ limit: 'abc', page: 'xyz' });
+		const result = (await comprehensiveHandler(event('GET'), mockUtils, adminCtx)) as Record<
+			string,
+			unknown
+		>;
+		expect(statusCapture).toBe(200);
+		// With the NaN guard, the default page size applies and the anchor row is
+		// returned; without it, limit=NaN yields an empty/inconsistent page.
+		const docs = result['docs'] as Array<Record<string, unknown>>;
+		expect(docs).toHaveLength(Number(result['totalDocs']));
+		expect(docs.length).toBeGreaterThanOrEqual(1);
+	});
+
+	it('GET /:id/workflow-history honors a numeric ?limit/?page', async () => {
+		const id = await createArticle();
+		route(`articles/${id}/workflow-history`);
+		(mockUtils.getQuery as ReturnType<typeof vi.fn>).mockReturnValue({ limit: '1', page: '1' });
+		const result = (await comprehensiveHandler(event('GET'), mockUtils, adminCtx)) as Record<
+			string,
+			unknown
+		>;
+		expect(statusCapture).toBe(200);
+		expect(result['limit']).toBe(1);
+		expect(result['page']).toBe(1);
+	});
+
+	it('transition on a non-workflow collection returns 400 WorkflowNotConfigured (not swallowed)', async () => {
+		// Re-init with a non-workflow collection.
+		resetMomentumAPI();
+		const adapter = createInMemoryAdapter();
+		comprehensiveHandler = createComprehensiveMomentumHandler({
+			db: { adapter },
+			collections: [
+				{
+					slug: 'tags',
+					fields: [{ name: 'name', type: 'text', required: true }],
+					access: { read: () => true, create: () => true, update: () => true, delete: () => true },
+				},
+			],
+		});
+		route('tags');
+		body({ name: 'urgent' });
+		const created = (await comprehensiveHandler(event('POST'), mockUtils, adminCtx)) as Record<
+			string,
+			unknown
+		>;
+		const tagId = (created['doc'] as Record<string, unknown>)['id'];
+		route(`tags/${tagId}/transition`);
+		body({ toStage: 'in-review' });
+		await comprehensiveHandler(event('POST'), mockUtils, adminCtx);
+		expect(statusCapture).toBe(400);
+	});
+});

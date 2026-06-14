@@ -20,6 +20,7 @@
  * ```
  */
 
+import { validateWorkflowConfig } from '../workflow/workflow-validators';
 import type { CollectionConfig, GlobalConfig, SoftDeleteConfig } from './collection.types';
 
 /**
@@ -63,6 +64,11 @@ export function defineCollection(config: CollectionConfig): CollectionConfig {
 				`softDelete.field "${collection.softDelete.field}" must be a valid identifier (letters, numbers, underscores, starting with a letter or underscore)`,
 			);
 		}
+	}
+
+	// Validate workflow config if provided — fails at boot rather than first transition
+	if (collection.workflow) {
+		validateWorkflowConfig(collection.workflow, collection.slug);
 	}
 
 	return collection;

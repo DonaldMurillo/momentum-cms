@@ -43,6 +43,11 @@ Thumbs.db
 
 .angular
 
+# Analog build artifacts (Nitro/SSR/Storybook outputs land here)
+libs/apps/
+**/.nitro/
+**/.analog/
+
 __screenshots__/
 
 # SQLite database files

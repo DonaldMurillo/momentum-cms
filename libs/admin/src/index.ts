@@ -63,6 +63,16 @@ export {
 	type StatusResult,
 } from './lib/services/version.service';
 
+// Workflow Service
+export {
+	WorkflowService,
+	injectWorkflowService,
+	type TransitionResult,
+	type TransitionRequest,
+	type TransitionConflictBody,
+	type WorkflowHistoryQueryResult,
+} from './lib/services/workflow.service';
+
 // Guards
 export * from './lib/guards';
 
@@ -105,6 +115,15 @@ export { EntityViewWidget } from './lib/widgets/entity-view/entity-view.componen
 export { FeedbackService } from './lib/widgets/feedback/feedback.service';
 export { VersionHistoryWidget } from './lib/widgets/version-history/version-history.component';
 export { PublishControlsWidget } from './lib/widgets/publish-controls/publish-controls.component';
+export { StageBadge } from './lib/widgets/workflow-controls/stage-badge.component';
+export { WorkflowControls } from './lib/widgets/workflow-controls/workflow-controls.component';
+export { WorkflowHistory } from './lib/widgets/workflow-controls/workflow-history.component';
+export { StageFilterPills } from './lib/widgets/workflow-controls/stage-filter-pills.component';
+export {
+	TransitionDialogComponent,
+	type TransitionDialogData,
+	type TransitionDialogResult,
+} from './lib/widgets/workflow-controls/transition-dialog.component';
 export {
 	MediaPreviewComponent,
 	type MediaPreviewData,

@@ -29,6 +29,9 @@ export * from './lib/seeding';
 // Versions
 export * from './lib/versions';
 
+// Workflow
+export * from './lib/workflow';
+
 // Migrations
 export * from './lib/migrations';
 

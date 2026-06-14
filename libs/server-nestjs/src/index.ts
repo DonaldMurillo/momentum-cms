@@ -33,6 +33,7 @@ export { ImportExportController } from './lib/controllers/import-export.controll
 export { PreviewController } from './lib/controllers/preview.controller';
 export { GraphQLController } from './lib/controllers/graphql.controller';
 export { CustomEndpointsController } from './lib/controllers/custom-endpoints.controller';
+export { WorkflowController } from './lib/controllers/workflow.controller';
 
 // Guards & Middleware
 export { MomentumAuthGuard } from './lib/guards/auth.guard';

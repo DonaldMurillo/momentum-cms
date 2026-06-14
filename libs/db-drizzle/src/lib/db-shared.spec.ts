@@ -86,6 +86,52 @@ describe('db-shared utilities', () => {
 			const collection = { slug: 'users', dbName: undefined } as CollectionConfig;
 			expect(getTableName(collection)).toBe('users');
 		});
+
+		// Red-team finding: dbName is interpolated into DDL via getTableName
+		// (e.g. `CREATE TABLE "${tbl}_workflow_history"`). validateCollectionSlug
+		// only guards the slug param; without validating the resolved table
+		// name, a malicious dbName silently inherits trust and reaches the
+		// interpolation site. Closing that gap at the lowest level — every
+		// callsite already routes through getTableName.
+		it('rejects dbName containing SQL meta characters', () => {
+			const collection = {
+				slug: 'posts',
+				dbName: 'posts"; DROP TABLE users; --',
+			} as CollectionConfig;
+			expect(() => getTableName(collection)).toThrow(/Invalid table name/i);
+		});
+
+		it('rejects dbName with a quote', () => {
+			const collection = { slug: 'posts', dbName: 'posts"x' } as CollectionConfig;
+			expect(() => getTableName(collection)).toThrow(/Invalid table name/i);
+		});
+
+		it('rejects dbName starting with a hyphen', () => {
+			const collection = { slug: 'posts', dbName: '-posts' } as CollectionConfig;
+			expect(() => getTableName(collection)).toThrow(/Invalid table name/i);
+		});
+
+		it('rejects dbName with a space', () => {
+			const collection = { slug: 'posts', dbName: 'pos ts' } as CollectionConfig;
+			expect(() => getTableName(collection)).toThrow(/Invalid table name/i);
+		});
+
+		it('accepts well-formed dbName values', () => {
+			expect(() =>
+				getTableName({ slug: 'posts', dbName: 'cms_posts' } as CollectionConfig),
+			).not.toThrow();
+			expect(() =>
+				getTableName({ slug: 'posts', dbName: 'cms-posts' } as CollectionConfig),
+			).not.toThrow();
+			expect(() =>
+				getTableName({ slug: 'posts', dbName: '_internal' } as CollectionConfig),
+			).not.toThrow();
+		});
+
+		it('still rejects an unsafe slug when dbName is absent', () => {
+			const collection = { slug: 'posts; DROP TABLE x' } as CollectionConfig;
+			expect(() => getTableName(collection)).toThrow(/Invalid table name/i);
+		});
 	});
 
 	describe('isDocumentStatus', () => {

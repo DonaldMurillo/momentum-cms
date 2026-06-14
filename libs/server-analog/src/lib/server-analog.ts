@@ -14,6 +14,8 @@ import {
 	handleSaveDraftRequest,
 	handleSchedulePublishRequest,
 	handleCancelScheduledPublishRequest,
+	handleTransitionRequest,
+	handleListWorkflowHistoryRequest,
 	handleBatchRequest,
 	handleGraphQLPostRequest,
 	handleGraphQLGetRequest,
@@ -898,6 +900,19 @@ export function createComprehensiveMomentumHandler(
 				return result.body;
 			}
 
+			// POST /:collection/:id/transition - Move document to a new workflow stage
+			if (action === 'transition') {
+				const body = await safeReadBody(event, utils, method);
+				const result = await handleTransitionRequest({
+					collectionSlug,
+					id: docId,
+					body,
+					user,
+				});
+				utils.setResponseStatus(event, result.status);
+				return result.body;
+			}
+
 			// POST /:collection/:id/restore (soft-delete restore)
 			if (action === 'restore') {
 				if (isManagedCollection(collectionSlug)) {
@@ -918,6 +933,27 @@ export function createComprehensiveMomentumHandler(
 			// Unknown action — return 404 instead of falling through to CRUD
 			utils.setResponseStatus(event, 404);
 			return { error: 'Not found', message: `Unknown action "${action}"` };
+		}
+
+		// ============================================
+		// Workflow history: GET /:collection/:id/workflow-history
+		// ============================================
+		if (seg2 === 'workflow-history' && seg1 && method === 'GET') {
+			// Coerce non-numeric query params to undefined (parity with the
+			// express adapter). Without the isFinite guard, `?limit=abc` would
+			// pass `NaN` to the adapter and emit `LIMIT NaN OFFSET NaN` → 500.
+			const limitRaw = Number(queryParams['limit']);
+			const pageRaw = Number(queryParams['page']);
+			const result = await handleListWorkflowHistoryRequest({
+				collectionSlug: seg0,
+				id: seg1,
+				limit:
+					queryParams['limit'] !== undefined && Number.isFinite(limitRaw) ? limitRaw : undefined,
+				page: queryParams['page'] !== undefined && Number.isFinite(pageRaw) ? pageRaw : undefined,
+				user,
+			});
+			utils.setResponseStatus(event, result.status);
+			return result.body;
 		}
 
 		// ============================================

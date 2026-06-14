@@ -306,6 +306,15 @@ export interface VersionOperations<T = Record<string, unknown>> {
 	restore(options: RestoreVersionOptions): Promise<T>;
 
 	/**
+	 * Verify the current user has `publishVersions` access without performing
+	 * any mutation. Used by handlers to gate stage-revealing checks behind
+	 * an access verdict.
+	 *
+	 * Throws AccessDeniedError if the user is not permitted.
+	 */
+	checkPublishAccess(): Promise<void>;
+
+	/**
 	 * Publish a document (change status from draft to published).
 	 * Creates a new published version.
 	 *

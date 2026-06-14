@@ -41,3 +41,24 @@ window.matchMedia = (query: string): MediaQueryList => {
 	}
 	return mql;
 };
+
+/**
+ * Initialise Angular's TestBed environment so `TestBed.configureTestingModule`
+ * works inside vitest specs. Without this, the very first call throws
+ * "Need to call TestBed.initTestEnvironment() first" — silently masking every
+ * component spec in this lib.
+ */
+import { getTestBed } from '@angular/core/testing';
+import {
+	BrowserDynamicTestingModule,
+	platformBrowserDynamicTesting,
+} from '@angular/platform-browser-dynamic/testing';
+
+try {
+	getTestBed().initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting(), {
+		teardown: { destroyAfterEach: true },
+	});
+} catch (err) {
+	// Re-init is fine in watch mode; only rethrow if it's an unrelated error.
+	if (!String(err).includes('Cannot set base providers')) throw err;
+}
